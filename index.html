@@ -38,7 +38,8 @@ Armada is pluggable asset-privacy infrastructure for USDC: a shielded pool (Rail
     <ul>
       <li><strong>Private sync</strong> — proof-carrying note streams that protect the anonymity set <em>at read-time</em> (Armada's core fragility: it dies at read-time over normal RPC).</li>
       <li><strong>Metering</strong> — pay-per-request Nitro vouchers.</li>
-      <li><strong>Mobile client + relay</strong> — the Laconic wallet (Android/iOS/web) + in-browser Nitro node + libp2p relay.</li>
+      <li><strong>Front-end</strong> — the Laconic wallet is a bare-bones React Native app, and MobyMask / swap are demo fragments — the right starting point, which we build up into the Armada-branded app.</li>
+      <li><strong>Client + relay</strong> — keys + Cosmos/EIP-155 signing + in-browser Nitro node + libp2p relay.</li>
       <li><strong>Deploy / ops</strong> — bonded service-provider federations run it; monetized via Armada's integrator revenue-share.</li>
     </ul>
   </div>
@@ -79,7 +80,7 @@ ex_net is <strong>not</strong> a sibling adapter — it is the private execution
 </p>
 <table>
 <tr><th>Tier</th><th>What it does</th><th>Status</th></tr>
-<tr><td><strong>T6 · Client / apps</strong></td><td>Laconic wallet (Android/iOS/web) + in-browser Nitro node + Armada SDK integration</td><td class="part">partial</td></tr>
+<tr><td><strong>T6 · Client / apps</strong></td><td>bare-bones Laconic wallet + demo fragments → Armada-branded app; in-browser Nitro node; Armada SDK wiring</td><td class="part">partial</td></tr>
 <tr><td><strong>T5 · Adapters</strong> (Armada)</td><td>Swaps &amp; yield adapters on the platform; CCTP</td><td class="new">net-new (CCTP built)</td></tr>
 <tr><td><strong>T4 · Execution platform</strong> (ex_net)</td><td>matcher · channel-hub liquidity / LP vault · Nitro settlement + receipts</td><td class="part">partial</td></tr>
 <tr><td><strong>T3 · Ordering</strong></td><td>commit-reveal + beacon · epoch set-agreement · inclusion receipts · DA · watchtower</td><td class="new">net-new</td></tr>

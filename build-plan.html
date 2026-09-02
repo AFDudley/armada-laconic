@@ -74,9 +74,9 @@
 <tr><td>Yield adapter (native LP + route to Aave v4)</td><td>on T4</td><td class="new">net-new (thin)</td><td>design</td></tr>
 <tr><td>CCTP cross-chain USDC</td><td>Armada's</td><td class="ok">built</td><td>design</td></tr>
 
-<tr><td rowspan="3"><strong>T6</strong><br>client</td><td>Laconic wallet (Android/iOS/web)</td><td>laconic-wallet<sup><a href="#r-lacwallet">[21]</a></sup> / -web<sup><a href="#r-lacwalletweb">[22]</a></sup></td><td class="part">built; needs updates</td><td>validated</td></tr>
+<tr><td rowspan="3"><strong>T6</strong><br>client</td><td>Laconic wallet (bare-bones RN app)</td><td>laconic-wallet<sup><a href="#r-lacwallet">[21]</a></sup> / -web<sup><a href="#r-lacwalletweb">[22]</a></sup></td><td class="part">bare-bones; productize</td><td>validated</td></tr>
 <tr><td>In-browser / mobile Nitro node</td><td>ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup></td><td class="ok">built</td><td>design</td></tr>
-<tr><td>Armada SDK integration</td><td>Armada SDK + T6 client</td><td class="new">net-new</td><td>design</td></tr>
+<tr><td>Armada-branded front-end + SDK wiring</td><td>grow from wallet + demo fragments</td><td class="new">net-new (build up)</td><td>design</td></tr>
 
 <tr><td rowspan="2"><strong>×-cut</strong><br>identity</td><td>ex_net identity proofs (selective disclosure)</td><td>ex_net<sup><a href="#r-exnet">[1]</a></sup> + onboarding<sup><a href="#r-onboard">[14]</a></sup></td><td class="part">spec + precedent</td><td>design</td></tr>
 <tr><td>Laconic Matchmaker (compliance matching)</td><td>proposal<sup><a href="#r-match">[15]</a></sup> (FHE)</td><td class="part">external / design</td><td>design</td></tr>
@@ -106,7 +106,7 @@
 <p><strong>Built:</strong> CCTP (Armada's). <strong>Net-new (thin, on T4):</strong> the Swaps adapter (exposes "swap shielded A→B" over the matcher) and the yield adapter (ex_net native LP yield + private route into Aave v4). <em>Audit note:</em> ex_net as a shared substrate under multiple adapters has its own audit boundary — a deliberate deviation from Armada's per-adapter audit discipline.</p>
 
 <h2 id="t6">T6 · Client / apps</h2>
-<p><strong>Built:</strong> laconic-wallet (Android/iOS)<sup><a href="#r-lacwallet">[21]</a></sup> + laconic-wallet-web<sup><a href="#r-lacwalletweb">[22]</a></sup>; in-browser Nitro node<sup><a href="#r-tsnitro">[4]</a></sup>. <strong>Net-new:</strong> wallet updates (return pubkey on <code>cosmos_signAmino</code>, Nitro + commit-reveal integration, Railgun boundary UX) and the Armada SDK integration.</p>
+<p><strong>Reality check:</strong> the wallet is <strong>bare-bones</strong> and MobyMask<sup><a href="#r-mobymask">[3]</a></sup> / the swap demos are <strong>demo fragments, not user-facing products</strong> — a real starting point, not a finished front-end. <strong>Reusable:</strong> laconic-wallet<sup><a href="#r-lacwallet">[21]</a></sup> / -web<sup><a href="#r-lacwalletweb">[22]</a></sup>; in-browser Nitro node<sup><a href="#r-tsnitro">[4]</a></sup>. <strong>Net-new:</strong> grow the wallet into the Armada-branded front-end + wire the Armada SDK; wallet updates (return pubkey on <code>cosmos_signAmino</code>, Nitro + commit-reveal integration, Railgun boundary UX).</p>
 
 <h2 id="backlog">Net-new backlog (roughly sequenced)</h2>
 <ol>
@@ -115,7 +115,7 @@
 <li><strong>Platform (T4):</strong> productionize matcher → LP / market-maker vault → receipt-or-slash + force-close/commit-reveal wiring → multi-asset outcomes.</li>
 <li><strong>Threshold (T2):</strong> DKG ceremony + resharing + integrate chain-signatures into signing paths.</li>
 <li><strong>Adapters (T5):</strong> swaps-on-matcher; yield (native LP + private route to Aave v4).</li>
-<li><strong>Client (T6):</strong> wallet updates; Armada SDK integration.</li>
+<li><strong>Client (T6):</strong> grow the bare-bones wallet into the Armada-branded front-end + wire the Armada SDK; wallet updates.</li>
 <li><strong>Ingestion (T1):</strong> Railgun/adjudicator watcher config + metered private note stream.</li>
 <li><strong>Identity (×-cut):</strong> selective-disclosure proofs; Matchmaker integration (if in scope).</li>
 </ol>

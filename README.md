@@ -1,15 +1,15 @@
 # armada-laconic
 
 Design and collaboration documents for delivering Armada's Ethereum-privacy services
-on Laconic infrastructure. Two additive offers for Armada's shielded pool — **more
-yield** and the **mobile-first private support services** that surround it. Armada builds
-the crypto core; Laconic provides the added yield and the private substrate around it.
+on Laconic infrastructure. Laconic delivers two things for Armada's shielded pool: the
+**mobile-first private support services** that surround it, and **more yield** on top.
+Armada builds the crypto core; Laconic provides the substrate around it and the yield.
 
 **▶ Live site — [afdudley.github.io/armada-laconic](https://afdudley.github.io/armada-laconic/)**
 
 ## What's on the site
 
-- **[index.html](./index.html)** — *Overview.* The two offers, how they plug into
+- **[index.html](./index.html)** — *Overview.* What Laconic delivers, how it plugs into
   Armada's three-tier model, and the tier map.
 - **[architecture.html](./architecture.html)** — *The tier stack.* Seven tiers
   (T0 Ethereum anchor → T6 client): watcher parties, Nitro, Schnorr DSS, ordering

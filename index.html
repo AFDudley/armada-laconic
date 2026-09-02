@@ -17,38 +17,38 @@
 </nav>
 
 <h1>Armada × Laconic</h1>
-<p class="lede">Two additive offers for Armada's shielded pool: <strong>more yield</strong> and the <strong>mobile-first private support services</strong> that surround it. Armada builds the crypto core; Laconic provides the added yield and the private substrate around it.</p>
+<p class="lede">Laconic delivers two things for Armada's shielded pool: the <strong>mobile-first private support services</strong> that surround it, and <strong>more yield</strong> on top. Armada builds the crypto core; Laconic provides the substrate around it and the yield.</p>
 <p style="margin-top:14px">
   <span class="tag">for: Armada team</span>
   <span class="tag">non-custodial</span>
   <span class="tag">pool untouched</span>
   <span class="tag">Ethereum L1-anchored</span>
-  <span class="tag">status: proposal + code-fit map</span>
+  <span class="tag">status: scope + code-fit map</span>
 </p>
 
 <div class="note">
-Armada is pluggable asset-privacy infrastructure for USDC: a shielded pool (Railgun ZK circuits, immutable), governance-added <em>adapters</em> (CCTP, Aave&nbsp;v4 yield, swaps), and an apps/SDK tier, funded by integrator revenue-share. This site proposes how Laconic slots <em>into that model</em> — as new yield sources and as the private, mobile-first substrate the pool depends on. Companion docs: <a href="laconic_ethereum_privacy_via_armada.html">the thesis</a> (why Laconic is the substrate) and the <a href="ex_net_whitepaper.pdf">ex_net whitepaper</a> (the 2017 design ancestor).
+Armada is pluggable asset-privacy infrastructure for USDC: a shielded pool (Railgun ZK circuits, immutable), governance-added <em>adapters</em> (CCTP, Aave&nbsp;v4 yield, swaps), and an apps/SDK tier, funded by integrator revenue-share. This site details how Laconic slots <em>into that model</em> — as the private, mobile-first substrate the pool depends on, and as new yield sources on top. Companion docs: <a href="laconic_ethereum_privacy_via_armada.html">the thesis</a> (why Laconic is the substrate) and the <a href="ex_net_whitepaper.pdf">ex_net whitepaper</a> (the 2017 design ancestor).
 </div>
 
-<h2>The two offers</h2>
+<h2>What Laconic delivers</h2>
 <div class="cards">
   <div class="card">
-    <h3>1 · More yield</h3>
-    <p class="big">A private execution/settlement <strong>platform</strong> that sits beneath Armada's Adapters tier and powers the yield &amp; swap adapters.</p>
-    <ul>
-      <li><strong>Native yield</strong> — LP spread + swap/routing fees earned in the venue, an additional yield source alongside Aave&nbsp;v4.</li>
-      <li><strong>Private rail</strong> — non-custodial movement of idle shielded balances into external yield (Aave&nbsp;v4) and back, with metering, accounting, and settlement.</li>
-      <li>Engine: the <a href="execution-platform.html">ex_net → matcher</a> — a frequent-batch-auction, curve-order matcher that unifies CLOB + RFQ, capital-efficient, non-custodial.</li>
-    </ul>
-  </div>
-  <div class="card">
-    <h3>2 · Support services</h3>
+    <h3>1 · Mobile-first support services</h3>
     <p class="big">The private, <strong>mobile-first</strong> substrate that runs Armada on phones and browsers with almost no fixed infrastructure.</p>
     <ul>
       <li><strong>Private sync</strong> — proof-carrying note streams that protect the anonymity set <em>at read-time</em> (Armada's core fragility: it dies at read-time over normal RPC).</li>
       <li><strong>Metering</strong> — pay-per-request Nitro vouchers.</li>
       <li><strong>Mobile client + relay</strong> — the Laconic wallet (Android/iOS/web) + in-browser Nitro node + libp2p relay.</li>
       <li><strong>Deploy / ops</strong> — bonded service-provider federations run it; monetized via Armada's integrator revenue-share.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>2 · More yield</h3>
+    <p class="big">A private execution/settlement <strong>platform</strong> that sits beneath Armada's Adapters tier and powers the yield &amp; swap adapters.</p>
+    <ul>
+      <li><strong>Native yield</strong> — LP spread + swap/routing fees earned in the venue, an additional yield source alongside Aave&nbsp;v4.</li>
+      <li><strong>Private rail</strong> — non-custodial movement of idle shielded balances into external yield (Aave&nbsp;v4) and back, with metering, accounting, and settlement.</li>
+      <li>Engine: the <a href="execution-platform.html">ex_net → matcher</a> — a frequent-batch-auction, curve-order matcher that unifies CLOB + RFQ, capital-efficient, non-custodial.</li>
     </ul>
   </div>
 </div>

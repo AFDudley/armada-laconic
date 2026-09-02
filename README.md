@@ -26,6 +26,9 @@ Armada builds the crypto core; Laconic provides the substrate around it and the 
   *The thesis.* Laconic as the sync / metering / client substrate beneath Armada's
   Railgun-circuit shielded pool.
 - **[ex_net_whitepaper.pdf](./ex_net_whitepaper.pdf)** — Vulcanize's 2017 design ancestor.
+- **[glossary.html](./glossary.html)** — *Glossary.* Terms and word-collisions across the
+  three worlds — Vulcanize/Laconic/cerc-io, Nitro state channels, and Railgun/Armada —
+  disambiguating overloaded words (relay, watcher/watchtower, swap, adapter, layer/tier).
 
 ## Code
 

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Glossary — Armada × Laconic</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="index.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="build-plan.html">Build plan</a>
+  <a href="execution-platform.html">Execution platform</a>
+  <a href="glossary.html" class="active">Glossary</a>
+  <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
+</nav>
+
+<h1>Glossary</h1>
+<p class="lede">Terms span three worlds — <strong>Vulcanize/Laconic/cerc-io</strong> (the substrate), <strong>Nitro</strong> (state channels), and <strong>Railgun/Armada</strong> (the shielded pool) — plus this project's own design terms. Several words collide; the collisions are resolved first.</p>
+
+<h2>Contents</h2>
+<div class="toc">
+  <a href="#collisions">1. Word collisions (read first)</a>
+  <a href="#projects">2. Laconic / Vulcanize / cerc-io projects</a>
+  <a href="#nitro">3. Nitro / state-channel terms</a>
+  <a href="#railgun">4. Railgun / Armada terms</a>
+  <a href="#design">5. This project's design terms</a>
+  <a href="#orgs">Orgs</a>
+</div>
+
+<h2 id="collisions">1. Word collisions (read this first)</h2>
+
+<h3>"Relay" — two unrelated things</h3>
+<table>
+<tr><th>Term</th><th>What it is</th><th>Role</th></tr>
+<tr><td><strong>Relay</strong> (Laconic / libp2p)</td><td>a <strong>libp2p transport relay</strong>: routes p2p messages and does NAT traversal between browsers/phones and keepers. Pure network plumbing; no trust, no on-chain role.</td><td>network transport</td></tr>
+<tr><td><strong>Relay</strong> (Railgun / Armada)</td><td>a <strong>Broadcaster</strong> (formerly "Relayer"): submits a user's encrypted, ZK transaction on-chain and <strong>pays gas</strong>, so the public origin is the broadcaster's address, not the user's. Talks to users over Waku.</td><td>on-chain <strong>write</strong></td></tr>
+</table>
+<p class="small"><strong>Resolution:</strong> the Railgun relay's Laconic analog is the <strong>keeper</strong> (tx submitter), <em>not</em> the Laconic relay. Unqualified "relay" here = the libp2p transport relay.</p>
+
+<h3>"Watcher" vs "Watchtower" vs "Keeper"</h3>
+<table>
+<tr><th>Term</th><th>What it does</th></tr>
+<tr><td><strong>Watcher</strong> (Laconic)</td><td>proof-carrying, metered <strong>state indexer</strong>: ingests chain state (plugeth/statediff → IPLD) and serves verifiable query results / note-streams. Read-and-serve.</td></tr>
+<tr><td><strong>Watchtower</strong> (state channel)</td><td>watches L1 for a <strong>stale-state challenge</strong> and <strong>responds with your latest signed state</strong> (<code>checkpoint</code>/<code>respond</code>) so an offline user isn't defrauded. = a watcher (read) <strong>+ a bonded responder (write)</strong>.</td></tr>
+<tr><td><strong>Keeper</strong></td><td>the node that <strong>submits transactions on-chain on the user's behalf</strong> (MobyMask lineage). The Laconic analog of a Railgun <strong>Broadcaster</strong>.</td></tr>
+</table>
+<p class="small"><strong>Duality:</strong> the watcher protects the <strong>read side</strong> of pool privacy (no RPC fingerprints you scanning the pool); the keeper/broadcaster protects the <strong>write side</strong> (no EOA links you submitting). Same anonymity set, opposite ends.</p>
+
+<h3>"Layer" vs "Tier"</h3>
+<ul>
+<li><strong>Tier (T0–T6)</strong> — <em>this project's</em> stack rungs, in the <strong>software-architecture</strong> (n-tier) sense. See §5.</li>
+<li><strong>Layer 1 / Layer 2 (Ethereum)</strong> — blockchains. We write "Ethereum L1" only where we mean the chain.</li>
+<li><strong>Execution / settlement / DA layers</strong> — modular-blockchain vocabulary; deliberately <em>not</em> used to name our tiers (hence "tier").</li>
+</ul>
+
+<h3>"Swap"</h3>
+<ul>
+<li><strong>swap</strong> (Nitro <code>protocols/swap</code>) — go-nitro's multi-asset off-chain swap protocol / <code>SwapChannel</code> (settlement primitive).</li>
+<li><strong>Swaps</strong> (Armada adapter) — the user-facing "swap shielded A→B" adapter; an application on the execution platform.</li>
+<li><strong>matcher swap</strong> — a fill from the ex_net matcher, settled via the Nitro swap primitive.</li>
+</ul>
+
+<h3>"Adapter"</h3>
+<ul>
+<li><strong>Adapter</strong> (Armada) — a governance-added module in Armada's Adapters tier (CCTP, Aave-v4 yield, Swaps).</li>
+<li><strong>Nitro↔Railgun adapter</strong> — a net-new boundary contract funding/settling Nitro channels from Railgun notes (Design A privacy boundary).</li>
+<li><strong><code>IForceMoveApp</code></strong> — a Nitro app-logic interface (e.g. <code>HashLockedSwap</code>); "adapter" in the Nitro sense.</li>
+</ul>
+
+<h3>"Validator"</h3>
+<ul>
+<li><strong>Validator</strong> (ex_net) — a bonded federation member that matches/prices/authorizes settlement. ≈ today's <strong>watcher-party member</strong>.</li>
+<li><strong>Validator</strong> (Cosmos / laconicd) — a PoA consensus validator on the laconicd chain. Unrelated to the exchange venue.</li>
+</ul>
+
+<h3>"Proof" (distinct artifacts)</h3>
+<ul>
+<li><strong>Liquidity proof</strong> — signed attestation that assets are available to trade for a bounded time (ex_net).</li>
+<li><strong>Inclusion receipt</strong> — threshold-signed proof an order-commit was included in an epoch (censorship becomes slashable).</li>
+<li><strong>Sequencing certificate</strong> — threshold-signed proof of an epoch's fixed order.</li>
+<li><strong>Fraud proof</strong> — on-chain evidence of misbehavior, slashable against a bond.</li>
+<li><strong>ZK proof / zk-SNARK</strong> — Railgun's Groth16/BN254 proof of a valid shielded transaction.</li>
+</ul>
+
+<h3>"Pool"</h3>
+<ul>
+<li><strong>Shielded pool</strong> — Railgun's privacy pool (one shared anonymity set). Armada's core.</li>
+<li><strong>LP pool / vault</strong> — market-making capital in the execution platform. Unrelated to the shielded pool.</li>
+</ul>
+
+<h2 id="projects">2. Laconic / Vulcanize / cerc-io projects &amp; components</h2>
+<p class="small">Hosting: <strong>GitHub</strong> <code>cerc-io</code> where a mirror exists, otherwise the Laconic <strong>Gitea</strong> <code>git.vdb.to</code>. Orgs: <strong>Vulcanize</strong> (company, 2017–), <strong>Laconic</strong> (network/company), <strong>cerc-io</strong> (code org).</p>
+<table>
+<tr><th>Name</th><th>What it is</th></tr>
+<tr><td><strong>ex_net</strong></td><td>Vulcanize's 2017 whitepaper: a bonded, federated, privacy-preserving cross-chain exchange venue. The design ancestor. (<a href="ex_net_whitepaper.pdf">PDF</a>.)</td></tr>
+<tr><td><strong>matcher</strong></td><td>private Vulcanize repo (2019–20): curve-order, frequent-batch-auction matching-engine PoC. The engine behind ex_net. (Branches <code>master</code>/<code>ian_branch</code>/<code>xsleonard_branch</code>.)</td></tr>
+<tr><td><strong>laconicd</strong></td><td>the Laconic Cosmos-SDK chain daemon; embeds a go-nitro server + onboarding module (<code>role</code>/<code>kyc_id</code>). Gitea.</td></tr>
+<tr><td><strong>laconic-wallet</strong></td><td>React Native (Android/iOS) wallet: keys + Cosmos/EIP-155 signing over WalletConnect. Bare-bones today. Gitea.</td></tr>
+<tr><td><strong>laconic-wallet-web</strong></td><td>browser build of the wallet. Gitea.</td></tr>
+<tr><td><strong>watcher-ts</strong></td><td>the generic <strong>watcher</strong> framework (proof-carrying, metered state indexing). GitHub.</td></tr>
+<tr><td><strong>mobymask</strong> / v2 / v3</td><td>reference p2p <strong>demo</strong> app (snap + in-browser Nitro + libp2p relay + keeper). A demo, not a product; proves the mobile-first shape.</td></tr>
+<tr><td><strong>ts-nitro</strong></td><td>TypeScript port of Nitro running a state-channel node <strong>in-browser / on mobile</strong>. GitHub.</td></tr>
+<tr><td><strong>go-nitro</strong></td><td>cerc-io fork of the (statechannels) <strong>Nitro</strong> Go impl: adjudicator, ForceMove, vouchers, virtual channels, swap protocol, Bridge. Live on Ethereum.</td></tr>
+<tr><td><strong>chain-signatures</strong></td><td>library: <code>ethschnorr</code> (Ethereum-compatible Schnorr) + <code>ethdss</code> (Distributed Schnorr, Stinson–Strobl <em>(t,n)</em>) on a <code>kyber</code> DKG. Gitea.</td></tr>
+<tr><td><strong>plugeth</strong> / plugeth-statediff</td><td>geth plugin system + state-diff extraction (no geth fork). GitHub.</td></tr>
+<tr><td><strong>ipld-eth-server</strong> / ipld-eth-state-snapshot</td><td>index and serve Ethereum state as IPLD. GitHub.</td></tr>
+<tr><td><strong>laconic-so</strong></td><td>"stack orchestrator": deploys stacks (ops tool, not a library).</td></tr>
+<tr><td><strong>Service Provider Marketplace / Federated Cache / Fee Vault</strong></td><td>Laconic's designed multi-sided market: matches a data-publisher with providers, organizes a Federated Cache serving one need, negotiates and pools fees. (Designed intent; largely never shipped at scale.)</td></tr>
+<tr><td><strong>Laconic Matchmaker</strong></td><td>"Laconic Matchmaking Services" (2022): privacy-preserving, broker-dealer-compliant matching via encrypted set-intersection / range matching (FHE).</td></tr>
+<tr><td><strong>DSS</strong></td><td>Distributed Schnorr Signature (see chain-signatures); the federation's threshold signature.</td></tr>
+<tr><td><strong>Deepstack</strong></td><td>the <code>deep-stack</code> project; authored go-nitro's swap protocol. Distinct from the older statechannels HashLockedSwap.</td></tr>
+</table>
+
+<h2 id="nitro">3. Nitro / state-channel terms</h2>
+<ul>
+<li><strong>State channel</strong> — off-chain, co-signed balance updates collateralized on L1; closed cooperatively at internet speed or unilaterally via dispute.</li>
+<li><strong>NitroAdjudicator</strong> — the L1 contract holding funds and adjudicating outcomes.</li>
+<li><strong>ForceMove</strong> — the dispute game: <code>challenge</code> → <code>checkpoint</code> → <code>conclude</code>. Only ever honors <strong>user-signed</strong> states.</li>
+<li><strong>MultiAssetHolder</strong> — holds multiple assets per channel.</li>
+<li><strong>Virtual channel</strong> (<code>virtualfund</code>) — a channel routed through a hub without a new on-chain deposit.</li>
+<li><strong>Voucher</strong> — a signed pay-per-request micropayment over a (virtual) channel; the metering primitive.</li>
+<li><strong>Force-close</strong> — unilateral exit to your last co-signed state (safety escape hatch: failure = halt, not loss).</li>
+<li><strong>HashLockedSwap</strong> — an <code>IForceMoveApp</code> example: reveal a preimage to unlock (HTLC-style).</li>
+<li><strong>SwapChannel</strong> — go-nitro's channel type for the swap protocol.</li>
+<li><strong>Bridge.sol</strong> — mirrored L1↔L2 channel construction (cross-chain movement).</li>
+<li><strong>Watchtower</strong> — see §1.</li>
+</ul>
+
+<h2 id="railgun">4. Railgun / Armada terms</h2>
+<ul>
+<li><strong>Railgun</strong> — Ethereum privacy protocol: a shielded pool using zk-SNARK circuits (BN254 / Groth16). Immutable core.</li>
+<li><strong>Armada</strong> — pluggable <strong>asset-privacy infrastructure for USDC</strong> on Railgun; three tiers (shielded pool / adapters / apps+SDK), crowdfunded, ARM-token DAO + steward. <code>@ship_armada</code>, <code>armada.wtf</code>. In testnet.</li>
+<li><strong>Shielded pool</strong> — the shared privacy pool; privacy compounds with volume (one anonymity set).</li>
+<li><strong>Note</strong> — a shielded UTXO-like value commitment inside the pool.</li>
+<li><strong>Commitment / Nullifier</strong> — the note's on-chain hash / its spend-marker (prevents double-spend without revealing which note).</li>
+<li><strong>0zk address</strong> — a Railgun private receiving address.</li>
+<li><strong>Broadcaster / Relayer</strong> — see §1 ("Relay", Railgun).</li>
+<li><strong>Waku</strong> — decentralized p2p messaging protocol (libp2p-based) for broadcaster↔user comms; light-client friendly (filter / lightpush / store).</li>
+<li><strong>CCTP</strong> — Circle's Cross-Chain Transfer Protocol; Armada's cross-chain USDC adapter.</li>
+<li><strong>Aave v4 adapter</strong> — Armada's shielded-yield adapter (idle-balance yield).</li>
+<li><strong>MASP</strong> — Namada's Multi-Asset Shielded Pool primitive (a note primitive; <strong>not</strong> a state channel — see the Architecture Design-B note).</li>
+</ul>
+
+<h2 id="design">5. This project's design terms</h2>
+<ul>
+<li><strong>Tier (T0–T6)</strong> — the stack: <strong>T0</strong> Ethereum anchor · <strong>T1</strong> ingestion · <strong>T2</strong> watcher-party substrate · <strong>T3</strong> ordering · <strong>T4</strong> execution platform (ex_net) · <strong>T5</strong> adapters · <strong>T6</strong> client/apps. Software-architecture tiers — not blockchain layers.</li>
+<li><strong>Watcher party</strong> — a bonded federation of service providers serving one data need; here also the execution venue. A sequencing-and-attestation role, <strong>not</strong> a BFT chain.</li>
+<li><strong>Commit-reveal</strong> — fair ordering: <code>commit = H(order‖salt)</code> → seal epoch + inclusion receipts → post-seal beacon fixes positions → reveal → matcher runs. Blocks operator front-running without client-side ZK.</li>
+<li><strong>Post-seal randomness beacon</strong> — randomness revealed <em>after</em> the epoch is sealed, fixing order positions.</li>
+<li><strong>Epoch set-agreement</strong> — the watcher party agreeing <em>which</em> commits are in an epoch and their order (leader-propose + threshold-attest + censorship fraud proofs). The core net-new, highest-risk piece.</li>
+<li><strong>Data availability (DA)</strong> — publishing the revealed epoch so anyone can recompute/challenge.</li>
+<li><strong>Frequent batch auction (FBA)</strong> — discrete per-block clearing at a uniform price, allocation pro-rata + lottery; defeats latency/HFT front-running (Budish–Cramton–Shim 2015).</li>
+<li><strong>Curve order</strong> — an order specifying price-varying liquidity over a <strong>range</strong> (vs a point), flattened into fillable chunks. (Predates Uniswap v3 concentrated liquidity.)</li>
+<li><strong>Filler-filtered order</strong> — an order carrying an allowlist of who may fill it; empty ⇒ open (lit/CLOB), non-empty ⇒ private/RFQ.</li>
+<li><strong>CLOB / RFQ</strong> — Central Limit Order Book (public, lit) / Request-for-Quote (bilateral, private). The matcher unifies both in one order type.</li>
+<li><strong>LP vault</strong> — pooled market-making capital run by a keeper (lets passive LPs participate).</li>
+<li><strong>Threshold Schnorr / DKG / t-of-n</strong> — the federation signature (via chain-signatures); we pick <strong>t high</strong> (e.g. 4-of-7) so liveness failure = halt, not loss.</li>
+<li><strong>Design A / Design B</strong> — <strong>A</strong> (this project): boundary privacy via a Railgun-style shielded pool + adapter; the venue is a blind matcher but sees trade amounts/terms. <strong>B</strong> (deferred): ZK matching + "shielded ForceMove" to hide amounts/terms from the venue itself.</li>
+</ul>
+
+<h2 id="orgs">Orgs</h2>
+<ul>
+<li><strong>Vulcanize</strong> — the originating company (ex_net, matcher, plugeth, vulcanizedb lineage).</li>
+<li><strong>Laconic</strong> — the network/company; <strong>cerc-io</strong> is its code org; <strong>git.vdb.to</strong> its Gitea.</li>
+<li><strong>Deepstack</strong> (<code>deep-stack</code>) — authored go-nitro's swap protocol.</li>
+<li><strong>Sovereign Systems</strong> — the Laconic Matchmaking Services proposal (privacy-preserving compliance matching).</li>
+</ul>
+
+<hr/>
+<p class="small">Companion to the <a href="index.html">Overview</a>, <a href="architecture.html">Architecture</a>, <a href="build-plan.html">Build plan</a>, and <a href="execution-platform.html">Execution platform</a>. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

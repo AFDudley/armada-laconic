@@ -25,9 +25,6 @@ itself — without changing Armada's focus, taking custody, or touching the immu
   Railgun-circuit shielded pool.
 - **[ex_net_whitepaper.pdf](./ex_net_whitepaper.pdf)** — Vulcanize's 2017 design ancestor.
 
-> **Tiers**, not blockchain "layers." T0–T6 are software-architecture tiers,
-> deliberately distinct from Ethereum Layer-1/Layer-2 vocabulary.
-
 ## Code
 
 Gitea-only Laconic repos (`git.vdb.to`) are vendored under [`code/`](./code) as

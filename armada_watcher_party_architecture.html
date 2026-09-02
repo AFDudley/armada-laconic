@@ -80,7 +80,7 @@ The central requirement: <strong>every Armada service is delivered through watch
 
 <pre class="diagram">
         browser wallet / mobile app                 browser wallet / mobile app
-    ( MetaMask snap  +  in-browser Nitro node  +  libp2p relay client )
+    ( Laconic wallet (Android/iOS/web)  +  in-browser Nitro node  +  libp2p relay )
                  \                                              /
                   \___________  p2p (WebRTC/WS) _____________ /
                         |   NAT traversal via STUN/TURN  |         &lt;- only fixed infra #1
@@ -128,7 +128,7 @@ A <strong>watcher party</strong> is a bonded federation of service providers tha
 <tr><td>Membership / bonding</td><td>an on-L1 registry + bond; disputes and slashing settle on L1 (§3)</td></tr>
 </table>
 <p>
-The client side is the <strong>MobyMask stack</strong>, which already proves the mobile-first shape end-to-end: a MetaMask <strong>snap</strong> for app-specific signing, an <strong>in-browser Nitro node</strong> for payments, and a <strong>libp2p relay</strong> to a keeper. The watcher framework itself is <code>watcher-ts</code><sup><a href="#r-watcherts">[2]</a></sup>; the reference peer-to-peer app is <code>mobymask</code><sup><a href="#r-mobymask">[3]</a></sup>; the TypeScript Nitro port that runs a node <em>inside the browser</em> is <code>ts-nitro</code><sup><a href="#r-tsnitro">[4]</a></sup>.
+The client is the <strong>Laconic wallet</strong> — a React Native app that runs on <strong>Android and iOS</strong><sup><a href="#r-lacwallet">[21]</a></sup> (with a browser build<sup><a href="#r-lacwalletweb">[22]</a></sup>): it custodies keys and signs both Cosmos and EIP-155 requests over WalletConnect, and pairs with an <strong>in-browser / mobile Nitro node</strong> for payments and a <strong>libp2p relay</strong>. This is the mobile-first shape the <code>MobyMask</code> stack<sup><a href="#r-mobymask">[3]</a></sup> already proved end-to-end (app-specific signing + in-browser Nitro + p2p relay to a keeper). The watcher framework is <code>watcher-ts</code><sup><a href="#r-watcherts">[2]</a></sup>; the TypeScript Nitro port that runs a node <em>inside the browser</em> is <code>ts-nitro</code><sup><a href="#r-tsnitro">[4]</a></sup>. <em>The plan requires updates to the wallet</em> — notably returning the signer public key on <code>cosmos_signAmino</code> and wiring commit-reveal + settlement receipts.
 </p>
 <div class="note">
 Why "party," not "chain": the federation only needs to (a) agree on <em>which</em> commitments are in an epoch and (b) fix an order — a sequencing-and-attestation task, not replicated global execution. That is a far weaker (and cheaper) primitive than BFT consensus, and it is what lets the network live on phones.
@@ -224,7 +224,7 @@ Caveats: identity privacy is only as strong as the Railgun anonymity set and is 
 <tr><td>Metering</td><td>go-nitro vouchers/virtual<sup><a href="#r-vouchers">[8]</a></sup></td><td>pay-per-request; venue fees</td><td class="ok">built</td></tr>
 <tr><td>Threshold Schnorr (DSS)</td><td>cerc-io/chain-signatures<sup><a href="#r-ethdss">[13]</a></sup></td><td>federation receipts / certs / liquidity proofs</td><td class="part">lib + tests</td></tr>
 <tr><td>Watcher framework</td><td>cerc-io/watcher-ts<sup><a href="#r-watcherts">[2]</a></sup></td><td>federated cache / private sync</td><td class="ok">built</td></tr>
-<tr><td>Mobile-first client</td><td>cerc-io/mobymask<sup><a href="#r-mobymask">[3]</a></sup> + ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup></td><td>snap + in-browser Nitro + relay</td><td class="ok">built</td></tr>
+<tr><td>Mobile-first client</td><td>cerc-io/laconic-wallet<sup><a href="#r-lacwallet">[21]</a></sup> (Android/iOS) + laconic-wallet-web<sup><a href="#r-lacwalletweb">[22]</a></sup>; ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup>; mobymask<sup><a href="#r-mobymask">[3]</a></sup> (lineage)</td><td>keys + Cosmos/EIP-155 signing + in-browser Nitro + relay</td><td class="part">built; needs updates</td></tr>
 <tr><td>L1 state injection</td><td>plugeth<sup><a href="#r-plugeth">[16]</a></sup> / statediff<sup><a href="#r-statediff">[17]</a></sup> / ipld-eth-*<sup><a href="#r-ipldserver">[18]</a></sup></td><td>Railgun + adjudicator state → watchers</td><td class="ok">built</td></tr>
 <tr><td>Identity</td><td>ex_net + Laconic Matchmaker<sup><a href="#r-match">[15]</a></sup> + laconicd onboarding<sup><a href="#r-onboard">[14]</a></sup></td><td>selective proofs + compliant private matchmaking</td><td class="part">spec + precedent</td></tr>
 <tr><td>Shielded pool</td><td>Railgun<sup><a href="#r-railgun">[20]</a></sup></td><td>note-funded / note-settled vaults (boundary privacy)</td><td class="part">external + adapter</td></tr>
@@ -243,7 +243,7 @@ Caveats: identity privacy is only as strong as the Railgun anonymity set and is 
 <hr/>
 <h2 id="refs">References</h2>
 <ol class="refs">
-<li id="r-exnet"><strong>ex_net whitepaper</strong>, Vulcanize (© 2017). Internal Google Doc — <a href="https://docs.google.com/document/d/1sFY46OgPJBRdY4hPAQ2-Ha29YFchxJ5K-xvm7accJXA/">ex_net_whitepaper</a>. See "Address signing / Identity proofs", "Liquidity proofs", "Validator responsibilities".</li>
+<li id="r-exnet"><strong>ex_net whitepaper</strong>, Vulcanize (© 2017). <a href="./ex_net_whitepaper.pdf">ex_net_whitepaper.pdf</a> (included in this repo). See "Address signing / Identity proofs", "Liquidity proofs", "Validator responsibilities".</li>
 <li id="r-watcherts"><strong>watcher-ts</strong> — watcher framework. <a href="https://github.com/cerc-io/watcher-ts/blob/18ca4e1a08328770af8e10f15f2128a459c9c704/README.md">github.com/cerc-io/watcher-ts</a> @ <code>18ca4e1</code>.</li>
 <li id="r-mobymask"><strong>mobymask</strong> — reference p2p app (snap + relay). <a href="https://github.com/cerc-io/mobymask/blob/23291987766f863e366a344973670c57cd82d678/README.md">github.com/cerc-io/mobymask</a> @ <code>2329198</code>.</li>
 <li id="r-tsnitro"><strong>ts-nitro</strong> — in-browser Nitro node (TS port). <a href="https://github.com/cerc-io/ts-nitro/tree/884d616a9a026742ef1ce57233801a13d681375a">github.com/cerc-io/ts-nitro</a> @ <code>884d616</code>.</li>
@@ -263,6 +263,8 @@ Caveats: identity privacy is only as strong as the Railgun anonymity set and is 
 <li id="r-ipldserver"><strong>ipld-eth-server</strong> — serves indexed ETH IPLD. <a href="https://github.com/cerc-io/ipld-eth-server/blob/330bc3d7e2dd6acf4f7a1e744d39ea462ecb2323/README.md">github.com/cerc-io/ipld-eth-server</a> @ <code>330bc3d</code>.</li>
 <li id="r-snapshot"><strong>ipld-eth-state-snapshot</strong> — full state/storage snapshots. <a href="https://github.com/cerc-io/ipld-eth-state-snapshot/tree/9e483fc9f7dfa993e3d1e98a311cb4e45917cd51">github.com/cerc-io/ipld-eth-state-snapshot</a> @ <code>9e483fc</code>.</li>
 <li id="r-railgun"><strong>Railgun</strong> — shielded-pool contracts &amp; circuits. <a href="https://github.com/Railgun-Privacy/contract">github.com/Railgun-Privacy/contract</a>, <a href="https://github.com/Railgun-Privacy/circuits-v2">circuits-v2</a>.</li>
+<li id="r-lacwallet"><strong>laconic-wallet</strong> — React Native wallet for <strong>Android/iOS</strong> (Cosmos + EIP-155 signing over WalletConnect; ships an <code>android/</code> Gradle project). <a href="https://git.vdb.to/cerc-io/laconic-wallet/src/commit/bb5223afdab0d16822bb3c119b6ba2350dab921e/android">git.vdb.to · cerc-io/laconic-wallet (android/)</a> @ <code>bb5223a</code>.</li>
+<li id="r-lacwalletweb"><strong>laconic-wallet-web</strong> — browser build of the Laconic wallet. <a href="https://git.vdb.to/cerc-io/laconic-wallet-web/src/commit/2a4a478e32d0a677711ac41f93ff40f364851c3a">git.vdb.to · cerc-io/laconic-wallet-web</a> @ <code>2a4a478</code>.</li>
 </ol>
 
 <p class="small" style="margin-top:26px">Generated for the Armada dev team. Code links pinned to commits: go-nitro <code>435eb2b</code>, chain-signatures <code>9016a7c</code>, laconicd <code>d130608</code> (<code>roysc/nitro-integration</code>). Internal Google Docs require Laconic/Vulcanize access.</p>

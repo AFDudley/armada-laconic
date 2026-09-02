@@ -58,7 +58,7 @@
 <tr><td rowspan="5"><strong>T2</strong><br>substrate</td><td>Federation membership / bonding</td><td>on T0 registry</td><td class="new">net-new</td><td>design</td></tr>
 <tr><td>Threshold key DKG (signing)</td><td>cerc-io/chain-signatures<sup><a href="#r-ethdss">[13]</a></sup></td><td class="part">lib + tests; DKG/reshare/wire net-new</td><td>design</td></tr>
 <tr><td>Metering / payments</td><td>go-nitro vouchers<sup><a href="#r-vouchers">[8]</a></sup> / virtual<sup><a href="#r-vfund">[9]</a></sup></td><td class="ok">built</td><td>validated</td></tr>
-<tr><td>p2p relay + STUN/TURN</td><td>mobymask<sup><a href="#r-mobymask">[3]</a></sup> / ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup> relay</td><td class="ok">built + commodity ops</td><td>design</td></tr>
+<tr><td>p2p relay + STUN/TURN</td><td>mobymask<sup><a href="#r-mobymask">[3]</a></sup> / ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup> relay</td><td class="ok">built (browser); mobile transport → T6</td><td>design</td></tr>
 <tr><td>Private-sync serving (metered note stream)</td><td>watcher-ts<sup><a href="#r-watcherts">[2]</a></sup></td><td class="part">serves; private-note config net-new</td><td>design</td></tr>
 
 <tr><td rowspan="5"><strong>T3</strong><br>ordering</td><td>Commit-reveal mempool + post-seal beacon</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
@@ -75,9 +75,10 @@
 <tr><td>Yield adapter (native LP + route to Aave v4)</td><td>on T4</td><td class="new">net-new (thin)</td><td>design</td></tr>
 <tr><td>CCTP cross-chain USDC</td><td>Armada's</td><td class="ok">built</td><td>design</td></tr>
 
-<tr><td rowspan="3"><strong>T6</strong><br>client</td><td>Laconic wallet (bare-bones RN app)</td><td>laconic-wallet<sup><a href="#r-lacwallet">[21]</a></sup> / -web<sup><a href="#r-lacwalletweb">[22]</a></sup></td><td class="part">bare-bones; productize</td><td>validated</td></tr>
+<tr><td rowspan="4"><strong>T6</strong><br>client</td><td>Laconic wallet (bare-bones RN app)</td><td>laconic-wallet<sup><a href="#r-lacwallet">[21]</a></sup> / -web<sup><a href="#r-lacwalletweb">[22]</a></sup></td><td class="part">bare-bones; productize</td><td>validated</td></tr>
 <tr><td>In-browser / mobile Nitro node</td><td>ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup></td><td class="ok">built</td><td>design</td></tr>
 <tr><td>Armada-branded front-end + SDK wiring</td><td>grow from wallet + demo fragments</td><td class="new">net-new (build up)</td><td>design</td></tr>
+<tr><td>Mobile p2p transport (open decision)</td><td>WebView reuse · go-waku · js-libp2p</td><td class="part">decide (see T6)</td><td>validated</td></tr>
 
 <tr><td rowspan="2"><strong>×-cut</strong><br>identity</td><td>ex_net identity proofs (selective disclosure)</td><td>ex_net<sup><a href="#r-exnet">[1]</a></sup> + onboarding<sup><a href="#r-onboard">[14]</a></sup></td><td class="part">spec + precedent</td><td>design</td></tr>
 <tr><td>Laconic Matchmaker (compliance matching)</td><td>proposal<sup><a href="#r-match">[15]</a></sup> (FHE)</td><td class="part">external / design</td><td>design</td></tr>
@@ -108,6 +109,16 @@
 
 <h2 id="t6">T6 · Client / apps</h2>
 <p><strong>Reality check:</strong> the wallet is <strong>bare-bones</strong> and MobyMask<sup><a href="#r-mobymask">[3]</a></sup> / the swap demos are <strong>demo fragments, not user-facing products</strong> — a real starting point, not a finished front-end. <strong>Reusable:</strong> laconic-wallet<sup><a href="#r-lacwallet">[21]</a></sup> / -web<sup><a href="#r-lacwalletweb">[22]</a></sup>; in-browser Nitro node<sup><a href="#r-tsnitro">[4]</a></sup>. <strong>Net-new:</strong> grow the wallet into the Armada-branded front-end + wire the Armada SDK; wallet updates (return pubkey on <code>cosmos_signAmino</code>, Nitro + commit-reveal integration, Railgun boundary UX).</p>
+<div class="panel">
+<strong>Open decision — mobile p2p transport.</strong> A working <em>browser</em> libp2p stack already exists (MobyMask: <code>@cerc-io/peer</code> + in-browser Nitro + Noise + webrtc-star/circuit-relay + gossipsub), but the RN wallet runs <em>no</em> libp2p today (WalletConnect only). Three paths:
+<table>
+<tr><th>Option</th><th>What</th><th>Effort / risk</th><th>Best for</th></tr>
+<tr><td><strong>A. Reuse browser stack in an RN WebView</strong></td><td>keep libp2p; wrap the MobyMask stack; no Hermes port</td><td class="ok">lowest</td><td>foreground demo / MVP</td></tr>
+<tr><td><strong>B. go-waku (gomobile native)</strong></td><td>switch messaging to Waku; native module; bridge Nitro over Waku topics</td><td class="part">medium</td><td>production always-on / background</td></tr>
+<tr><td><strong>C. js-libp2p + Noise in Hermes</strong></td><td>run libp2p natively in React Native</td><td class="new">highest / unsupported</td><td>avoid</td></tr>
+</table>
+<p class="small"><strong>Verdict:</strong> "Waku is an easier port" is <em>denied</em> as a near-term generalization — reuse the existing browser stack (A). Waku (B) wins only for always-on / background messaging, where a WebView is undermined (iOS WKWebView JS suspension when backgrounded, battery, unreliable persistent WS/WebRTC). Caveats: <code>@waku/sdk</code> (Waku-in-JS) repackages the same RN libp2p-noise problem — only the native <code>go-waku</code> binding is a true RN win; and Waku replaces <em>messaging</em>, not Nitro's channel transport (still bridge Nitro over Waku content topics).</p>
+</div>
 
 <h2 id="backlog">Net-new backlog (roughly sequenced)</h2>
 <ol>
@@ -116,7 +127,7 @@
 <li><strong>Platform (T4):</strong> productionize matcher → LP / market-maker vault → receipt-or-slash + force-close/commit-reveal wiring → multi-asset outcomes.</li>
 <li><strong>Threshold (T2):</strong> DKG ceremony + resharing + integrate chain-signatures into signing paths.</li>
 <li><strong>Adapters (T5):</strong> swaps-on-matcher; yield (native LP + private route to Aave v4).</li>
-<li><strong>Client (T6):</strong> grow the bare-bones wallet into the Armada-branded front-end + wire the Armada SDK; wallet updates.</li>
+<li><strong>Client (T6):</strong> grow the bare-bones wallet into the Armada-branded front-end + wire the Armada SDK; wallet updates; <strong>decide mobile p2p transport</strong> (reuse browser stack in WebView vs go-waku native).</li>
 <li><strong>Ingestion (T1):</strong> Railgun/adjudicator watcher config + metered private note stream.</li>
 <li><strong>Identity (×-cut):</strong> selective-disclosure proofs; Matchmaker integration (if in scope).</li>
 </ol>

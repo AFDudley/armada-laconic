@@ -18,10 +18,14 @@ Armada builds the crypto core; Laconic provides the substrate around it and the 
 - **[build-plan.html](./build-plan.html)** — *Status & backlog.* What's built vs.
   partial vs. net-new per tier, with a per-component confidence mark and a
   sequenced net-new backlog.
-- **[execution-platform.html](./execution-platform.html)** — *ex_net.* The
-  frequent-batch-auction, curve-order matcher (T4) that powers the swaps and yield
-  adapters: lineage, the 2019–2020 matcher PoC, CLOB+RFQ in one order type, and
-  capital efficiency vs. AMMs.
+- **[execution-platform.html](./execution-platform.html)** — *ex_net (v2).* The
+  frequent-batch-auction, curve-order matcher — Armada's **v2** price-discovery upgrade,
+  not v1: lineage, the 2019–2020 matcher PoC, CLOB+RFQ in one order type, capital
+  efficiency vs. AMMs.
+- **[yield-clearing.html](./yield-clearing.html)** — *Yield & clearing (v1).* The money side:
+  posted-price venue, clearing over Nitro (vouchers → channel allocations → USDC), the
+  RelayAdapt "recipe" adapter, boundary-only amount privacy, and yield (shielded wstETH note
+  for ETH; LP-buffered Aave for USDC; taker/maker; saturation → dribble-or-become-LP).
 - **[mobile-privacy.html](./mobile-privacy.html)** — *Mobile end-to-end privacy.* Traces a
   mobile private swap through every privacy layer (device → network → transport → read →
   order → submit → settle → identity) with source-verified code references, plus an

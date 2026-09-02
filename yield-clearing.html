@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Yield &amp; clearing — Armada × Laconic</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="index.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="build-plan.html">Build plan</a>
+  <a href="execution-platform.html">Execution platform</a>
+  <a href="yield-clearing.html" class="active">Yield &amp; clearing</a>
+  <a href="mobile-privacy.html">Mobile privacy</a>
+  <a href="glossary.html">Glossary</a>
+  <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
+</nav>
+
+<h1>Yield &amp; clearing</h1>
+<p class="lede">The money side of the v1 venue — how value is priced, exchanged, cleared, and earns yield — kept <strong>non-custodial and private end-to-end</strong>, using Railgun for value privacy and Nitro for settlement. No service-provider marketplace; no custodial vault.</p>
+<p class="legend" style="margin-top:14px">
+  Maturity:
+  <span class="chip ok">built</span> reusable prod code ·
+  <span class="chip part">partial</span> exists, needs integration ·
+  <span class="chip new">net-new</span> must build
+</p>
+
+<div class="note">
+<strong>Scope.</strong> Everything here is <strong>v1</strong> — deliberately simple. Price <em>discovery</em> (an order book / matcher) is a separate <strong>v2</strong> feature (see <a href="execution-platform.html">Execution platform</a>); v1 uses a posted price. Design B (hiding trade amounts from the venue) is v3. See the <a href="build-plan.html">Build plan</a> for the full version split.
+</div>
+
+<h2 id="contents">Contents</h2>
+<div class="toc">
+  <a href="#pricing">1. Pricing — posted price (v1)</a>
+  <a href="#clearing">2. Clearing over Nitro</a>
+  <a href="#recipe">3. The "adapter" is a Railgun recipe</a>
+  <a href="#amounts">4. Amount privacy</a>
+  <a href="#yield">5. Yield — ETH vs USDC</a>
+  <a href="#maturity">6. What's built vs net-new</a>
+  <a href="#refs">References</a>
+</div>
+
+<h2 id="pricing">1. Pricing — posted price (v1)</h2>
+<p>
+v1 has <strong>no price discovery</strong>. Armada <strong>posts a price on both sides</strong> of a pair (bid and ask) and participants <strong>take it or leave it</strong>. If the price is wrong — no fills, or lopsided fills — Armada simply posts a new one. Very simple, very manual.
+</p>
+<ul>
+<li><strong>Who sets it:</strong> a single privileged <code>priceSetter</code> — one ETH L1 wallet to start, migratable to a <strong>governance</strong> address later (the same admin-key→governance path Armada already uses for its steward).</li>
+<li><strong>What the venue does:</strong> hold the current posted price, execute fills at it, and clear/settle over Nitro. No order book, no auction, no queue.</li>
+<li><strong>Why it's enough:</strong> a posted, take-it-or-leave-it price has <strong>nothing to front-run</strong> — which removes the entire fair-ordering problem (commit-reveal, sequencing, the epoch set-agreement) from v1. Those live in <a href="execution-platform.html">v2</a> with the matcher.</li>
+</ul>
+<div class="note"><strong>v2 upgrade path:</strong> when you want competitive quotes / multiple LPs setting prices instead of one admin quote, the ex_net matcher (frequent-batch-auction, curve orders, CLOB/RFQ) replaces the posted price with real price discovery. Not needed for Armada now.</div>
+
+<h2 id="clearing">2. Clearing over Nitro</h2>
+<p>
+The money side is <strong>clearing</strong>, not a marketplace: the running, multi-party accounting of who owes what, netted and settled non-custodially. It is entirely Nitro:
+</p>
+<ul>
+<li><strong>Meter</strong> — per-use <strong>vouchers</strong><sup><a href="#r-vouchers">[2]</a></sup> (signed IOUs).</li>
+<li><strong>Clear</strong> — each metered payment updates a co-signed <strong>channel allocation</strong> that splits value among <em>user / protocol / integrator</em> (the integrator revenue-share is just a split in the allocation — no fee vault, no negotiation).</li>
+<li><strong>Settle</strong> — a channel checkpoint/close nets those allocations to <strong>L1 in USDC</strong>, non-custodially (force-closable).</li>
+</ul>
+<p>Both trades and fees clear the same way. Integrator revenue-sharing — one of Armada's stated goals — is delivered as a clearing allocation, using shipped go-nitro code (<code>MultiAssetHolder</code> / <code>virtualfund</code> / <code>payments</code>).</p>
+
+<h2 id="recipe">3. The "adapter" is a Railgun recipe (not a vault, not DSS)</h2>
+<p>
+"Adapter" is overloaded (see <a href="glossary.html">glossary</a>). The value-moving adapter here is <strong>Railgun's RelayAdapt / Cookbook "recipe"</strong><sup><a href="#r-cookbook">[5]</a></sup> — an <strong>atomic</strong> <code>unshield → external call → reshield</code> in one transaction. It is:
+</p>
+<ul>
+<li><strong>Not DSS.</strong> The watcher-party threshold signature (<code>chain-signatures</code>) only <em>attests</em> (receipts/certs); it never holds or moves funds.</li>
+<li><strong>Not a custodial vault.</strong> The recipe reverts entirely if any step fails; the user holds a shielded note before and after. Custody never leaves the user.</li>
+<li><strong>Origin-private.</strong> A broadcaster submits it, so the on-chain origin is not the user's <code>0zk</code> address.</li>
+</ul>
+<p>This is what turns a shielded USDC note into a shielded aUSDC ("aave") note, or wraps a CCTP mint into the shield — all atomically, in the user's custody.</p>
+
+<h2 id="amounts">4. Amount privacy</h2>
+<p>
+Arbitrary-amount privacy is <strong>already solved inside the shield</strong>: Railgun's note commitments hide the amount and the zk-SNARK enforces value-conservation + range, so <strong>$50 and $5,000,000 are equally opaque</strong> for any shielded-to-shielded activity. No denomination buckets (that was Tornado's crutch for lacking amount-hiding commitments).
+</p>
+<p>The amount is only exposed at the <strong>transparent boundary</strong> — <code>shield</code>/<code>unshield</code>, the CCTP mint, an Aave deposit — because the counterparty must receive it in the clear. Mitigations there are <strong>aggregation, not buckets</strong>:</p>
+<ul>
+<li><strong>Stay shielded</strong> — keep value in the pool so crossings are rare.</li>
+<li><strong>Atomic batched aggregation</strong> — a keeper batches many users' boundary ops into one aggregate tx (CoinJoin-style), non-custodially (atomic), so individual amounts vanish into the aggregate.</li>
+<li><strong>Decorrelate</strong> entry from exit (amount + timing).</li>
+</ul>
+<div class="note"><strong>The irreducible exception:</strong> a large <em>lone</em> public crossing (a $5M shield or a $5M Aave supply) stands out — no scheme hides one $5M public event in a crowd of $50s. But that's a <em>one-time entry</em> data point: once inside, <strong>exits, yield, and transfers are private</strong>, provided exits are decorrelated and use common/aggregated sizes. Entry can be clear; everything after is private.</div>
+
+<h2 id="yield">5. Yield — ETH vs USDC</h2>
+<p>The two assets have very different yield shapes, because ETH carries yield intrinsically and USDC does not.</p>
+
+<h3>ETH — trivial: a shielded wstETH note</h3>
+<p>
+<strong>wstETH</strong> (and <strong>weETH</strong>) are <strong>non-rebasing</strong> LSTs: fixed balance, value accrues via a rising exchange rate vs ETH. Two consequences:
+</p>
+<ul>
+<li><strong>Non-rebasing ⇒ a clean shielded note</strong> — the note's value tracks by price, not by a changing balance (the rebasing gotcha that afflicts aUSDC/aWETH disappears).</li>
+<li><strong>Yield with no Aave, no LP, no boundary tx</strong> — a shielded wstETH note <em>earns staking yield just by being held</em>. The entire LP/aggregation/saturation machinery below is <strong>not needed</strong> for base ETH yield.</li>
+</ul>
+<p class="small">Optional higher yield: Aave <strong>E-Mode looping</strong> (supply wstETH, borrow WETH, re-supply) for leveraged staking yield — opt-in, with liquidation + LST risk (accepted as standard DeFi risk).</p>
+
+<h3>USDC — needs an LP: buffered, batched Aave</h3>
+<p>
+USDC has no intrinsic yield, so USDC yield requires an external protocol (Aave) — and doing that privately needs an <strong>LP as a liquidity buffer</strong>, not a per-user public Aave deposit:
+</p>
+<ul>
+<li><strong>Taker (private):</strong> the user swaps a shielded <strong>USDC note ↔ the LP's shielded aUSDC note</strong>, atomically, at the posted price. The user never touches Aave, so their amount/timing never appear on-chain. Capacity-bounded by LP depth.</li>
+<li><strong>LP / maker (compensated):</strong> the LP holds inventory (shielded notes backed by a public Aave position) and <strong>rebalances to/from Aave in aggregate, on its own decorrelated schedule</strong> — one batched public tx, tied to no user. The LP earns the spread; its aggregate position is public by the nature of market-making.</li>
+<li><strong>Non-custodial both sides</strong> — swaps are atomic; the LP trades <em>its own</em> inventory and never holds a taker's funds.</li>
+</ul>
+<h4>Saturation → never a forced privacy loss</h4>
+<p>If a deposit exceeds LP inventory, the taker does <strong>not</strong> get pushed to a public Aave tx. Instead they keep their <strong>shielded USDC</strong> and either:</p>
+<ul>
+<li><strong>Dribble in</strong> — swap incrementally as LP capacity replenishes (just get the yield note later; nothing leaks), or</li>
+<li><strong>Become an LP</strong> — provide the liquidity themselves, earning yield + spread. Their large entry was already public, so being a maker adds no new exposure — and it <strong>deepens the pool</strong>, which fixes the LP cold-start (saturation is the recruitment signal). This is the compounding flywheel Armada already describes.</li>
+</ul>
+<h4>Two timing clocks</h4>
+<ul>
+<li><strong>Aggregation window</strong> (privacy knob) — batching needs an epoch to gather enough swaps and decorrelate the LP's public rebalance; bigger window = larger crowd = more latency.</li>
+<li><strong>LP build-up</strong> (cold-start) — privacy needs LP depth; depth takes time + capital and must be accumulated without the LP's own positions being trivially linkable. Thin early LP = low capacity + weak privacy; improves as it grows (and as saturating whales convert to LPs).</li>
+</ul>
+
+<h2 id="maturity">6. What's built vs net-new</h2>
+<table>
+<tr><th>Piece</th><th>Code</th><th>Maturity</th></tr>
+<tr><td>Clearing (meter + settle)</td><td>go-nitro vouchers / virtualfund / MultiAssetHolder<sup><a href="#r-vouchers">[2]</a></sup></td><td class="ok">built</td></tr>
+<tr><td>Fee-split allocation (user/protocol/integrator)</td><td>on go-nitro channel state</td><td class="new">net-new</td></tr>
+<tr><td>Posted-price venue (priceSetter → governance)</td><td>small contract + poster</td><td class="new">net-new (small)</td></tr>
+<tr><td>Adapter = RelayAdapt recipe</td><td>Railgun Cookbook<sup><a href="#r-cookbook">[5]</a></sup></td><td class="part">Railgun built; our recipes net-new</td></tr>
+<tr><td>ETH yield = shielded wstETH note</td><td>Railgun multi-asset (holds wstETH<sup><a href="#r-wsteth">[6]</a></sup>)</td><td class="part">pool built; note config integration</td></tr>
+<tr><td>USDC yield = LP-buffered Aave</td><td>Railgun recipe + Aave<sup><a href="#r-aave">[7]</a></sup> + LP inventory</td><td class="new">net-new (LP + batched rebalance)</td></tr>
+<tr><td>Optional levered yield (looping)</td><td>Aave E-Mode<sup><a href="#r-aave">[7]</a></sup></td><td class="new">net-new + external (Aave v4 not live)</td></tr>
+</table>
+<p class="small">No new cryptography for any of this — it is Railgun (value privacy) + Nitro (clearing/settlement) + a small posted-price contract + LP operations. Price discovery, fair-ordering, and ZK matching are explicitly out of v1.</p>
+
+<hr/>
+<h2 id="refs">References</h2>
+<ol class="refs">
+<li id="r-exnet"><strong>ex_net whitepaper</strong>, Vulcanize (© 2017). <a href="ex_net_whitepaper.pdf">ex_net_whitepaper.pdf</a>.</li>
+<li id="r-vouchers"><strong>go-nitro</strong> — clearing/settlement: <a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/payments/vouchers.go">payments/vouchers.go</a>, <code>protocols/virtualfund</code>, <code>MultiAssetHolder.sol</code>, @ <code>435eb2b</code>.</li>
+<li id="r-forcemove"><strong>ForceMove.sol</strong> — non-custodial force-close. <a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/packages/nitro-protocol/contracts/ForceMove.sol">go-nitro · ForceMove.sol</a>.</li>
+<li id="r-railgun"><strong>Railgun</strong> — shielded pool (BN254; arbitrary amounts hidden in-circuit). <a href="https://github.com/Railgun-Privacy/contract">contract</a>, <a href="https://github.com/Railgun-Privacy/circuits-v2">circuits-v2</a>.</li>
+<li id="r-cookbook"><strong>Railgun Cookbook / RelayAdapt</strong> — atomic <code>unshield → cross-contract call → reshield</code> recipes (Aave deposit, swaps, combos). <a href="https://github.com/Railgun-Community/cookbook">github.com/Railgun-Community/cookbook</a>.</li>
+<li id="r-wsteth"><strong>wstETH / weETH</strong> — non-rebasing LSTs (value via rising exchange rate). <a href="https://docs.lido.fi/contracts/wsteth/">Lido wstETH</a>.</li>
+<li id="r-aave"><strong>Aave v3</strong> — WETH lending (aWETH) + wstETH/weETH supply &amp; E-Mode looping for leveraged staking yield. <a href="https://aave.com/blog/lido-aave-case-study">Aave · Lido case study</a>. (v4 not yet live.)</li>
+</ol>
+<p class="small" style="margin-top:26px">Companion to <a href="architecture.html">Architecture</a>, the <a href="build-plan.html">Build plan</a> (v1/v2/v3), and <a href="mobile-privacy.html">Mobile privacy</a>.</p>
+
+</main>
+</body>
+</html>

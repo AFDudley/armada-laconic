@@ -13,6 +13,7 @@
   <a href="architecture.html">Architecture</a>
   <a href="build-plan.html">Build plan</a>
   <a href="execution-platform.html">Execution platform</a>
+  <a href="yield-clearing.html">Yield &amp; clearing</a>
   <a href="mobile-privacy.html">Mobile privacy</a>
   <a href="glossary.html" class="active">Glossary</a>
   <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
@@ -140,9 +141,11 @@
 <li><strong>0zk address</strong> — a Railgun private receiving address.</li>
 <li><strong>Broadcaster / Relayer</strong> — see §1 ("Relay", Railgun).</li>
 <li><strong>Waku</strong> — decentralized p2p messaging protocol (libp2p-based) for broadcaster↔user comms; light-client friendly (filter / lightpush / store).</li>
-<li><strong>CCTP</strong> — Circle's Cross-Chain Transfer Protocol; Armada's cross-chain USDC adapter.</li>
-<li><strong>Aave v4 adapter</strong> — Armada's shielded-yield adapter (idle-balance yield).</li>
+<li><strong>CCTP</strong> — Circle's Cross-Chain Transfer Protocol (burn-and-mint native USDC); Armada's cross-chain adapter, used as <em>mint-and-shield</em>.</li>
+<li><strong>Aave-yield adapter</strong> — USDC shielded yield via an <strong>LP-buffered</strong>, batched Aave rail (no per-user public deposit); ETH yield instead uses a shielded wstETH note. Armada's adapter tier.</li>
 <li><strong>MASP</strong> — Namada's Multi-Asset Shielded Pool primitive (a note primitive; <strong>not</strong> a state channel — see the Architecture Design-B note).</li>
+<li><strong>RelayAdapt / recipe</strong> — Railgun's cross-contract module: an atomic <code>unshield → external call → reshield</code> (Cookbook "recipes", e.g. an Aave deposit). The value-moving "adapter" — <em>not</em> a custodial vault, <em>not</em> DSS.</li>
+<li><strong>wstETH / weETH</strong> — non-rebasing LSTs (value via a rising exchange rate). Held as a shielded note they earn ETH staking yield intrinsically — no Aave/LP needed.</li>
 </ul>
 
 <h2 id="design">5. This project's design terms</h2>
@@ -160,6 +163,9 @@
 <li><strong>LP vault</strong> — pooled market-making capital run by a keeper (lets passive LPs participate).</li>
 <li><strong>Threshold Schnorr / DKG / t-of-n</strong> — the federation signature (via chain-signatures); we pick <strong>t high</strong> (e.g. 4-of-7) so liveness failure = halt, not loss.</li>
 <li><strong>Design A / Design B</strong> — <strong>A</strong> (this project): boundary privacy via a Railgun-style shielded pool + adapter; the venue is a blind matcher but sees trade amounts/terms. <strong>B</strong> (deferred): ZK matching + "shielded ForceMove" to hide amounts/terms from the venue itself.</li>
+<li><strong>Posted-price venue (v1)</strong> — a single <code>priceSetter</code> (one L1 wallet → governance) posts bid/ask on both sides; take-it-or-leave-it; cleared over Nitro. No order book, no price discovery — nothing to front-run. Discovery is the v2 matcher.</li>
+<li><strong>Taker / maker (LP)</strong> — <strong>taker</strong>: swaps notes privately at the posted price, capacity-bounded, fully private. <strong>maker/LP</strong>: provides inventory, holds a public aggregate position, earns the spread — voluntary + compensated. Saturating takers are <em>offered</em> the maker role, never forced to a public deposit.</li>
+<li><strong>v1 / v2 / v3</strong> — scope split: <strong>v1</strong> = Armada support (posted price + clearing + private sync + mobile client + CCTP + boundary + base yield); <strong>v2</strong> = ex_net matcher (price discovery + fair-ordering); <strong>v3</strong> = Design B. See <a href="build-plan.html#versions">Build plan · versions</a>.</li>
 </ul>
 
 <h2 id="orgs">Orgs</h2>

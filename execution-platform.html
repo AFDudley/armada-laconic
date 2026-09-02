@@ -13,22 +13,23 @@
   <a href="architecture.html">Architecture</a>
   <a href="build-plan.html">Build plan</a>
   <a href="execution-platform.html" class="active">Execution platform</a>
+  <a href="yield-clearing.html">Yield &amp; clearing</a>
   <a href="mobile-privacy.html">Mobile privacy</a>
   <a href="glossary.html">Glossary</a>
   <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
 </nav>
 
 <h1>Execution platform (ex_net)</h1>
-<p class="lede">Tier T4 — the private execution/settlement platform beneath Armada's Adapters tier. A frequent-batch-auction, curve-order matcher that unifies CLOB + RFQ, is capital-efficient, non-custodial, and powers the Swaps and yield adapters as applications on top.</p>
+<p class="lede">A <strong>v2</strong> feature — price <em>discovery</em> and market-making. A frequent-batch-auction, curve-order matcher that unifies CLOB + RFQ, capital-efficient and non-custodial. <strong>Not in Armada's v1 scope:</strong> v1 executes at a <a href="yield-clearing.html">posted price</a>; this matcher is the later upgrade that replaces the posted price with real price discovery.</p>
 <p style="margin-top:14px">
-  <span class="tag">tier: T4</span>
+  <span class="tag">scope: v2 (post-v1 upgrade)</span>
   <span class="tag">validated in depth</span>
   <span class="tag">non-custodial</span>
   <span class="tag">powers swaps + yield</span>
 </p>
 
 <div class="note">
-This is the one tier read in depth this cycle (code + provenance), so it is the best-grounded part of the scope — but it is deliberately <em>subordinate</em>: the platform that yield and swaps run on, not a new product. See <a href="architecture.html#t4">Architecture · T4</a> for where it sits and <a href="build-plan.html#t4">Build plan · T4</a> for what's built vs. net-new.
+This is the price-discovery upgrade, deliberately <strong>out of Armada's v1</strong> (v1 = posted price + clearing; see <a href="yield-clearing.html">Yield &amp; clearing</a>). It is kept here because the code is the best-grounded part of the scope — the 2019–2020 <code>matcher</code> PoC read in depth this cycle. See <a href="architecture.html#t4">Architecture · T4</a> and <a href="build-plan.html#versions">Build plan · versions</a>.
 </div>
 
 <h2>Contents</h2>

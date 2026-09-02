@@ -13,6 +13,7 @@
   <a href="architecture.html">Architecture</a>
   <a href="build-plan.html">Build plan</a>
   <a href="execution-platform.html">Execution platform</a>
+  <a href="yield-clearing.html">Yield &amp; clearing</a>
   <a href="mobile-privacy.html">Mobile privacy</a>
   <a href="glossary.html">Glossary</a>
   <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
@@ -47,18 +48,18 @@ Armada is pluggable asset-privacy infrastructure for USDC: a shielded pool (Rail
   </div>
   <div class="card">
     <h3>2 · More yield</h3>
-    <p class="big">A private execution/settlement <strong>platform</strong> that sits beneath Armada's Adapters tier and powers the yield &amp; swap adapters.</p>
+    <p class="big">Yield plus a simple private exchange, cleared non-custodially over Nitro — a posted price in v1, market-making later.</p>
     <ul>
-      <li><strong>Native yield</strong> — LP spread + swap/routing fees earned in the venue, an additional yield source alongside Aave&nbsp;v4.</li>
-      <li><strong>Private rail</strong> — non-custodial movement of idle shielded balances into external yield (Aave&nbsp;v4) and back, with metering, accounting, and settlement.</li>
-      <li>Engine: the <a href="execution-platform.html">ex_net → matcher</a> — a frequent-batch-auction, curve-order matcher that unifies CLOB + RFQ, capital-efficient, non-custodial.</li>
+      <li><strong>ETH yield</strong> — a shielded <strong>wstETH note</strong>: intrinsic, non-rebasing staking yield; no Aave or LP needed.</li>
+      <li><strong>USDC yield</strong> — an <strong>LP-buffered</strong>, batched Aave rail (non-custodial), plus posted-price spread + clearing fees.</li>
+      <li>Engine now: <strong>posted price + clearing</strong> (<a href="yield-clearing.html">Yield &amp; clearing</a>); the <a href="execution-platform.html">ex_net matcher</a> is the v2 price-discovery upgrade.</li>
     </ul>
   </div>
 </div>
 
 <h2>How it plugs into Armada</h2>
 <p>
-ex_net is <strong>not</strong> a sibling adapter — it is the private execution/settlement <strong>platform beneath</strong> the Adapters tier. Armada's <em>Swaps</em> and <em>Aave-v4 yield</em> adapters become <strong>applications built on it</strong>; future governance-added adapters run on the same substrate. The shielded pool stays immutable and untouched; the platform operates at the adapter/execution tier, non-custodially.
+ex_net is <strong>not</strong> a sibling adapter — the venue is a private execution/settlement layer <strong>beneath</strong> the Adapters tier: in <strong>v1</strong> a posted-price venue + clearing over Nitro, upgradable to the <strong>v2</strong> ex_net matcher for price discovery. Armada's <em>Swaps</em> and <em>yield</em> adapters are <strong>applications</strong> on it; the shielded pool stays immutable and untouched; everything is non-custodial.
 </p>
 <pre class="diagram">
    ARMADA APPS / SDK            front-end · integrator apps · treasury/payment tools     (Armada)
@@ -67,8 +68,8 @@ ex_net is <strong>not</strong> a sibling adapter — it is the private execution
                                      \            /                 |
                                       \          /   applications   |
    ─────────────────────────────────── \ ────── / ─────────────────┼───────────────
-   EXECUTION / SETTLEMENT PLATFORM   ►  ex_net → matcher  +  watcher-party substrate  ◄  (Laconic)
-                                        (private match · LP/yield · Nitro settle · sync · metering)
+   EXECUTION / SETTLEMENT LAYER    ►  posted-price venue + clearing  +  watcher substrate  ◄  (Laconic)
+                                        (v1: post price · clear/settle · private sync · yield   —   matcher = v2)
    ─────────────────────────────────────────────────────────────────────────────────
    SHIELDED POOL                 Railgun ZK circuits · immutable · one anonymity set    (Armada — untouched)
 </pre>
@@ -84,13 +85,13 @@ ex_net is <strong>not</strong> a sibling adapter — it is the private execution
 <tr><th>Tier</th><th>What it does</th><th>Status</th></tr>
 <tr><td><strong>T6 · Client / apps</strong></td><td>bare-bones Laconic wallet + demo fragments → Armada-branded app; in-browser Nitro node; Armada SDK wiring</td><td class="part">partial</td></tr>
 <tr><td><strong>T5 · Adapters</strong> (Armada)</td><td>Swaps &amp; yield adapters on the platform; CCTP</td><td class="new">net-new (CCTP built)</td></tr>
-<tr><td><strong>T4 · Execution platform</strong> (ex_net)</td><td>matcher · channel-hub liquidity / LP vault · Nitro settlement + receipts</td><td class="part">partial</td></tr>
-<tr><td><strong>T3 · Ordering</strong></td><td>commit-reveal + beacon · epoch set-agreement · inclusion receipts · DA · watchtower</td><td class="new">net-new</td></tr>
+<tr><td><strong>T4 · Execution</strong> (venue)</td><td>v1 posted-price venue + clearing; <em>v2:</em> ex_net matcher · LP vault</td><td class="part">v1 small · v2 later</td></tr>
+<tr><td><strong>T3 · Ordering</strong> (v2)</td><td>commit-reveal + beacon · epoch set-agreement · DA · watchtower — only needed with the matcher</td><td class="new">v2</td></tr>
 <tr><td><strong>T2 · Watcher-party substrate</strong></td><td>federation + bond · threshold DKG signing · metering · relay · private-sync serving</td><td class="part">partial</td></tr>
 <tr><td><strong>T1 · Ingestion</strong></td><td>plugeth/IPLD → private watcher over pool + adjudicator events</td><td class="part">partial</td></tr>
 <tr><td><strong>T0 · Ethereum anchor</strong></td><td>Railgun pool + Nitro adjudicator (built) · registry/bond · cert verifier · Nitro↔Railgun adapter</td><td class="new">net-new contracts</td></tr>
 </table>
-<p class="small">Bottom line: T0–T2 is mostly built/integration (assembling existing cerc / Nitro / Railgun infra). The genuine new build is <strong>T3 ordering + T4 platform + the T0 contracts</strong>. Full detail on the <a href="build-plan.html">Build plan</a>.</p>
+<p class="small">Bottom line: <strong>v1</strong> is mostly integration of shipped infra + a small posted-price contract + the Design&nbsp;A boundary — the heavy <strong>T3 ordering + T4 matcher move to v2</strong>. Full split on the <a href="build-plan.html#versions">Build plan</a>.</p>
 
 <h2>Honest scope notes</h2>
 <ul>

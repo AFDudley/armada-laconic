@@ -13,6 +13,7 @@
   <a href="architecture.html">Architecture</a>
   <a href="build-plan.html" class="active">Build plan</a>
   <a href="execution-platform.html">Execution platform</a>
+  <a href="yield-clearing.html">Yield &amp; clearing</a>
   <a href="mobile-privacy.html">Mobile privacy</a>
   <a href="glossary.html">Glossary</a>
   <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
@@ -29,8 +30,19 @@
 <strong>Confidence key.</strong> <span class="kbd">validated</span> = we read the code / grounded it this cycle · <span class="kbd">design</span> = specified, not yet code-reviewed in depth. Only the execution platform (T4, ex_net → matcher) is <span class="kbd">validated</span> so far; everything else is <span class="kbd">design</span>-level and should be read that way.
 </div>
 
+<h2 id="versions">Version scope (epics)</h2>
+<p>The work splits into three clearly different scopes. <strong>v1 is what Armada needs now</strong>; the ex_net matcher and everything it implies is a separate <strong>v2</strong> feature; hiding amounts from the venue is <strong>v3</strong>.</p>
+<table>
+<tr><th>Version</th><th>Scope</th><th>Epics / tiers</th></tr>
+<tr><td><strong>v1 — Armada support</strong></td><td>private, mobile-first USDC rails + a posted-price venue + clearing + yield</td><td>E1 private sync (T1/T2) · E2 clearing over Nitro · E3 posted-price venue · E4 mobile client (T6) · E5 private transport · E6 CCTP private rail (T5) · E7 Design&nbsp;A boundary (T0) · E8 thin identity · base yield (wstETH note / LP-buffered Aave)</td></tr>
+<tr><td><strong>v2 — ex_net / matcher</strong></td><td>price <em>discovery</em> + market-making</td><td>FBA / curve / CLOB-RFQ matcher + LP / market-maker vault + native LP yield (T4) · the whole fair-ordering stack: commit-reveal + post-seal beacon + sequencing certs + DA + <strong>epoch set-agreement</strong> + watchtower (T3)</td></tr>
+<tr><td><strong>v3 — Design B</strong></td><td>hide trade amounts/terms from the venue itself</td><td>ZK matching + shielded ForceMove (deferred / research)</td></tr>
+</table>
+<div class="note"><strong>Why the split de-risks v1:</strong> a posted-price, take-it-or-leave-it venue has nothing to front-run, so v1 needs <em>neither</em> commit-reveal ordering <em>nor</em> the epoch set-agreement — the two highest-risk, research-grade items. They move to v2 with the matcher. v1 collapses to integration of shipped components + a small posted-price contract + the Design&nbsp;A boundary adapter — no new consensus/ordering protocol, no ZK-circuit research. The v1 money side is detailed in <a href="yield-clearing.html">Yield &amp; clearing</a>.</div>
+
 <h2>Contents</h2>
 <div class="toc">
+  <a href="#versions">Version scope (v1/v2/v3)</a>
   <a href="#summary">Status summary (all tiers)</a>
   <a href="#t0">T0 · Ethereum anchor</a>
   <a href="#t1">T1 · Ingestion</a>

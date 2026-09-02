@@ -88,7 +88,7 @@ ex_net is <strong>not</strong> a sibling adapter — the venue is a private exec
 <tr><td><strong>T4 · Execution</strong> (venue)</td><td>v1 posted-price venue + clearing; <em>v2:</em> ex_net matcher · LP vault</td><td class="part">v1 small · v2 later</td></tr>
 <tr><td><strong>T3 · Ordering</strong> (v2)</td><td>commit-reveal + beacon · epoch set-agreement · DA · watchtower — only needed with the matcher</td><td class="new">v2</td></tr>
 <tr><td><strong>T2 · Watcher-party substrate</strong></td><td>federation + bond · threshold DKG signing · metering · relay · private-sync serving</td><td class="part">partial</td></tr>
-<tr><td><strong>T1 · Ingestion</strong></td><td>plugeth/IPLD → private watcher over pool + adjudicator events</td><td class="part">partial</td></tr>
+<tr><td><strong>T1 · Ingestion</strong></td><td>nimbus-eth1 state-diff emitter → IPLD → private watcher over pool + adjudicator events</td><td class="part">partial</td></tr>
 <tr><td><strong>T0 · Ethereum anchor</strong></td><td>Railgun pool + Nitro adjudicator (built) · registry/bond · cert verifier · Nitro↔Railgun adapter</td><td class="new">net-new contracts</td></tr>
 </table>
 <p class="small">Bottom line: <strong>v1</strong> is mostly integration of shipped infra + a small posted-price contract + the Design&nbsp;A boundary — the heavy <strong>T3 ordering + T4 matcher move to v2</strong>. Full split on the <a href="build-plan.html#versions">Build plan</a>.</p>

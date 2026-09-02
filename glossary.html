@@ -45,7 +45,7 @@
 <h3>"Watcher" vs "Watchtower" vs "Keeper"</h3>
 <table>
 <tr><th>Term</th><th>What it does</th></tr>
-<tr><td><strong>Watcher</strong> (Laconic)</td><td>proof-carrying, metered <strong>state indexer</strong>: ingests chain state (plugeth/statediff → IPLD) and serves verifiable query results / note-streams. Read-and-serve.</td></tr>
+<tr><td><strong>Watcher</strong> (Laconic)</td><td>proof-carrying, metered <strong>state indexer</strong>: ingests chain state (nimbus-eth1 state-diff emitter → IPLD) and serves verifiable query results / note-streams. Read-and-serve.</td></tr>
 <tr><td><strong>Watchtower</strong> (state channel)</td><td>watches L1 for a <strong>stale-state challenge</strong> and <strong>responds with your latest signed state</strong> (<code>checkpoint</code>/<code>respond</code>) so an offline user isn't defrauded. = a watcher (read) <strong>+ a bonded responder (write)</strong>.</td></tr>
 <tr><td><strong>Keeper</strong></td><td>the node that <strong>submits transactions on-chain on the user's behalf</strong> (MobyMask lineage). The Laconic analog of a Railgun <strong>Broadcaster</strong>.</td></tr>
 </table>
@@ -107,7 +107,7 @@
 <tr><td><strong>ts-nitro</strong></td><td>TypeScript port of Nitro running a state-channel node <strong>in-browser / on mobile</strong>. GitHub.</td></tr>
 <tr><td><strong>go-nitro</strong></td><td>cerc-io fork of the (statechannels) <strong>Nitro</strong> Go impl: adjudicator, ForceMove, vouchers, virtual channels, swap protocol, Bridge. Live on Ethereum.</td></tr>
 <tr><td><strong>chain-signatures</strong></td><td>library: <code>ethschnorr</code> (Ethereum-compatible Schnorr) + <code>ethdss</code> (Distributed Schnorr, Stinson–Strobl <em>(t,n)</em>) on a <code>kyber</code> DKG. Gitea.</td></tr>
-<tr><td><strong>plugeth</strong> / plugeth-statediff</td><td>geth plugin system + state-diff extraction (no geth fork). GitHub.</td></tr>
+<tr><td><strong>nimbus-eth1</strong></td><td>Nim Ethereum L1 execution client with stateless/witness execution + the Aristo state DB — emits canonical, proof-carrying MPT-node state diffs. GitHub.</td></tr>
 <tr><td><strong>ipld-eth-server</strong> / ipld-eth-state-snapshot</td><td>index and serve Ethereum state as IPLD. GitHub.</td></tr>
 <tr><td><strong>laconic-so</strong></td><td>"stack orchestrator": deploys stacks (ops tool, not a library).</td></tr>
 <tr><td><strong>Clearing (Nitro)</strong></td><td>Netting + non-custodial settlement of trades and fees over Nitro channels: per-request vouchers meter, co-signed channel allocations split fees (user / protocol / integrator), an L1 close settles in USDC. This is what the watcher party provides on the money side — <em>not</em> a service-provider marketplace or fee vault.</td></tr>
@@ -170,7 +170,7 @@
 
 <h2 id="orgs">Orgs</h2>
 <ul>
-<li><strong>Vulcanize</strong> — the originating company (ex_net, matcher, plugeth, vulcanizedb lineage).</li>
+<li><strong>Vulcanize</strong> — the originating company (ex_net, matcher, vulcanizedb lineage).</li>
 <li><strong>Laconic</strong> — the network/company; <strong>cerc-io</strong> is its code org; <strong>git.vdb.to</strong> its Gitea.</li>
 <li><strong>Deepstack</strong> (<code>deep-stack</code>) — authored go-nitro's swap protocol.</li>
 </ul>

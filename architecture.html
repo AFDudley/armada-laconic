@@ -35,7 +35,7 @@ Tiers are named in the software-architecture sense (an n-tier stack) — deliber
 <div class="toc">
   <a href="#shape">The shape of the network (mobile-first)</a>
   <a href="#t0">T0 · Ethereum anchor — settlement &amp; shielded custody</a>
-  <a href="#t1">T1 · Ingestion (plugeth → watchers)</a>
+  <a href="#t1">T1 · Ingestion (nimbus-eth1 → watchers)</a>
   <a href="#t2">T2 · Watcher-party substrate</a>
   <a href="#t3">T3 · Ordering &amp; fault model</a>
   <a href="#t4">T4 · Execution / settlement platform (ex_net)</a>
@@ -48,7 +48,7 @@ Tiers are named in the software-architecture sense (an n-tier stack) — deliber
 
 <h2 id="shape">The shape of the network — mobile-first</h2>
 <p>
-The central requirement: <strong>every service is delivered through watcher parties</strong> so the overwhelming majority of the network is <strong>browser wallets and mobile apps talking peer-to-peer</strong>. The only fixed infrastructure is (a) a handful of <strong>STUN/TURN</strong> servers for NAT traversal and (b) a small number of <strong>plugeth-based Ethereum state injectors</strong> that feed L1 state into the parties. Everything else — sync, metering, matching, settlement, threshold attestation — is run by the bonded service-provider federations and the clients.
+The central requirement: <strong>every service is delivered through watcher parties</strong> so the overwhelming majority of the network is <strong>browser wallets and mobile apps talking peer-to-peer</strong>. The only fixed infrastructure is (a) a handful of <strong>STUN/TURN</strong> servers for NAT traversal and (b) a small number of <strong>nimbus-eth1 state-diff emitters</strong> that feed L1 state into the parties. Everything else — sync, metering, matching, settlement, threshold attestation — is run by the bonded service-provider federations and the clients.
 </p>
 <pre class="diagram">
         browser wallet / mobile app                 browser wallet / mobile app
@@ -65,8 +65,8 @@ The central requirement: <strong>every service is delivered through watcher part
                         ^                                ^
                         |  proof-carrying L1 state       |               T1
             ┌───────────────────────────┐                |
-            │  plugeth state injectors  │  &lt;- only fixed infra #2
-            │  (statediff → IPLD)       │
+            │  nimbus-eth1 emitters     │  &lt;- only fixed infra #2
+            │  (state diffs → IPLD)     │
             └───────────────────────────┘
                         ^
                         |
@@ -76,7 +76,7 @@ The central requirement: <strong>every service is delivered through watcher part
             └─────────────────────────────────────────────────────┘
 </pre>
 <p class="small">
-Clients hold their own keys and funds (channels are L1-collateralized); a watcher party never takes custody and can be exited unilaterally. The two boxes of fixed infra are deliberately small — STUN/TURN carry no trust, and plugeth injectors only publish verifiable state.
+Clients hold their own keys and funds (channels are L1-collateralized); a watcher party never takes custody and can be exited unilaterally. The two boxes of fixed infra are deliberately small — STUN/TURN carry no trust, and the nimbus-eth1 emitters only publish verifiable state.
 </p>
 
 <h2 id="t0">T0 · Ethereum anchor — settlement &amp; shielded custody</h2>
@@ -92,12 +92,12 @@ Settlement is non-custodial Nitro state channels on Ethereum L1. Funds are locke
 Cross-chain / L1↔L2 movement reuses the <code>Bridge</code> mirrored-channel construction<sup><a href="#r-bridge">[10]</a></sup>. <strong>What's built here:</strong> the Railgun shielded pool (Armada's, immutable) and the full Nitro adjudicator/ForceMove/MultiAssetHolder<sup><a href="#r-forcemove">[5]</a></sup>, live on Ethereum. <strong>What's net-new here:</strong> a venue/party <em>registry + bond</em> contract, an on-chain <em>sequencing-cert + fraud-proof verifier</em>, and the <em>Nitro↔Railgun boundary adapter</em> (see <a href="#privacy">Privacy</a>). Full status on the <a href="build-plan.html#t0">Build plan</a>.
 </p>
 
-<h2 id="t1">T1 · Ingestion (plugeth → watchers)</h2>
+<h2 id="t1">T1 · Ingestion (nimbus-eth1 → watchers)</h2>
 <p>
-The mechanism that gets L1 state into the watcher parties: Vulcanize's <strong>plugeth</strong><sup><a href="#r-plugeth">[16]</a></sup> + <strong>plugeth-statediff</strong><sup><a href="#r-statediff">[17]</a></sup>, which extract full Ethereum state diffs from a geth node without forking geth, and the IPLD services that index and serve it — <code>ipld-eth-server</code><sup><a href="#r-ipldserver">[18]</a></sup> and <code>ipld-eth-state-snapshot</code><sup><a href="#r-snapshot">[19]</a></sup>.
+The mechanism that gets L1 state into the watcher parties: a <strong>nimbus-eth1</strong><sup><a href="#r-nimbus">[16]</a></sup> state-diff emitter, whose stateless/witness + Aristo primitives<sup><a href="#r-nimbusstateless">[17]</a></sup> emit full, proof-carrying Ethereum state diffs (intermediate + leaf MPT trie nodes) from a bounded working set, indexed and served by the IPLD services — <code>ipld-eth-server</code><sup><a href="#r-ipldserver">[18]</a></sup> and <code>ipld-eth-state-snapshot</code><sup><a href="#r-snapshot">[19]</a></sup>.
 </p>
 <p>
-This is what makes private sync possible: a watcher party ingests the Railgun shielded-pool commitments/nullifiers and the Nitro adjudicator events via plugeth, then serves <strong>proof-carrying, identical-for-everyone</strong> note streams metered by Nitro. Clients scan those streams <strong>locally</strong>, so no RPC provider ever fingerprints a user against the pool — <em>the single property Armada's anonymity set depends on</em>. A few injectors serve the whole network; the phones and browsers do the rest. The generic <code>watcher-ts</code> framework<sup><a href="#r-watcherts">[2]</a></sup> exists; the Railgun/adjudicator-specific watcher config is the integration work.
+This is what makes private sync possible: a watcher party ingests the Railgun shielded-pool commitments/nullifiers and the Nitro adjudicator events via the nimbus-eth1 emitter, then serves <strong>proof-carrying, identical-for-everyone</strong> note streams metered by Nitro. Clients scan those streams <strong>locally</strong>, so no RPC provider ever fingerprints a user against the pool — <em>the single property Armada's anonymity set depends on</em>. A few emitters serve the whole network; the phones and browsers do the rest. The generic <code>watcher-ts</code> framework<sup><a href="#r-watcherts">[2]</a></sup> exists; the emitter module and the Railgun/adjudicator-specific watcher config are the build work.
 </p>
 
 <h2 id="t2">T2 · Watcher-party substrate</h2>
@@ -217,8 +217,8 @@ Caveats: identity privacy is only as strong as the Railgun anonymity set and is 
 <li id="r-ethdss"><strong>ethdss</strong> — Distributed Schnorr (Stinson–Strobl (t,n)). <a href="https://git.vdb.to/cerc-io/chain-signatures/src/commit/9016a7c4a7f046cac8f57b3335a1afcde346e75f/ethdss/ethdss.go#L55-L287">git.vdb.to · chain-signatures/ethdss</a>.</li>
 <li id="r-onboard"><strong>laconicd onboarding</strong> — <code>Participant</code> (<code>role</code>, <code>kyc_id</code>). <a href="https://git.vdb.to/cerc-io/laconicd/src/commit/d130608f672983cb65acfbddc89976747a417aac/proto/cerc/onboarding/v1/onboarding.proto#L18-L41">git.vdb.to · onboarding.proto</a>.</li>
 <li id="r-match"><strong>Laconic Matchmaking Services</strong> proposal, Nov 2022. Internal Google Doc — <a href="https://docs.google.com/document/d/1AkUfIT_fBDgErBUy2YFCCUsPwHhL0WQngVRgKSqjqi0/">Proposal</a>. Privacy-preserving, broker-dealer-compliant matching via encrypted set-intersection / range matching.</li>
-<li id="r-plugeth"><strong>plugeth</strong>. <a href="https://github.com/cerc-io/plugeth/tree/98f17553032d9a90d27eef7695046c7c5d0a3c39">github.com/cerc-io/plugeth</a> @ <code>98f1755</code>.</li>
-<li id="r-statediff"><strong>plugeth-statediff</strong>. <a href="https://github.com/cerc-io/plugeth-statediff/blob/9a18f199e13ec41cfaeea3d9e4bf0f7968d13e88/README.md">github.com/cerc-io/plugeth-statediff</a> @ <code>9a18f19</code>.</li>
+<li id="r-nimbus"><strong>nimbus-eth1</strong> — Nim Ethereum L1 execution client (stateless/witness execution + Aristo state DB). <a href="https://github.com/status-im/nimbus-eth1">github.com/status-im/nimbus-eth1</a>.</li>
+<li id="r-nimbusstateless"><strong>nimbus-eth1 stateless &amp; Aristo</strong> — witness generation/verification and canonical MPT-node proofs. <a href="https://github.com/status-im/nimbus-eth1/tree/master/execution_chain/stateless">execution_chain/stateless</a>, <a href="https://github.com/status-im/nimbus-eth1/tree/master/execution_chain/db/aristo">db/aristo</a>.</li>
 <li id="r-ipldserver"><strong>ipld-eth-server</strong>. <a href="https://github.com/cerc-io/ipld-eth-server/blob/330bc3d7e2dd6acf4f7a1e744d39ea462ecb2323/README.md">github.com/cerc-io/ipld-eth-server</a> @ <code>330bc3d</code>.</li>
 <li id="r-snapshot"><strong>ipld-eth-state-snapshot</strong>. <a href="https://github.com/cerc-io/ipld-eth-state-snapshot/tree/9e483fc9f7dfa993e3d1e98a311cb4e45917cd51">github.com/cerc-io/ipld-eth-state-snapshot</a> @ <code>9e483fc</code>.</li>
 <li id="r-railgun"><strong>Railgun</strong> — shielded-pool contracts &amp; circuits. <a href="https://github.com/Railgun-Privacy/contract">contract</a>, <a href="https://github.com/Railgun-Privacy/circuits-v2">circuits-v2</a>.</li>

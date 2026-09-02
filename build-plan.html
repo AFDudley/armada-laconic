@@ -64,7 +64,7 @@
 <tr><td rowspan="3"><strong>T0</strong></td><td>Railgun shielded pool</td><td>foundation</td><td>Railgun<sup><a href="#r-railgun">[20]</a></sup> (Armada's)</td><td class="ok">built · immutable</td><td>design</td></tr>
 <tr><td>Nitro settlement + disputes</td><td>E2</td><td>cerc-io/go-nitro<sup><a href="#r-forcemove">[5]</a></sup></td><td class="ok">live on ETH</td><td>validated</td></tr>
 <tr><td>Nitro↔Railgun boundary adapter</td><td>E7</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
-<tr><td rowspan="2"><strong>T1</strong></td><td>plugeth / statediff / IPLD</td><td>E1</td><td>plugeth<sup><a href="#r-plugeth">[16]</a></sup> · statediff<sup><a href="#r-statediff">[17]</a></sup> · ipld-eth-*<sup><a href="#r-ipldserver">[18]</a></sup></td><td class="ok">built</td><td>design</td></tr>
+<tr><td rowspan="2"><strong>T1</strong></td><td>nimbus-eth1 state-diff emitter → IPLD</td><td>E1</td><td>nimbus-eth1<sup><a href="#r-nimbus">[16]</a></sup> · stateless/Aristo<sup><a href="#r-nimbusstateless">[17]</a></sup> · ipld-eth-*<sup><a href="#r-ipldserver">[18]</a></sup></td><td class="new">net-new (build)</td><td>design</td></tr>
 <tr><td>Railgun + adjudicator watcher config</td><td>E1</td><td>watcher-ts<sup><a href="#r-watcherts">[2]</a></sup></td><td class="part">framework built; config net-new</td><td>design</td></tr>
 <tr><td rowspan="3"><strong>T2</strong></td><td>Metering / clearing</td><td>E2</td><td>go-nitro vouchers<sup><a href="#r-vouchers">[8]</a></sup> / virtual<sup><a href="#r-vfund">[9]</a></sup></td><td class="ok">built</td><td>validated</td></tr>
 <tr><td>p2p relay + STUN/TURN</td><td>E5</td><td>mobymask<sup><a href="#r-mobymask">[3]</a></sup> / ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup></td><td class="ok">built (browser); mobile → T6</td><td>design</td></tr>
@@ -111,7 +111,7 @@
 </ul>
 
 <h2 id="t1">T1 · Ingestion</h2>
-<p><strong>Built:</strong> plugeth<sup><a href="#r-plugeth">[16]</a></sup> + statediff<sup><a href="#r-statediff">[17]</a></sup> + ipld-eth-*<sup><a href="#r-ipldserver">[18]</a></sup>; the generic watcher-ts framework<sup><a href="#r-watcherts">[2]</a></sup>. <strong>Net-new / integration:</strong> a Railgun-pool + Nitro-adjudicator watcher config, and the metered private-note-stream serving on top of it. This tier is what protects the anonymity set at read-time.</p>
+<p><strong>Target:</strong> a <strong>nimbus-eth1</strong><sup><a href="#r-nimbus">[16]</a></sup> state-diff emitter — its stateless/witness + Aristo primitives<sup><a href="#r-nimbusstateless">[17]</a></sup> already produce canonical, proof-carrying MPT trie-node diffs — indexed and served as IPLD<sup><a href="#r-ipldserver">[18]</a></sup> and consumed by the generic watcher-ts framework<sup><a href="#r-watcherts">[2]</a></sup>. <strong>Net-new:</strong> the emitter module (server-side, plus a scoped mobile emitter that caches only the watched-contract state), and a Railgun-pool + Nitro-adjudicator watcher config with metered note-stream serving. This tier is what protects the anonymity set at read-time.</p>
 
 <h2 id="t2">T2 · Watcher-party substrate</h2>
 <p><strong>Built:</strong> Nitro metering (vouchers<sup><a href="#r-vouchers">[8]</a></sup> / virtual channels<sup><a href="#r-vfund">[9]</a></sup>); p2p relay (mobymask<sup><a href="#r-mobymask">[3]</a></sup> / ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup>); the Schnorr DSS library<sup><a href="#r-ethdss">[13]</a></sup>. <strong>Net-new:</strong> federation membership/bonding coordination; the <strong>DKG ceremony + resharing</strong> and wiring chain-signatures into the signing paths; STUN/TURN is commodity ops.</p>
@@ -146,7 +146,7 @@
 <li><strong>Threshold (T2):</strong> DKG ceremony + resharing + integrate chain-signatures into signing paths.</li>
 <li><strong>Adapters (T5):</strong> posted-price venue + Swaps at the posted price; yield (wstETH note for ETH; LP-buffered Aave for USDC).</li>
 <li><strong>Client (T6):</strong> grow the bare-bones wallet into the Armada-branded front-end + wire the SDK; build the <strong>go-nitro + go-waku gomobile native module</strong> + mopro prover (RN = shell only); WebView MVP as the interim.</li>
-<li><strong>Ingestion (T1):</strong> Railgun/adjudicator watcher config + metered private note stream.</li>
+<li><strong>Ingestion (T1):</strong> nimbus-eth1 state-diff emitter + Railgun/adjudicator watcher config + metered private note stream.</li>
 <li><strong>Identity (×-cut):</strong> selective-disclosure proofs; Matchmaker integration (if in scope).</li>
 </ol>
 <p class="small">One-line shape: T0–T2 is mostly built/integration; the genuine new build is <strong>T3 ordering + T4 platform + the T0 contracts</strong>. Deferred (Design B): ZK matching + shielded ForceMove to hide trade amounts from the venue itself; native BTC settlement beyond an HTLC leg.</p>
@@ -165,8 +165,8 @@
 <li id="r-ethdss"><strong>chain-signatures</strong> — ethschnorr + Distributed Schnorr (Stinson–Strobl (t,n)). <a href="https://git.vdb.to/cerc-io/chain-signatures/src/commit/9016a7c4a7f046cac8f57b3335a1afcde346e75f/ethdss/ethdss.go#L55-L287">git.vdb.to · chain-signatures/ethdss</a>.</li>
 <li id="r-onboard"><strong>laconicd onboarding</strong> — <code>Participant</code>. <a href="https://git.vdb.to/cerc-io/laconicd/src/commit/d130608f672983cb65acfbddc89976747a417aac/proto/cerc/onboarding/v1/onboarding.proto#L18-L41">git.vdb.to · onboarding.proto</a>.</li>
 <li id="r-match"><strong>Laconic Matchmaking Services</strong> proposal, Nov 2022. Internal Google Doc — <a href="https://docs.google.com/document/d/1AkUfIT_fBDgErBUy2YFCCUsPwHhL0WQngVRgKSqjqi0/">Proposal</a>.</li>
-<li id="r-plugeth"><strong>plugeth</strong>. <a href="https://github.com/cerc-io/plugeth/tree/98f17553032d9a90d27eef7695046c7c5d0a3c39">github.com/cerc-io/plugeth</a> @ <code>98f1755</code>.</li>
-<li id="r-statediff"><strong>plugeth-statediff</strong>. <a href="https://github.com/cerc-io/plugeth-statediff/blob/9a18f199e13ec41cfaeea3d9e4bf0f7968d13e88/README.md">github.com/cerc-io/plugeth-statediff</a> @ <code>9a18f19</code>.</li>
+<li id="r-nimbus"><strong>nimbus-eth1</strong> — Nim Ethereum L1 execution client (stateless/witness execution + Aristo state DB). <a href="https://github.com/status-im/nimbus-eth1">github.com/status-im/nimbus-eth1</a>.</li>
+<li id="r-nimbusstateless"><strong>nimbus-eth1 stateless &amp; Aristo</strong> — witness generation/verification and canonical MPT-node proofs. <a href="https://github.com/status-im/nimbus-eth1/tree/master/execution_chain/stateless">execution_chain/stateless</a>, <a href="https://github.com/status-im/nimbus-eth1/tree/master/execution_chain/db/aristo">db/aristo</a>.</li>
 <li id="r-ipldserver"><strong>ipld-eth-server</strong>. <a href="https://github.com/cerc-io/ipld-eth-server/blob/330bc3d7e2dd6acf4f7a1e744d39ea462ecb2323/README.md">github.com/cerc-io/ipld-eth-server</a> @ <code>330bc3d</code>. See also <a href="https://github.com/cerc-io/ipld-eth-state-snapshot/tree/9e483fc9f7dfa993e3d1e98a311cb4e45917cd51">ipld-eth-state-snapshot</a>.</li>
 <li id="r-railgun"><strong>Railgun</strong> — shielded-pool contracts &amp; circuits. <a href="https://github.com/Railgun-Privacy/contract">contract</a>, <a href="https://github.com/Railgun-Privacy/circuits-v2">circuits-v2</a>.</li>
 <li id="r-lacwallet"><strong>laconic-wallet</strong> — React Native (Android/iOS). <a href="https://git.vdb.to/cerc-io/laconic-wallet/src/commit/bb5223afdab0d16822bb3c119b6ba2350dab921e/android">git.vdb.to · cerc-io/laconic-wallet</a> @ <code>bb5223a</code>.</li>

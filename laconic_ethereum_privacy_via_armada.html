@@ -150,11 +150,12 @@
       pool's shared anonymity set &mdash; the single property the whole design rests on.
     </li>
     <li>
-      <strong>Metered payments + fee marketplace (Nitro + SP Marketplace).</strong>
+      <strong>Metered payments + clearing (Nitro).</strong>
       Armada's model is metered flows with integrator fee-sharing. Laconic already
-      meters per request (Nitro vouchers, proven end-to-end in MobyMask) and already
-      has a Service Provider Marketplace that sets and shares fees among providers.
-      Everything settles in <strong>USDC</strong>.
+      meters per request (Nitro vouchers, proven end-to-end in MobyMask) and
+      <strong>clears</strong> them over state channels: vouchers net into co-signed
+      channel allocations that split fees (user / protocol / integrator) and settle to
+      L1 in <strong>USDC</strong>. No marketplace, no fee vault &mdash; just clearing.
     </li>
     <li>
       <strong>Reference client (MobyMask stack).</strong> Armada's SDK boundary is
@@ -165,32 +166,27 @@
     </li>
   </ol>
 
-  <h2>This is the model Laconic was designed for</h2>
+  <h2>This is the substrate Laconic already built</h2>
   <p>
-    This is not a bespoke deal &mdash; it is Laconic's founding business model
-    instantiated with a first real customer. Laconic was always meant to run a
-    multi-sided <strong>Service Provider Marketplace</strong> that matches a
-    demand-side publisher with service providers, organizes them into a
-    <strong>Federated Cache</strong> to serve one data need,
-    <strong>negotiates the fee on the providers' behalf</strong>, and
-    <strong>pools fees</strong> for distribution. Armada slots straight in:
+    This is not a bespoke deal &mdash; it reuses what Laconic already built: verifiable
+    Ethereum data served privately, per-request metering, non-custodial clearing, and an
+    in-browser client stack. Armada is the first real customer for that substrate.
   </p>
   <table>
     <thead>
-      <tr><th>Laconic's designed role</th><th>Armada collaboration</th></tr>
+      <tr><th>Laconic capability</th><th>Armada need it fills</th></tr>
     </thead>
     <tbody>
-      <tr><td>Watcher Publisher (demand side)</td><td><strong>Armada</strong> &mdash; the shielded pool needing private sync + metering</td></tr>
-      <tr><td>Federated Cache (providers serving one need)</td><td><strong>Laconic SP fleet</strong> &mdash; watcher + relay + keeper for the pool</td></tr>
-      <tr><td>SP Marketplace (sets/negotiates the fee)</td><td><strong>Unified USDC fee</strong>, negotiated on the providers' behalf</td></tr>
-      <tr><td>Fee pool</td><td><strong>Fee-share settlement</strong>, in USDC</td></tr>
+      <tr><td>Watchers &mdash; proof-carrying, metered private sync</td><td>Protects the shielded pool's anonymity set at read-time</td></tr>
+      <tr><td>Nitro &mdash; per-request vouchers + channel <strong>clearing</strong></td><td>Cheap metered fees + integrator revenue-share, settled in USDC</td></tr>
+      <tr><td>MobyMask / wallet client stack + p2p relay + keeper</td><td>The front-end / SDK shape and origin-private submission</td></tr>
     </tbody>
   </table>
   <p class="note">
-    Design intent per <code>docs.laconic.com</code> &mdash; service-provider-marketplace,
-    federated cache, fee vault. Note: those docs describe intent, much of which never
-    shipped; this collaboration is the path to finally running that model against live
-    demand.
+    Maturity: the pieces ship as libraries/demos (<code>watcher-ts</code>, <code>go-nitro</code>
+    vouchers/channels, MobyMask, the Laconic wallet); the pool-specific integration
+    (Railgun watcher config, the Nitro&harr;Railgun boundary, the clearing splits) is the
+    new work. Nothing here requires a service-provider marketplace &mdash; only clearing.
   </p>
 
   <h2>Commercial shape (simple)</h2>

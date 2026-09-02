@@ -58,7 +58,7 @@ The central requirement: <strong>every service is delivered through watcher part
                         v                                v
             ┌─────────────────────────────────────────────────────┐
             │            WATCHER PARTY  (bonded SP federation)      │  T2–T4
-            │  federated cache · Nitro metering · matching/venue    │
+            │  shared cache · Nitro clearing · matching/venue       │
             │  commit-reveal sequencing · threshold Schnorr (DSS)   │
             └─────────────────────────────────────────────────────┘
                         ^                                ^
@@ -101,12 +101,12 @@ This is what makes private sync possible: a watcher party ingests the Railgun sh
 
 <h2 id="t2">T2 · Watcher-party substrate</h2>
 <p>
-A <strong>watcher party</strong> is a bonded federation of service providers that <em>collectively serves one data need</em> — the "Federated Cache" role in Laconic's Service-Provider Marketplace. Here it is also the <strong>execution venue</strong>: it delivers all of Armada's private support services at once.
+A <strong>watcher party</strong> is a bonded federation of service providers that <em>collectively serves one data need</em>. Here it is also the <strong>execution venue</strong>: it delivers all of Armada's private support services at once and <strong>clears</strong> the associated payments over Nitro.
 </p>
 <table>
 <tr><th>Service</th><th>Delivered by the watcher party as…</th></tr>
-<tr><td>Private shielded-pool sync</td><td>federated cache serving proof-carrying, everyone-gets-the-same-bytes note streams (clients scan locally &amp; privately)</td></tr>
-<tr><td>Metering / payments</td><td>per-request Nitro vouchers<sup><a href="#r-vouchers">[8]</a></sup> over virtual channels<sup><a href="#r-vfund">[9]</a></sup></td></tr>
+<tr><td>Private shielded-pool sync</td><td>a shared cache serving proof-carrying, everyone-gets-the-same-bytes note streams (clients scan locally &amp; privately)</td></tr>
+<tr><td>Metering / clearing</td><td>per-request Nitro vouchers<sup><a href="#r-vouchers">[8]</a></sup> netted into co-signed channel allocations over virtual channels<sup><a href="#r-vfund">[9]</a></sup>, settled to L1 in USDC</td></tr>
 <tr><td>Matching / venue</td><td>commit-reveal sequencing + a matcher over revealed orders (T3–T4)</td></tr>
 <tr><td>Attestation</td><td>threshold-Schnorr (DSS) inclusion receipts, sequencing certs, liquidity-proof snapshots</td></tr>
 <tr><td>Membership / bonding</td><td>an on-L1 registry + bond; disputes and slashing settle on L1 (T0)</td></tr>

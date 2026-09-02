@@ -5,7 +5,9 @@ on Laconic infrastructure. Two additive offers for Armada's shielded pool — **
 yield** and the **mobile-first private support services** Armada needs but won't build
 itself — without changing Armada's focus, taking custody, or touching the immutable pool.
 
-## Site (open `index.html`, or enable GitHub Pages)
+**▶ Live site — [afdudley.github.io/armada-laconic](https://afdudley.github.io/armada-laconic/)**
+
+## What's on the site
 
 - **[index.html](./index.html)** — *Overview.* The two offers, how they plug into
   Armada's three-tier model, and the tier map.

@@ -1,0 +1,10 @@
+syntax = "proto3";
+package cerc.nitro.v1;
+
+option go_package = "git.vdb.to/cerc-io/laconicd/server/nitro";
+
+// P2PMessage wraps a json-encoded Nitro protocols.Message
+// TODO: proper proto message?
+message P2PMessage {
+  string content = 1;
+}

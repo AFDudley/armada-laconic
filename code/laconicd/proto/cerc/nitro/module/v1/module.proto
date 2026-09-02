@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package cerc.nitro.module.v1;
+
+import "cosmos/app/v1alpha1/module.proto";
+
+// Module is the app config object of the module.
+// Learn more: https://docs.cosmos.network/main/building-modules/depinject
+message Module {
+  option (cosmos.app.v1alpha1.module) = {
+    go_import : "git.vdb.to/cerc-io/laconicd/x/nitro"
+  };
+
+  // authority defines the custom module authority. If not set, defaults to the
+  // governance module.
+  string authority = 2;
+
+  // TODO LNT address here?
+  string token_address = 3;
+}

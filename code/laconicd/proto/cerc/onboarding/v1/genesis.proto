@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package cerc.onboarding.v1;
+
+import "gogoproto/gogo.proto";
+import "cerc/onboarding/v1/onboarding.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/onboarding";
+
+// GenesisState defines the onboarding module's genesis state.
+message GenesisState {
+  // params defines all the parameters of the module.
+  Params params = 1 [ (gogoproto.nullable) = false ];
+  // participants defines all the participants
+  repeated Participant participants = 2 [ (gogoproto.nullable) = false ];
+}

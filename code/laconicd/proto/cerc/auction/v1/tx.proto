@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+package cerc.auction.v1;
+
+import "cosmos/msg/v1/msg.proto";
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/duration.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos_proto/cosmos.proto";
+import "cerc/auction/v1/auction.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/auction";
+
+// Tx defines the gRPC tx interface
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // CreateAuction is the command for creating an auction
+  rpc CreateAuction(MsgCreateAuction) returns (MsgCreateAuctionResponse) {
+    option (google.api.http).post = "/cerc/auction/v1/create_auction";
+  };
+
+  // CommitBid is the command for committing a bid
+  rpc CommitBid(MsgCommitBid) returns (MsgCommitBidResponse) {
+    option (google.api.http).post = "/cerc/auction/v1/commit_bid";
+  };
+
+  // RevealBid is the command for revealing a bid
+  rpc RevealBid(MsgRevealBid) returns (MsgRevealBidResponse) {
+    option (google.api.http).post = "/cerc/auction/v1/reveal_bid";
+  };
+
+  // UpdateParams defines an operation for updating the x/staking module
+  // parameters.
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+
+  // ReleaseFunds is the command for paying the winners of provider auctions
+  rpc ReleaseFunds(MsgReleaseFunds) returns (MsgReleaseFundsResponse) {
+    option (google.api.http).post = "/cerc/auction/v1/release_funds";
+  };
+}
+
+// MsgCreateAuction defines a create auction message
+message MsgCreateAuction {
+  option (gogoproto.goproto_getters) = false;
+  option (cosmos.msg.v1.signer) = "signer";
+
+  // Address of the signer
+  string signer = 1
+      [ (gogoproto.moretags) = "json:\"signer\" yaml:\"signer\"" ];
+
+  // Auction kind (vickrey | provider)
+  string kind = 2 [ (gogoproto.moretags) = "json:\"kind\" yaml:\"kind\"" ];
+
+  // Duration of the commits phase in seconds
+  google.protobuf.Duration commits_duration = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.stdduration) = true,
+    (gogoproto.moretags) = "json:\"commits_duration\" yaml:\"commits_duration\""
+  ];
+
+  // Duration of the reveals phase in seconds
+  google.protobuf.Duration reveals_duration = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.stdduration) = true,
+    (gogoproto.moretags) = "json:\"reveals_duration\" yaml:\"reveals_duration\""
+  ];
+
+  // Commit fees
+  cosmos.base.v1beta1.Coin commit_fee = 5 [
+    (gogoproto.nullable) = false,
+    (gogoproto.moretags) = "json:\"commit_fee\" yaml:\"commit_fee\""
+  ];
+
+  // Reveal fees
+  cosmos.base.v1beta1.Coin reveal_fee = 6 [
+    (gogoproto.nullable) = false,
+    (gogoproto.moretags) = "json:\"reveal_fee\" yaml:\"reveal_fee\""
+  ];
+
+  // Minimum acceptable bid amount
+  // Only applicable in vickrey auctions
+  cosmos.base.v1beta1.Coin minimum_bid = 7 [
+    (gogoproto.nullable) = false,
+    (gogoproto.moretags) = "json:\"minimum_bid\" yaml:\"minimum_bid\""
+  ];
+
+  // Maximum acceptable bid amount
+  // Only applicable in provider auctions
+  cosmos.base.v1beta1.Coin max_price = 8 [
+    (gogoproto.nullable) = false,
+    (gogoproto.moretags) = "json:\"max_price\" yaml:\"max_price\""
+  ];
+
+  // Number of desired providers (num of auction winners)
+  // Only applicable in provider auctions
+  int32 num_providers = 9;
+}
+
+// MsgCreateAuctionResponse returns the details of the created auction
+message MsgCreateAuctionResponse {
+  option (gogoproto.goproto_getters) = false;
+
+  // Auction details
+  Auction auction = 1
+      [ (gogoproto.moretags) = "json:\"auction\" yaml:\"auction\"" ];
+}
+
+// CommitBid defines the message to commit a bid
+message MsgCommitBid {
+  option (gogoproto.goproto_getters) = false;
+  option (cosmos.msg.v1.signer) = "signer";
+
+  // Auction id
+  string auction_id = 1
+      [ (gogoproto.moretags) = "json:\"auction_id\" yaml:\"auction_id\"" ];
+
+  // Commit Hash
+  string commit_hash = 2
+      [ (gogoproto.moretags) = "json:\"commit_hash\" yaml:\"commit_hash\"" ];
+
+  // Address of the signer
+  string signer = 3
+      [ (gogoproto.moretags) = "json:\"signer\" yaml:\"signer\"" ];
+}
+
+// MsgCommitBidResponse returns the state of the auction after the bid creation
+message MsgCommitBidResponse {
+  option (gogoproto.goproto_getters) = false;
+
+  // Auction details
+  Bid bid = 1 [ (gogoproto.moretags) = "json:\"bid\" yaml:\"bid\"" ];
+}
+
+// RevealBid defines the message to reveal a bid
+message MsgRevealBid {
+  option (gogoproto.goproto_getters) = false;
+  option (cosmos.msg.v1.signer) = "signer";
+
+  // Auction id
+  string auction_id = 1
+      [ (gogoproto.moretags) = "json:\"auction_id\" yaml:\"auction_id\"" ];
+
+  // Commit Hash
+  string reveal = 2
+      [ (gogoproto.moretags) = "json:\"reveal\" yaml:\"reveal\"" ];
+
+  // Address of the signer
+  string signer = 3
+      [ (gogoproto.moretags) = "json:\"signer\" yaml:\"signer\"" ];
+}
+
+// MsgRevealBidResponse returns the state of the auction after the bid reveal
+message MsgRevealBidResponse {
+  option (gogoproto.goproto_getters) = false;
+
+  // Auction details
+  Auction auction = 1
+      [ (gogoproto.moretags) = "json:\"auction\" yaml:\"auction\"" ];
+}
+
+// MsgUpdateParams is the Msg/UpdateParams request type.
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  // authority is the address that controls the module (defaults to x/gov unless
+  // overwritten).
+  string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+
+  // params defines the x/auction parameters to update.
+  //
+  // NOTE: All parameters must be supplied.
+  Params params = 2 [ (gogoproto.nullable) = false ];
+}
+
+// MsgUpdateParamsResponse defines the response structure for executing a
+// MsgUpdateParams message.
+message MsgUpdateParamsResponse {};
+
+// ReleaseFunds defines the message to pay the winners of provider auctions
+message MsgReleaseFunds {
+  option (gogoproto.goproto_getters) = false;
+  option (cosmos.msg.v1.signer) = "signer";
+
+  // Auction id
+  string auction_id = 1
+      [ (gogoproto.moretags) = "json:\"auction_id\" yaml:\"auction_id\"" ];
+
+  // Address of the signer
+  string signer = 2
+      [ (gogoproto.moretags) = "json:\"signer\" yaml:\"signer\"" ];
+}
+
+// MsgReleaseFundsResponse returns the state of the auction after releasing the
+// funds
+message MsgReleaseFundsResponse {
+  option (gogoproto.goproto_getters) = false;
+
+  // Auction details
+  Auction auction = 1
+      [ (gogoproto.moretags) = "json:\"auction\" yaml:\"auction\"" ];
+}

@@ -1,0 +1,158 @@
+syntax = "proto3";
+
+package cerc.auction.v1;
+
+import "gogoproto/gogo.proto";
+import "google/api/annotations.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cerc/auction/v1/auction.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/auction";
+
+// Query defines the gRPC querier interface for the auction module
+service Query {
+  // Params queries auction module params
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/cerc/auction/v1/params";
+  }
+
+  // Auctions queries all auctions
+  rpc Auctions(QueryAuctionsRequest) returns (QueryAuctionsResponse) {
+    option (google.api.http).get = "/cerc/auction/v1/auctions";
+  }
+
+  // GetAuction queries an auction
+  rpc GetAuction(QueryGetAuctionRequest) returns (QueryGetAuctionResponse) {
+    option (google.api.http).get = "/cerc/auction/v1/auctions/{id}";
+  }
+
+  // GetBid queries an auction bid
+  rpc GetBid(QueryGetBidRequest) returns (QueryGetBidResponse) {
+    option (google.api.http).get =
+        "/cerc/auction/v1/bids/{auction_id}/{bidder}";
+  }
+
+  // GetBids queries all auction bids
+  rpc GetBids(QueryGetBidsRequest) returns (QueryGetBidsResponse) {
+    option (google.api.http).get = "/cerc/auction/v1/bids/{auction_id}";
+  }
+
+  // AuctionsByBidder queries auctions by bidder
+  rpc AuctionsByBidder(QueryAuctionsByBidderRequest)
+      returns (QueryAuctionsByBidderResponse) {
+    option (google.api.http).get =
+        "/cerc/auction/v1/by-bidder/{bidder_address}";
+  }
+
+  // AuctionsByOwner queries auctions by owner
+  rpc AuctionsByOwner(QueryAuctionsByOwnerRequest)
+      returns (QueryAuctionsByOwnerResponse) {
+    option (google.api.http).get = "/cerc/auction/v1/by-owner/{owner_address}";
+  }
+
+  // GetAuctionModuleBalance queries the auction module account balance
+  rpc GetAuctionModuleBalance(QueryGetAuctionModuleBalanceRequest)
+      returns (QueryGetAuctionModuleBalanceResponse) {
+    option (google.api.http).get = "/cerc/auction/v1/balance";
+  }
+}
+
+// QueryParamsRequest is the format to query the parameters of the auction
+// module
+message QueryParamsRequest {}
+
+// QueryParamsResponse returns parameters of the auction module
+message QueryParamsResponse { Params params = 1; }
+
+// AuctionsRequest is the format for querying all the auctions
+message QueryAuctionsRequest {
+  // pagination defines an optional pagination info for the next request
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+// AuctionsResponse returns the list of all auctions
+message QueryAuctionsResponse {
+  // List of auctions
+  Auctions auctions = 1;
+  // pagination defines an optional pagination info for the next request
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+// AuctionRequest is the format for querying a specific auction
+message QueryGetAuctionRequest {
+  // Auction id
+  string id = 1;
+}
+
+// AuctionResponse returns the details of the queried auction
+message QueryGetAuctionResponse {
+  // Auction details
+  Auction auction = 1;
+}
+
+// BidRequest is the format for querying a specific bid in an auction
+message QueryGetBidRequest {
+  // Auction id
+  string auction_id = 1;
+  // Bidder address
+  string bidder = 2;
+}
+
+// BidResponse returns the details of the queried bid
+message QueryGetBidResponse {
+  // Bid details
+  Bid bid = 1;
+}
+
+// BidsRequest is the format for querying all bids in an auction
+message QueryGetBidsRequest {
+  // Auction id
+  string auction_id = 1;
+}
+
+// BidsResponse returns details of all bids in an auction
+message QueryGetBidsResponse {
+  // List of bids in the auction
+  repeated Bid bids = 1;
+}
+
+// AuctionsByBidderRequest is the format for querying all auctions containing a
+// bidder address
+message QueryAuctionsByBidderRequest {
+  // Address of the bidder
+  string bidder_address = 1;
+}
+
+// AuctionsByBidderResponse returns all auctions containing a bidder
+message QueryAuctionsByBidderResponse {
+  // List of auctions
+  Auctions auctions = 1;
+}
+
+// AuctionsByOwnerRequest is the format for querying all auctions created by an
+// owner
+message QueryAuctionsByOwnerRequest {
+  // Address of the owner
+  string owner_address = 1;
+}
+
+// AuctionsByOwnerResponse returns all auctions created by an owner
+message QueryAuctionsByOwnerResponse {
+  // List of auctions
+  Auctions auctions = 1;
+}
+
+// BalanceRequest is the format to fetch all balances
+message QueryGetAuctionModuleBalanceRequest {}
+
+// QueryGetAuctionModuleBalanceResponse is the response type for auction module
+// balance rpc method
+message QueryGetAuctionModuleBalanceResponse {
+  // Set of all balances within the auction
+  repeated cosmos.base.v1beta1.Coin balance = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins",
+    (gogoproto.moretags) = "json:\"coins\" yaml:\"coins\""
+  ];
+}

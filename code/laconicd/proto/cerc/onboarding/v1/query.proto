@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package cerc.onboarding.v1;
+
+import "gogoproto/gogo.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "cerc/onboarding/v1/onboarding.proto";
+import "google/api/annotations.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/onboarding";
+
+// Query defines the gRPC querier service for onboarding module
+service Query {
+  // Participants queries Participants list
+  rpc Participants(QueryParticipantsRequest)
+      returns (QueryParticipantsResponse) {
+    option (google.api.http).get = "/cerc/onboarding/v1/participants";
+  }
+
+  // GetParticipantByAddress queries a participant by cosmos (laconic) address
+  rpc GetParticipantByAddress(QueryGetParticipantByAddressRequest)
+      returns (QueryGetParticipantByAddressResponse) {
+    option (google.api.http).get = "/cerc/onboarding/v1/participants/{address}";
+  }
+
+  // GetParticipantByNitroAddress queries a participant by nitro address
+  rpc GetParticipantByNitroAddress(QueryGetParticipantByNitroAddressRequest)
+      returns (QueryGetParticipantByNitroAddressResponse) {
+    option (google.api.http).get =
+        "/cerc/onboarding/v1/participants-by-nitro/{nitro_address}";
+  }
+}
+
+// QueryParticipantsRequest queries participants
+message QueryParticipantsRequest {
+  // pagination defines an optional pagination for the request.
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+// QueryParticipantsResponse is response type for querying the participants
+message QueryParticipantsResponse {
+  repeated Participant participants = 1
+      [ (gogoproto.moretags) = "json:\"participants\" yaml:\"participants\"" ];
+
+  // pagination defines the pagination in the response.
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryGetParticipantByAddressRequest queries participant by the laconic
+// address
+message QueryGetParticipantByAddressRequest {
+  // Laconic address
+  string address = 1;
+}
+
+// QueryGetParticipantByAddressResponse is response type for querying
+// participant by the laconic address
+message QueryGetParticipantByAddressResponse {
+  // Participant details
+  Participant participant = 1;
+}
+
+// QueryGetParticipantByNitroAddressRequest queries participant by the nitro
+// address
+message QueryGetParticipantByNitroAddressRequest {
+  // Nitro address
+  string nitro_address = 1;
+}
+
+// QueryGetParticipantByNitroAddressResponse is response type for querying
+// participant by the nitro address
+message QueryGetParticipantByNitroAddressResponse {
+  // Participant details
+  Participant participant = 1;
+}

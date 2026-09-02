@@ -1,0 +1,40 @@
+name: SDK Tests
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release/**
+
+jobs:
+  sdk_tests_nameservice_expiry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Checkout registry-sdk
+        uses: actions/checkout@v3
+        with:
+          path: "./registry-sdk/"
+          repository: cerc-io/registry-sdk
+          fetch-depth: 0
+          ref: main
+      - name: Environment
+        run: ls -tlh && env
+
+      - name: Build laconicd container
+        working-directory: tests/sdk_tests
+        run: ./build-laconicd-container.sh
+
+      - name: Build sdk container
+        working-directory: registry-sdk
+        run: ./scripts/build-sdk-test-container.sh
+
+      - name: Start containers (expiry enabled)
+        working-directory: tests/sdk_tests
+        env:
+          TEST_REGISTRY_EXPIRY: true
+        run: docker compose up -d
+
+      - name: Run nameservice expiry tests
+        working-directory: tests/sdk_tests
+        run: ./run-tests.sh test:nameservice-expiry

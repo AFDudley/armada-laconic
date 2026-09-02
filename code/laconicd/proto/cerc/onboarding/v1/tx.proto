@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package cerc.onboarding.v1;
+
+import "cosmos/msg/v1/msg.proto";
+import "google/api/annotations.proto";
+import "gogoproto/gogo.proto";
+import "cerc/onboarding/v1/onboarding.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/onboarding";
+
+// Msg defines the onboarding Msg service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // OnboardParticipant defines a method for enrolling a new validator.
+  rpc OnboardParticipant(MsgOnboardParticipant)
+      returns (MsgOnboardParticipantResponse) {
+    option (google.api.http).post = "/cerc/onboarding/v1/onboard_participant";
+  };
+}
+
+// MsgOnboardParticipant defines a SDK message for enrolling a new validator.
+message MsgOnboardParticipant {
+  option (cosmos.msg.v1.signer) = "participant";
+
+  // Participant is the msg sender
+  string participant = 1;
+  EthPayload eth_payload = 2 [ (gogoproto.nullable) = false ];
+  string eth_signature = 3;
+  string role = 4;
+  string kyc_id = 5;
+}
+
+// MsgOnboardParticipantResponse defines the Msg/OnboardParticipant response
+// type.
+message MsgOnboardParticipantResponse {}

@@ -1,0 +1,7 @@
+version: "1.0"
+name: laconic-wallet-web
+description: "Laconic web wallet"
+containers:
+  - cerc/laconic-wallet-web
+pods:
+  - laconic-wallet-web

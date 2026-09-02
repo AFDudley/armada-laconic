@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package cerc.nitro.v1;
+
+import "google/api/annotations.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/nitro/types/v1";
+
+// Params defines the parameters of the nitro module.
+message Params {
+  bytes nitro_adjudicator_address = 1;
+  bytes virtual_payment_app_address = 2;
+  bytes consensus_app_address = 3;
+}
+
+message PaymentChannel {
+  string channel_id = 1;
+  // TODO
+}
+
+message Fund {
+  option (gogoproto.equal) = true;
+
+  string token_address  = 1;
+  string amount = 2 [
+    (cosmos_proto.scalar)  = "cosmos.Int",
+    (gogoproto.customtype) = "cosmossdk.io/math.Int",
+    (gogoproto.nullable)   = false
+  ];
+}

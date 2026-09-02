@@ -1,0 +1,201 @@
+syntax = "proto3";
+
+package cerc.registry.v1;
+
+import "google/api/annotations.proto";
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cerc/registry/v1/registry.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/registry";
+
+// Query defines the gRPC querier service for registry module
+service Query {
+  // Params queries the registry module params.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/params";
+  }
+
+  // Records queries all records
+  rpc Records(QueryRecordsRequest) returns (QueryRecordsResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/records";
+  }
+
+  // Get record by id
+  rpc GetRecord(QueryGetRecordRequest) returns (QueryGetRecordResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/records/{id}";
+  }
+
+  // Get records by bond id
+  rpc GetRecordsByBondId(QueryGetRecordsByBondIdRequest)
+      returns (QueryGetRecordsByBondIdResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/records-by-bond-id/{id}";
+  }
+
+  // NameRecords queries all name records
+  rpc NameRecords(QueryNameRecordsRequest) returns (QueryNameRecordsResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/names";
+  }
+
+  // Whois method retrieve the name authority info
+  rpc Whois(QueryWhoisRequest) returns (QueryWhoisResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/whois/{name}";
+  }
+
+  // LookupLrn
+  rpc LookupLrn(QueryLookupLrnRequest) returns (QueryLookupLrnResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/lookup";
+  }
+
+  // ResolveLrn
+  rpc ResolveLrn(QueryResolveLrnRequest) returns (QueryResolveLrnResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/resolve";
+  }
+
+  // Get registry module balance
+  rpc GetRegistryModuleBalance(QueryGetRegistryModuleBalanceRequest)
+      returns (QueryGetRegistryModuleBalanceResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/balance";
+  }
+
+  // Authorities queries all authorities
+  rpc Authorities(QueryAuthoritiesRequest) returns (QueryAuthoritiesResponse) {
+    option (google.api.http).get = "/cerc/registry/v1/authorities";
+  }
+}
+
+// QueryParamsRequest is request type for registry params
+message QueryParamsRequest {}
+
+// QueryParamsResponse is response type for registry params
+message QueryParamsResponse { Params params = 1; }
+
+// QueryRecordsRequest is request type for registry records list
+message QueryRecordsRequest {
+  // Array type attribute
+  message ArrayInput { repeated ValueInput values = 1; }
+  // Map type attribute
+  message MapInput { map<string, ValueInput> values = 1; }
+  // Type for record attribute value
+  message ValueInput {
+    // Value is one of the following types
+    oneof value {
+      string string = 1;
+      int64 int = 2;
+      double float = 3;
+      bool boolean = 4;
+      string link = 5;
+      ArrayInput array = 6;
+      MapInput map = 7;
+    }
+  }
+  // Type for record attribute key
+  message KeyValueInput {
+    string key = 1;
+    ValueInput value = 2;
+  }
+
+  repeated KeyValueInput attributes = 1;
+
+  bool all = 2;
+
+  // pagination defines an optional pagination for the request.
+  cosmos.base.query.v1beta1.PageRequest pagination = 3;
+}
+
+// QueryRecordsResponse is response type for registry records list
+message QueryRecordsResponse {
+  repeated Record records = 1 [ (gogoproto.nullable) = false ];
+  // pagination defines the pagination in the response.
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryGetRecordRequest is request type for registry records by id
+message QueryGetRecordRequest { string id = 1; }
+
+// QueryGetRecordResponse is response type for registry records by id
+message QueryGetRecordResponse {
+  Record record = 1 [ (gogoproto.nullable) = false ];
+}
+
+// QueryGetRecordsByBondIdRequest is request type for get the records by bond-id
+message QueryGetRecordsByBondIdRequest {
+  string id = 1;
+  // pagination defines an optional pagination for the request.
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+// QueryGetRecordsByBondIdResponse is response type for records list by bond-id
+message QueryGetRecordsByBondIdResponse {
+  repeated Record records = 1 [ (gogoproto.nullable) = false ];
+  // pagination defines the pagination in the response.
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryNameRecordsRequest is request type for registry names records
+message QueryNameRecordsRequest {
+  // pagination defines an optional pagination for the request.
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+// QueryNameRecordsResponse is response type for registry names records
+message QueryNameRecordsResponse {
+  repeated NameEntry names = 1 [ (gogoproto.nullable) = false ];
+  // pagination defines the pagination in the response.
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryWhoisRequest is request type for Get NameAuthority
+message QueryWhoisRequest { string name = 1; }
+
+// QueryWhoisResponse is response type for whois request
+message QueryWhoisResponse {
+  NameAuthority name_authority = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.moretags) = "json:\"name_authority\" yaml:\"name_authority\""
+  ];
+}
+
+// QueryAuthoritiesRequest is request type to get all authorities
+message QueryAuthoritiesRequest { string owner = 1; }
+
+// QueryAuthoritiesResponse is response type for authorities request
+message QueryAuthoritiesResponse {
+  repeated AuthorityEntry authorities = 1 [ (gogoproto.nullable) = false ];
+  // pagination defines the pagination in the response.
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// QueryLookupLrnRequest is request type for LookupLrn
+message QueryLookupLrnRequest { string lrn = 1; }
+
+// QueryLookupLrnResponse is response type for QueryLookupLrnRequest
+message QueryLookupLrnResponse { NameRecord name = 1; }
+
+// QueryResolveLrnRequest is request type for ResolveLrn
+message QueryResolveLrnRequest { string lrn = 1; }
+
+// QueryResolveLrnResponse is response type for QueryResolveLrnRequest
+message QueryResolveLrnResponse { Record record = 1; }
+
+// QueryGetRegistryModuleBalanceRequest is request type for registry module
+// accounts balance
+message QueryGetRegistryModuleBalanceRequest {}
+
+// QueryGetRegistryModuleBalanceResponse is response type for registry module
+// accounts balance
+message QueryGetRegistryModuleBalanceResponse {
+  repeated AccountBalance balances = 1;
+}
+
+// AccountBalance is registry module account balance
+message AccountBalance {
+  string account_name = 1
+      [ (gogoproto.moretags) = "json:\"account_name\" yaml:\"account_name\"" ];
+  repeated cosmos.base.v1beta1.Coin balance = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins",
+    (gogoproto.moretags) = "json:\"balance\" yaml:\"balance\""
+  ];
+}

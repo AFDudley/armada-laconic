@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package cerc.registry.v1;
+
+import "gogoproto/gogo.proto";
+import "cerc/registry/v1/registry.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/registry";
+
+// GenesisState defines the registry module's genesis state.
+message GenesisState {
+  // params defines all the params of registry module.
+  Params params = 1 [ (gogoproto.nullable) = false ];
+
+  // records
+  repeated Record records = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.moretags) = "json:\"records\" yaml:\"records\""
+  ];
+
+  // authorities
+  repeated AuthorityEntry authorities = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.moretags) = "json:\"authorities\" yaml:\"authorities\""
+  ];
+
+  // names
+  repeated NameEntry names = 4 [
+    (gogoproto.nullable) = false,
+    (gogoproto.moretags) = "json:\"names\" yaml:\"names\""
+  ];
+}

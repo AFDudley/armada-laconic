@@ -1,0 +1,25 @@
+services:
+  # Builds and serves the React laconic-wallet-web app
+  laconic-wallet-web:
+    restart: unless-stopped
+    image: cerc/laconic-wallet-web:local
+    environment:
+      CERC_SCRIPT_DEBUG: ${CERC_SCRIPT_DEBUG}
+      WALLET_CONNECT_ID: ${WALLET_CONNECT_ID}
+      WALLET_CONNECT_VERIFY_CODE: ${WALLET_CONNECT_VERIFY_CODE}
+      CERC_DEFAULT_GAS_PRICE: ${CERC_DEFAULT_GAS_PRICE:-0.025}
+      CERC_GAS_ADJUSTMENT: ${CERC_GAS_ADJUSTMENT:-2}
+      CERC_LACONICD_RPC_URL: ${CERC_LACONICD_RPC_URL:-https://laconicd.laconic.com}
+      CERC_ALLOWED_URLS: ${CERC_ALLOWED_URLS}
+    command: ["bash", "/scripts/run.sh"]
+    volumes:
+      - ../config/app/run.sh:/scripts/run.sh
+      - ../config/app/serve.json:/app/serve.json
+    ports:
+      - "80"
+    healthcheck:
+      test: ["CMD", "nc", "-vz", "localhost", "80"]
+      interval: 20s
+      timeout: 5s
+      retries: 15
+      start_period: 10s

@@ -1,0 +1,107 @@
+modules:
+  - name: runtime
+    config:
+      "@type": cosmos.app.runtime.v1alpha1.Module
+      app_name: LaconicApp
+      # During begin block slashing happens after distr.BeginBlocker so that
+      # there is nothing left over in the validator fee pool, so as to keep the CanWithdrawInvariant invariant.
+      # NOTE: staking module is required if HistoricalEntries param > 0
+      begin_blockers: [distribution, protocolpool, slashing, evidence, staking]
+      end_blockers: [gov, staking, protocolpool, auction, registry]
+      # NOTE: The genutils module must occur after staking so that pools are properly initialized with tokens from genesis accounts.
+      # NOTE: The genutils module must also occur after auth so that it can access the params from auth.
+      init_genesis:
+        - consensus
+        - auth
+        - bank
+        - distribution
+        - staking
+        - slashing
+        - gov
+        - genutil
+        - evidence
+        - protocolpool
+        - auction
+        - bond
+        - registry
+        - onboarding
+        - nitro
+      override_store_keys:
+        - module_name: auth
+          kv_store_key: acc
+      skip_store_keys:
+        - tx
+        - validate
+        - genutil
+        - runtime
+        - vesting
+  - name: auth
+    config:
+      "@type": cosmos.auth.module.v1.Module
+      bech32_prefix: laconic
+      module_account_permissions:
+        - account: fee_collector
+        - account: distribution
+        - account: bonded_tokens_pool
+          permissions: [burner, staking]
+        - account: not_bonded_tokens_pool
+          permissions: [burner, staking]
+        - account: gov
+          permissions: [burner]
+        - account: protocolpool
+        - account: protocolpool_escrow
+        - account: auction
+        - account: auction_burn
+        - account: bond
+        - account: registry
+        - account: record_rent
+        - account: authority_rent
+        - account: lps_lockup
+      enable_unordered_transactions: true
+  - name: bank
+    config:
+      "@type": cosmos.bank.module.v1.Module
+      blocked_module_accounts_override:
+        [fee_collector, distribution, bonded_tokens_pool, not_bonded_tokens_pool]
+  - name: staking
+    config:
+      "@type": cosmos.staking.module.v1.Module
+  - name: slashing
+    config:
+      "@type": cosmos.slashing.module.v1.Module
+  - name: distribution
+    config:
+      "@type": cosmos.distribution.module.v1.Module
+  - name: consensus
+    config:
+      "@type": cosmos.consensus.module.v1.Module
+  - name: genutil
+    config:
+      "@type": cosmos.genutil.module.v1.Module
+  - name: tx
+    config:
+      "@type": cosmos.tx.config.v1.Config
+  - name: gov
+    config:
+      "@type": cosmos.gov.module.v1.Module
+  - name: evidence
+    config:
+      "@type": cosmos.evidence.module.v1.Module
+  - name: protocolpool
+    config:
+      "@type": cosmos.protocolpool.module.v1.Module
+  - name: bond
+    config:
+      "@type": cerc.bond.module.v1.Module
+  - name: auction
+    config:
+      "@type": cerc.auction.module.v1.Module
+  - name: registry
+    config:
+      "@type": cerc.registry.module.v1.Module
+  - name: onboarding
+    config:
+      "@type": cerc.onboarding.module.v1.Module
+  - name: nitro
+    config:
+      "@type": cerc.nitro.module.v1.Module

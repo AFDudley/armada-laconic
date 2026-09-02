@@ -1,0 +1,13 @@
+
+record:
+    type: ServiceProviderRegistration
+    bond_id: madeUpBondID
+    laconic_id: madeUpLaconicID
+    version: 1.0.0
+    x500:
+      common_name: cerc-io
+      organization_unit: xyz
+      organization_name: abc
+      state_name: california
+      country: US
+      locality_name: local

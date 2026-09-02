@@ -1,0 +1,228 @@
+syntax = "proto3";
+
+package cerc.registry.v1;
+
+import "google/api/annotations.proto";
+import "gogoproto/gogo.proto";
+import "cosmos/msg/v1/msg.proto";
+import "cerc/registry/v1/registry.proto";
+import "cosmos_proto/cosmos.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/registry";
+
+// Msg is a service which exposes the registry functionality
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // SetRecord records a new record with given payload and bond id
+  rpc SetRecord(MsgSetRecord) returns (MsgSetRecordResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/set_record";
+  }
+
+  // Renew Record renews an expired record
+  rpc RenewRecord(MsgRenewRecord) returns (MsgRenewRecordResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/renew_record";
+  }
+
+  // AssociateBond
+  rpc AssociateBond(MsgAssociateBond) returns (MsgAssociateBondResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/associate_bond";
+  }
+
+  // DissociateBond
+  rpc DissociateBond(MsgDissociateBond) returns (MsgDissociateBondResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/dissociate_bond";
+  }
+
+  // DissociateRecords
+  rpc DissociateRecords(MsgDissociateRecords)
+      returns (MsgDissociateRecordsResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/dissociate_records";
+  }
+
+  // ReassociateRecords
+  rpc ReassociateRecords(MsgReassociateRecords)
+      returns (MsgReassociateRecordsResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/reassociate_records";
+  }
+
+  // SetName will store the name with given lrn and name
+  rpc SetName(MsgSetName) returns (MsgSetNameResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/set_name";
+  }
+
+  // Delete Name method will remove authority name
+  rpc DeleteName(MsgDeleteName) returns (MsgDeleteNameResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/delete_name";
+  }
+
+  // Reserve authority name
+  rpc ReserveAuthority(MsgReserveAuthority)
+      returns (MsgReserveAuthorityResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/reserve_authority";
+  }
+
+  // SetAuthorityBond
+  rpc SetAuthorityBond(MsgSetAuthorityBond)
+      returns (MsgSetAuthorityBondResponse) {
+    option (google.api.http).post = "/cerc/registry/v1/set_authority_bond";
+  }
+
+  // UpdateParams defines an operation for updating the x/staking module
+  // parameters.
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+// MsgSetRecord
+message MsgSetRecord {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string bond_id = 1
+      [ (gogoproto.moretags) = "json:\"bond_id\" yaml:\"bond_id\"" ];
+  string signer = 2;
+  Payload payload = 3 [ (gogoproto.nullable) = false ];
+}
+
+// MsgSetRecordResponse
+message MsgSetRecordResponse { string id = 1; }
+
+// Payload
+message Payload {
+  Record record = 1;
+  repeated Signature signatures = 2 [
+    (gogoproto.nullable) = false,
+    (gogoproto.moretags) = "json:\"signatures\" yaml:\"signatures\""
+  ];
+}
+
+// MsgSetName
+message MsgSetName {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string lrn = 1;
+  string cid = 2;
+  string signer = 3;
+}
+
+// MsgSetNameResponse
+message MsgSetNameResponse {}
+
+// MsgReserveAuthority
+message MsgReserveAuthority {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string name = 1;
+  string signer = 2;
+
+  // if creating a sub-authority.
+  string owner = 3;
+}
+
+// MsgReserveAuthorityResponse
+message MsgReserveAuthorityResponse {}
+
+// MsgSetAuthorityBond
+message MsgSetAuthorityBond {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string name = 1;
+  string bond_id = 2
+      [ (gogoproto.moretags) = "json:\"bond_id\" yaml:\"bond_id\"" ];
+  string signer = 3;
+}
+
+// MsgSetAuthorityBondResponse
+message MsgSetAuthorityBondResponse {}
+
+// MsgDeleteName
+message MsgDeleteName {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string lrn = 1;
+  string signer = 2;
+}
+
+// MsgDeleteNameResponse
+message MsgDeleteNameResponse {}
+
+// MsgRenewRecord
+message MsgRenewRecord {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string record_id = 1
+      [ (gogoproto.moretags) = "json:\"record_id\" yaml:\"record_id\"" ];
+  string signer = 2;
+}
+
+// MsgRenewRecordResponse
+message MsgRenewRecordResponse {}
+
+// MsgAssociateBond
+message MsgAssociateBond {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string record_id = 1
+      [ (gogoproto.moretags) = "json:\"record_id\" yaml:\"record_id\"" ];
+  string bond_id = 2
+      [ (gogoproto.moretags) = "json:\"bond_id\" yaml:\"bond_id\"" ];
+  string signer = 3;
+}
+
+// MsgAssociateBondResponse
+message MsgAssociateBondResponse {}
+
+// MsgDissociateBond
+message MsgDissociateBond {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string record_id = 1
+      [ (gogoproto.moretags) = "json:\"record_id\" yaml:\"record_id\"" ];
+  string signer = 2;
+}
+
+// MsgDissociateBondResponse
+message MsgDissociateBondResponse {}
+
+// MsgDissociateRecords
+message MsgDissociateRecords {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string bond_id = 1
+      [ (gogoproto.moretags) = "json:\"bond_id\" yaml:\"bond_id\"" ];
+  string signer = 2;
+}
+
+// MsgDissociateRecordsResponse
+message MsgDissociateRecordsResponse {}
+
+// MsgReassociateRecords
+message MsgReassociateRecords {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  string new_bond_id = 1
+      [ (gogoproto.moretags) = "json:\"new_bond_id\" yaml:\"new_bond_id\"" ];
+  string old_bond_id = 2
+      [ (gogoproto.moretags) = "json:\"old_bond_id\" yaml:\"old_bond_id\"" ];
+  string signer = 3;
+}
+
+// MsgReassociateRecordsResponse
+message MsgReassociateRecordsResponse {}
+
+// MsgUpdateParams is the Msg/UpdateParams request type.
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  // authority is the address that controls the module (defaults to x/gov unless
+  // overwritten).
+  string authority = 1 [ (cosmos_proto.scalar) = "cosmos.AddressString" ];
+
+  // params defines the x/registry parameters to update.
+  //
+  // NOTE: All parameters must be supplied.
+  Params params = 2 [ (gogoproto.nullable) = false ];
+}
+
+// MsgUpdateParamsResponse defines the response structure for executing a
+// MsgUpdateParams message.
+message MsgUpdateParamsResponse {}

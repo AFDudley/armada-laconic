@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package cerc.nitro.v1;
+
+import "google/api/annotations.proto";
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "cosmos/msg/v1/msg.proto";
+
+option go_package = "git.vdb.to/cerc-io/laconicd/x/nitro/types/v1";
+
+// 1. user submits OpenChannel tx (from local relay node)
+//
+// 2. tx is not processed; instead first block proposer to pick up tx triggers Nitro
+//    CreateLedgerChannel call (or client makes the call and the tx indicates it was made, then
+//    proposer pushes an event to Nitro?)
+//
+// 3. objective is cranked among Nitro nodes over comet p2p
+//
+// 4. once complete, block proposer includes actual tx; client can detect update via Event api
+
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // TODO: OpenLedgerChannel?
+  rpc OpenChannel(MsgOpenChannel) returns (MsgOpenChannelResponse) {
+    option (google.api.http).post = "/cerc/nitro/v1/open_channel";
+  }
+
+  rpc CloseChannel(MsgCloseChannel) returns (MsgCloseChannelResponse) {
+    option (google.api.http).post = "/cerc/nitro/v1/close_channel";
+  }
+
+  rpc CreatePaymentChannel(MsgCreatePaymentChannel) returns (MsgCreatePaymentChannelResponse) {
+    option (google.api.http).post = "/cerc/nitro/v1/create_payment_channel";
+  }
+
+  rpc ClosePaymentChannel(MsgClosePaymentChannel) returns (MsgClosePaymentChannelResponse) {
+    option (google.api.http).post = "/cerc/nitro/v1/close_payment_channel";
+  }
+
+  rpc Pay(MsgPay) returns (MsgPayResponse) {
+    option (google.api.http).post = "/cerc/nitro/v1/pay";
+  }
+}
+
+message MsgOpenChannel {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  // Nitro address of proposing party
+  string nitro_address = 1;
+
+  // Nitro address of counterparty
+  string counterparty = 2;
+
+  // Simplified outcome just includes the funding amount from payer
+  // TODO: review use of coins to represent ETH/ERC20
+  repeated cosmos.base.v1beta1.Coin funds = 3 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+  ];
+
+  // Nitro channel ID
+  string channel_id = 4;
+
+  // Tx signer address is independent of proposer ETH address
+  string signer = 5;
+}
+message MsgOpenChannelResponse {}
+
+message MsgCloseChannel {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  // Nitro channel ID to close
+  string channel_id = 1;
+
+  // Whether to close via challenge (dispute resolution) or cooperative closure
+  bool is_challenge = 2;
+
+  // Laconic address of proposing party
+  string signer = 3;
+}
+message MsgCloseChannelResponse {}
+
+message MsgCreatePaymentChannel {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  // Nitro address of proposing party
+  string nitro_address = 1;
+
+  // Nitro address of counterparty
+  string counterparty = 2;
+
+  // Nitro addresses of intermediaries
+  repeated string intermediaries = 3;
+
+  // Challenge duration for the channel
+  uint32 challenge_duration = 4;
+
+  // Funding amount for the payment channel
+  repeated cosmos.base.v1beta1.Coin funds = 5 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+  ];
+
+  // Nitro channel ID
+  string channel_id = 6;
+
+  // Laconic address of proposing party
+  string signer = 7;
+}
+message MsgCreatePaymentChannelResponse {}
+
+message MsgClosePaymentChannel {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  // Nitro channel ID to close
+  string channel_id = 1;
+
+  // Laconic address of proposing party
+  string signer = 2;
+}
+message MsgClosePaymentChannelResponse {}
+
+message MsgPay {
+  option (cosmos.msg.v1.signer) = "signer";
+
+  // Nitro channel ID through which to send payment
+  string channel_id = 1;
+
+  // Amount to pay
+  cosmos.base.v1beta1.Coin amount = 2 [
+    (gogoproto.nullable) = false
+  ];
+
+  // Laconic address of the payer
+  string signer = 3;
+}
+message MsgPayResponse {}

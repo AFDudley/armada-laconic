@@ -43,7 +43,7 @@
 <h2>Contents</h2>
 <div class="toc">
   <a href="#versions">Version scope (v1/v2/v3)</a>
-  <a href="#summary">Status summary (all tiers)</a>
+  <a href="#summary">Status summary — v1 &amp; v2 tables</a>
   <a href="#t0">T0 · Ethereum anchor</a>
   <a href="#t1">T1 · Ingestion</a>
   <a href="#t2">T2 · Watcher-party substrate</a>
@@ -55,49 +55,51 @@
   <a href="#refs">References</a>
 </div>
 
-<h2 id="summary">Status summary (all tiers)</h2>
+<h2 id="summary">Status summary — v1 &amp; v2</h2>
+
+<h3>v1 — Armada support</h3>
 <table>
-<tr><th>Tier</th><th>Component</th><th>Epic · ver</th><th>Repo (pinned)</th><th>Status</th><th>Conf.</th></tr>
-
-<tr><td rowspan="5"><strong>T0</strong><br>anchor</td><td>Railgun shielded pool</td><td>foundation · v1</td><td>Railgun<sup><a href="#r-railgun">[20]</a></sup> (Armada's)</td><td class="ok">built · immutable</td><td>design</td></tr>
-<tr><td>Nitro settlement + disputes</td><td>E2 · v1</td><td>cerc-io/go-nitro<sup><a href="#r-forcemove">[5]</a></sup></td><td class="ok">live on ETH</td><td>validated</td></tr>
-<tr><td>Venue/party registry + bond</td><td>v2</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
-<tr><td>Sequencing-cert + fraud-proof verifier</td><td>v2</td><td>uses chain-signatures<sup><a href="#r-ethdss">[13]</a></sup></td><td class="new">net-new</td><td>design</td></tr>
-<tr><td>Nitro↔Railgun boundary adapter</td><td>E7 · v1</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
-
-<tr><td rowspan="2"><strong>T1</strong><br>ingestion</td><td>plugeth / statediff / IPLD</td><td>E1 · v1</td><td>plugeth<sup><a href="#r-plugeth">[16]</a></sup> · statediff<sup><a href="#r-statediff">[17]</a></sup> · ipld-eth-*<sup><a href="#r-ipldserver">[18]</a></sup></td><td class="ok">built</td><td>design</td></tr>
-<tr><td>Railgun + adjudicator watcher config</td><td>E1 · v1</td><td>cerc-io/watcher-ts<sup><a href="#r-watcherts">[2]</a></sup></td><td class="part">framework built; config net-new</td><td>design</td></tr>
-
-<tr><td rowspan="5"><strong>T2</strong><br>substrate</td><td>Federation membership / bonding</td><td>v2</td><td>on T0 registry</td><td class="new">net-new</td><td>design</td></tr>
-<tr><td>Threshold key DKG (signing)</td><td>v2</td><td>cerc-io/chain-signatures<sup><a href="#r-ethdss">[13]</a></sup></td><td class="part">lib + tests; DKG/reshare/wire net-new</td><td>design</td></tr>
-<tr><td>Metering / clearing</td><td>E2 · v1</td><td>go-nitro vouchers<sup><a href="#r-vouchers">[8]</a></sup> / virtual<sup><a href="#r-vfund">[9]</a></sup></td><td class="ok">built</td><td>validated</td></tr>
-<tr><td>p2p relay + STUN/TURN</td><td>E5 · v1</td><td>mobymask<sup><a href="#r-mobymask">[3]</a></sup> / ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup> relay</td><td class="ok">built (browser); mobile transport → T6</td><td>design</td></tr>
-<tr><td>Private-sync serving (metered note stream)</td><td>E1 · v1</td><td>watcher-ts<sup><a href="#r-watcherts">[2]</a></sup></td><td class="part">serves; private-note config net-new</td><td>design</td></tr>
-
-<tr><td rowspan="5"><strong>T3</strong><br>ordering</td><td>Commit-reveal mempool + post-seal beacon</td><td>v2</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
-<tr><td>Epoch set-agreement (leader + attest + fraud proofs)</td><td>v2</td><td>—</td><td class="new">net-new · highest risk</td><td>design</td></tr>
-<tr><td>Inclusion receipts + sequencing certificate</td><td>v2</td><td>chain-signatures<sup><a href="#r-ethdss">[13]</a></sup></td><td class="part">signing built; protocol net-new</td><td>design</td></tr>
-<tr><td>DA publish of revealed epoch</td><td>v2</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
-<tr><td>Watchtower</td><td>v2 <span class="small">(v1 opt)</span></td><td>—</td><td class="new">net-new</td><td>design</td></tr>
-
-<tr><td rowspan="3"><strong>T4</strong><br>execution</td><td>Matcher (FBA / curve / CLOB-RFQ / rings)</td><td>v2</td><td>vulcanize/matcher<sup><a href="#r-matcher">[24]</a></sup> (PoC 2019–20)</td><td class="part">PoC; productionize net-new</td><td>validated</td></tr>
-<tr><td>Channel-hub liquidity + LP vault</td><td>v1 LP · v2 MM</td><td>go-nitro channels/virtual<sup><a href="#r-vfund">[9]</a></sup></td><td class="part">channels built; LP/MM vault net-new</td><td>validated</td></tr>
-<tr><td>Settlement + force-close (+ receipt-or-slash)</td><td>v1 f-close · v2 receipt</td><td>go-nitro swap<sup><a href="#r-swap">[6]</a></sup> / ForceMove<sup><a href="#r-forcemove">[5]</a></sup></td><td class="part">ForceMove built; receipt wiring net-new</td><td>validated</td></tr>
-
-<tr><td rowspan="4"><strong>T5</strong><br>adapters</td><td>Posted-price venue</td><td>E3 · v1</td><td>small contract + priceSetter</td><td class="new">net-new (small)</td><td>design</td></tr>
-<tr><td>Swaps adapter (at posted price)</td><td>E3 · v1</td><td>RelayAdapt recipe<sup><a href="#r-cookbook">[25]</a></sup></td><td class="new">net-new (thin)</td><td>design</td></tr>
-<tr><td>Yield adapter (wstETH note · LP-buffered Aave)</td><td>yield · v1</td><td>Railgun recipe + Aave / LP</td><td class="new">net-new (ETH trivial)</td><td>design</td></tr>
-<tr><td>CCTP cross-chain USDC (mint-and-shield)</td><td>E6 · v1</td><td>Armada's</td><td class="ok">built</td><td>design</td></tr>
-
-<tr><td rowspan="4"><strong>T6</strong><br>client</td><td>Laconic wallet (bare-bones RN app)</td><td>E4 · v1</td><td>laconic-wallet<sup><a href="#r-lacwallet">[21]</a></sup> / -web<sup><a href="#r-lacwalletweb">[22]</a></sup></td><td class="part">bare-bones; productize</td><td>validated</td></tr>
-<tr><td>In-browser / mobile Nitro node</td><td>E4 · v1</td><td>ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup></td><td class="ok">built</td><td>design</td></tr>
-<tr><td>Armada-branded front-end + SDK wiring</td><td>E4 · v1</td><td>grow from wallet + demo fragments</td><td class="new">net-new (build up)</td><td>design</td></tr>
-<tr><td>Mobile p2p transport (open decision)</td><td>E5 · v1</td><td>WebView reuse · go-waku · js-libp2p</td><td class="part">decide (see T6)</td><td>validated</td></tr>
-
-<tr><td rowspan="2"><strong>×-cut</strong><br>identity</td><td>ex_net identity proofs (selective disclosure)</td><td>E8 · v1</td><td>ex_net<sup><a href="#r-exnet">[1]</a></sup> + onboarding<sup><a href="#r-onboard">[14]</a></sup></td><td class="part">spec + precedent</td><td>design</td></tr>
-<tr><td>Laconic Matchmaker (compliance matching)</td><td>v2+</td><td>proposal<sup><a href="#r-match">[15]</a></sup> (FHE)</td><td class="part">external / design</td><td>design</td></tr>
+<tr><th>Tier</th><th>Component</th><th>Epic</th><th>Repo (pinned)</th><th>Status</th><th>Conf.</th></tr>
+<tr><td rowspan="3"><strong>T0</strong></td><td>Railgun shielded pool</td><td>foundation</td><td>Railgun<sup><a href="#r-railgun">[20]</a></sup> (Armada's)</td><td class="ok">built · immutable</td><td>design</td></tr>
+<tr><td>Nitro settlement + disputes</td><td>E2</td><td>cerc-io/go-nitro<sup><a href="#r-forcemove">[5]</a></sup></td><td class="ok">live on ETH</td><td>validated</td></tr>
+<tr><td>Nitro↔Railgun boundary adapter</td><td>E7</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
+<tr><td rowspan="2"><strong>T1</strong></td><td>plugeth / statediff / IPLD</td><td>E1</td><td>plugeth<sup><a href="#r-plugeth">[16]</a></sup> · statediff<sup><a href="#r-statediff">[17]</a></sup> · ipld-eth-*<sup><a href="#r-ipldserver">[18]</a></sup></td><td class="ok">built</td><td>design</td></tr>
+<tr><td>Railgun + adjudicator watcher config</td><td>E1</td><td>watcher-ts<sup><a href="#r-watcherts">[2]</a></sup></td><td class="part">framework built; config net-new</td><td>design</td></tr>
+<tr><td rowspan="3"><strong>T2</strong></td><td>Metering / clearing</td><td>E2</td><td>go-nitro vouchers<sup><a href="#r-vouchers">[8]</a></sup> / virtual<sup><a href="#r-vfund">[9]</a></sup></td><td class="ok">built</td><td>validated</td></tr>
+<tr><td>p2p relay + STUN/TURN</td><td>E5</td><td>mobymask<sup><a href="#r-mobymask">[3]</a></sup> / ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup></td><td class="ok">built (browser); mobile → T6</td><td>design</td></tr>
+<tr><td>Private-sync serving (metered note stream)</td><td>E1</td><td>watcher-ts<sup><a href="#r-watcherts">[2]</a></sup></td><td class="part">serves; config net-new</td><td>design</td></tr>
+<tr><td rowspan="2"><strong>T4</strong></td><td>Channel-hub liquidity + LP vault (yield)</td><td>yield</td><td>go-nitro channels/virtual<sup><a href="#r-vfund">[9]</a></sup></td><td class="part">channels built; LP vault net-new</td><td>validated</td></tr>
+<tr><td>Settlement + force-close</td><td>E2</td><td>go-nitro ForceMove<sup><a href="#r-forcemove">[5]</a></sup></td><td class="ok">ForceMove built</td><td>validated</td></tr>
+<tr><td rowspan="4"><strong>T5</strong></td><td>Posted-price venue</td><td>E3</td><td>small contract + priceSetter</td><td class="new">net-new (small)</td><td>design</td></tr>
+<tr><td>Swaps adapter (at posted price)</td><td>E3</td><td>RelayAdapt recipe<sup><a href="#r-cookbook">[25]</a></sup></td><td class="new">net-new (thin)</td><td>design</td></tr>
+<tr><td>Yield adapter (wstETH note · LP-buffered Aave)</td><td>yield</td><td>Railgun recipe + Aave / LP</td><td class="new">net-new (ETH trivial)</td><td>design</td></tr>
+<tr><td>CCTP cross-chain USDC (mint-and-shield)</td><td>E6</td><td>Armada's</td><td class="ok">built</td><td>design</td></tr>
+<tr><td rowspan="4"><strong>T6</strong></td><td>Laconic wallet (bare-bones RN app)</td><td>E4</td><td>laconic-wallet<sup><a href="#r-lacwallet">[21]</a></sup> / -web<sup><a href="#r-lacwalletweb">[22]</a></sup></td><td class="part">bare-bones; productize</td><td>validated</td></tr>
+<tr><td>In-browser / mobile Nitro node</td><td>E4</td><td>ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup></td><td class="ok">built</td><td>design</td></tr>
+<tr><td>Armada-branded front-end + SDK wiring</td><td>E4</td><td>grow from wallet + demo fragments</td><td class="new">net-new (build up)</td><td>design</td></tr>
+<tr><td>Mobile p2p transport (open decision)</td><td>E5</td><td>WebView reuse · go-waku · js-libp2p</td><td class="part">decide (see T6)</td><td>validated</td></tr>
+<tr><td><strong>×-cut</strong></td><td>ex_net identity proofs (selective disclosure)</td><td>E8</td><td>ex_net<sup><a href="#r-exnet">[1]</a></sup> + onboarding<sup><a href="#r-onboard">[14]</a></sup></td><td class="part">spec + precedent</td><td>design</td></tr>
 </table>
-<p class="small">Epic codes (v1): <strong>E1</strong> private sync · <strong>E2</strong> clearing · <strong>E3</strong> posted-price venue · <strong>E4</strong> mobile client · <strong>E5</strong> private transport · <strong>E6</strong> CCTP rail · <strong>E7</strong> Design&nbsp;A boundary · <strong>E8</strong> thin identity · <em>yield</em> (wstETH note / LP-buffered Aave). <strong>v2</strong> = ex_net matcher + fair-ordering; <strong>v3</strong> = Design&nbsp;B. See <a href="#versions">Version scope</a>.</p>
+<p class="small">Epic codes: <strong>E1</strong> private sync · <strong>E2</strong> clearing · <strong>E3</strong> posted-price venue · <strong>E4</strong> mobile client · <strong>E5</strong> private transport · <strong>E6</strong> CCTP rail · <strong>E7</strong> Design&nbsp;A boundary · <strong>E8</strong> thin identity · <em>yield</em> (wstETH note / LP-buffered Aave). <strong>v1 is mostly integration + a small posted-price contract + the boundary adapter</strong> — no new consensus, ordering, or ZK-circuit research.</p>
+
+<h3>v2 — ex_net matcher &amp; fair-ordering</h3>
+<table>
+<tr><th>Tier</th><th>Component</th><th>Repo (pinned)</th><th>Status</th><th>Conf.</th></tr>
+<tr><td rowspan="2"><strong>T0</strong></td><td>Venue/party registry + bond</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
+<tr><td>Sequencing-cert + fraud-proof verifier</td><td>uses chain-signatures<sup><a href="#r-ethdss">[13]</a></sup></td><td class="new">net-new</td><td>design</td></tr>
+<tr><td rowspan="2"><strong>T2</strong></td><td>Federation membership / bonding</td><td>on T0 registry</td><td class="new">net-new</td><td>design</td></tr>
+<tr><td>Threshold key DKG (signing)</td><td>cerc-io/chain-signatures<sup><a href="#r-ethdss">[13]</a></sup></td><td class="part">lib + tests; DKG/reshare/wire net-new</td><td>design</td></tr>
+<tr><td rowspan="5"><strong>T3</strong></td><td>Commit-reveal mempool + post-seal beacon</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
+<tr><td>Epoch set-agreement (leader + attest + fraud proofs)</td><td>—</td><td class="new">net-new · highest risk</td><td>design</td></tr>
+<tr><td>Inclusion receipts + sequencing certificate</td><td>chain-signatures<sup><a href="#r-ethdss">[13]</a></sup></td><td class="part">signing built; protocol net-new</td><td>design</td></tr>
+<tr><td>DA publish of revealed epoch</td><td>—</td><td class="new">net-new</td><td>design</td></tr>
+<tr><td>Watchtower <span class="small">(v1 optional)</span></td><td>—</td><td class="new">net-new</td><td>design</td></tr>
+<tr><td rowspan="3"><strong>T4</strong></td><td>Matcher (FBA / curve / CLOB-RFQ / rings)</td><td>vulcanize/matcher<sup><a href="#r-matcher">[24]</a></sup> (PoC 2019–20)</td><td class="part">PoC; productionize net-new</td><td>validated</td></tr>
+<tr><td>Market-maker vault</td><td>go-nitro channels/virtual<sup><a href="#r-vfund">[9]</a></sup></td><td class="new">net-new</td><td>validated</td></tr>
+<tr><td>Receipt-or-slash wiring</td><td>go-nitro swap<sup><a href="#r-swap">[6]</a></sup> / ForceMove<sup><a href="#r-forcemove">[5]</a></sup></td><td class="new">net-new</td><td>validated</td></tr>
+<tr><td><strong>×-cut</strong></td><td>Laconic Matchmaker (compliance matching)</td><td>proposal<sup><a href="#r-match">[15]</a></sup> (FHE)</td><td class="part">external / design</td><td>design</td></tr>
+</table>
+<p class="small">v2 is where the research-grade work lives (fair ordering + the epoch set-agreement) plus the matcher. <strong>v3</strong> (Design&nbsp;B — ZK matching + shielded ForceMove) is deferred; see <a href="#versions">Version scope</a>.</p>
 
 <h2 id="t0">T0 · Ethereum anchor</h2>
 <p><strong>Built:</strong> Railgun pool (Armada's, immutable); full Nitro adjudicator / ForceMove / MultiAssetHolder, live on Ethereum<sup><a href="#r-forcemove">[5]</a></sup>. <strong>Net-new:</strong></p>

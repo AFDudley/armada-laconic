@@ -22,6 +22,10 @@ Armada builds the crypto core; Laconic provides the substrate around it and the 
   frequent-batch-auction, curve-order matcher (T4) that powers the swaps and yield
   adapters: lineage, the 2019–2020 matcher PoC, CLOB+RFQ in one order type, and
   capital efficiency vs. AMMs.
+- **[mobile-privacy.html](./mobile-privacy.html)** — *Mobile end-to-end privacy.* Traces a
+  mobile private swap through every privacy layer (device → network → transport → read →
+  order → submit → settle → identity) with source-verified code references, plus an
+  integration-difficulty scoping of assembling it all on a phone.
 - **[laconic_ethereum_privacy_via_armada.html](./laconic_ethereum_privacy_via_armada.html)** —
   *The thesis.* Laconic as the sync / metering / client substrate beneath Armada's
   Railgun-circuit shielded pool.

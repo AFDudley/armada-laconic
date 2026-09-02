@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mobile end-to-end privacy — Armada × Laconic</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="index.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="build-plan.html">Build plan</a>
+  <a href="execution-platform.html">Execution platform</a>
+  <a href="mobile-privacy.html" class="active">Mobile privacy</a>
+  <a href="glossary.html">Glossary</a>
+  <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
+</nav>
+
+<h1>Mobile end-to-end privacy</h1>
+<p class="lede">Trace a mobile user's private swap through every privacy layer — device → network → transport → read → order → submit → settle → identity — with the code that implements each, and an honest scope of what it takes to integrate on a phone.</p>
+<p class="legend" style="margin-top:14px">
+  Mobile integration difficulty:
+  <span class="chip ok">Low</span> config / wire-up of existing prod code ·
+  <span class="chip part">Med</span> integration + gaps, components exist ·
+  <span class="chip new">High</span> net-new protocol / circuit / native-module / research
+</p>
+
+<div class="note">
+Source-verified across three research passes (network/transport, sync/submit/order, settlement/identity). Code links use GitHub where a mirror exists, else the Laconic Gitea <code>git.vdb.to</code>; <code>mtm-vpn-client</code> is private (SSH-only). This complements the <a href="architecture.html">Architecture</a> tier stack and the <a href="build-plan.html">Build plan</a> status.
+</div>
+
+<h2 id="flow">The privacy flow (a mobile private swap)</h2>
+<pre class="diagram">
+  DEVICE            keys never leave phone (secure enclave)                    [L3]
+    │  on-device mnemonic → HD keys (react-native-keychain)
+    ▼
+  NETWORK / IP      Nym mixnet underlay hides IP + traffic metadata           [L1]
+    │  5-hop mixnet  (or 2-hop AmneziaWG for latency)   · zk-nym creds
+    ▼
+  TRANSPORT         two modes, both libp2p, both tunneled through Nym         [L1]
+    │  ├─ Waku pub/sub  → broadcaster / discovery / async  (recipient-unlinkable)
+    │  └─ direct libp2p-noise stream → Nitro hot loop  (tens-of-ms; enc+auth only)
+    ▼
+  READ  (sync)      watcher serves proof-carrying, same-bytes note stream     [L2] ★
+    │  phone scans/decrypts notes LOCALLY → no RPC fingerprints you
+    ▼
+  ORDER            commit-reveal + post-seal beacon (venue can't front-run)   [L2]
+    │  commit=H(order‖salt) → seal → beacon → reveal → match
+    ▼
+  SUBMIT (write)    broadcaster/keeper submits tx → on-chain origin ≠ your EOA [L2]
+    │  Railgun Broadcaster over Waku · Laconic keeper · gasless
+    ▼
+  SETTLE (value)    Railgun shielded pool (notes/nullifiers) + Nitro channel  [L3]
+    │  non-custodial · force-close escape hatch · Design A boundary
+    ▼
+  IDENTITY         optional, selectively-disclosed proof (else identity-blind) [L3]
+       onboarding eth-sig + kyc_id · ex_net proofs · FHE matchmaker
+</pre>
+<p class="small">★ = the single property Armada's anonymity set depends on (read-time interest-privacy). If reads leak, everything downstream is moot.</p>
+
+<h2 id="l1">Layer 1 · Network / IP + transport</h2>
+<p class="small">Hides the user's IP + traffic metadata (Nym), gives recipient-unlinkability at the app layer (Waku topic anonymity set); libp2p-noise supplies encryption + peer-auth only, <em>not</em> IP privacy.</p>
+<table>
+<tr><th>Component</th><th>Hidden — &amp; from whom</th><th>Code reference</th><th>Maturity</th><th>Mobile</th></tr>
+<tr><td><strong>Nym 5-hop mixnet</strong></td><td>IP + traffic timing/volume, from ISP / gateways / counterparty; zk-nym unlinks payment from usage</td><td><a href="https://github.com/nymtech/nym-vpn-client">nymtech/nym-vpn-client</a> · <code>nym-vpn-core/crates</code> (<code>nym-vpn-lib</code>, <code>nym-gateway-directory</code>, <code>nym-vpn-credential-fetcher</code>, <code>nym-vpn-lib-uniffi</code>); in-house fork <code>git.vdb.to/cerc-io/mtm-vpn-client</code> (private)</td><td class="ok">mainnet</td><td class="part">Med</td></tr>
+<tr><td><strong>Nym 2-hop Fast</strong> (AmneziaWG)</td><td>IP from destination; hides WireGuard signature from DPI/censors. Lower latency, weaker metadata cover than 5-hop</td><td>nym-vpn-client · <code>nym-vpn-core/crates/nym-wg-go</code>, <code>nym-routing</code>/<code>nym-dns</code>/<code>nym-firewall</code></td><td class="ok">mainnet</td><td class="part">Med</td></tr>
+<tr><td>CGNAT / eNAT rotation</td><td>Weak, incidental cover only — hides nothing from the live counterparty; no metadata unlinkability. <em>Not a privacy primitive.</em></td><td>carrier property — no code</td><td class="part">n/a</td><td class="ok">Low</td></tr>
+<tr><td><strong>Waku pub/sub</strong></td><td><em>Which subscriber</em> consumes a message (topic anonymity set). Does NOT hide sender IP/timing by itself; bounded by topic size</td><td><a href="https://github.com/waku-org/go-waku">waku-org/go-waku</a> <code>library/mobile</code> (gomobile); <a href="https://github.com/Railgun-Community/waku-broadcaster-client">waku-broadcaster-client</a> over <code>@waku/sdk</code></td><td class="ok">mainnet</td><td class="new">High (RN)</td></tr>
+<tr><td>libp2p-noise</td><td>Transport <em>encryption</em> + peer-id auth. <strong>Zero IP privacy</strong> — both endpoints see each other's IP</td><td><a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/node/engine/messageservice/p2p-message-service/service.go">go-nitro · p2p-message-service</a> (<code>/nitro/msg/1.0.0</code>); <code>@chainsafe/libp2p-noise</code> via <a href="https://github.com/cerc-io/ts-nitro/tree/884d616a9a026742ef1ce57233801a13d681375a">ts-nitro</a> + <code>@cerc-io/peer</code></td><td class="ok">prod</td><td class="new">High (RN)</td></tr>
+</table>
+<div class="note">
+<strong>Nym is a packet tunnel; Waku/libp2p are app overlays.</strong> Once the Nym TUN is up, every socket the app opens (go-waku <em>and</em> direct libp2p) transits it automatically — no per-library work for the async path. But routing the <em>direct-noise hot loop</em> through the 5-hop mixnet re-adds the latency the direct path exists to avoid, so the hot path realistically uses Nym <strong>2-hop Fast</strong> mode (or bypass). WebRTC-star (UDP/ICE) may not cleanly traverse a WireGuard TUN — the least-proven combination. [INFERENCE]
+</div>
+
+<h2 id="l2">Layer 2 · Read · Order · Submit</h2>
+<p class="small">Interest-privacy (nobody learns which notes you read) + origin-privacy (on-chain sender ≠ your EOA) + anti-front-run ordering.</p>
+<table>
+<tr><th>Component</th><th>Hidden — &amp; from whom</th><th>Code reference</th><th>Maturity</th><th>Mobile</th></tr>
+<tr><td><strong>★ Read-time private sync</strong> (watcher)</td><td><em>Which notes/addresses/commitments you care about</em>, from the data provider &amp; read-path observers — everyone pulls identical proof-carrying bytes; phone scans locally</td><td><a href="https://github.com/cerc-io/watcher-ts/blob/18ca4e1a08328770af8e10f15f2128a459c9c704/packages/util/src/types.ts">watcher-ts · types.ts</a> (<code>getStorageAt→{value,proof}</code>), <code>indexer.ts</code>, <code>payments.ts</code> (voucher metering). <strong>Railgun/Nitro watcher config = net-new</strong></td><td class="part">framework prod; config net-new</td><td class="part">Med</td></tr>
+<tr><td><strong>Write-time origin privacy</strong> (broadcaster + keeper)</td><td>Your <em>EOA as tx origin</em>, from chain/mempool/venue — sender/gas-payer is the broadcaster; payload encrypted to broadcaster</td><td><a href="https://github.com/Railgun-Community/waku-broadcaster-client">waku-broadcaster-client</a> <code>waku-topics.ts</code>, <code>broadcaster-transaction.ts</code>; keeper <a href="https://github.com/cerc-io/mobymask/blob/23291987766f863e366a344973670c57cd82d678/packages/server/index.ts">mobymask · submitInvocations</a>; go-nitro vouchers</td><td class="ok">Railgun prod; keeper PoC</td><td class="part">Med</td></tr>
+<tr><td>Ordering / anti-front-run</td><td>Order <em>content + sequence</em> from the venue during sequencing (no front-run/sandwich/reorder)</td><td><strong>net-new protocol</strong> — commit-reveal + post-seal randomness beacon; no in-tree impl</td><td class="new">paper</td><td class="new">High</td></tr>
+</table>
+
+<h2 id="l3">Layer 3 · Settlement / value · Identity · Custody</h2>
+<p class="small">Value flows hidden in a shielded pool; non-custodial force-closable settlement; identity optional/selectively-disclosed. Design A residual leak: the venue still sees trade <em>amounts/terms</em>.</p>
+<table>
+<tr><th>Component</th><th>Hidden — &amp; from whom</th><th>Code reference</th><th>Maturity</th><th>Mobile</th></tr>
+<tr><td><strong>Railgun shielded pool</strong></td><td>Amounts, sender, recipient, cross-trade linkage — from venue / RPC / chain observers (∝ anonymity-set size)</td><td><a href="https://github.com/Railgun-Privacy/contract">Railgun-Privacy/contract</a> + <a href="https://github.com/Railgun-Privacy/circuits-v2">circuits-v2</a> (BN254/Groth16; commitments/nullifiers)</td><td class="ok">mainnet</td><td class="new">High (mobile prover)</td></tr>
+<tr><td><strong>Design A boundary</strong> (Nitro↔Railgun adapter)</td><td>Who you are, fund origin, history, that two channels are you — from the venue (sees ephemeral id + shielded terms only)</td><td><strong>net-new</strong> — note-funded/note-settled channels; on go-nitro + Railgun</td><td class="new">design</td><td class="new">High</td></tr>
+<tr><td>Non-custodial Nitro channels</td><td>Guarantees no custody (not privacy): force-close to last co-signed state; no receipt ⇒ refund</td><td><a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/packages/nitro-protocol/contracts/ForceMove.sol">go-nitro · ForceMove.sol</a>, NitroAdjudicator, MultiAssetHolder, <code>protocols/swap</code>, vouchers</td><td class="ok">prod</td><td class="part">Med</td></tr>
+<tr><td>laconicd onboarding proof</td><td>Records only a proof (eth-sig + KYC <em>receipt id</em>) — never the KYC data; opt-in, venue identity-blind by default</td><td><a href="https://git.vdb.to/cerc-io/laconicd/src/commit/d130608f672983cb65acfbddc89976747a417aac/proto/cerc/onboarding/v1/onboarding.proto">laconicd · onboarding.proto</a> (<code>Participant</code> role/kyc_id), <code>tx.proto</code> (<code>MsgOnboardParticipant</code> eth_payload/eth_signature)</td><td class="part">testnet</td><td class="part">Med</td></tr>
+<tr><td>ex_net identity proofs</td><td>Identity from the venue unless a counterparty/jurisdiction demands a selective proof</td><td>ex_net whitepaper (<a href="ex_net_whitepaper.pdf">PDF</a>) + the onboarding eth-sig precedent</td><td class="part">paper + precedent</td><td class="part">Med</td></tr>
+<tr><td>Laconic Matchmaker (FHE)</td><td>Each party's identity/exact values from the other <em>and</em> the venue, while proving constraints match</td><td>Laconic Matchmaking Services proposal (FHE set-intersection / range match)</td><td class="new">PoC</td><td class="new">High</td></tr>
+<tr><td>zk-nym credentials</td><td>Which paying user consumes network access — unlinkable, double-spend-resistant</td><td>nym-vpn-client <code>nym-vpn-core</code> (credential-fetcher / account-controller)</td><td class="ok">mainnet/maturing</td><td class="new">High</td></tr>
+<tr><td><strong>Device key custody</strong></td><td>Keys + mnemonic never leave device (iOS Keychain / Android Keystore)</td><td><a href="https://git.vdb.to/cerc-io/laconic-wallet/src/commit/bb5223afdab0d16822bb3c119b6ba2350dab921e">laconic-wallet</a> · <code>src/utils/accounts.ts</code> (react-native-keychain); <a href="https://git.vdb.to/cerc-io/laconic-wallet-web/src/commit/2a4a478e32d0a677711ac41f93ff40f364851c3a">-web</a></td><td class="ok">prod (bare-bones)</td><td class="ok">Low</td></tr>
+</table>
+
+<h2 id="leaks">What still leaks (honest residuals)</h2>
+<ul>
+<li><strong>Design A: the venue sees trade amounts/terms</strong> + an ephemeral per-channel identity. It does <em>not</em> learn who you are, fund origin, history, or that two channels are you. Hiding amounts/terms from the venue = <strong>Design B</strong> (ZK matching + shielded ForceMove), out of scope for v1.</li>
+<li><strong>Anonymity set is finite:</strong> Railgun crowd size + Waku topic-anonymity size bound the guarantees; subject to amount/timing correlation — mitigate with denominations/batching + a fresh per-channel identity.</li>
+<li><strong>CGNAT is not privacy:</strong> gives no guarantee vs the live counterparty; IP privacy must come from Nym.</li>
+<li><strong>Waku exposes the requesting node's IP</strong> to lightpush/filter/store peers unless tunneled through Nym.</li>
+</ul>
+
+<h2 id="difficulty">Integration difficulty — scoping the assembly</h2>
+<p>The privacy <em>primitives</em> mostly exist and are individually production-grade. The cost is almost entirely <strong>mobile-runtime integration</strong> (React Native runs none of the p2p/prover stacks natively today) plus <strong>~5 net-new pieces</strong>. Ranked crux items:</p>
+<table>
+<tr><th>#</th><th>Crux</th><th>Why hard</th><th>Difficulty</th></tr>
+<tr><td>1</td><td>Real libp2p on React Native — <em>twice</em>, under a VPN</td><td>No working RN libp2p today (wallet is WalletConnect-only). Must ship <code>go-waku</code> gomobile native module <em>and</em> a direct-noise path (MobyMask stack in a WebView or native), both through the Nym TUN, respecting iOS/Android background limits + WebRTC-over-WireGuard routing</td><td class="new">High</td></tr>
+<tr><td>2</td><td>Mobile Railgun prover</td><td>Client-side Groth16 (BN254) witness-gen + Merkle note-scan on a phone; RN has no native prover — ship WASM/native prover</td><td class="new">High</td></tr>
+<tr><td>3</td><td>Nitro↔Railgun boundary adapter (Design A)</td><td>Net-new contract moving value between shielded-note and channel-deposit representations while staying unlinkable <em>and</em> unilaterally force-closable</td><td class="new">High</td></tr>
+<tr><td>4</td><td>Commit-reveal + post-seal beacon ordering</td><td>Net-new protocol + two-phase (commit→reveal) mobile UX + a trustworthy post-seal randomness source</td><td class="new">High</td></tr>
+<tr><td>5</td><td>★ Railgun/Nitro watcher config + verifying light client</td><td>Framework exists (watcher-ts) but the pool-specific watcher (ABIs/state/GQL) is net-new; phone needs a verifying light client doing local note-scan. <em>Anonymity-set-critical.</em></td><td class="part">Med–High</td></tr>
+<tr><td>6</td><td>Nym mode-selection policy</td><td>5-hop (max privacy) vs 2-hop Fast (hot-path latency) vs bypass — no repo implements this end-to-end on mobile</td><td class="part">Med</td></tr>
+</table>
+<h3>Reusable today (Low / wire-up)</h3>
+<ul>
+<li><strong>On-device key custody</strong> — ships in the wallet (only new <em>signing paths</em> are additive).</li>
+<li><strong>Nitro adjudicator / ForceMove</strong> — live on Ethereum; mobile side via ts-nitro in a WebView.</li>
+<li><strong>Railgun shielded pool</strong> — live (Armada's, immutable) — we consume, not build.</li>
+<li><strong>NymVPN client</strong> — shipped Android/iOS (in-house fork); wire-up, not build; embedded-wallet-from-mnemonic precedent exists.</li>
+<li><strong>Keeper relay + broadcaster</strong> — Railgun broadcaster is prod; keeper submit is a trivial RPC (PoC lineage).</li>
+<li><strong>Onboarding proof</strong> — a Cosmos msg the wallet nearly signs already (add eth-sig + pubkey return).</li>
+</ul>
+<div class="note">
+<strong>Bottom line.</strong> No new cryptography is required for v1 (Design A) — the hard work is (a) making a phone run two libp2p transports + a ZK prover under a mixnet VPN, and (b) building four net-new protocol/contract pieces (boundary adapter, ordering, pool watcher, and gluing them). The load-bearing, do-first item is <strong>#5 read-time private sync</strong> — if reads leak, the entire pool anonymity set collapses and the rest is moot.
+</div>
+
+<hr/>
+<p class="small">Companion to <a href="architecture.html">Architecture</a> (tier stack) and <a href="build-plan.html">Build plan</a> (status/backlog). Pinned commits: go-nitro <code>435eb2b</code>, watcher-ts <code>18ca4e1</code>, mobymask <code>2329198</code>, ts-nitro <code>884d616</code>, laconicd <code>d130608</code>, laconic-wallet <code>bb5223a</code>. <code>mtm-vpn-client</code> is private (git.vdb.to). Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

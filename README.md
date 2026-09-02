@@ -1,22 +1,35 @@
 # armada-laconic
 
 Design and collaboration documents for delivering Armada's Ethereum-privacy services
-on Laconic infrastructure.
+on Laconic infrastructure. Two additive offers for Armada's shielded pool — **more
+yield** and the **mobile-first private support services** Armada needs but won't build
+itself — without changing Armada's focus, taking custody, or touching the immutable pool.
 
-## Documents
+## Site (open `index.html`, or enable GitHub Pages)
 
-- **[armada_watcher_party_architecture.html](./armada_watcher_party_architecture.html)** —
-  *Armada on Watcher Parties.* A mobile-first, non-custodial, front-running-resistant
-  private exchange delivered through bonded Laconic watcher parties: ex_net, Nitro,
-  Schnorr DSS, the identity model (ex_net proofs + the Laconic Matchmaker), watcher
-  parties, and Ethereum state injection via plugeth — with a code-fit map and
-  line-anchored citations to the existing implementations.
-
+- **[index.html](./index.html)** — *Overview.* The two offers, how they plug into
+  Armada's three-tier model, and the tier map.
+- **[architecture.html](./architecture.html)** — *The tier stack.* Seven tiers
+  (T0 Ethereum anchor → T6 client): watcher parties, Nitro, Schnorr DSS, ordering
+  & fault model, ex_net execution platform, adapters, identity, and the privacy
+  boundary — with line-anchored citations to existing implementations.
+- **[build-plan.html](./build-plan.html)** — *Status & backlog.* What's built vs.
+  partial vs. net-new per tier, with a per-component confidence mark and a
+  sequenced net-new backlog.
+- **[execution-platform.html](./execution-platform.html)** — *ex_net.* The
+  frequent-batch-auction, curve-order matcher (T4) that powers the swaps and yield
+  adapters: lineage, the 2019–2020 matcher PoC, CLOB+RFQ in one order type, and
+  capital efficiency vs. AMMs.
 - **[laconic_ethereum_privacy_via_armada.html](./laconic_ethereum_privacy_via_armada.html)** —
-  *Leveraging Laconic for Ethereum Privacy (via Armada).* The original thesis: Laconic
-  as the sync / metering / client substrate beneath Armada's Railgun-circuit shielded pool.
+  *The thesis.* Laconic as the sync / metering / client substrate beneath Armada's
+  Railgun-circuit shielded pool.
+- **[ex_net_whitepaper.pdf](./ex_net_whitepaper.pdf)** — Vulcanize's 2017 design ancestor.
 
-## Viewing
+> **Tiers**, not blockchain "layers." T0–T6 are software-architecture tiers,
+> deliberately distinct from Ethereum Layer-1/Layer-2 vocabulary.
 
-These are self-contained HTML files — open them directly in a browser, or enable
-GitHub Pages to serve them.
+## Code
+
+Gitea-only Laconic repos (`git.vdb.to`) are vendored under [`code/`](./code) as
+shallow, history-free snapshots at the pinned commits, so citations stay reviewable
+if Gitea is unavailable.

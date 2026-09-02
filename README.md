@@ -2,8 +2,8 @@
 
 Design and collaboration documents for delivering Armada's Ethereum-privacy services
 on Laconic infrastructure. Two additive offers for Armada's shielded pool — **more
-yield** and the **mobile-first private support services** Armada needs but won't build
-itself — without changing Armada's focus, taking custody, or touching the immutable pool.
+yield** and the **mobile-first private support services** that surround it — so Armada's
+team can stay focused on the crypto core. Non-custodial, and we never touch the immutable pool.
 
 **▶ Live site — [afdudley.github.io/armada-laconic](https://afdudley.github.io/armada-laconic/)**
 

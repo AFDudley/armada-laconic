@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Builder codes, attribution &amp; liquidity — TACEO vs ex_net (discussion draft)</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="index.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="build-plan.html">Build plan</a>
+  <a href="execution-platform.html">Execution platform</a>
+  <a href="yield-clearing.html">Yield &amp; clearing</a>
+  <a href="mobile-privacy.html">Mobile privacy</a>
+  <a href="glossary.html">Glossary</a>
+  <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="builder-codes.html" class="active">Builder codes</a>
+</nav>
+
+<h1>Builder codes, attribution &amp; liquidity — TACEO vs ex_net</h1>
+<p class="lede">Two ways to do private <em>payment for order flow</em> / builder-code attribution — TACEO's cryptographic construction and ex_net's peer-to-peer construction — plus the liquidity question underneath both. This is a <strong>discussion draft to start a conversation</strong>, not a recommendation: it's not yet clear which model we want.</p>
+<p style="margin-top:14px">
+  <span class="tag">discussion draft</span>
+  <span class="tag">no recommendation</span>
+  <span class="tag">standalone</span>
+</p>
+
+<div class="note">
+Standalone by design — it doesn't assume the rest of the site's direction. It summarizes each proposal on its own terms, then compares. Sources: TACEO, <a href="https://core.taceo.io/articles/privacy-preserving-builder-codes/">"Privacy-Preserving Builder Codes for Revenue Sharing"</a> (Mar 2026); the <a href="ex_net_whitepaper.pdf">ex_net whitepaper</a> (2017). "Armada" here = the Railgun shielded pool + Nitro clearing + ex_net-style venue described elsewhere on this site.
+</div>
+
+<h2 id="taceo">1. The TACEO proposal</h2>
+<p>
+<strong>The problem it solves.</strong> Wallets and apps (MetaMask, Phantom, aggregators) route enormous volume to AMMs and want a verifiable revenue share for it — "builder codes" / payment for order flow, the on-chain analog of Robinhood→Citadel. But proving attribution by <strong>tagging transactions publicly</strong> (e.g. ERC-8021) exposes exactly what competitors would pay to see: which users trade where, how much, and when. Attribution destroys privacy.
+</p>
+<p><strong>The construction</strong> — three steps between a wallet and an AMM:</p>
+<ol>
+<li><strong>Tag.</strong> The wallet holds a secret key <code>sk</code>. Per transaction it samples a nonce <code>x</code> and computes a <em>blind referral tag</em> <code>r = H(sk, x)</code>, attached to the tx. The AMM sees the tag but learns nothing about the wallet's identity or its other trades.</li>
+<li><strong>Commit.</strong> The AMM determines the fee <code>b</code> generated and inserts <code>[r, b]</code> into a public <strong>Referral Tree</strong> (a Merkle tree), publishing the root on-chain. Anyone can audit; understating fees or omitting a referral is provable via Merkle proof.</li>
+<li><strong>Redeem.</strong> To claim, the wallet obtains a nullifier <code>n = OPRF(r, sk_oprf)</code> from the <strong>TACEO:OPRF</strong> service, whose key <code>sk_oprf</code> is held by a network of nodes via <strong>threshold MPC</strong> (no single party holds it). It then submits a zero-knowledge proof: "I hold valid OPRF nullifiers on tags that sit in the Referral Tree summing to <code>$X</code> in fees; I know the <code>sk</code>/nonces behind them; my payout rate is <code>p</code>." The contract checks the proof and that the nullifiers are unused, then pays out privately and marks them spent.</li>
+</ol>
+<p>
+The OPRF is the load-bearing piece: it <strong>obliviously</strong> (without learning the input) and via a <strong>no-single-party key</strong> transforms a <em>public</em> tag into a deterministic, unlinkable nullifier — severing the link between the tag in the tree and the redemption. An optional <strong>Fee Tree</strong> (public-key → private revenue-share %) keeps differentiated pricing hidden until redemption.
+</p>
+<p><strong>What it guarantees:</strong> verifiable attribution with zero linkability — the wallet proves "I referred this volume" and gets paid; the user stays unlinkable; and <strong>not even the fee-committing AMM</strong> can reverse-engineer which trades, which users, or what a competitor earns.</p>
+<p class="small"><strong>What it assumes:</strong> deep <em>public</em> AMM liquidity (Uniswap/Jupiter) — the trade is public and the taker already has full depth; only attribution needs hiding. Cost: an MPC OPRF network + ZK circuits.</p>
+
+<h2 id="exnet">2. The ex_net proposal</h2>
+<p>
+ex_net (2017) is a <strong>federated, bonded, non-custodial cross-chain exchange venue</strong>. Validators run matching engines and take a fee percentage on every filled order; orders are backed by assets escrowed in payment channels or vouchers. It addresses the same attribution-and-privacy problem <strong>structurally, through its order and routing model</strong>, rather than with heavy cryptography.
+</p>
+<p><strong>Order model (three types):</strong></p>
+<ul>
+<li><strong>Unblinded</strong> — sent to the pool of bonded validators to be matched.</li>
+<li><strong>Blinded</strong> — values encrypted to one or more specific parties; anyone can see an order exists, but only sender/receiver see the values (the receiver's wallet must be online to decrypt).</li>
+<li><strong>P2P</strong> — matched and settled off-chain, directly between counterparties over payment channels.</li>
+</ul>
+<p><strong>Attribution is native to routing.</strong> Orders carry explicit <strong>filler allowlists and router allowlists</strong>; a router/filler creates a <strong>derived order</strong> backed by the original (a blinded order doubles as privacy-preserving proof-of-backing). The chain of derived orders <em>is</em> the attribution path — whoever routed or filled is recorded in the order structure and earns their cut from the fee schedule, settled in-channel. No public tag, no Merkle tree of fees, no nullifier, no OPRF.</p>
+<p><strong>Privacy comes from P2P + selective encryption</strong>, not global anonymity + an OPRF: sensitive flow is either off-chain (P2P) or per-recipient-encrypted (blinded), so "who trades where, how much, when" is never placed on a public venue. Supporting mechanisms: <strong>composable per-account orderbooks</strong> with custom matching rules, per-pair/per-account <strong>fee schedules</strong>, and counterparty <strong>blocklists</strong>; <strong>liquidity proofs</strong> (signed, selectively-blinded statements of available liquidity across chains); <strong>ephemeral liquidity</strong> (time-bounded, validator-enforced commitments — a fix for "ghost liquidity"); and validators <strong>opportunistically filling</strong> against public DEX activity.</p>
+<p class="small"><strong>Armada mapping:</strong> Railgun shielded pool (hides values), Nitro clearing (co-signed channel allocations already split fees <em>user / protocol / <strong>integrator</strong></em> — the integrator is the builder), and bonded <strong>watcher parties</strong> as the emergent P2P venues. Cost: public-key encryption + payment channels + access-control lists + bonded-validator honesty — no MPC/OPRF/ZK required for the base case.</p>
+
+<h2 id="charts">3. Comparison</h2>
+
+<h3>3a. Attribution &amp; privacy</h3>
+<table>
+<tr><th>Guarantee</th><th>TACEO (crypto-heavy)</th><th>ex_net / Armada (crypto-light)</th></tr>
+<tr><td>Attribution mechanism</td><td>blind tag committed by the AMM to a public Merkle tree</td><td>routing/filler allowlists + derived orders — the routing path <em>is</em> the attribution</td></tr>
+<tr><td>Exactly-once (no double-claim)</td><td>OPRF nullifiers</td><td>fill→settle-once channel accounting (or Railgun nullifiers)</td></tr>
+<tr><td>Verifiable fees / anti-fraud</td><td class="ok">trustless Merkle fraud proof</td><td>bonded validators + signed caches + liquidity proofs (economic + signature)</td></tr>
+<tr><td>Hidden from public / competitors</td><td class="ok">yes (OPRF unlinks tag↔redeem)</td><td class="ok">yes (nothing on a public venue; P2P + encryption + shielded settle)</td></tr>
+<tr><td>Hidden from the fee-committing counterparty</td><td class="ok">yes (threshold OPRF, no single de-anonymizer)</td><td class="part">no — parties in the routing/fill path see attribution (trust-scoped)</td></tr>
+<tr><td>Differentiated private pricing</td><td>optional Fee Tree (ZK)</td><td>per-account fee schedules + ACLs (private because the order is P2P/encrypted)</td></tr>
+<tr><td>Payout privacy</td><td>confidential payments (Merces)</td><td>off-chain channel settlement (shielded via the Railgun adapter)</td></tr>
+<tr><td>Cost</td><td>MPC OPRF network + ZK circuits</td><td>PK-encryption + payment channels + allowlists + bonding</td></tr>
+</table>
+<p class="small">The one property ex_net/Armada does <em>not</em> match for free is <strong>counterparty-blind attribution</strong> (hiding it from the venue itself). That's the sole thing the OPRF buys. If Armada needs it, the fix is a <strong>threshold VOPRF hosted on the bonded federation</strong> (net-new crypto), or a commitment-style tag where the redemption nullifier is derived from the builder's own secret (pure Railgun-style, no threshold key) — an open design question.</p>
+
+<h3>3b. Liquidity for shielded actors</h3>
+<p>The deeper axis TACEO takes for granted: once you <em>shield</em> the actor, what liquidity can they still reach without deshielding? Three tiers:</p>
+<table>
+<tr><th>Tier</th><th>Counter-liquidity</th><th>Privacy</th><th>Depth</th></tr>
+<tr><td><strong>1 · Internal cross</strong></td><td>other shielded actors (coincidence-of-wants)</td><td class="ok">highest; trade never leaves the pool</td><td class="part">thin — only opposite-side shielded flow</td></tr>
+<tr><td><strong>2 · Private LP inventory</strong></td><td>a maker/LP who posts inventory and holds a <em>public aggregate</em> position (Armada's posted-price v1; LP-buffered Aave/wstETH)</td><td class="ok">taker private; LP absorbs the boundary exposure</td><td class="part">bounded by LP capital + risk appetite</td></tr>
+<tr><td><strong>3 · Emergent watcher-party venues</strong></td><td><strong>small, opt-in groups coordinated over the private p2p network</strong> that provide liquidity to the shielded pool</td><td class="ok">group is the coordination/privacy boundary; identity-gating optional</td><td class="new">federated — scales by venues emerging, not one book</td></tr>
+</table>
+<p>
+<strong>Tier 3 is the key idea.</strong> Liquidity provision is itself a <strong>watcher-party service</strong>: the same bonded p2p federation primitive that serves proof-carrying state to the pool can also <em>provide liquidity</em> to it. Such venues <strong>emerge spontaneously and permissionlessly</strong> — many coexist and compete rather than one central book (ex_net: "multiple exchanges will exist"; the marketplace's Asker/Responder model). Coordination happens within a <strong>bounded opt-in group over p2p</strong>, so flow never touches a public book. Each venue <strong>can leverage identity if it wants</strong> — an institutional/compliant pool that gates counterparties by KYC / accreditation / jurisdiction, or a fully open anonymous one. That is exactly why <a href="architecture.html#identity">identity is an optional match filter, not a layer</a>: each emergent venue picks its own policy. Bridging aggregated net flow to public AMMs is one <em>optional</em> behavior of such a party, not the definition.
+</p>
+<p class="small"><strong>Consequence:</strong> depth for shielded actors is <strong>composed from many small private venues</strong> — the privacy/liquidity frontier becomes <em>federated</em> rather than a single trade-off. Honest edges: each venue's individual book is shallow (the bet is that many venues + composability aggregate to real depth); identity-gated venues trade openness for counterparty quality/compliance; and cross-venue discovery (finding who will privately serve your side) is itself a p2p problem — ex_net's liquidity proofs / advertising is the crypto-light answer.</p>
+
+<h3>3c. Which problem each construction actually solves</h3>
+<table>
+<tr><th>Axis</th><th>TACEO</th><th>ex_net / Armada</th></tr>
+<tr><td>Liquidity source</td><td>deep public AMMs (assumed given)</td><td>tiered: internal cross → private LP → emergent watcher-party venues</td></tr>
+<tr><td>The hard problem</td><td>attribution privacy over public flow</td><td>liquidity depth for shielded actors</td></tr>
+<tr><td>Who bears boundary exposure</td><td>n/a (trade is public)</td><td>the LP / market-maker (public aggregate), paid the spread</td></tr>
+<tr><td>Venue shape</td><td>one deep public venue + crypto on top</td><td>many emergent, opt-in, identity-optional private venues</td></tr>
+<tr><td>Best fit</td><td>an adversarial, transparent public AMM</td><td>a P2P, federated, non-custodial shielded venue</td></tr>
+</table>
+
+<h2 id="discussion">4. For discussion</h2>
+<p>Neither is strictly "better"; they solve different halves and assume different worlds. Questions to settle:</p>
+<ul>
+<li><strong>Do we need counterparty-blind attribution at all?</strong> If our venue is a bonded, blind watcher party (not an adversarial public AMM), the cheap ex_net/Nitro path may suffice. If we do need it, is it worth a threshold VOPRF on the federation, or can a commitment-style tag avoid it?</li>
+<li><strong>Is the liquidity model federated (many emergent watcher-party venues) or LP-anchored (a few large market-makers)?</strong> This drives everything: depth, anonymity-set size, and how much we lean on public-AMM bridging.</li>
+<li><strong>How much identity gating?</strong> Per-venue opt-in identity lets compliant/institutional pools and open anonymous pools coexist on the same shielded pool — is that the desired shape?</li>
+<li><strong>Where does public depth enter?</strong> Only via optional LP hedging / watcher-party bridging, or as a first-class routing target (which reintroduces TACEO's attribution problem)?</li>
+</ul>
+
+<hr/>
+<p class="small">Discussion draft for the Armada dev team. Non-custodial; Armada's shielded pool is immutable and untouched. Sources linked inline; ex_net internal docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

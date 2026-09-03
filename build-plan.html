@@ -79,7 +79,7 @@
 <tr><td>In-browser / mobile Nitro node</td><td>E4</td><td>ts-nitro<sup><a href="#r-tsnitro">[4]</a></sup></td><td class="ok">built</td><td>design</td></tr>
 <tr><td>Armada-branded front-end + SDK wiring</td><td>E4</td><td>grow from wallet + demo fragments</td><td class="new">net-new (build up)</td><td>design</td></tr>
 <tr><td>Mobile runtime (RN shell + native modules)</td><td>E4/E5</td><td>go-nitro + go-waku (gomobile) · mopro prover · RN shell</td><td class="new">net-new (path set)</td><td>design</td></tr>
-<tr><td><strong>×-cut</strong></td><td>ex_net identity proofs (selective disclosure)</td><td>E8</td><td>ex_net<sup><a href="#r-exnet">[1]</a></sup> + onboarding<sup><a href="#r-onboard">[14]</a></sup></td><td class="part">spec + precedent</td><td>design</td></tr>
+<tr><td><strong>opt</strong></td><td>Identity filter (optional, selective-disclosure) — a match parameter, not a layer</td><td>E8</td><td>ex_net<sup><a href="#r-exnet">[1]</a></sup> + onboarding<sup><a href="#r-onboard">[14]</a></sup></td><td class="part">optional</td><td>design</td></tr>
 </table>
 <p class="small"><strong>v1 is mostly integration</strong> + a small posted-price contract + the boundary adapter — no new consensus, ordering, or ZK-circuit research.</p>
 
@@ -147,7 +147,7 @@
 <li><strong>Adapters (T5):</strong> posted-price venue + Swaps at the posted price; yield (wstETH note for ETH; LP-buffered Aave for USDC).</li>
 <li><strong>Client (T6):</strong> grow the bare-bones wallet into the Armada-branded front-end + wire the SDK; build the <strong>go-nitro + go-waku gomobile native module</strong> + mopro prover (RN = shell only); WebView MVP as the interim.</li>
 <li><strong>Ingestion (T1):</strong> nimbus-eth1 state-diff emitter + Railgun/adjudicator watcher config + metered private note stream.</li>
-<li><strong>Identity (×-cut):</strong> selective-disclosure proofs; Matchmaker integration (if in scope).</li>
+<li><strong>Identity (optional filter):</strong> a selective-disclosure attribute parties may require in match criteria — not a separate layer; off-the-shelf via Self, deferred.</li>
 </ol>
 <p class="small">One-line shape: T0–T2 is mostly built/integration; the genuine new build is <strong>T3 ordering + T4 platform + the T0 contracts</strong>. Deferred (Design B): ZK matching + shielded ForceMove to hide trade amounts from the venue itself; native BTC settlement beyond an HTLC leg.</p>
 

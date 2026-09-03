@@ -41,7 +41,7 @@ Tiers are named in the software-architecture sense (an n-tier stack) — deliber
   <a href="#t4">T4 · Execution / settlement platform (ex_net)</a>
   <a href="#t5">T5 · Adapters (Armada's tier)</a>
   <a href="#t6">T6 · Client / apps (mobile-first)</a>
-  <a href="#identity">Cross-cutting · Identity</a>
+  <a href="#identity">Identity — optional match filter</a>
   <a href="#privacy">Cross-cutting · Privacy boundary (Design A)</a>
   <a href="#refs">References</a>
 </div>
@@ -176,9 +176,9 @@ As an adapter it chains two operations into one user action, without touching th
 The client is the <strong>Laconic wallet</strong> — a React Native app on <strong>Android and iOS</strong><sup><a href="#r-lacwallet">[21]</a></sup> (with a browser build<sup><a href="#r-lacwalletweb">[22]</a></sup>): it custodies keys and signs both Cosmos and EIP-155 requests over WalletConnect, and pairs with an <strong>in-browser / mobile Nitro node</strong><sup><a href="#r-tsnitro">[4]</a></sup> for payments and a <strong>libp2p relay</strong>. Be clear about maturity: the wallet is <strong>bare-bones</strong>, and <code>MobyMask</code><sup><a href="#r-mobymask">[3]</a></sup> / the swap demos are <strong>demo fragments, not user-facing products</strong> — they demonstrate the mobile-first shape (app-specific signing + in-browser Nitro + p2p relay to a keeper), not a finished app. So T6 is a real build: grow the bare-bones wallet into the <strong>Armada-branded front-end</strong>, wire the Armada SDK, and add wallet updates (return pubkey on <code>cosmos_signAmino</code>, Nitro + commit-reveal integration, Railgun boundary UX).
 </p>
 
-<h2 id="identity">Cross-cutting · Identity</h2>
+<h2 id="identity">Identity — an optional match filter</h2>
 <p>
-Deliberately thin and privacy-first, described by two existing pieces of Laconic work.
+Identity is <strong>not a special layer</strong> — it's an <strong>optional, well-defined attribute</strong> a party can attach to itself and optionally require of counterparties, evaluated by the <strong>same matcher</strong> as any other filter (pair, size, price, allow/block lists). The default is <strong>identity-blind</strong>; a party opts in only when a counterparty or a jurisdiction requires it. The pieces below are just how such an attribute is sourced and proved — all optional.
 </p>
 <h3>ex_net identity proofs</h3>
 <p>

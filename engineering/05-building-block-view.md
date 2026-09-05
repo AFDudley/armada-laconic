@@ -28,18 +28,18 @@ This section gives the static decomposition of the system. **Level 1** is the se
 
 ## Item registry (the single model)
 
-Facets: **status** (`built`→redeploy · `reuse` · `partial` · `net-new`) · **release** (`v1` ship first · `v2` later · `opt`).
+Facets: **status** (`net-new` · `net-new (clean-room)` · `reuse` / `built/reuse` · `partial`) · **release** (`v1` ship first · `v2` later · `opt`).
 
 ### T0 · Ethereum anchor
 | id | item | status | release |
 |---|---|---|---|
-| T0.0 | Shielded pool — redeploy Railgun OSS; POI policy; fee=0 | built→redeploy | v1 |
-| T0.1 | Trusted setup — reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N) | net-new (process) | v1 |
+| T0.0 | Shielded pool — clean-room reimplement (spec-compatible with Railgun); POI policy; fee=0 (ADR-0014) | net-new (clean-room) | v1 |
+| T0.1 | Circuits + trusted setup — clean-room JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N) (ADR-0014) | net-new (clean-room) | v1 |
 | T0.2 | Nitro adjudicator — `go-nitro` NitroAdjudicator / ForceMove / MultiAssetHolder | built/reuse | v1 |
 | T0.3 | Deposit/payout contract — the Nitro↔Railgun boundary (notes in / notes out) | net-new | v1 |
 | T0.4 | Registry + bond contract — venue/party bonding | net-new | v2 |
 | T0.5 | Sequencing-cert + fraud-proof verifier | net-new | v2 |
-| T0.6 | Native channelized commitment — amount-privacy-in-play (circuit change ⇒ re-run T0.1) | net-new | opt |
+| T0.6 | Native channelized commitment — amount-privacy-in-play (change to our own circuits ⇒ re-run T0.1) | net-new | opt |
 | T0.7 | Anonymity-set strategy — bootstrap own crowd + Railgun import bridge | strategy | v1 |
 
 ### T1 · Ingestion

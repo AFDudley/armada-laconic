@@ -21,6 +21,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 | [0011](#adr-0011) | Market-making & LP-buffered USDC yield are out of v1 | accepted |
 | [0012](#adr-0012) | Delivery model: reuse-oriented incremental delivery; scopes as WBS work packages | accepted |
 | [0013](#adr-0013) | Single team; scope spans the whole Armada product; Laconic is prior art | accepted |
+| [0014](#adr-0014) | Pool + circuits are a clean-room reimplementation (license-clean) | accepted |
 
 ---
 
@@ -36,7 +37,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Alternatives.** C4/Simon Brown is diagram-centric and light on decisions and cross-cutting concerns; Views-and-Beyond/SEI is rigorous but heavyweight; and a bespoke structure is the status quo that failed.
 
 ## ADR-0002
-**Deploy our own Railgun pool (don't rent Railgun's)** · accepted · 2026-09-04
+**Deploy our own Railgun pool (don't rent Railgun's)** · accepted · 2026-09-04 · amended by ADR-0014
 
 **Context.** We need a shielded pool with our own fee policy and POI policy, plus the freedom to attach a settlement contract. Railgun's OSS is redeployable.
 
@@ -47,7 +48,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Alternatives.** Renting Railgun's live pool — which carries their ~0.25% fee, no fee or POI control, and no settlement hook — was rejected.
 
 ## ADR-0003
-**Keep Groth16; reuse Perpetual PoT Phase-1 + run our own Phase-2** · accepted · 2026-09-04
+**Keep Groth16; reuse Perpetual PoT Phase-1 + run our own Phase-2** · accepted · 2026-09-04 · amended by ADR-0014
 
 **Context.** Groth16 requires a per-circuit trusted setup. Two questions remained open: whether to run our own trusted setup, and whether to switch to Halo2 to avoid setup altogether.
 
@@ -176,3 +177,14 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Consequences.** §1 purpose reframes from *Laconic work to satisfy Armada requirements* to *the team's work to build Armada, a Railgun-based product, on Laconic prior art*. §3's build-ownership boundary becomes a **reuse boundary** (what already exists vs what is net-new), not an org boundary. T5's items enter the WBS; "external systems" shrinks to genuine third parties (Ethereum L1, Circle/CCTP, Aave, the Railgun OSS we redeploy, nimbus-eth1 upstream, the Waku network). The architecture baseline (ADRs 0002–0011) is unchanged — those technical choices stand.
 
 **Alternatives.** Keep the two-org boundary (rejected — it's one team; the boundary created artificial "out of scope" gaps like T5 and mis-framed the yield/adapter work).
+
+## ADR-0014
+**Pool + circuits are a clean-room reimplementation (license-clean)** · accepted · 2026-09-05 · amends ADR-0002, ADR-0003
+
+**Context.** The A deep dive ([A.1.10](../A-nitro-on-railgun/A.1-reuse-inventory.md)) found Railgun's `circuits-v2` carries an explicit *"No License is provided for any party under any circumstances"* file and the pool contracts are SPDX `UNLICENSED`. So ADR-0002 (redeploy the OSS pool) and ADR-0003 (own Phase-2 over Railgun's circuits) are **not executable as written**. `go-nitro`/`ts-nitro` are separately-licensed OSS and unaffected; Railgun's `engine`/`cookbook` are MIT (usable as reference), but they are not the on-chain/circuit pieces.
+
+**Decision.** Reimplement the **shielded-pool contracts** (T0.0) and the **JoinSplit circuits** (T0.1) **clean-room** — independently authored, spec-compatible with the Railgun design the deep dive documents (A.1.1/A.1.2), using no Railgun-licensed source. Our engineers own this build. Everything else stands: reuse `go-nitro` (T0.2), `ts-nitro` (T6.2), and `engine`/`cookbook` as MIT reference; reuse the community Perpetual PoT Phase-1 and run our own Phase-2 **over our own circuits** (ADR-0003 otherwise unchanged); keep Groth16.
+
+**Consequences.** T0.0 and T0.1 change status from **reuse/redeploy → net-new (clean-room)** — a real, audit-critical crypto-engineering workstream, though of a well-understood design that the deep dive de-risks by pinning the exact behavior/format to match. The "integration, not new cryptography" thesis (ADR-0012, §4) now holds for the **settlement rail** (T0.2 adjudicator + T0.3 deposit/payout + T6.x) but **not** for the pool/circuits. **A.1 (the reuse inventory) doubles as the reference spec** the clean-room implements. T0.6 (native commitment) is a change to our own circuits. Note format may match Railgun (to ease the T0.7 onboarding bridge) or diverge — our choice; our anonymity set is separate regardless.
+
+**Alternatives.** Obtain a Railgun grant/relicense (unavailable — we go clean-room). Use Railgun's live deployed pool directly (rejected — no fee=0/own POI, no settlement hook; contradicts ADR-0002's rationale).

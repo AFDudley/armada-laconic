@@ -36,7 +36,7 @@ The on-chain price surface. A single privileged `priceSetter` holds the current 
 A **pure state machine** — states `propose-quote → accept → fill → settle/abort` — registered in the **T0.3 ForceMove app registry**, where its app ID occupies an allow-listed slot.
 
 - **What it is:** it drives a channel to a co-signed fill state at the posted price — user leg out, venue leg in. Acceptance of a signed quote (T4.0) advances the app, and a **missing settlement receipt forces a close to the pre-fill state**, so a stalled settle never costs funds.
-- **Reuse vs build:** build the app (pure state machine). The adjudication and dispute machinery is reused from T0.2 (`ForceMove.sol` / `NitroAdjudicator.sol`), and `protocols/swap/swap.go` in go-nitro is the reference for the ETH-in/USDC-out multi-asset fill.
+- **Reuse vs build:** build the app (pure state machine). The adjudication and dispute machinery is reused from T0.2 (`ForceMove.sol` / `NitroAdjudicator.sol`), and `protocols/swap/swap.go` in go-nitro is the reference for the ETH-in/USDC-out multi-asset fill — the `MultiAssetHolder` / `transferAllAssets` machinery already supports multi-asset, so T4.1 is the net-new settlement *app*, not new outcome/holder machinery (A.1.8 §2).
 - **Interface consumed:** the T0.3 channel lifecycle API (open/fund-from-note, propose/accept state, cooperative close, force-close, respond), the app-registry slot, and the T4.0 posted-price read path.
 - **Interface published:** the quote/settle app ID plus the adjudication interface go to T6; the wallet drives the fill state machine directly.
 - **Key tasks:** define the states; register the app ID in the T0.3 allow-list; wire the read of the T4.0 price into the fill transition.
@@ -80,7 +80,7 @@ The trivial yield shape. **wstETH** (and weETH) are **non-rebasing** LSTs: the b
 - **Non-rebasing ⇒ a clean shielded note** — the note's value tracks by price, not by a changing balance, so the rebasing gotcha that afflicts aUSDC/aWETH disappears.
 - **Yield with no Aave, no LP, no boundary tx** — a shielded wstETH note **earns staking yield just by being held**. The T4.2/T4.5 LP/aggregation/saturation machinery is **not needed** for base ETH yield; the venue is needed only to **swap that yield to USDC** privately (the T4.1 quote/settle path).
 
-- **Reuse vs build:** config — the T0.0 Railgun pool already holds multi-asset notes (wstETH), so this is note-config integration with no new contract.
+- **Reuse vs build:** config — the T0.0 clean-room pool (Railgun-spec-compatible) already holds multi-asset notes (wstETH), so this is note-config integration with no new contract.
 - **Interface consumed:** the T0.0 asset allow-list must include the pair (e.g. wstETH/USDC); the swap-to-USDC route runs through T4.1, filled from the venue's **static inventory** in v1 (the T4.2 solver is v2).
 - **Optional higher yield:** Aave **E-Mode looping** (supply wstETH, borrow WETH, re-supply) via T5.1 → T5.0 — opt-in, with liquidation and LST risk accepted as standard DeFi risk.
 

@@ -17,17 +17,19 @@ sidechain.
   force-close, and watchers read L1 state directly rather than a trusted RPC of record.
 - *Governs:* §5 T0.
 
-**TC-2 — Railgun's deployed protocol is consumed unmodified.** We redeploy the Railgun
-OSS contracts and circuits under our own control (T0.0) and never edit or touch Railgun's
-live pool.
-- *Consequence:* Shielded-pool cryptography is inherited rather than re-invented. Upgrades
-  and audit become our responsibility, but note format and nullifier semantics stay
-  Railgun-compatible, and value from Railgun enters only via the unshield→shield bridge
-  hop (T0.7).
-- *Governs:* ADR-0002 · §5 T0.0, T0.7.
+**TC-2 — Shielded-pool design is Railgun-spec-compatible, clean-room implemented.**
+Because Railgun's contracts/circuits are unlicensed (A.1.10), we **clean-room reimplement**
+the shielded-pool contracts and JoinSplit circuits — spec-compatible with the Railgun
+design, using no Railgun-licensed source (T0.0/T0.1) — and never edit or touch Railgun's
+live pool (ADR-0014, amending ADR-0002).
+- *Consequence:* Shielded-pool cryptography follows a known, de-risked design rather than
+  novel research, but authoring and auditing it is our responsibility. Note format and
+  nullifier semantics stay Railgun-compatible, and value from Railgun enters only via the
+  unshield→shield bridge hop (T0.7). The licensing blocker is resolved by going clean-room.
+- *Governs:* ADR-0002, ADR-0014 · §5 T0.0, T0.1, T0.7.
 
 **TC-3 — Groth16 over BN254 proving.** v1 keeps Groth16: Phase-1 reuses the community
-Perpetual Powers of Tau, and Phase-2 is our own 1-of-N MPC (T0.1).
+Perpetual Powers of Tau, and Phase-2 is our own 1-of-N MPC over our own clean-room circuits (T0.1).
 - *Consequence:* Each circuit requires a per-circuit trusted setup, so any circuit change
   such as fork-lite (T0.6) re-runs Phase-2 and a fresh audit. In return, on-chain
   verification and mobile prover performance stay Groth16-cheap.
@@ -68,11 +70,11 @@ it move them unilaterally; custody is contract-enforced (T0).
   user-signed channel state or transparent-boundary hops, never on discretionary custody.
 - *Governs:* §5 T0 · quality scenarios in →§10.
 
-**OC-2 — Railgun's deployed protocol is untouched; we redeploy the OSS.** We stand up our own pool by redeploying the Railgun OSS under our control (T0.0, fee=0, our POI) and never fork, patch, or govern Railgun's *deployed* protocol or live pool ([ADR-0002](./09-architecture-decisions.md#adr-0002)).
+**OC-2 — Railgun's deployed protocol is untouched; we clean-room reimplement.** We stand up our own pool by **clean-room reimplementing** the Railgun-spec design under our control (T0.0/T0.1, fee=0, our POI; no Railgun-licensed source) and never fork, patch, or govern Railgun's *deployed* protocol or live pool ([ADR-0002](./09-architecture-decisions.md#adr-0002), [ADR-0014](./09-architecture-decisions.md#adr-0014)).
 - *Consequence:* Blast radius splits cleanly — pool and audit changes never route through the product work above T0.0. This reinforces TC-2.
-- *Governs:* ADR-0002 · §5 T0.0.
+- *Governs:* ADR-0002, ADR-0014 · §5 T0.0, T0.1.
 
-**OC-3 — One team; a reuse boundary, not an org split.** A single engineering team builds the whole Armada product; the boundary is **reuse vs net-new**, not Armada-vs-Laconic ([ADR-0013](./09-architecture-decisions.md#adr-0013)). Reuse Railgun OSS + Laconic prior art (nitro, watchers, wallet, chain-signatures, ingestion); build only the deltas. The adapters (T5.0 — CCTP built, Aave-v4 yield, Swaps) are in scope, owned by work package C.
+**OC-3 — One team; a reuse boundary, not an org split.** A single engineering team builds the whole Armada product; the boundary is **reuse vs net-new**, not Armada-vs-Laconic ([ADR-0013](./09-architecture-decisions.md#adr-0013)). Reuse Laconic prior art (nitro, watchers, wallet, chain-signatures, ingestion) and Railgun's MIT `engine`/`cookbook` as reference; **clean-room the shielded pool + circuits** (Railgun-spec-compatible, ADR-0014); build only the remaining deltas. The adapters (T5.0 — CCTP built, Aave-v4 yield, Swaps) are in scope, owned by work package C.
 - *Consequence:* Interfaces between work packages — the T0.3 deposit/payout ICD and the T5.1 routing interface — are specified before parallel work begins (→ §0, §3, §4). "Adapters" (capital-A) means the T5 tier (ADR-0010).
 - *Governs:* ADR-0013 · §0 · §5 T5.
 

@@ -22,31 +22,41 @@ settlement games over shielded value **with no new cryptography** and without
 governance-gated RelayAdapt recipes. RelayAdapt is Railgun's own module, used only in
 the T4.2 hedge leg and never for settlement.
 
-**This is integration, not new cryptography.** The two hard cryptographic assets are
-consumed unmodified:
+**This is integration, not *new* cryptography — with one caveat (ADR-0014).** The thesis
+holds fully for the **settlement rail** (T0.2 adjudicator + T0.3 deposit/payout + T6.x),
+which is pure reuse and integration. It does **not** hold for the shielded **pool (T0.0)
+and JoinSplit circuits (T0.1)**: because Railgun's contracts/circuits are unlicensed
+(A.1.10), those are **clean-room net-new** — independently authored, spec-compatible with
+the Railgun design, and therefore audit-critical crypto-engineering (of a well-understood,
+de-risked design, not novel cryptography). The hard cryptographic assets break down as:
 
-- **T0.0** — the Railgun OSS shielded pool, *redeployed* under our control (fee=0, our
-  POI policy), protocol unchanged (ADR-0002). Amounts are hidden in-circuit; the SNARK
-  enforces value-conservation + range, so *$50 and $5M are equally opaque* — no
-  Tornado-style denomination buckets.
+- **T0.0 / T0.1** — the shielded pool and its JoinSplit circuits, **clean-room
+  reimplemented** (spec-compatible with Railgun, fee=0, our POI policy; ADR-0014), plus our
+  own Phase-2 ceremony. Net-new and audit-critical, but a reimplementation of a known
+  design, not novel cryptography. Amounts are hidden in-circuit; the SNARK enforces
+  value-conservation + range, so *$50 and $5M are equally opaque* — no Tornado-style
+  denomination buckets.
 - **T0.2** — vanilla `go-nitro` `NitroAdjudicator` / `ForceMove` / `MultiAssetHolder`,
   deployed and configured, not forked.
 
-Against those, the **net-new v1 surface is small and enumerable**:
+Against that, the **net-new v1 surface** is enumerable — the clean-room pool/circuits plus
+a thin integration layer:
 
 | Net-new for v1 | id |
 |---|---|
+| Clean-room shielded pool + JoinSplit circuits (spec-compatible with Railgun; audit-critical) | **T0.0, T0.1** |
 | Deposit/payout contract (the Nitro↔Railgun boundary) | **T0.3** |
 | Watcher ingest config (index pool commitments/nullifiers + T0.3 events) | **T1.2** |
 | Posted-price venue + quote/settle app + fee-split (v1 fills from static inventory) | **T4.0, T4.1, T4.3** |
 | Wallet bits (note-scanner, settlement client, watchtower, transport, proving) | **T6.1–T6.7** |
 | Anonymity-set strategy (process, not code) | **T0.7** |
 
-The only *optional* net-new cryptography anywhere in the plan is **T0.6** (native
+The only *novel* cryptography optional anywhere in the plan is **T0.6** (native
 channelized commitment, "fork-lite"). It is deferred off the spine (ADR-0005) and, if
-greenlit, re-runs the Phase-2 ceremony (ADR-0003). v1 itself needs **zero new crypto and
-zero new consensus/ordering** (ADR-0007): because a posted price has nothing to
-front-run, the fair-ordering stack (T3) does not exist in v1.
+greenlit, re-runs the Phase-2 ceremony over our own circuits (ADR-0003). v1 needs **no
+novel cryptography and zero new consensus/ordering** (ADR-0007) — the clean-room
+pool/circuits (T0.0/T0.1) reimplement a known design rather than invent one — and because
+a posted price has nothing to front-run, the fair-ordering stack (T3) does not exist in v1.
 
 ## 4.2 How the top quality goals are met
 
@@ -67,13 +77,14 @@ opt-in T0.6 upgrade, which sits outside the v1 spine.
 
 Increments are the **release** facet of the §5 registry, read as a shipping order:
 
-- **v1 — Armada support (the spine).** Redeploy pool + own Phase-2 (T0.0/T0.1), Nitro
+- **v1 — Armada support (the spine).** Clean-room pool + circuits + own Phase-2 (T0.0/T0.1), Nitro
   adjudicator (T0.2), **deposit/payout boundary (T0.3)**, ingestion (T1.0–T1.2),
   watcher feeds + metering + transport (T2.0–T2.3), **RFQ posted-price venue filled from a
   static inventory (T4.0, T4.1, T4.3) + ETH/wstETH yield (T4.4)**, Armada adapters +
   routing (T5.0/T5.1), full wallet (T6.0–T6.7), anonymity-set bootstrap + Railgun import
-  bridge (T0.7 / ADR-0006). This is integration + one small contract + thin app code —
-  no market-making, no new consensus, no ZK research (ADR-0011).
+  bridge (T0.7 / ADR-0006). This is the clean-room pool/circuits (audit-critical, of a
+  known design; ADR-0014) plus integration + one small boundary contract + thin app code
+  — no market-making, no new consensus, no novel ZK research (ADR-0011).
 - **v2 — market-making + ex_net matcher (price discovery + fair ordering).** The venue
   solver / automated market-making (T4.2) and the LP-buffered USDC-yield rail (T4.5); the
   whole ordering stack (T3.0–T3.2); the ex_net matcher + LP vault (T4.6); and the
@@ -117,7 +128,7 @@ against it).
                                                 └─► T6 (wallet) ─► walking skeleton
 ```
 
-- **Do-first:** T0.0 + T0.1 (the pool and its Phase-2 keys) and T0.2 feed **T0.3**, the
+- **Do-first:** T0.0 + T0.1 (the clean-room pool and circuits + Phase-2 keys) and T0.2 feed **T0.3**, the
   boundary contract every other tier binds to. Nothing above T0 can integrate until
   T0.3's address, ABI, events, and lifecycle exist.
 - **Then fan out in parallel** once T0.3 is real: the **T1 → T2** feed path (ingest
@@ -128,7 +139,7 @@ against it).
   every read-side consumer (T2 feeds → T4/T6) assumes its fresh, proof-carrying view.
   The proof-carrying feed leak-safety (T2.0) is the *do-first* item on the read path
   because a single leak collapses the whole anonymity set. go-nitro maturity gaps
-  (multi-asset outcomes, dispute wiring) surface first at T0.3 and are Phase-3
+  (the net-new multi-asset ForceMove app, dispute wiring) surface first at T0.3 and are Phase-3
   hardening, not spine blockers.
 
 ---

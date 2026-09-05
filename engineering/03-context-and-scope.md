@@ -14,18 +14,18 @@ The four [work packages (§0)](./00-work-packages.md) are the entire scope; each
 
 | WP | §5 items | Note |
 |---|---|---|
-| **A · nitro-on-railgun** | T0.0–T0.3, T0.6 *(opt)*, T0.7; T6.2, T6.3 | Redeploy Railgun OSS + own Phase-2; the deposit/payout boundary is the one genuinely new v1 contract (ADR-0002/0003/0004). |
+| **A · nitro-on-railgun** | T0.0–T0.3, T0.6 *(opt)*, T0.7; T6.2, T6.3 | Clean-room pool + circuits + own Phase-2 (ADR-0014); the deposit/payout boundary is the net-new integration contract (ADR-0002/0003/0004). |
 | **B · watcher parties** | T1.0–T1.2, T2.0–T2.4; T6.1 | Proof-carrying ingest + metered private feeds; reuse the cerc-io watcher / ipld / nimbus lineage (ADR-0008/0009). |
 | **C · yield & exchange** | T4.0–T4.6, T3.\* *(v2)*; **T5.0 adapters (CCTP built · Aave-v4 yield · Swaps), T5.1 routing** | Posted-price venue v1; adapters build-or-reuse Railgun's Cookbook recipe (license gate). **USDC yield is the priority** (ADR-0007/0011/0013). |
 | **D · client** | T6.0, T6.4–T6.8 | Wallet/app, mobile transport, on-device proving (ADR-0008). |
 
-## Reused, not built (prior art & redeployed OSS)
+## Reused, not built (prior art & reference)
 
 Cited at pinned commits; never re-documented (ADR-0012 reuse-spec discipline).
 
 | Component | Note |
 |---|---|
-| **Railgun OSS** pool + circuits | **Redeployed** under our control (fee=0, our POI); we never modify Railgun's live pool (ADR-0002). |
+| **Railgun design** (`contract` / `circuits-v2` spec; MIT `engine` / `cookbook` as reference) | **Reference spec only** — the shielded pool + JoinSplit circuits are **clean-room reimplemented** (T0.0/T0.1, spec-compatible, no Railgun-licensed source), not reused OSS (ADR-0014). |
 | `go-nitro`, `watcher-ts`, `ts-nitro`, `@cerc-io/peer`, `mobymask`, `laconic-wallet`, `chain-signatures`, `ipld-eth-*` | Laconic / cerc-io prior art, reused at pinned commits. |
 | **Perpetual Powers of Tau** Phase-1 | Inherited universal ceremony; we run only our own Phase-2 (ADR-0003). |
 | Railgun **RelayAdapt / Cookbook** recipe | Railgun's own value-moving recipe; the C adapters may reuse it (license permitting), distinct from our T0.3 deposit/payout contract (ADR-0010). |
@@ -36,7 +36,7 @@ Direction is stated relative to our system.
 
 | External system | Interface & direction | Touched by | Decision |
 |---|---|---|---|
-| **Ethereum L1** | Settlement root: our redeployed pool, `go-nitro` adjudicator, and deposit/payout contract live here. Bidirectional — write channel state, read commitment/nullifier/adjudicator events. | T0.0, T0.2, T0.3 (read at T1.2) | ADR-0002/0004 |
+| **Ethereum L1** | Settlement root: our clean-room pool, `go-nitro` adjudicator, and deposit/payout contract live here. Bidirectional — write channel state, read commitment/nullifier/adjudicator events. | T0.0, T0.2, T0.3 (read at T1.2) | ADR-0002/0004/0014 |
 | **Railgun deployed pool** (live) | Onboarding bridge: user **unshields from Railgun → shields into our pool** — one public boundary hop; a Railgun note is never spent/nullified in our contract. Inbound. | T0.7 | ADR-0006 |
 | **Aave v4** | The yield protocol the USDC-yield rail reaches through, via our Aave-v4 adapter's recipe (`unshield USDC → supply → reshield aUSDC`). Amounts public only at the transparent supply boundary (Design A). | T5.0 (C) | ADR-0005 |
 | **Circle CCTP** | Cross-chain USDC mint wrapped into the shield by our CCTP adapter — arrives as a fresh shielded USDC note. Inbound; adapter already built. | T5.0 (C), enters via T0.3 | — |

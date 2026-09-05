@@ -16,7 +16,7 @@ nimbus-eth1 per ADR-0009.
 
 ### Ethereum L1 (on-chain)
 The settlement substrate. The **T0** contracts are deployed here, and this is the
-one node no participant hosts: the redeployed Railgun shielded **pool** (T0.0),
+one node no participant hosts: the clean-room, Railgun-spec-compatible shielded **pool** (T0.0),
 the **Nitro adjudicator** (T0.2), the **deposit/payout contract** (T0.3), and, at
 v2, the **registry + bond** (T0.4). Everything else is a client or observer of
 these contracts. Fixturenet, testnet, and mainnet differ only in *which* L1 this

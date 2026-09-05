@@ -5,38 +5,39 @@
 **Release:** v1 (T0.0, T0.1, T0.2, T0.3, T0.7) · v2 (T0.4, T0.5) · opt (T0.6)
 **Depends on / Blocks:** root tier — depends on nothing above it. Blocks T1.2 (indexes T0.0 commitments/nullifiers + T0.2/T0.3 events), T2.1 (voucher metering over T0.2), T4.1 (quote/settle app in the T0.3 app registry), T6.2 (settlement client drives T0.3), T6.3 (watchtower response with T0.2), T6.6 (mobile proving from T0.0/T0.1 artifacts). T0.4 underpins T2.4 bonding; T0.5 underpins T3 slashing.
 
-The on-chain anchor is where value actually lives and where disputes settle. It is almost entirely **reuse**: an unmodified Railgun shielded pool (T0.0) redeployed under our control, and vanilla `go-nitro` adjudicator/ForceMove/MultiAssetHolder (T0.2). The only genuinely new v1 code is the **deposit/payout contract** (T0.3) — the Nitro↔Railgun boundary that realizes *notes in → normal Nitro → notes out* — plus our own Phase-2 ceremony (T0.1, process not code) and the anonymity-set strategy (T0.7). Two v2 economic-security contracts (T0.4 registry+bond, T0.5 sequencing-cert + fraud-proof verifier) and one optional cryptographic upgrade (T0.6 native channelized commitment) round out the tier. Amounts are public only at the T0.3 boundary — **Design A**, the default…
+The on-chain anchor is where value actually lives and where disputes settle. Its reuse boundary splits cleanly (ADR-0014): the **settlement rail** is reuse — vanilla `go-nitro` adjudicator/ForceMove/MultiAssetHolder (T0.2) plus the modest **deposit/payout contract** (T0.3) that binds it to the pool and realizes *notes in → normal Nitro → notes out* — while the **shielded pool (T0.0) and JoinSplit circuits (T0.1) are clean-room net-new**, independently authored and spec-compatible with the Railgun design the A deep dive documents (A.1.1/A.1.2), using no Railgun-licensed source. The clean-room pool/circuits plus our own Phase-2 ceremony (T0.1) and the anonymity-set strategy (T0.7) are the audit-critical net-new crypto-engineering here; the deposit/payout boundary (T0.3) is the net-new integration code. Two v2 economic-security contracts (T0.4 registry+bond, T0.5 sequencing-cert + fraud-proof verifier) and one optional cryptographic upgrade (T0.6 native channelized commitment) round out the tier. Amounts are public only at the T0.3 boundary — **Design A**, the default. The Railgun **licensing gate is resolved via clean-room** (ADR-0014), not an open blocker.
 
-## T0.0 Shielded pool — redeploy Railgun OSS; POI policy; fee=0
+## T0.0 Shielded pool — clean-room reimplement (spec-compatible with Railgun); POI policy; fee=0
 
-**What it is.** This is our own shielded pool, a redeployment of the Railgun OSS contracts and circuits under our control, and it forms the root of the spine. Every downstream item references the pool address, its commitment/nullifier event ABI, and its `shield`/`unshield` entrypoints.
+**What it is.** This is our own shielded pool, a **clean-room reimplementation** of the shielded-pool contracts — independently authored and **spec-compatible** with the Railgun design (ADR-0014), using no Railgun-licensed source — and it forms the root of the spine. Every downstream item references the pool address, its commitment/nullifier event ABI, and its `shield`/`unshield` entrypoints.
 
-**Reuse vs. build.** The work here is pure reuse plus configuration; we do **not** fork the protocol.
+**Reuse vs. build.** This is **net-new (clean-room)**: real, audit-critical crypto-engineering, but of a well-understood, de-risked design — the A deep dive pins the exact behavior/format our implementation matches. Railgun's `circuits-v2` is unlicensed and its pool contracts are SPDX `UNLICENSED` (A.1.10), so they are the **reference spec**, never a source we copy; `engine`/`cookbook` are MIT and usable as reference only.
 
-| Component | Source |
+| Component | Reference spec (clean-room target — not a source dependency) |
 |---|---|
-| Pool / accumulator (Merkle tree, nullifier set, Groth16 verifier) | [`Railgun-Privacy/contract`](https://github.com/Railgun-Privacy/contract) |
-| ZK circuits (Circom) — 54 JoinSplit circuits by UTXO in→out count | [`Railgun-Privacy/circuits-v2`](https://github.com/Railgun-Privacy/circuits-v2) |
+| Pool / accumulator (Merkle tree, nullifier set, Groth16 verifier) | [`Railgun-Privacy/contract`](https://github.com/Railgun-Privacy/contract) — behavior/format documented in A.1.1 |
+| ZK circuits (Circom) — 54 JoinSplit circuits by UTXO in→out count | [`Railgun-Privacy/circuits-v2`](https://github.com/Railgun-Privacy/circuits-v2) — behavior/format documented in A.1.2; authored clean-room under T0.1 |
 
-The proof system is **Groth16** via Circom and snarkjs ([`iden3/snarkjs`](https://github.com/iden3/snarkjs)); browser and node prove through snarkjs-WASM, while mobile proves via T6.6. We deploy the **full 54-circuit set** for wallet compatibility. Trimming to a common subset is a later gas and setup optimization: each circuit dropped is one fewer Phase-2 key from T0.1, but it also costs a wallet capability.
+The proof system is **Groth16** via Circom and snarkjs ([`iden3/snarkjs`](https://github.com/iden3/snarkjs)); browser and node prove through snarkjs-WASM, while mobile proves via T6.6. We author and deploy the **full 54-circuit set** (clean-room, T0.1) for wallet compatibility. Trimming to a common subset is a later gas and setup optimization: each circuit dropped is one fewer Phase-2 key from T0.1, but it also costs a wallet capability.
 
-**Config deltas from stock Railgun** (deploy/config, not protocol change):
+**Design deltas from the Railgun spec** (our choices, baked into the clean-room implementation, not a protocol fork):
 1. **Fee = 0.** Zero the shield/unshield fee params. Revenue is venue spread plus watcher metering, not a pool skim, and this is the whole reason to own the deployment.
-2. **POI policy.** Keep Railgun's Proof-of-Innocence construction but set **our** policy — gated entry plus fresh-shield exit (T0.7, §5 overview). The allow-list root and update authority are our L1 governance wallet initially, moving to on-chain governance later.
+2. **POI policy.** Implement a Railgun-compatible Proof-of-Innocence construction but set **our** policy — gated entry plus fresh-shield exit (T0.7, §5 overview). The allow-list root and update authority are our L1 governance wallet initially, moving to on-chain governance later.
 3. **Settlement-contract allow-list.** Reserve and authorize the T0.3 deposit/payout contract address in the pool config. Here we only leave the config hook; the contract itself is T0.3.
 4. **Token allow-list.** Start with USDC, ETH/wstETH, and expand later.
 
 **Interface exposed.** The pool publishes pool and verifier addresses per network; the commitment-insert and nullifier-spend event ABI (consumed by T1.2, decrypted by T6.1); `shield`/`unshield` plus the reserved deposit/payout hook that T0.3 binds to; circuit `wasm` and `zkey` artifacts and hashes for T6.6; and the POI allow-list root plus update authority.
 
-**Testing.** Use a Laconic fixturenet for deterministic E2E (shield → commitment event → unshield → nullifier, proofs against our keys). Reuse Railgun's Hardhat suite as-is, and add tests only for our config deltas — fee=0 enforced, POI gating, and deposit/payout hook authorization.
+**Testing.** Use a Laconic fixturenet for deterministic E2E (shield → commitment event → unshield → nullifier, proofs against our keys). We author our **own** test suite for the clean-room contracts/circuits — the Railgun design is the behavioral oracle, not a suite we import — with explicit coverage of fee=0 enforced, POI gating, deposit/payout hook authorization, and spec-compatibility (note/commitment format, nullifier semantics) against the A.1 reference.
 
-**Risks.** Railgun OSS version drift is the main concern: pin commits and re-audit the config deltas on any bump. Anything touching pool spend authorization or POI config is audit-critical before mainnet.
+**Risks.** The clean-room pool + circuits are a **real, audit-critical crypto-engineering** workstream (§11): correctness and exact spec-compatibility with the Railgun design (note format, nullifier semantics, verifier wiring) are the load-bearing concern, and anything touching pool spend authorization or POI config is audit-critical before mainnet. The licensing blocker is **resolved by going clean-room** (ADR-0014); no Railgun-licensed source is used.
 
-## T0.1 Trusted setup — reuse Perpetual PoT Phase-1; our own Phase-2 MPC (1-of-N)
+## T0.1 Circuits + trusted setup — clean-room JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N)
 
-**What it is.** This is the Groth16 setup for the T0.0 circuit set. It has two phases, and only Phase 2 is ours. It is a **process** deliverable, not code.
+**What it is.** T0.1 owns two things (ADR-0014): the **clean-room JoinSplit circuits** — independently authored in Circom, spec-compatible with the Railgun circuit design (A.1.2) and using no Railgun-licensed source — and the **Groth16 trusted setup** over that circuit set. The circuits are net-new code; the setup has two phases, and only Phase 2 is ours (a process deliverable). Together this is **net-new (clean-room)**, audit-critical but of a well-understood design.
 
 **Reuse vs. build.**
+- **Circuits — clean-room (net-new).** We author our own JoinSplit circuit set in Circom, spec-compatible with the Railgun design (A.1.2) and using no Railgun-licensed source (ADR-0014). This is the audit-critical crypto-engineering half of T0.1; the setup below runs over *our* circuits.
 - **Phase 1 — reuse.** We consume the community **Perpetual Powers of Tau** BN254 artifact ([`privacy-ethereum/perpetualpowersoftau`](https://github.com/privacy-ethereum/perpetualpowersoftau)). It is circuit-agnostic, large, and vetted — the expensive, risky part, and a good one already exists. We **never** run our own universal ceremony; Railgun sits in exactly this position.
 - **Phase 2 — ours.** This is a circuit-specific MPC over our deployed set. Security rests on **1-of-N honest**: a single participant destroying their toxic waste suffices. We publish the full transcript plus a final public randomness beacon.
 
@@ -44,7 +45,7 @@ The proof system is **Groth16** via Circom and snarkjs ([`iden3/snarkjs`](https:
 
 **Re-run trigger.** Phase 2 is repeated **only** when circuits change; the canonical trigger is T0.6 (native channelized commitment) or the optional T0.7 cross-pool path. Phase 1 is never re-run.
 
-> **Reuse-Railgun-keys alternative, rejected.** Because we deploy their circuits unmodified, we *could* ship Railgun's published Phase-2 `.zkey`s and run no ceremony at all. A few days of our own MPC removes any dependence on trusting Railgun's specific ceremony instance at negligible cost, so running our own Phase-2 is the default.
+> **Reuse-Railgun-keys alternative, moot.** Railgun's published Phase-2 `.zkey`s are bound to *their* circuit instances and fall under the same unlicensed status as `circuits-v2` (A.1.10). Because our circuits are clean-room net-new (ADR-0014), those keys do not apply regardless — a fresh Phase-2 over our own set is required, not merely preferred.
 
 **Testing.** Run `snarkjs zkey verify` in CI against the published transcript, and fail the build on any `zkey` hash mismatch.
 
@@ -59,7 +60,7 @@ The proof system is **Groth16** via Circom and snarkjs ([`iden3/snarkjs`](https:
 **Dispute / challenge machinery.** This is the standard ForceMove `forceMove` / `respond` / `checkpoint` on `NitroAdjudicator`, where a challenge window finalizes if left unanswered. This challenge/dispute *machinery* is owned here (T0.2). The **watchtower response** — submitting a higher-turn state within the window so a user never loses funds to a stale-state force-close — is **not** owned here; it is **T6.3**, built against this adjudicator and gated on T2 feed freshness. Reference T6.3 rather than duplicating it.
 
 **Maturity gaps (real long poles → Phase-3 hardening; document, don't assume done):**
-1. **Single-asset outcomes.** go-nitro outcomes are effectively single-asset, but **multi-asset outcomes** (ETH-in / USDC-out) are needed for swaps, which means outcome encoding plus payout handling for ≥2 assets.
+1. **Multi-asset ForceMove *app* is net-new.** go-nitro's `MultiAssetHolder` / `transferAllAssets` / `protocols/swap/swap.go` **do support multi-asset** outcomes (ETH-in / USDC-out); the real gap is that **no shipped ForceMove *app*** produces a multi-asset atomic swap — `HashLockedSwap.sol` is single-asset / 2-party (A.1.8 §2). The net-new work is the multi-asset settlement *app*, not the outcome/holder machinery.
 2. **Dispute wiring.** Challenge/response paths exist in the adjudicator but are not fully wired in the node for our flow; they must be driven end-to-end.
 3. **Persistent connections / liveness.** Reliable state and voucher delivery is required, which ties to T2.3 transport.
 
@@ -94,7 +95,7 @@ The Nitro game analysis is fully isolated from the Railgun privacy analysis; the
 - Voucher format — reused by T2.1 for Nitro metering.
 - **ForceMove app registry:** allow-listed app IDs plus the adjudication interface — where **T4.1**'s quote/settle game registers.
 
-**Maturity note.** The go-nitro gaps in T0.2 (single-asset outcomes, dispute wiring) surface here first, since deposit/payout must encode outcomes; multi-asset is the swap-demo pull.
+**Maturity note.** The go-nitro gaps in T0.2 (the net-new multi-asset ForceMove *app*, dispute wiring) surface here first, since deposit/payout must encode outcomes; the multi-asset holder/outcome machinery already exists, so the swap-demo pull is authoring the multi-asset app on top of it.
 
 **Testing.** Run fixturenet E2E: note → deposit → off-chain updates → (a) cooperative close and (b) force-close plus T6.3 response → payout → fresh notes scanned. Adversarial cases that MUST pass are a stale-state force-close defeated by the watchtower (T6.3), an unresponsive counterparty where the honest party still exits correctly, and a double-fund or replayed nullifier rejected at deposit. Reuse go-nitro's Go tests, and add tests only for the deposit/payout contract.
 
@@ -125,7 +126,7 @@ It is kept concise as v2 economic-security and verification, not v1 detail.
 **Why "lite."** It stays inside the primitives T0.0/T0.1 already ship:
 - **No new proof system** — keep Groth16 via Circom and snarkjs; Halo2 is a separate, rejected decision.
 - **No shielded dispute game** — `NitroAdjudicator` (T0.2) still runs its normal challenge/checkpoint/conclude; only the on-chain outcome it settles points at **commitments** rather than cleartext balances, opened by the T0.3 payout endpoint into fresh notes as today.
-- **Scope of the circuit delta** — extend the payout/settlement side of the JoinSplit note format so a channel's final allocation is amount-hiding commitments (Pedersen/Poseidon values already native to the pool) with a range/consistency proof that allocations sum to the deposited value. This is a **format extension**, not a new construction; the Nitro game stays isolated, meeting T0.3 only at the allocation→note boundary.
+- **Scope of the circuit delta** — extend the payout/settlement side of **our own clean-room JoinSplit note format** (T0.1) so a channel's final allocation is amount-hiding commitments (Pedersen/Poseidon values already native to the pool) with a range/consistency proof that allocations sum to the deposited value. This is a **format extension** of our circuits, not a new construction; the Nitro game stays isolated, meeting T0.3 only at the allocation→note boundary.
 
 **Trusted-setup consequence (the load-bearing coupling).** Fork-lite **changes circuits**, which means it **re-runs T0.1's Phase-2 MPC** over the amended set (Phase-1 / Perpetual PoT is never re-run): `snarkjs zkey new → contribute → beacon → verify`, ≥5 contributors, published transcript plus hashes, and regenerate plus redeploy the Solidity verifier. New `wasm` and `zkey` artifacts ship to T6.6. T0.1 already names T0.6 as the canonical "circuits changed" trigger, so nothing new is invented — the pipeline is simply re-executed.
 
@@ -158,7 +159,7 @@ It is kept concise as v2 economic-security and verification, not v1 detail.
 ## Sources
 
 - go-nitro (cerc-io @435eb2b) — https://github.com/cerc-io/go-nitro — `NitroAdjudicator.sol`, `ForceMove.sol`, `MultiAssetHolder.sol`, `protocols/virtualfund/virtualfund.go`, `payments/vouchers.go`, `examples/HashLockedSwap.sol` · upstream https://github.com/statechannels/go-nitro
-- Railgun OSS pool + POI construction — https://github.com/Railgun-Privacy/contract · circuits (note/commitment format) https://github.com/Railgun-Privacy/circuits-v2
+- Railgun pool + POI construction (**reference spec** for the clean-room T0.0/T0.1 — unlicensed, not a source; ADR-0014) — https://github.com/Railgun-Privacy/contract · circuits (note/commitment format) https://github.com/Railgun-Privacy/circuits-v2
 - Railgun RelayAdapt / Cookbook recipe (T4.2 only, not this tier) — https://github.com/Railgun-Community/cookbook
 - Railgun trusted-setup / proving system — https://docs.railgun.org/wiki/learn/privacy-system/trusted-setup-ceremony
 - Perpetual Powers of Tau (Phase-1 reuse) — https://github.com/privacy-ethereum/perpetualpowersoftau

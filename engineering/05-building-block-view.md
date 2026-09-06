@@ -1,30 +1,36 @@
 # 5. Building Block View
 
-arc42 §5 · **2026-09-04**
+arc42 §5 · **2026-09-06**
 
-This section gives the static decomposition of the system. **Level 1** is the seven **tiers** (T0–T6), and each tier's whitebox detail lives in its own doc (`T0-ethereum-anchor.md` … `T6-client-apps.md`). The **item registry** below is the single model of record: every buildable item carries one `T#.#` id together with its `status` and `release` facets. Tiers and the "lines" of §4/§8 are simply two ways of grouping those same items.
+This section gives the static decomposition of the system. **Level 1** is the seven **tiers** (T0–T6) — horizontal building-block layers running from the on-chain anchor up to the client — and each tier's whitebox detail lives in its own doc (`T0-ethereum-anchor.md` … `T6-client-apps.md`). The four **subsystems** — work packages A/B/C/D ([§0](./00-work-packages.md)) — are the **vertical slices**: each owns `T#.#` items across several tiers and consumes the rest across ICDs. Tiers and subsystems are two axes over one item set — the familiar layered view with feature slices crossing it — and the **item registry** below is the single model of record, every buildable item carrying one `T#.#` id with its `status` and `release` facets. (The "lines" of §4/§8 are a third grouping of those same items.)
 
 ## Level 1 — the tier stack
 
 ```
- T6  CLIENT / apps        wallet · mobile light client · self-watchtower · SDK        (Laconic build)
- T5  ADAPTERS             Swaps · Aave-v4 yield · CCTP                                 (in scope · WP C)
- T4  EXECUTION / venue    v1 posted-price venue + clearing   ·   v2 ex_net matcher     (Laconic)
- T3  ORDERING (v2)        commit-reveal + beacon · epoch set-agreement · DA            (Laconic, v2)
- T2  WATCHER substrate    proof-carrying feeds · metering · relay · federation+bond    (Laconic)
- T1  INGESTION            nimbus-eth1 state-diff → IPLD → watcher ingest               (Laconic)
- T0  ETHEREUM anchor      Railgun pool · Nitro adjudicator · deposit/payout · registry (on-chain)
+ tier                    building blocks                                    owner    release
+ ------------------------------------------------------------------------------------------
+ T6  CLIENT / apps       wallet · light client · self-watchtower · SDK      A·B·D    v1
+ T5  ADAPTERS            Swaps · Aave-v4 yield · CCTP                        C        v1
+ T4  EXECUTION / venue   posted-price venue + clearing                       C        v1  (matcher v2)
+ T3  ORDERING            commit-reveal + beacon · epoch set-agreement · DA   C        v2
+ T2  WATCHER substrate   proof-carrying feeds · metering · relay             B        v1  (federation v2)
+ T1  INGESTION           nimbus-eth1 state-diff → IPLD → watcher ingest      B        v1
+ T0  ETHEREUM anchor     pool · circuits · adjudicator · deposit/payout      A        v1  (econ-security v2)
 ```
 
-| Tier | Responsibility | Whitebox |
-|---|---|---|
-| **T0** Ethereum anchor | On-chain pool, adjudicator, the deposit/payout settlement boundary, trusted setup, economic-security contracts | [`T0-ethereum-anchor.md`](./T0-ethereum-anchor.md) |
-| **T1** Ingestion | Proof-carrying Ethereum state feed (nimbus-eth1 → IPLD → watcher ingest) | [`T1-ingestion.md`](./T1-ingestion.md) |
-| **T2** Watcher substrate | Private, metered, P2P proof-carrying feeds + federation | [`T2-watcher-substrate.md`](./T2-watcher-substrate.md) |
-| **T3** Ordering (v2) | Provably-fair sequencing for the matcher | [`T3-ordering.md`](./T3-ordering.md) |
-| **T4** Execution / venue | Posted-price RFQ clearing + yield rails; v2 matcher | [`T4-execution-venue.md`](./T4-execution-venue.md) |
-| **T5** Adapters | Swaps, Aave-v4 yield, CCTP + the routing interface (in scope, work package C) | [`T5-adapters.md`](./T5-adapters.md) |
-| **T6** Client / apps | Wallet, mobile light client, self-watchtower, app | [`T6-client-apps.md`](./T6-client-apps.md) |
+Read this as a layered building-block view: the tiers are horizontal layers, and the subsystems (A/B/C/D) are vertical slices that cross them — the standard shape of a layered architecture with feature slices. The `owner` column is each tier's primary subsystem; **T6 is deliberately shared** (A owns the settlement client and watchtower, B the note-scanner, D the host, transport, proving, and app). Vertical position is on-chain-to-client proximity and `release` marks v1/v2 phasing; neither is a strict call-dependency order — for example the ordering tier (T3) is v2-only, and some v2 items (T0.4/T0.5 economic-security, T2.4 federation) light up later inside otherwise-v1 tiers.
+
+<p><img src="./tiers.svg" alt="Armada tiers and subsystems: T0–T6 horizontal building-block layers crossed by A/B/C/D subsystem slices, coloured by owner with v1/v2 phasing" style="width:100%;height:auto;border:1px solid #223047;border-radius:10px;margin:16px 0"/></p>
+
+| Tier | Responsibility | Owner(s) | Whitebox |
+|---|---|---|---|
+| **T0** Ethereum anchor | On-chain pool, adjudicator, the deposit/payout settlement boundary, trusted setup, economic-security contracts | A (T0.4/T0.5 v2) | [`T0-ethereum-anchor.md`](./T0-ethereum-anchor.md) |
+| **T1** Ingestion | Proof-carrying Ethereum state feed (nimbus-eth1 → IPLD → watcher ingest) | B | [`T1-ingestion.md`](./T1-ingestion.md) |
+| **T2** Watcher substrate | Private, metered, P2P proof-carrying feeds + federation | B | [`T2-watcher-substrate.md`](./T2-watcher-substrate.md) |
+| **T3** Ordering (v2) | Provably-fair sequencing for the matcher | C (v2) | [`T3-ordering.md`](./T3-ordering.md) |
+| **T4** Execution / venue | Posted-price RFQ clearing + yield rails; v2 matcher | C | [`T4-execution-venue.md`](./T4-execution-venue.md) |
+| **T5** Adapters | Swaps, Aave-v4 yield, CCTP + the routing interface | C | [`T5-adapters.md`](./T5-adapters.md) |
+| **T6** Client / apps | Wallet, mobile light client, self-watchtower, app | A · B · D | [`T6-client-apps.md`](./T6-client-apps.md) |
 
 ## Item registry (the single model)
 

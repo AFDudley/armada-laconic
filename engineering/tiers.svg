@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 610" width="960" height="610" role="img" aria-labelledby="ttl desc">
+  <title id="ttl">Armada — tiers × subsystems</title>
+  <desc id="desc">The seven building-block tiers T0–T6 as horizontal layers from the on-chain anchor up to the client, crossed by the four subsystems (work packages A nitro-on-railgun, B watcher parties, C yield and exchange, D client) as vertical slices. Cells are coloured by owning subsystem; solid borders are v1, dashed are v2.</desc>
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  </style>
+
+  <rect x="0" y="0" width="960" height="610" fill="#0b0e14"/>
+
+  <text x="24" y="40" font-size="20" font-weight="700" fill="#e6edf3">Armada — tiers × subsystems</text>
+  <text x="24" y="62" font-size="12.5" fill="#93a1b3">T0–T6 building-block layers (horizontal) · A / B / C / D subsystems as vertical slices crossing them</text>
+
+  <!-- vertical subsystem tints (the slices) -->
+  <rect x="176" y="86" width="185" height="464" fill="#7c9cff" opacity="0.05"/>
+  <rect x="367" y="86" width="185" height="464" fill="#5ad1c4" opacity="0.05"/>
+  <rect x="558" y="86" width="185" height="464" fill="#ffb454" opacity="0.05"/>
+  <rect x="749" y="86" width="185" height="464" fill="#54d18c" opacity="0.05"/>
+
+  <!-- subsystem column headers -->
+  <rect x="180" y="90" width="177" height="32" rx="8" fill="#7c9cff" fill-opacity="0.14" stroke="#7c9cff"/>
+  <text x="190" y="110" font-size="12"><tspan fill="#7c9cff" font-weight="700">A</tspan><tspan fill="#e6edf3"> — nitro-on-railgun</tspan></text>
+  <rect x="371" y="90" width="177" height="32" rx="8" fill="#5ad1c4" fill-opacity="0.14" stroke="#5ad1c4"/>
+  <text x="381" y="110" font-size="12"><tspan fill="#5ad1c4" font-weight="700">B</tspan><tspan fill="#e6edf3"> — watcher parties</tspan></text>
+  <rect x="562" y="90" width="177" height="32" rx="8" fill="#ffb454" fill-opacity="0.14" stroke="#ffb454"/>
+  <text x="572" y="110" font-size="12"><tspan fill="#ffb454" font-weight="700">C</tspan><tspan fill="#e6edf3"> — yield &amp; exchange</tspan></text>
+  <rect x="753" y="90" width="177" height="32" rx="8" fill="#54d18c" fill-opacity="0.14" stroke="#54d18c"/>
+  <text x="763" y="110" font-size="12"><tspan fill="#54d18c" font-weight="700">D</tspan><tspan fill="#e6edf3"> — client</tspan></text>
+
+  <!-- tier row separators -->
+  <g stroke="#223047" stroke-width="1">
+    <line x1="24" y1="126" x2="936" y2="126"/>
+    <line x1="24" y1="130" x2="936" y2="130"/>
+    <line x1="24" y1="190" x2="936" y2="190"/>
+    <line x1="24" y1="250" x2="936" y2="250"/>
+    <line x1="24" y1="310" x2="936" y2="310"/>
+    <line x1="24" y1="370" x2="936" y2="370"/>
+    <line x1="24" y1="430" x2="936" y2="430"/>
+    <line x1="24" y1="490" x2="936" y2="490"/>
+    <line x1="24" y1="550" x2="936" y2="550"/>
+  </g>
+
+  <!-- tier labels (left) -->
+  <g>
+    <text x="32" y="157" font-size="15" font-weight="700" fill="#e6edf3">T6</text><text x="32" y="174" font-size="10" fill="#93a1b3">CLIENT / apps</text>
+    <text x="32" y="217" font-size="15" font-weight="700" fill="#e6edf3">T5</text><text x="32" y="234" font-size="10" fill="#93a1b3">ADAPTERS</text>
+    <text x="32" y="277" font-size="15" font-weight="700" fill="#e6edf3">T4</text><text x="32" y="294" font-size="10" fill="#93a1b3">EXECUTION / venue</text>
+    <text x="32" y="337" font-size="15" font-weight="700" fill="#e6edf3">T3</text><text x="32" y="354" font-size="10" fill="#93a1b3">ORDERING</text>
+    <text x="32" y="397" font-size="15" font-weight="700" fill="#e6edf3">T2</text><text x="32" y="414" font-size="10" fill="#93a1b3">WATCHER substrate</text>
+    <text x="32" y="457" font-size="15" font-weight="700" fill="#e6edf3">T1</text><text x="32" y="474" font-size="10" fill="#93a1b3">INGESTION</text>
+    <text x="32" y="517" font-size="15" font-weight="700" fill="#e6edf3">T0</text><text x="32" y="534" font-size="10" fill="#93a1b3">ETHEREUM anchor</text>
+  </g>
+
+  <!-- ==== owned cells ==== -->
+
+  <!-- T6 · A/B/D (shared) -->
+  <g>
+    <rect x="180" y="136" width="177" height="48" rx="8" fill="#7c9cff" fill-opacity="0.16" stroke="#7c9cff" stroke-opacity="0.85" stroke-width="1.3"/>
+    <text x="190" y="154" font-size="11" font-weight="500" fill="#e6edf3">settlement client</text>
+    <text x="190" y="168" font-size="11" fill="#e6edf3">· self-watchtower</text>
+    <text x="190" y="181" font-size="9.5" class="mono" fill="#93a1b3">T6.2 · T6.3</text>
+  </g>
+  <g>
+    <rect x="371" y="136" width="177" height="48" rx="8" fill="#5ad1c4" fill-opacity="0.16" stroke="#5ad1c4" stroke-opacity="0.85" stroke-width="1.3"/>
+    <text x="381" y="154" font-size="11" font-weight="500" fill="#e6edf3">note-scanner</text>
+    <text x="381" y="168" font-size="11" fill="#e6edf3">(WASM)</text>
+    <text x="381" y="181" font-size="9.5" class="mono" fill="#93a1b3">T6.1</text>
+  </g>
+  <g>
+    <rect x="753" y="136" width="177" height="48" rx="8" fill="#54d18c" fill-opacity="0.16" stroke="#54d18c" stroke-opacity="0.85" stroke-width="1.3"/>
+    <text x="763" y="154" font-size="11" font-weight="500" fill="#e6edf3">host · transport</text>
+    <text x="763" y="168" font-size="11" fill="#e6edf3">proving · app · SDK</text>
+    <text x="763" y="181" font-size="9.5" class="mono" fill="#93a1b3">T6.0 · T6.4–6.8</text>
+  </g>
+
+  <!-- T5 · C -->
+  <g>
+    <rect x="562" y="196" width="177" height="48" rx="8" fill="#ffb454" fill-opacity="0.16" stroke="#ffb454" stroke-opacity="0.85" stroke-width="1.3"/>
+    <text x="572" y="214" font-size="11" font-weight="500" fill="#e6edf3">adapters</text>
+    <text x="572" y="228" font-size="11" fill="#e6edf3">Swaps · Aave-v4 · CCTP</text>
+    <text x="572" y="241" font-size="9.5" class="mono" fill="#93a1b3">T5.0 · T5.1</text>
+  </g>
+
+  <!-- T4 · C -->
+  <g>
+    <rect x="562" y="256" width="177" height="48" rx="8" fill="#ffb454" fill-opacity="0.16" stroke="#ffb454" stroke-opacity="0.85" stroke-width="1.3"/>
+    <text x="572" y="274" font-size="11" font-weight="500" fill="#e6edf3">execution / venue</text>
+    <text x="572" y="288" font-size="11" fill="#e6edf3">posted-price + clearing</text>
+    <text x="572" y="301" font-size="9.5" class="mono" fill="#93a1b3">T4.0–T4.6 <tspan fill="#ffb454">· matcher v2</tspan></text>
+  </g>
+
+  <!-- T3 · C (whole tier v2) -->
+  <g>
+    <rect x="562" y="316" width="177" height="48" rx="8" fill="#ffb454" fill-opacity="0.10" stroke="#ffb454" stroke-opacity="0.85" stroke-width="1.3" stroke-dasharray="5 4"/>
+    <rect x="705" y="318" width="28" height="14" rx="7" fill="#ffb454" fill-opacity="0.2" stroke="#ffb454"/>
+    <text x="719" y="328" font-size="9" fill="#ffb454" text-anchor="middle">v2</text>
+    <text x="572" y="334" font-size="11" font-weight="500" fill="#e6edf3">ordering</text>
+    <text x="572" y="348" font-size="11" fill="#e6edf3">commit-reveal · beacon · DA</text>
+    <text x="572" y="361" font-size="9.5" class="mono" fill="#93a1b3">T3.*</text>
+  </g>
+
+  <!-- T2 · B -->
+  <g>
+    <rect x="371" y="376" width="177" height="48" rx="8" fill="#5ad1c4" fill-opacity="0.16" stroke="#5ad1c4" stroke-opacity="0.85" stroke-width="1.3"/>
+    <text x="381" y="394" font-size="11" font-weight="500" fill="#e6edf3">watcher substrate</text>
+    <text x="381" y="408" font-size="11" fill="#e6edf3">feeds · metering · relay</text>
+    <text x="381" y="421" font-size="9.5" class="mono" fill="#93a1b3">T2.0–T2.4 <tspan fill="#ffb454">· federation v2</tspan></text>
+  </g>
+
+  <!-- T1 · B -->
+  <g>
+    <rect x="371" y="436" width="177" height="48" rx="8" fill="#5ad1c4" fill-opacity="0.16" stroke="#5ad1c4" stroke-opacity="0.85" stroke-width="1.3"/>
+    <text x="381" y="454" font-size="11" font-weight="500" fill="#e6edf3">ingestion</text>
+    <text x="381" y="468" font-size="11" fill="#e6edf3">nimbus-eth1 → IPLD → ingest</text>
+    <text x="381" y="481" font-size="9.5" class="mono" fill="#93a1b3">T1.0–T1.2</text>
+  </g>
+
+  <!-- T0 · A -->
+  <g>
+    <rect x="180" y="496" width="177" height="48" rx="8" fill="#7c9cff" fill-opacity="0.16" stroke="#7c9cff" stroke-opacity="0.85" stroke-width="1.3"/>
+    <text x="190" y="514" font-size="11" font-weight="500" fill="#e6edf3">pool · circuits · adjudicator</text>
+    <text x="190" y="528" font-size="11" fill="#e6edf3">· deposit/payout</text>
+    <text x="190" y="541" font-size="9.5" class="mono" fill="#93a1b3">T0.0–T0.3 · T0.6 · T0.7</text>
+  </g>
+
+  <!-- legend / caption -->
+  <text x="24" y="576" font-size="11" fill="#93a1b3">Horizontal = tiers (T0–T6 building-block layers).  Vertical = subsystems (A / B / C / D) as slices crossing them.</text>
+  <text x="24" y="592" font-size="11" fill="#93a1b3">Solid border = v1 · dashed = v2. Vertical position is on-chain→client proximity, not a call-dependency order (T3 is v2; T0.4/0.5 and T2.4 are v2 within v1 tiers).</text>
+</svg>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>T5 · Adapters — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="t5-adapters">T5 · Adapters</h1>
+<p><strong>Status:</strong> draft · tier doc · 2026-09-05
+<strong>Parent:</strong> <a href="./05-building-block-view.html"><code>05-building-block-view.md</code></a> · <strong>Tier:</strong> T5
+<strong>Release:</strong> v1 (T5.0, T5.1)
+<strong>Owner:</strong> work package <strong>C · yield &amp; exchange</strong> (<a href="./00-work-packages.html"><code>00-work-packages.md</code></a>)
+<strong>Depends on / Blocks:</strong> consumes T4.5, T4.3, T4.2, T4.0; settles over T0.3; sits ON T0.0 · blocks nothing downstream</p>
+<p>T5 is the <strong>adapter layer of Armada</strong>, and per <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a> it is <strong>in scope</strong> — one engineering team builds the whole Armada product, so the old "Armada-built vs Laconic-built" ownership line no longer applies here. This tier is <strong>owned by work package C</strong> (yield &amp; exchange). The adapters are <strong>applications</strong> that ride the T4 venue and settle over the T0.3 rail; they are not part of the shielded pool and take no custody. The two sections below name the pieces: T5.0 is the set of adapters (what is reused vs net-new), and T5.1 is the interface note describing how the T4 venue routes to and from them. Neither introduces a new settlement contract — settlement is T0.3, work package A.</p>
+<h2 id="t50-adapters">T5.0 Adapters</h2>
+<p><strong>What it is.</strong> The governance-added adapters that ride Armada's shielded pool: <strong>CCTP</strong> (cross-chain USDC in), <strong>Aave-v4 yield</strong>, and <strong>Swaps</strong>. Each is an <strong>application</strong> on the execution/settlement layer, not part of the pool and not a new settlement contract. Per <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a> all three are in scope for work package C; the boundary here is <strong>reuse vs net-new</strong>, not org ownership.</p>
+<p><strong>Boundary — what this tier is and is not.</strong>
+- <strong>Applications on the layer.</strong> As the index diagram states, the venue is a private execution/settlement layer <strong>beneath</strong> the adapters, and Swaps and yield are applications on it. <code>ex_net</code>/the matcher is <em>not</em> a sibling adapter; that is T4.6, which sits under this tier.
+- <strong>Pool stays immutable.</strong> Every adapter operates at the adapter/execution tier, so nothing here alters Armada's core Railgun contracts (T0.0) or takes custody. The shielded pool remains immutable — a single anonymity set, untouched.
+- <strong>Non-custodial.</strong> Value only ever moves under the user's own key. The value-moving mechanism an adapter uses to touch an external protocol is <strong>Railgun's own RelayAdapt / Cookbook recipe</strong> — an atomic <code>unshield → external call → reshield</code> in one transaction (see <code>yield-clearing.html</code> §3) — never a held vault. Per <a href="./09-architecture-decisions.html#adr-0010">ADR-0010</a>, that recipe is <strong>Railgun's own</strong>, distinct from our T0.3 deposit/payout contract; the T0.3 rail is not an "adapter."</p>
+<p><strong>The three adapters — reuse vs net-new.</strong>
+- <strong>CCTP.</strong> Cross-chain USDC (Circle's CCTP), <strong>already built</strong> — this is <strong>reuse</strong>. A CCTP mint is wrapped into the shield atomically, so cross-chain USDC arrives as a shielded note.
+- <strong>Aave-v4 yield.</strong> This adapter turns a shielded USDC note into a shielded aUSDC ("aave") note. It is the <strong>mechanism for USDC yield</strong>, which — since Armada is privacy-for-USDC — is the <strong>priority capability</strong> (work package C open decision; see <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a> and the C open-decisions list in <a href="./00-work-packages.html"><code>00-work-packages.md</code></a>). It is <strong>the team's to build</strong>, or to <strong>reuse Railgun's Cookbook / RelayAdapt Aave recipe</strong> if the <strong>license permits</strong> — an <strong>OPEN gate</strong>, C-scope.
+- <strong>Swaps.</strong> A token-for-token exchange exposed as an application on the venue. Like the yield recipe, it is <strong>build-or-reuse</strong> against Railgun's Cookbook (same license gate); the swap itself clears over Nitro like any other T4 trade. Routing is T5.1.</p>
+<p><strong>USDC-yield mechanism — open C-scope decision.</strong> The Aave-v4 adapter delivers USDC yield, but <em>how</em> is not yet fixed: a <strong>v1</strong> direct-adapter recipe with a <strong>public Design-A boundary</strong> (amounts exposed only at the transparent Aave supply) versus the <strong>LP-buffered private rail</strong> (T4.5). That v1/v2 split is an <strong>open work-package-C decision</strong> and <strong>may amend <a href="./09-architecture-decisions.html#adr-0011">ADR-0011</a></strong>, which currently cuts LP-buffered USDC yield (T4.5) and the venue solver (T4.2) to v2.</p>
+<p><strong>Interface exposed / consumed.</strong> T5.0 exposes each adapter as a named application endpoint that the T4 venue routes into (T5.1). It consumes only the settlement/routing contract that T4 (work package A/C) already provides over Nitro. Amount privacy for shielded-to-shielded activity is solved inside the pool; amounts are exposed only at the transparent boundary (CCTP mint, Aave supply) per Design A (<code>yield-clearing.html</code> §4).</p>
+<h2 id="t51-routing-interface">T5.1 Routing interface</h2>
+<p><strong>What it is.</strong> The <strong>interface note</strong> describing how the T4 venue routes to and from the T5.0 adapters. It is <em>interface</em>, v1 — <strong>not a new settlement contract</strong>. The interface already exists in T4's contracts and clearing; this section only names how those pieces reach the adapters and settle over Nitro.</p>
+<p><strong>How the venue routes.</strong>
+- <strong>USDC yield → Aave-v4 adapter.</strong> The venue's USDC-yield rail, <strong>T4.5</strong> (LP-buffered, batched Aave, v2), is the routing point into the Aave-v4 yield adapter. When the venue rebalances buffered USDC into Aave, it does so through the adapter's Railgun recipe (<code>unshield USDC → Aave supply → reshield aUSDC</code>), atomically and in the taker's custody. Saturation is handled inside T4.5 (dribble / become-LP), so a rebalance never forces a public per-user Aave deposit (<code>yield-clearing.html</code> §5). (Which mechanism ships in v1 is the open C-scope decision noted in T5.0.)
+- <strong>Swaps → applications on T4.</strong> A swap routes as an application on the venue: priced by the posted-price contract (<strong>T4.0</strong>) and, in v1, filled from the venue's static inventory; automated hedging/internalization by the venue solver (<strong>T4.2</strong>) is v2. Swaps clear and settle over Nitro like any other T4 trade, and fee-split allocation (<strong>T4.3</strong>) applies unchanged.
+- <strong>CCTP → shield boundary.</strong> A CCTP mint is wrapped into the shield by the adapter, so from the venue's side it appears as a fresh shielded USDC note entering a channel — no special venue routing beyond the normal deposit/settlement path (<strong>T0.3</strong>).</p>
+<p><strong>Interface consumed / exposed.</strong> T5.1 <strong>consumes</strong> T4.5 (Aave rail), T4.2 (solver), and T4.0 (posted price), and <strong>exposes</strong> those as the routing targets for T5.0's Swaps and Aave-v4 adapters. Integrator revenue-share is delivered as a clearing allocation on channel state (T4.3), not as a new mechanism here.</p>
+<p><strong>Shared dependency — its own audit boundary.</strong> Putting one execution layer <em>under</em> several adapters makes it a <strong>shared dependency</strong>: a larger surface than any single adapter, and one that needs <strong>its own audit</strong>. This is a live engineering point, not an org boundary — it changes nothing about custody or the pool (the layer operates at the adapter/execution tier and never alters the core contracts, T0.0), but the shared-surface audit is real, and it belongs to whoever owns the shared T4 layer (work package C). The mitigation is to keep the venue's contract footprint small (posted-price + deposit/payout) so the shared surface stays auditable.</p>
+<p><strong>Testing / risks (inline).</strong> The interface carries no new contract, so its correctness is exercised by T4's own tests (posted-price, solver, USDC rail) plus the adapter-side tests. The standing risk is the shared-dependency audit surface above.</p>
+<h2 id="sources">Sources</h2>
+<ul>
+<li><code>index.html</code> — Adapters tier (Swaps · Aave-v4 yield · CCTP; governance-added), the "How it plugs into Armada" diagram (adapters as applications <em>on</em> the execution/settlement layer; pool immutable; non-custodial), the tier map (T5; CCTP built), and the shared-substrate ⇒ own-audit note.</li>
+<li><code>yield-clearing.html</code> — §3 the value-moving recipe is Railgun's RelayAdapt / Cookbook (atomic <code>unshield → external call → reshield</code>, turning shielded USDC into shielded aUSDC, wrapping a CCTP mint into the shield); §4 amount privacy at the transparent boundary (Design A); §5 USDC yield via LP-buffered batched Aave and saturation handling.</li>
+<li>Railgun RelayAdapt / Cookbook: https://github.com/Railgun-Community/cookbook</li>
+<li><a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a> — single team; T5 in scope, owned by work package C. <a href="./09-architecture-decisions.html#adr-0011">ADR-0011</a> — market-making (T4.2) and LP-buffered USDC yield (T4.5) cut to v2, may be amended by the C-scope USDC-yield decision. <a href="./09-architecture-decisions.html#adr-0010">ADR-0010</a> — RelayAdapt/Cookbook is Railgun's recipe, distinct from the T0.3 deposit/payout contract.</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/T5-adapters.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

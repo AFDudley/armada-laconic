@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>T2 · Watcher-party substrate — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="t2-watcher-party-substrate">T2 · Watcher-party substrate</h1>
+<p><strong>Status:</strong> draft · tier doc · 2026-09-04
+<strong>Parent:</strong> <a href="./05-building-block-view.html"><code>05-building-block-view.md</code></a> · <strong>Tier:</strong> T2
+<strong>Release:</strong> v1 (T2.0, T2.1, T2.2, T2.3) · v2 (T2.4)
+<strong>Depends on / Blocks:</strong> consumes T1.2 (ingested pool/rail state) and the event ABIs of T0.0 / T0.2 / T0.3; T2.4 bonds against T0.4 and routes its fraud path through T0.5 / T3. Blocks T4 (venue solver consumes these feeds + metering) and T6 — the feed schema and head cursor gate the T6.3 watchtower, and the metering interface drives the T6.2 settlement client.</p>
+<p>A <strong>watcher party</strong> is the Service tier that turns ingested L1 state into <strong>proof-carrying, everyone-gets-the-same-bytes</strong> feeds of our shielded pool (T0.0) and the settlement rail (T0.2 / T0.3), <strong>metered privately over Nitro vouchers</strong>. It is a <strong>bonded federation of peers, not a client-server RPC</strong>: the overwhelming majority of the network is browser wallets and mobile apps talking peer-to-peer, with only a handful of state-diff emitters (T1) and STUN/TURN as fixed infra (<a href="../architecture.html">architecture T2</a>). The party never takes custody and holds no game state; it <strong>serves and meters data</strong>. Its correctness rests on two properties — <em>feed authenticity</em>, enforced by the storage proof the client checks, and <em>voucher accounting</em>, enforced by go-nitro's channel machinery — not on consensus. Everything the anonymity-set guarantee depends on flows from this: clients scan and decrypt notes <strong>locally</strong>, so no RPC provider ever fingerprints a user against the pool (<a href="../mobile-privacy.html">mobile-privacy §4 ★</a>). Ingestion itself is <strong>not owned here</strong> — T1.2 delivers the proof-carrying state that this tier consumes as a feed.</p>
+<pre><code>   L1 (pool T0.0 + rail T0.2/T0.3 events)
+        │  proof-carrying state diffs (via T1.2 ingest)
+        ▼
+  ┌─────────────────────────────────────────────┐
+  │  WATCHER PARTY  (bonded peer federation)     │  Service tier
+  │  watcher-ts config: our pool + adjudicator   │
+  │  ├─ T2.0 GraphQL feed: getStorageAt→{value,proof}
+  │  ├─ T2.1 payments.ts: Nitro voucher metering │
+  │  └─ T2.4 (v2) threshold-Schnorr attestation  │
+  └─────────────────────────────────────────────┘
+        ▲  Waku pub/sub (discovery/gossip)  │  libp2p-noise (1:1 hot loop)   ← T2.3
+        │  ── T2.2 peer substrate ──         ▼
+   browser / mobile / server peers  ── scan + verify LOCALLY ──►  venue (T4), wallet (T6)
+</code></pre>
+<h3 id="watcher-vs-watchtower-vs-keeper-vs-relay-kept-distinct-glossary">Watcher vs. watchtower vs. keeper vs. relay <em>(kept distinct — glossary)</em></h3>
+<p>These names collide across the source repos. This tier owns exactly the first and must not be conflated with the others:</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Role</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Watcher</strong> (Laconic)</td>
+<td>proof-carrying, metered <strong>state indexer</strong> — serve verifiable query results / note-streams. <strong>Read-and-serve.</strong></td>
+<td><strong>this tier (T2)</strong></td>
+</tr>
+<tr>
+<td><strong>Watchtower</strong> (state channel)</td>
+<td>watches L1 for a stale-state challenge and <strong>responds with your latest signed state</strong> (<code>checkpoint</code>/<code>respond</code>). = a watcher (read) <strong>+ a bonded responder (write)</strong>.</td>
+<td>T6.3 (composes T2 feed + T0.2 responder)</td>
+</tr>
+<tr>
+<td><strong>Keeper / broadcaster</strong></td>
+<td>submits transactions on the user's behalf (mobymask lineage); write-side origin privacy.</td>
+<td>T6 (T6.5 transport / wallet)</td>
+</tr>
+<tr>
+<td><strong>Relay</strong> (libp2p)</td>
+<td>pure network transport / NAT traversal (circuit-relay, STUN/TURN). No trust, no on-chain role.</td>
+<td>T2.3</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Duality:</strong> the watcher protects the <strong>read side</strong> of pool privacy (no RPC fingerprints as you scan the pool), while the keeper/broadcaster protects the <strong>write side</strong> (no EOA links as you submit) — same anonymity set, opposite ends. A watchtower is this watcher's read feed plus T0.2's bonded challenge responder; T6.3 composes the two. This tier ships only the <strong>read-and-serve</strong> half.</p>
+<hr />
+<h2 id="t20-proof-carrying-feeds">T2.0 Proof-carrying feeds</h2>
+<p><strong>Status:</strong> reuse+config · <strong>Release:</strong> v1.</p>
+<p><strong>What it is.</strong> The <code>watcher-ts</code> framework pointed at <strong>our</strong> contracts, serving each read as <code>getStorageAt → {value, proof}</code> (<code>packages/util/src/types.ts</code>). The watcher returns the relevant state slice <strong>with a storage/Merkle proof</strong>, so a phone verifies authenticity without trusting the watcher. Every subscriber receives <strong>identical bytes</strong> for a given slice — the anti-fingerprint property that stops a data provider from learning which commitments/nullifiers a user scans (mobile-privacy §4 ★).</p>
+<p><strong>Reuse vs. build.</strong> The framework — proof-carrying GraphQL, <code>indexer.ts</code>, and storage-proof serving — is production code and is <strong>reused</strong> as-is at <code>watcher-ts</code> @ <code>18ca4e1</code>. The net-new work is the <strong>pool/adjudicator-specific config</strong>: the ABIs, storage layout, and GraphQL query schema for our pool's commitment-insert / nullifier-spend events (T0.0) and for the deposit/payout contract's <code>Deposit</code>/<code>Payout</code> plus the adjudicator's <code>Challenge</code>/<code>Checkpoint</code>/<code>Finalized</code> events (T0.2 / T0.3).</p>
+<p><strong>Interface consumed.</strong> State comes from <strong>T1.2</strong>, not a bare JSON-RPC node. T1.2 delivers a proof-carrying state feed (intermediate + leaf MPT nodes), so the watcher's <code>{value, proof}</code> responses inherit on-chain verifiability. This tier consumes that feed; it does not build ingestion.</p>
+<p><strong>Interface exposed (to T4 / T6).</strong> Consumers MUST bind to this, not re-derive it:
+- <strong>Feed schema (GraphQL).</strong> Proof-carrying queries over pool and rail events: commitment-insert / nullifier-spend (T0.0); <code>Deposit(channelId, asset, amount, consumedNullifier)</code>, <code>Payout(channelId, newCommitments[])</code>, and the adjudicator's <code>Challenge</code>/<code>Checkpoint</code>/<code>Finalized</code> (T0.2 / T0.3). Every response carries a <code>{value, proof}</code> the client verifies locally.
+- <strong>Head cursor / liveness.</strong> Each feed exposes its current chain-head cursor (the block / tree-index it has ingested up to) so a consumer can detect staleness and gap-fill. This cursor is what <strong>gates the T6.3 watchtower</strong>: its challenge-response fires only while the feed is fresh.</p>
+<p><strong>Key tasks.</strong> Author the watcher config for our pool (ingest commitment-insert / nullifier-spend; expose the <code>getStorageAt → {value, proof}</code> GraphQL feed); extend it to ingest the rail events from T0.2 / T0.3 and add their feed queries; publish the schema and head cursor for T4 / T6.</p>
+<p><strong>Observers this tier blinds.</strong> The feeds exist to deny one specific observer (mobile-privacy §1, §4 ★):</p>
+<table>
+<thead>
+<tr>
+<th>Observer</th>
+<th>Would learn without this tier</th>
+<th>Blinded by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RPC / data provider</td>
+<td>Exactly which commitments/nullifiers/addresses the wallet queries — enough to fingerprint the user against the pool</td>
+<td>proof-carrying, identical-bytes feed + <strong>local</strong> note-scan</td>
+</tr>
+<tr>
+<td>The watcher itself</td>
+<td>Nothing forgeable — a lying <code>value</code> fails the storage proof the client checks</td>
+<td><code>getStorageAt → {value, proof}</code> verification</td>
+</tr>
+<tr>
+<td>Metering observer</td>
+<td>Who is paying for which reads</td>
+<td>private per-request Nitro vouchers, funded at note creation (T2.1)</td>
+</tr>
+</tbody>
+</table>
+<p>A leak here collapses the whole anonymity set, which makes this the <strong>do-first</strong> item on the spine's critical path for T4 / T6.</p>
+<p><strong>Testing / risks (inline).</strong> Shield, deposit, or challenge a known value on the fixturenet, then assert that the feed's <code>{value, proof}</code> matches the on-chain slice and that the storage proof <strong>verifies</strong> against the block state root; a tampered <code>value</code> MUST fail proof verification client-side. <strong>Identical-bytes invariant:</strong> the anonymity guarantee assumes every subscriber to a slice receives byte-identical responses, so a config that lets query parameters vary the served bytes per requester silently re-introduces fingerprinting — assert this in tests, not just at review. State-feed staleness is the known long pole, but it lives in T1 (see T1.0): a lying watcher is caught by the proof, whereas a <em>withholding</em> watcher is a liveness problem mitigated by the T2.4 federation + bond.</p>
+<hr />
+<h2 id="t21-nitro-voucher-metering">T2.1 Nitro voucher metering</h2>
+<p><strong>Status:</strong> reuse+config · <strong>Release:</strong> v1.</p>
+<p><strong>What it is.</strong> Private, per-request metering of the paid feed methods. Paid RPC methods (<code>constants.ts</code>) are metered by <strong>go-nitro payment vouchers</strong> (<code>payments/vouchers.go</code>) via watcher-ts <code>payments.ts</code>: a peer pays per-request vouchers that net into a co-signed <strong>virtual-channel</strong> allocation (<code>protocols/virtualfund/virtualfund.go</code>), settled to L1 in USDC. Metering funds are provisioned <strong>at note creation</strong> and stay <strong>private</strong> — the voucher stream is the same mechanism T0.2 / T0.3 publishes, reused here, so watcher payment leaks nothing about the reader.</p>
+<p><strong>Reuse vs. build.</strong> go-nitro vouchers plus virtual channels and watcher-ts <code>payments.ts</code> are <strong>reused</strong>. The build is the <strong>metering wiring</strong>: register the paid feed methods over <code>constants.ts</code>/<code>payments.ts</code>, fund a virtual channel, and meter per-request vouchers against the T2.0 feed methods.</p>
+<p><strong>Interface exposed (to T4 / T6).</strong> The <strong>voucher-metering interface</strong> — the set of paid RPC/feed methods, the go-nitro voucher format (reused from T0.2), and the virtual-channel handshake that funds metering. T6.2's settlement client drives this, and T4's venue solver consumes the same feeds under the same metering. This is the same <strong>Nitro clearing</strong> the T4 venue uses for fees; T2 is where it first appears on the read path, which is why watcher metering is one of the two revenue pillars (venue spread + watcher metering).</p>
+<p><strong>Key tasks.</strong> Register paid methods; fund the virtual channel; meter per-request vouchers via <code>payments.ts</code>; run the fixturenet E2E: a peer subscribes → receives <code>{value, proof}</code> → verifies locally → pays a voucher → the voucher nets into the channel allocation → cooperative close settles to the correct USDC balance.</p>
+<p><strong>Testing / risks (inline).</strong> For N metered requests, the voucher total must equal the expected amount and net into a co-signed allocation, while an unpaid or underpaid request is refused. <strong>Voucher replay / double-count:</strong> accounting MUST reject a replayed or out-of-order voucher; correctness rides on go-nitro's voucher nonce/redemption logic (<code>payments/vouchers.go</code>), so treat any deviation in our wiring as safety-critical for the metering channel balance. <strong>Metering griefing:</strong> unpaid reads are cheaply refused, and anti-spam is a nominal request fee rather than a heavy protocol — because metering is non-custodial, the worst case is refused service.</p>
+<hr />
+<h2 id="t22-p2p-peer-substrate">T2.2 P2P peer substrate</h2>
+<p><strong>Status:</strong> reuse · <strong>Release:</strong> v1.</p>
+<p><strong>What it is.</strong> The peer stack that lets browser, mobile, and server peers interoperate on one libp2p base — <strong>NOT client-server</strong>. Peers run the in-browser/mobile Nitro node (<a href="https://github.com/cerc-io/ts-nitro"><code>ts-nitro</code></a> @ <code>884d616</code>) over <code>@cerc-io/peer</code> — <strong>circuit-relay + webrtc-star + gossipsub</strong> — so a phone, a browser tab, and a headless server are all first-class peers. A <strong>submit-on-behalf</strong> relay follows the <a href="https://github.com/cerc-io/mobymask"><code>mobymask</code></a> @ <code>2329198</code> keeper lineage (<code>packages/server/index.ts</code>, <code>submitInvocations → registry.invoke</code>), reused here so a light peer can delegate a metered T2.0 request without its own public origin. The write-path keeper/broadcaster in T6 reuses the identical lineage — the same pattern at the opposite end of the anonymity set.</p>
+<p><strong>Reuse vs. build.</strong> This is <strong>entirely reuse</strong> — <code>ts-nitro</code> over <code>@cerc-io/peer</code> plus the mobymask relay lineage, with no protocol changes. The work is deploy and configure: bring up peers both <strong>in a browser</strong> and <strong>on a server</strong>.</p>
+<p><strong>Interface exposed.</strong> The <strong>submit-on-behalf endpoint</strong> — the keeper-relay method for delegating a metered request from a light peer (T6's broadcaster/keeper reuses the identical lineage).</p>
+<p><strong>Key tasks.</strong> Vendor/pin <code>ts-nitro</code> (<code>884d616</code>) and <code>mobymask</code> (<code>2329198</code>) at their commits; bring up the peer substrate over <code>@cerc-io/peer</code>; run peers both in a browser and on a server; add the submit-on-behalf relay for delegated metered requests.</p>
+<p><strong>Testing / risks (inline).</strong> The same feed is served and consumed by a headless server peer <em>and</em> an in-browser peer over <code>@cerc-io/peer</code>, and the T2.0 identical-bytes property holds across both. <strong>Mobile transport maturity</strong> is the real risk — real libp2p on React Native is the crux, tracked in T6.5; the peer config here is Med difficulty, while the transport under it (T2.3) is High.</p>
+<hr />
+<h2 id="t23-transport">T2.3 Transport</h2>
+<p><strong>Status:</strong> reuse · <strong>Release:</strong> v1. Transport gate settled in ADR-0008 — <strong>both, per need</strong>.</p>
+<p><strong>What it is.</strong> Two transports, each for what it is good at:
+- <strong>Waku pub/sub</strong> for feed <strong>discovery, gossip, and async</strong> delivery. Subscribers pull by content-topic, giving recipient-unlinkability bounded by the topic's anonymity set, and it is the transport Railgun's broadcaster network already speaks (<a href="https://github.com/waku-org/go-waku">go-waku</a>; <a href="https://github.com/Railgun-Community/waku-broadcaster-client">waku-broadcaster-client</a>). Mobile uses the <strong>gomobile</strong> native module (the <code>@waku/sdk</code> is not React-Native-compatible → T6.5).
+- <strong>libp2p-noise direct streams</strong> for the <strong>1:1 hot loop</strong> (voucher exchange, low-latency reads), as in go-nitro's p2p message service (<code>node/engine/messageservice/p2p-message-service/service.go</code>, <code>/nitro/msg/1.0.0</code>) and <code>ts-nitro</code>. Noise gives encryption plus peer-id auth only — <strong>not IP privacy</strong> (endpoints see each other's IP); the mixnet underlay that hides IP is T6's concern, not this tier's.</p>
+<p>A <strong>circuit-relay + STUN/TURN</strong> bootstrap lets browser and mobile peers behind NAT dial each other — the only fixed transport infra (architecture T2).</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Carries</th>
+<th>Recipient-unlinkable?</th>
+<th>Latency</th>
+<th>Mobile path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Waku pub/sub</strong></td>
+<td>feed discovery, gossip, async note-streams, broadcaster interop</td>
+<td>yes (topic anonymity set)</td>
+<td>multi-hop store-and-forward</td>
+<td>go-waku gomobile module</td>
+</tr>
+<tr>
+<td><strong>libp2p-noise</strong></td>
+<td>1:1 voucher/metering hot loop, low-latency reads</td>
+<td>no (endpoints see IPs)</td>
+<td>tens-of-ms</td>
+<td>ts-nitro over <code>@cerc-io/peer</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interface exposed.</strong> Stable Waku <strong>content-topics</strong> per feed for discovery and subscription (analogous to Railgun's fixed <code>/railgun/v2/...</code> topics), plus the direct-noise protocol id for the 1:1 hot loop:</p>
+<pre><code># illustrative content-topic shape (mirrors Railgun's /railgun/v2/...):
+/armada/v1/${chainId}-pool-commitments/json
+/armada/v1/${chainId}-pool-nullifiers/json
+/armada/v1/${chainId}-rail-adjudicator/json   # Challenge/Checkpoint/Finalized
+</code></pre>
+<p><strong>Key tasks.</strong> Wire Waku pub/sub content-topics for feed discovery/gossip; wire direct libp2p-noise for the 1:1 hot loop; stand up the circuit-relay + STUN/TURN bootstrap.</p>
+<p><strong>Reuse vs. build / flagged alternative.</strong> Everything here is <strong>reuse</strong> (go-waku, Railgun's waku-broadcaster-client, go-nitro's message service). A single <code>@cerc-io/libp2p</code> gossipsub transport for everything is the <strong>flagged alternative</strong>, rejected as the default because Waku is mandatory for broadcaster interop and gives async recipient-unlinkability, while direct-noise is needed for the tens-of-ms Nitro hot loop that Waku's multi-hop store-and-forward cannot meet. Using <strong>both per need</strong> is the settled choice; a gossipsub-only stack remains a fallback if Waku operations prove too heavy on mobile.</p>
+<hr />
+<h2 id="t24-federation-bond-threshold-dkg-signing-v2">T2.4 Federation + bond + threshold DKG signing (v2)</h2>
+<p><strong>Status:</strong> partial · <strong>Release:</strong> v2. Kept at v2 depth — never a v1 prerequisite.</p>
+<p><strong>What it is.</strong> The economic-security layer that upgrades the read-and-serve federation into a <strong>bonded</strong> party that can <strong>attest</strong> to what it serves and orders. A watcher party is a bonded federation of service providers that collectively serves one data need; at v2 it also signs everything it attests to with a <strong>threshold Schnorr signature</strong> produced by a distributed key.</p>
+<p><strong>Threshold DKG signing.</strong> The <code>chain-signatures</code> library provides Ethereum-compatible Schnorr (<code>ethschnorr.Sign</code> / <code>Verify</code>) and the <strong>Distributed Schnorr Signature</strong> protocol (Stinson–Strobl <code>(t, n)</code>) in <code>ethdss</code>, built on a <code>kyber</code> DKG. Two properties matter:
+- <strong>On-chain verifiable.</strong> Because it is Ethereum-flavoured Schnorr, an L1 contract verifies the party's aggregate signature — so a sequencing cert or a censored-commit receipt becomes a <strong>slashable fraud proof</strong> against the bond.
+- <strong>Threshold direction is safety-first.</strong> <code>t-of-n</code> tolerates <code>t−1</code> malicious for safety and <code>n−t</code> offline for liveness. We pick <strong>t high</strong> (e.g. <strong>4-of-7</strong>) so forging an attestation needs a large coalition, and a liveness failure degrades to <strong>halt, not loss</strong> because settlement is non-custodial. A BFT-style small quorum (e.g. 3-of-11) would be wrong — it would let any 3 forge.</p>
+<p>The threshold key is used for <strong>signing only</strong>. We do <strong>not</strong> run a threshold-encrypted mempool: with the sequencer and key-holder being the same federation, encryption gives no real fairness, since a colluding threshold can decrypt-then-order. Fair ordering is achieved with commit-reveal in T3, not here.</p>
+<p><strong>Interface consumed / relationship to siblings.</strong>
+- <strong>Bond = T0.4.</strong> The on-L1 registry + bond contract is owned by T0.4; this tier is a <em>member</em> that bonds against it — reference it, do not re-own it.
+- <strong>Fraud path = T0.5 / T3.</strong> The DSS signs the sequencing certs, inclusion receipts, and liquidity-proof snapshots that T3 produces; the sequencing-cert + fraud-proof verifier is T0.5, and a censored-commit or bad-ordering receipt settles as slashing on L1 (disputes → T0.4 bond via T0.5). T2.4 provides the <strong>signature primitive and the bonded membership</strong>; the ordering that it attests to lives in T3.
+- <strong>What it attests over T2.0–T2.3.</strong> Attestation makes a <em>withholding</em> watcher (the liveness gap flagged in T2.0) accountable: the bonded federation is what closes the availability hole the storage proof alone cannot.</p>
+<p><strong>Reuse vs. build.</strong> <code>chain-signatures</code> (<code>ethschnorr</code>, <code>ethdss</code>, kyber DKG) is <strong>reused</strong> as the primitive; the DKG setup, the party's signing wiring, and the L1 verify-and-slash integration are the v2 build — <strong>months of work per venue</strong>, layered on the same spine, not a rewrite (yield-clearing / architecture T2–T3).</p>
+<p><strong>Testing / risks (inline, v2).</strong> DSS and fair-ordering tests are v2, not v1. The DSS/sequencer upgrade adds a larger shared-substrate audit surface (architecture T4 note): anything that makes an aggregate signature verifiable-and-slashable on L1 is audit-critical before mainnet.</p>
+<hr />
+<h2 id="sources">Sources</h2>
+<ul>
+<li>watcher-ts (proof-carrying feeds + voucher metering) — https://github.com/cerc-io/watcher-ts (<code>packages/util/src/types.ts</code> <code>getStorageAt→{value,proof}</code>, <code>indexer.ts</code>, <code>payments.ts</code>, <code>constants.ts</code>) @ <code>18ca4e1</code></li>
+<li>ts-nitro (in-browser/mobile Nitro node; <code>@cerc-io/peer</code> circuit-relay + webrtc-star + gossipsub, <code>@chainsafe/libp2p-noise</code>) — https://github.com/cerc-io/ts-nitro @ <code>884d616</code></li>
+<li>go-nitro (payment vouchers, virtual channels, p2p message service) — https://github.com/cerc-io/go-nitro (<code>payments/vouchers.go</code>, <code>protocols/virtualfund/virtualfund.go</code>, <code>node/engine/messageservice/p2p-message-service/service.go</code>) @ <code>435eb2b</code></li>
+<li>mobymask (submit-on-behalf keeper relay) — https://github.com/cerc-io/mobymask (<code>packages/server/index.ts</code>) @ <code>2329198</code></li>
+<li>go-waku (mobile Waku, gomobile bindings) — https://github.com/waku-org/go-waku</li>
+<li>Railgun Waku broadcaster client (fixed content-topics) — https://github.com/Railgun-Community/waku-broadcaster-client</li>
+<li>chain-signatures (threshold DSS: <code>ethschnorr</code>, <code>ethdss</code> Stinson–Strobl (t,n), kyber DKG) — https://git.vdb.to/cerc-io/chain-signatures @ <code>9016a7c</code></li>
+<li>nimbus-eth1 (state-diff emitter / EL state source, consumed via T1.2) — https://github.com/status-im/nimbus-eth1</li>
+<li>Companion site docs: <a href="../architecture.html"><code>architecture.html</code></a> (T2 watcher-party substrate, threshold Schnorr DSS), <a href="../mobile-privacy.html"><code>mobile-privacy.html</code></a> (§4 read-time private sync ★), <a href="../yield-clearing.html"><code>yield-clearing.html</code></a></li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/T2-watcher-substrate.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

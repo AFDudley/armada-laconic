@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A.6 — Settlement client & self-watchtower — Armada × Laconic</title>
+<link rel="stylesheet" href="../../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../../index.html">Overview</a>
+  <a href="../../architecture.html">Architecture</a>
+  <a href="../../build-plan.html">Build plan</a>
+  <a href="../../execution-platform.html">Execution platform</a>
+  <a href="../../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../../mobile-privacy.html">Mobile privacy</a>
+  <a href="../../glossary.html">Glossary</a>
+  <a href="../../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../../builder-codes.html">Builder codes</a>
+  <a href="../../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="a6-settlement-client-self-watchtower">A.6 — Settlement client &amp; self-watchtower</h1>
+<p>work package A · reuse-oriented spec · <strong>2026-09-05</strong>
+<strong>Parent:</strong> <a href="./A.0-overview.html"><code>A.0</code></a>
+<strong>Owns:</strong> T6.2 settlement client · T6.3 self-watchtower</p>
+<hr />
+<h2 id="a61-goal">A.6.1 Goal</h2>
+<p>This document defines the client edge of A: the software a party runs to drive a settlement channel through its whole life and to keep that channel safe while it is open. On the T6.2 side, the client funds a channel from a deposit, exchanges off-chain ForceMove states and vouchers, and defunds it back to a payout. On the T6.3 side, it automatically defeats a counterparty who force-closes on a stale state. Both are client-side; neither touches pool or adjudicator internals, only their ABIs (see A.5).</p>
+<p>Per <a href="../09-architecture-decisions.html#adr-0012">ADR-0012</a>, this is integration plus glue. The channel engine, the P2P substrate, the voucher primitive, and the chain event and transaction machinery are all reused at pinned commits (A.1.5, A.1.6, A.1.3). T6.3's automatic challenge-response logic is itself trivial to write, because the primitives already exist: <code>ForceMove.checkpoint</code>, the <code>ChallengeRegistered</code> feed, and the Checkpoint transaction build (A.1.6, A.1.3). The real net-new work is the tooling and liveness that make that logic runnable in a browser. That work is a thin in-browser dispute API on the ts-nitro node, which stock ts-nitro omits, and an always-on watch and relay so a challenge is seen inside its window (A.1.6, A.1.9). This client is hosted by D (T6.0/T6.5) and consumes B's feeds (T2) for state freshness.</p>
+<h2 id="a62-boundary">A.6.2 Boundary</h2>
+<p><strong>In scope (T6.2):</strong>
+- Run the ts-nitro in-browser node as the channel engine (fund/defund/pay) over <code>@cerc-io/peer</code> (A.1.5).
+- Drive the A.5 deposit/payout lifecycle from the client: request deposit-in, build/sign ForceMove <code>VariablePart</code>s, exchange vouchers, request payout-out.
+- <strong>Submit-on-behalf</strong> path for write-side origin privacy: on-chain transactions (deposit escrow, conclude, challenge, checkpoint) are relayed by a funded submitter so the signing party stays origin-private (A.1.5 keeper shape).
+- The <strong>net-new dispute API</strong> surfaced on the node: <code>challenge</code>, <code>checkpoint</code>, <code>getSupportedState</code> — absent from stock ts-nitro (A.1.9 delta 6).</p>
+<p><strong>In scope (T6.3):</strong>
+- The automatic watchtower loop: subscribe to <code>ChallengeRegistered</code>, compare turnNums, and <code>checkpoint</code> before <code>FinalizesAt</code>, or else fall back to <code>directdefund</code> (A.1.6).
+- Always-on liveness: a persistent relay connection and background watch so the challenge is <em>seen</em> inside its window.</p>
+<p><strong>Out of scope / consumed:</strong> the deposit/payout contract, outcome encoding, and the app registry are A.5 (T0.3); the adjudicator (<code>ForceMove</code>/<code>MultiAssetHolder</code>) and its dispute primitives are reused from A.4 (T0.2); note-scanning of the pool is B (T6.1); the freshness signal the watchtower gates on is B's per-contract head-cursor (T2; see A.6.5); the wallet host, transport, and mobile proving are D (T6.0/T6.5/T6.6). Terminology per <a href="../09-architecture-decisions.html#adr-0010">ADR-0010</a>: this is the deposit/payout lifecycle, a boundary with B, and a client of tier T6.</p>
+<h2 id="a63-reuse-inventory-cite-a1-pinned-commits">A.6.3 Reuse inventory (cite A.1 + pinned commits)</h2>
+<p>Pinned: ts-nitro <strong>@884d616</strong>, go-nitro <strong>@435eb2b</strong>, mobymask <strong>@2329198</strong>. Railgun is <strong>unpinned — pin before build</strong> (A.1.10). Cites resolve to A.1; do not re-document.</p>
+<table>
+<thead>
+<tr>
+<th>Reused piece</th>
+<th>Citation (via A.1)</th>
+<th>What it gives T6.2/T6.3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>In-browser Nitro node (fund/defund/pay)</td>
+<td>A.1.5 · ts-nitro @884d616 <code>packages/nitro-node/src/node/node.ts</code> L69–190</td>
+<td>The channel engine T6.2 wraps. <strong>Dispute surface is thin — no <code>challenge</code>/<code>checkpoint</code></strong> (A.1.9 → net-new, A.6.4).</td>
+</tr>
+<tr>
+<td>Browser P2P over <code>@cerc-io/peer</code></td>
+<td>A.1.5 · ts-nitro <code>…/p2p-message-service/service.ts</code> L16–120, 453–527</td>
+<td><code>/nitro/msg/1.0.0</code> + <code>/nitro/peerinfo/1.0.0</code>; relay/WebRTC dial (no inbound listen) — the transport the always-on liveness (A.6.4) keeps warm.</td>
+</tr>
+<tr>
+<td>Submit-on-behalf keeper</td>
+<td>A.1.5 · mobymask @2329198 <code>packages/server/index.ts</code> L48–58; <code>Delegatable.sol</code> <code>execute</code>/<code>_msgSender</code></td>
+<td>The <strong>broadcaster analog</strong>: a funded relayer submits on behalf of a signer who stays origin-private — reusable <em>shape</em> for T6.2 write-side privacy.</td>
+</tr>
+<tr>
+<td>Vouchers</td>
+<td>A.1.3 · go-nitro @435eb2b <code>payments/vouchers.go</code> L23–52</td>
+<td>Incremental in-channel micropayment primitive — the in-channel payment T6.2 sends/redeems (shared with C metering &amp; settlement).</td>
+</tr>
+<tr>
+<td>Event source <code>ChallengeRegistered</code>/<code>ChallengeCleared</code></td>
+<td>A.1.6 · go-nitro <code>node/engine/chainservice/eth_chainservice.go</code> L494–539; <code>chainservice.go</code> L86–160 (<code>ChallengeRegisteredEvent{candidate,sigs,FinalizesAt,IsInitiatedByMe}</code>)</td>
+<td>The feed T6.3 subscribes to; <code>FinalizesAt</code> is the deadline, <code>candidate</code> carries the challenger's turnNum.</td>
+</tr>
+<tr>
+<td>Tx submit <code>Challenge</code>/<code>Checkpoint</code></td>
+<td>A.1.6 · <code>eth_chainservice.go</code> L376–386; payloads <code>protocols/interfaces.go</code> L59–114</td>
+<td>The tx builders T6.3 invokes to push a higher-turn state on-chain.</td>
+</tr>
+<tr>
+<td><code>checkpoint</code> (higher-turn, no finalize) / <code>challenge</code> / <code>conclude</code></td>
+<td>A.1.3 · go-nitro <code>ForceMove.sol</code> L88–119 / L39–80 / L126–172</td>
+<td><strong><code>checkpoint</code> is the exact primitive T6.3 uses</strong> to reset <code>FinalizesAt</code> with a later supported state and defeat a stale close.</td>
+</tr>
+<tr>
+<td><code>recoverVariablePart</code> signing domain</td>
+<td>A.1.3 · <code>ForceMove.sol</code> L236–268</td>
+<td>State sigs = <code>NitroUtils.hashState(fixedPart, variablePart)</code> — the dispute API (A.6.4) must reproduce this exactly, same as T0.3/A.5.</td>
+</tr>
+<tr>
+<td>Manual counter-challenge (pattern, not the loop)</td>
+<td>A.1.6 · go-nitro <code>engine.go</code> L882–915 (<code>handleCounterChallengeRequest</code>)</td>
+<td>Shows how a checkpoint payload is assembled once triggered — T6.3 automates the <em>trigger</em>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>A.1.8 corrections honored.</strong> mobymask @2329198 gives the submit-on-behalf keeper only; it is classic delegatable MobyMask (hardhat, react-app, and OpenRPC server), not a browser-peer or watcher. The P2P substrate here is ts-nitro and <code>@cerc-io/peer</code>; the browser-peer and watcher lineage lives in <code>mobymask-v2</code> and <code>mobymask-v2-watcher-ts</code>, and is not this commit. Multi-asset settlement is supported by the adjudicator (A.1.8 §2 / A.4), so the client's lifecycle is multi-asset-capable even though the ETH-in/USDC-out ForceMove app is net-new (A.5).</p>
+<h2 id="a64-net-new-delta-what-a-actually-builds">A.6.4 Net-new delta (what A actually builds)</h2>
+<p>Two deltas, both from A.1.9 (items 3 and 6):</p>
+<p><strong>D1 — In-browser dispute API (T6.2).</strong> Stock ts-nitro <code>node.ts</code> (L69–190) exposes only <code>fund</code>/<code>defund</code>/<code>pay</code>; the dispute path is not surfaced (A.1.5 / A.1.9 delta 6). Add, on the node:
+- <code>getSupportedState(channelId) → {variablePart, sigs, turnNum}</code> — the highest-turn state the local store holds with a complete support proof.
+- <code>challenge(channelId)</code> and <code>checkpoint(channelId, supportedState)</code> — build the payload (<code>protocols/interfaces.go</code> shape, A.1.6), sign in the <code>recoverVariablePart</code> domain (A.1.3), and hand the tx to the submit-on-behalf relayer (A.6.3).
+This is a surface over reused primitives, not new cryptography. Signing and hashing reuse <code>NitroUtils.hashState</code>. It exists so the browser client can dispute, which today only the go-nitro server engine can do.</p>
+<p><strong>D2 — Automatic watchtower loop and always-on liveness (T6.3).</strong> go-nitro has no automatic watchtower (A.1.6). A non-initiator engine auto-creates a <code>directdefund</code> (conclude and withdraw) on an adversarial <code>ChallengeRegistered</code>, not a higher-turn <code>checkpoint</code>; only a manual <code>CounterChallengeRequest</code> reaches checkpoint (<code>engine.go</code> L540–612, L882–915). The loop itself is small and trivial once the tooling (D1) and liveness are correct, because the checkpoint primitive, the <code>ChallengeRegistered</code> feed, and the Checkpoint transaction build all already exist (A.1.6/A.1.3). What is missing is only the automatic trigger wired over them:</p>
+<pre><code>on ChallengeRegistered(channelId, candidate, FinalizesAt, IsInitiatedByMe):
+  if IsInitiatedByMe: return                       # our own close, nothing to defend
+  local  = getSupportedState(channelId)            # D1
+  onchain = candidate.turnNum
+  if local.turnNum &gt; onchain:                      # we hold a strictly later supported state
+      checkpoint(channelId, local)                 # D1 → resets FinalizesAt, no finalize (ForceMove L88–119)
+  else:                                            # counterparty's state is current/ahead: no fraud
+      directdefund(channelId)                      # let the exit proceed correctly (reused engine path)
+  # all of the above MUST land before FinalizesAt
+</code></pre>
+<ul>
+<li><strong>Freshness gate.</strong> The "highest locally-held supported state" is only trustworthy if the client is synced. T6.3 gates the loop on B's per-contract head-cursor freshness signal (T2; see A.6.5). If the feed is stale, the client cannot assert that <code>local.turnNum</code> is authoritative, and it MUST prefer the safe <code>directdefund</code> exit rather than a checkpoint that could itself be stale.</li>
+<li><strong>Always-on liveness (net-new).</strong> The browser node has no background watch loop and no guaranteed relay connection (A.1.6). T6.3 adds a persistent <code>@cerc-io/peer</code> relay connection and a background subscriber so <code>ChallengeRegistered</code> is observed within its window. A missed challenge means a lost channel; this is the A.0.5 gate 5 liveness requirement. Where a phone cannot stay connected for the full challenge window, the loop MUST be delegable to an always-on submit-on-behalf relayer (A.6.3 keeper shape) that watches and checkpoints for the offline party. That delegation is the primary reason the keeper is reused write-side.</li>
+</ul>
+<p>The choice of <code>checkpoint</code> over <code>directdefund</code> is the crux. A <code>directdefund</code> still exits, but at the challenger's possibly stale, adversarial outcome. A <code>checkpoint</code> re-establishes the true latest state, so the channel finalizes correctly or stays open. The response logic above is trivial given the tooling: a turnNum compare plus a <code>checkpoint</code> call over primitives that already exist. The genuinely net-new, load-bearing work is therefore the tooling of D1's in-browser dispute API and the always-on liveness that let it run at all, not the primitive and not the branch logic.</p>
+<h2 id="a65-interfaces-icd">A.6.5 Interfaces (ICD)</h2>
+<p><strong>Consumed from A.5 (T0.3, sibling in this package):</strong>
+- Channel-lifecycle API: <code>requestDeposit(channelId, asset, amount)</code> drives <code>RailgunSmartWallet.transact</code> unshield-in, then <code>MultiAssetHolder.deposit</code>; <code>requestPayout(channelId, outcome)</code> calls <code>concludeAndTransferAllAssets</code> to the payout external destination that re-shields (A.5 · A.1.4).
+- <code>channelId = NitroUtils.getChannelId(fixedPart)</code>, plus the ForceMove app registry (<code>appDefinition</code>) that T6.2 selects the settlement app from (A.5 · A.1.4). The walking skeleton uses the trivial app (see A.0.4/A.8); C's quote/settle app registers later.
+- Outcome / exit-format encoding (<code>SingleAssetExit</code>, <code>Allocation</code>) the client assembles for defund (A.5 · A.1.3).</p>
+<p><strong>Consumed from B (feeds, cross-package boundary):</strong>
+- The proof-carrying feed <code>getStorageAt → {value, proof}</code> (T2.0) reads on-chain channel and holdings state with a proof rather than trusting a bare RPC.
+- The per-contract head-cursor freshness signal (T2, "which T6.3 gates on" per <code>00-work-packages.md</code>), which is the input to the A.6.4 freshness gate. T6.3 depends on B (T2 feeds) for freshness.
+- The Nitro voucher metering interface (T2.1): the same voucher primitive (A.6.3) funds B's watcher metering, and T6.2 issues and redeems these in-channel.</p>
+<p><strong>Consumed from A.4 (T0.2, sibling):</strong> the adjudicator address and the <code>ForceMove</code>/<code>MultiAssetHolder</code> ABIs. The dispute API (A.6.4 D1) and watch loop (D2) bind to <code>challenge</code>/<code>checkpoint</code>/<code>conclude</code> and the <code>ChallengeRegistered</code>/<code>ChallengeCleared</code> events there.</p>
+<p><strong>Exposed to D (host) and up through A's ICD (A.8):</strong> the settlement-client channel-lifecycle API (fund, pay, and defund, plus the net-new challenge, checkpoint, and getSupportedState); and the watchtower as a background service D hosts, or delegates to a keeper. A.8 aggregates what A exposes to B/C/D.</p>
+<p><strong>Exposed to C:</strong> the same lifecycle and voucher surface is what C's yield/exchange clearing drives over A's rail (A.8).</p>
+<h2 id="a66-acceptance-verification">A.6.6 Acceptance / verification</h2>
+<p>Verified on a laconic fixturenet (see A.8), reusing the walking-skeleton channel (A.0.4). Two adversarial scenarios plus the happy path follow:</p>
+<ol>
+<li><strong>Watchtower defeats a stale force-close (T6.3, the headline test).</strong>
+   - Open a channel, advance it to a supported state at <code>turnNum = N</code> (both parties signed).
+   - Counterparty issues <code>challenge</code> with an earlier state <code>turnNum = M &lt; N</code> (a stale/adversarial close).
+   - <strong>Expected:</strong> the watchtower observes <code>ChallengeRegistered</code> over its persistent relay connection, computes <code>local.turnNum = N &gt; M</code>, submits a <code>checkpoint</code> with the <code>N</code> state before <code>FinalizesAt</code>, and the challenge is cleared (<code>ChallengeCleared</code>); the stale outcome never finalizes. Funds settle at the true latest state.</li>
+<li><strong>Unresponsive counterparty still exits correctly (T6.2/T6.3 fallback).</strong>
+   - Counterparty goes silent (no newer state exists; we legitimately want to close).
+   - We <code>challenge</code> with our latest supported state; counterparty never responds.
+   - <strong>Expected:</strong> no higher-turn state appears; after <code>FinalizesAt</code> the channel concludes at our state and <code>concludeAndTransferAllAssets</code> routes the payout to A.5's payout destination which re-shields. The exit completes without counterparty cooperation. (When <em>we</em> are the offline party, the delegated keeper performs this.)</li>
+<li><strong>Freshness-gated safety.</strong>
+   - Force B's head-cursor stale (feed lag). A <code>ChallengeRegistered</code> arrives.
+   - <strong>Expected:</strong> the loop refuses to assert authority on a possibly-stale <code>local</code>; it takes the safe <code>directdefund</code> path (exit, not checkpoint) rather than risk checkpointing an outdated state. Exit is correct-if-conservative.</li>
+<li><strong>Lifecycle happy path (T6.2).</strong> fund (deposit-in), then exchange states plus at least one voucher, then cooperative defund (payout-out), then a fresh notes scan (B/T6.1). This proves the client drives the full A.5 boundary once.</li>
+</ol>
+<p><strong>Verification tactics:</strong> drive scenarios from a test harness against the fixturenet adjudicator; assert on emitted <code>ChallengeRegistered</code>/<code>ChallengeCleared</code> and final <code>holdings</code>/payout; assert the checkpoint tx lands strictly before <code>FinalizesAt</code> (timing is the failure mode). Reuse go-nitro's dispute test fixtures as oracles for turnNum comparison. No project-wide suite runs here; scoped scenario tests only, since the main integration lands in A.8.</p>
+<h2 id="a67-risks-open">A.6.7 Risks / open</h2>
+<ul>
+<li><strong>Liveness is the crux (A.0.5 gate 5).</strong> A phone that sleeps through the full challenge window loses the channel. The mitigation is the persistent-relay and delegated-keeper path (A.6.4); the residual risk is trusting and funding that keeper. The keeper sees that a party disputes but stays origin-private on submission (A.6.3); it does not learn channel contents beyond what it relays.</li>
+<li><strong>ts-nitro dispute-API maturity.</strong> The net-new <code>challenge</code>/<code>checkpoint</code> surface (D1) must exactly reproduce go-nitro's signing and support-proof semantics (<code>ForceMove</code> L88–119, L236–268). Divergence produces an invalid checkpoint that the adjudicator rejects, silently losing the defense. Cross-test the browser payload against the go-nitro server engine.</li>
+<li><strong>Freshness dependency on B.</strong> T6.3 correctness is only as good as B's freshness signal (T2). If B under-reports staleness, the loop could checkpoint a stale state; the conservative <code>directdefund</code> fallback (A.6.4) bounds the blast radius to a correct-but-suboptimal exit.</li>
+<li><strong>Railgun unpinned</strong> (A.1.10): the payout re-shield that the lifecycle drives crosses into unpinned Railgun code, so pin a Railgun commit before build (A.5/A.2).</li>
+<li><strong>Multi-asset app gap (A.1.8 §2 / A.1.9 delta 2):</strong> the client lifecycle is multi-asset-ready, but until C's multi-asset ForceMove app ships, T6.2 exercises only the single-asset trivial app (A.4/A.5). Not a client-side blocker.</li>
+</ul>
+<p>See also — siblings: <a href="./A.1-reuse-inventory.html"><code>A.1</code></a> (§A.1.5, A.1.6, A.1.3, A.1.8, A.1.9) · <a href="./A.4-adjudicator-integration.html"><code>A.4</code></a> (adjudicator/dispute primitives) · <a href="./A.5-deposit-payout-contract.html"><code>A.5</code></a> (channel-lifecycle API, outcome encoding, app registry) · <a href="./A.8-interfaces-acceptance.html"><code>A.8</code></a> (aggregate ICD and fixturenet). Baseline: <a href="../09-architecture-decisions.html#adr-0004">ADR-0004</a>, <a href="../09-architecture-decisions.html#adr-0010">ADR-0010</a>, <a href="../09-architecture-decisions.html#adr-0012">ADR-0012</a>.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/A-nitro-on-railgun/A.6-settlement-client-watchtower.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A.4 — Adjudicator Integration — Armada × Laconic</title>
+<link rel="stylesheet" href="../../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../../index.html">Overview</a>
+  <a href="../../architecture.html">Architecture</a>
+  <a href="../../build-plan.html">Build plan</a>
+  <a href="../../execution-platform.html">Execution platform</a>
+  <a href="../../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../../mobile-privacy.html">Mobile privacy</a>
+  <a href="../../glossary.html">Glossary</a>
+  <a href="../../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../../builder-codes.html">Builder codes</a>
+  <a href="../../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="a4-adjudicator-integration">A.4 — Adjudicator Integration</h1>
+<p>work package A · reuse-oriented spec · <strong>2026-09-05</strong>
+<strong>Parent:</strong> <a href="./A.0-overview.html"><code>A.0</code></a>
+<strong>Owns:</strong> <strong>T0.2</strong> — Nitro adjudicator (<code>go-nitro</code> NitroAdjudicator / ForceMove / MultiAssetHolder + exit-format Outcome)</p>
+<hr />
+<h2 id="a41-goal">A.4.1 Goal</h2>
+<p>Stand up the on-chain adjudicator that anchors Armada settlement: a redeployed <code>go-nitro</code> <code>NitroAdjudicator</code>, comprising its <code>ForceMove</code> dispute machine, its <code>MultiAssetHolder</code> escrow, and the exit-format <code>Outcome</code> payout path. It runs on the laconic fixturenet so channels funded from a shielded note can settle off-chain via ForceMove and finalize back to the deposit/payout boundary (T0.3; see <a href="./A.5-deposit-payout-contract.html">A.5</a>). Per <a href="../09-architecture-decisions.html#adr-0004">ADR-0004</a> and <a href="../09-architecture-decisions.html#adr-0012">ADR-0012</a>, this is integration, not new cryptography. The adjudicator is reused as-is at its pinned commit. The only genuinely net-new code T0.2 introduces is a multi-asset ForceMove settlement app (ETH-in/USDC-out) and the end-to-end wiring of the dispute paths (challenge/checkpoint/conclude) through the node.</p>
+<p>The walking-skeleton target (A.0.4) is to fund a channel via <code>MultiAssetHolder.deposit</code>, run a trivial single-asset settlement app off-chain, then call <code>concludeAndTransferAllAssets</code> to the T0.3 external destination. This proves <em>notes-in-Nitro-notes-out</em> before the real multi-asset app or the auto-watchtower (T6.3; see <a href="./A.6-settlement-client-watchtower.html">A.6</a>) is deepened.</p>
+<h2 id="a42-boundary">A.4.2 Boundary</h2>
+<p>T0.2 owns the adjudicator contract set and its dispute wiring, and nothing on either private side of it:</p>
+<ul>
+<li><strong>In scope:</strong> deploy <code>NitroAdjudicator</code> (its <code>ForceMove</code>, <code>MultiAssetHolder</code>, and exit-format pieces) at commit @435eb2b; author the multi-asset settlement app that binds to it; drive challenge, checkpoint, and conclude end-to-end from the node; and expose the adjudicator address, the <code>appDefinition</code> and app-registry surface, and the signing domain (see A.4.5) that T0.3 (A.5) and C's quote/settle app (T4.1) consume.</li>
+<li><strong>Out of scope (cited baseline / sibling):</strong> the shielded pool (clean-room per A.2) and its shield/unshield ABIs (<a href="./A.1-reuse-inventory.html#a11-shielded-pool-t00--clean-room-reference-spec">A.1.1</a>, A.2); the net-new deposit/payout contract itself (T0.3, A.5), for which T0.2 only defines the ABIs that T0.3 calls into and finalizes out of; the settlement client and auto-watchtower (T6.2/T6.3, A.6); and C's real quote/settle app variant (T4.1), for which T0.2 delivers the reference multi-asset app and registry mechanism it plugs into.</li>
+<li>The Railgun/Nitro boundary (<a href="../09-architecture-decisions.html#adr-0010">ADR-0010</a>) is realized in T0.3. Here <code>RelayAdapt</code> and <code>Cookbook</code> name Railgun's own recipe layer, not this boundary. T0.2 is the public-side channel counterparty that T0.3 deposits into and concludes from.</li>
+<li><strong>Phase-0 note (licensing gate — resolved via clean-room, <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>):</strong> T0.2 was never licence-blocked; go-nitro is Apache/MIT-lineage OSS and freely redeployable. The pool (T0.0) and circuits (T0.1) that share its fixturenet were <code>UNLICENSED</code>, but are now clean-room reimplemented (A.2/A.3), so that gate is resolved. The adjudicator still comes up independently for its own acceptance (A.4.6); the joined skeleton (deposit-from-note) now waits only on those clean-room builds, not on a licensing grant. This dependency is recorded in the A.4.6 acceptance, where A.4 couples to A.2 and A.3.</li>
+</ul>
+<h2 id="a43-reuse-inventory-cite-a1-pinned-commit">A.4.3 Reuse inventory (cite A.1 + pinned commit)</h2>
+<p>Everything here is reused <strong>as-is</strong> from <code>cerc-io/go-nitro</code> <strong>@435eb2b</strong> per <a href="./A.1-reuse-inventory.html#a13-go-nitro-adjudicator-t02--reuse-as-is">A.1.3</a>. Citations are pinned there; this spec cites, it does not re-document (ADR-0012 rule 1).</p>
+<table>
+<thead>
+<tr>
+<th>Reused piece</th>
+<th>Pinned citation (@435eb2b)</th>
+<th>Role in T0.2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MultiAssetHolder.deposit(asset, channelId, expectedHeld, amount)</code></td>
+<td><code>packages/nitro-protocol/contracts/MultiAssetHolder.sol</code> <strong>L36–70</strong>; <code>holdings[asset][channelId]</code> <strong>L24–29</strong></td>
+<td>The <strong>escrow entrypoint</strong> T0.3 calls post-unshield; <code>expectedHeld</code> is the reorg/race guard. <code>channelId = NitroUtils.getChannelId(fixedPart)</code>.</td>
+</tr>
+<tr>
+<td><code>concludeAndTransferAllAssets(FixedPart, candidate)</code> + <code>transferAllAssets</code></td>
+<td><code>NitroAdjudicator.sol</code> <strong>L33–42</strong>; <code>transferAllAssets</code> <strong>L123–190</strong></td>
+<td><strong>Finalize + payout</strong>: loops every asset in the outcome → transfers to named destinations. The payout leg of the skeleton.</td>
+</tr>
+<tr>
+<td><code>_executeSingleAssetExit</code> / <code>_isExternalDestination</code></td>
+<td><code>MultiAssetHolder.sol</code> <strong>L411–427</strong></td>
+<td>Confirms <strong>T0.3 payout is an external destination</strong> that receives ERC20 and re-shields (A.5).</td>
+</tr>
+<tr>
+<td><code>challenge</code> / <code>checkpoint</code> / <code>conclude</code></td>
+<td><code>ForceMove.sol</code> <strong>L39–80</strong> / <strong>L88–119</strong> / <strong>L126–172</strong></td>
+<td>The dispute state machine. <code>checkpoint</code> (higher-turn, <strong>no finalize</strong>) is the exact primitive T6.3 uses to defeat a stale challenge (A.6).</td>
+</tr>
+<tr>
+<td><code>recoverVariablePart</code> — <strong>signing domain</strong></td>
+<td><code>ForceMove.sol</code> <strong>L236–268</strong></td>
+<td>State sigs = <code>NitroUtils.hashState(fixedPart, variablePart)</code>. <strong>T0.3/T6.2 and every app must sign this exact domain</strong> (→ A.4.5).</td>
+</tr>
+<tr>
+<td>exit-format <code>Outcome</code> structs (<code>SingleAssetExit</code>, <code>Allocation</code>, <code>AllocationType{simple, withdrawHelper, guarantee}</code>)</td>
+<td>exit-format <code>ExitFormat.sol</code> <strong>L26–73</strong></td>
+<td>The wire format T0.3 ABI-encodes for payout; <code>withdrawHelper</code> is the alternate re-shield route.</td>
+</tr>
+<tr>
+<td><code>IForceMoveApp.stateIsSupported</code> app hook</td>
+<td><code>NitroAdjudicator.sol</code> <strong>L193–207</strong></td>
+<td>The <code>appDefinition</code> dispatch point — where the settlement app (skeleton or C's) is bound.</td>
+</tr>
+<tr>
+<td><code>HashLockedSwap.sol</code> reference app</td>
+<td><code>examples/HashLockedSwap.sol</code> <strong>L33–83</strong></td>
+<td>Pattern for a ForceMove app — <strong>single-asset / 2-party only</strong> (basis of the A.4.4 delta).</td>
+</tr>
+<tr>
+<td>multi-asset swap negotiation</td>
+<td><code>protocols/swap/swap.go</code> <strong>L105–408</strong></td>
+<td>Proof that <strong>multi-asset ETH-in/USDC-out is supported off-chain</strong> by the protocol/holder — correcting the "single-asset gap" (A.1.8 §2).</td>
+</tr>
+<tr>
+<td>vouchers</td>
+<td><code>payments/vouchers.go</code> <strong>L23–52</strong></td>
+<td>In-channel micropayment primitive reused by C metering + settlement (not net-new here).</td>
+</tr>
+</tbody>
+</table>
+<p>For the walking skeleton, the <code>appDefinition</code> is a <strong>plain settlement/consensus app</strong> (HashLockedSwap-grade single-asset stand-in, per A.0.4) — reused directly as the trivial-settle proof. The <strong>multi-asset app is the only app-side net-new item</strong> (A.4.4).</p>
+<h2 id="a44-net-new-delta">A.4.4 Net-new delta</h2>
+<p>Two deltas, both flagged in <a href="./A.1-reuse-inventory.html#a19-net-new-deltas-what-a-actually-builds">A.1.9</a> §2 and A.0.5 gate 4. Everything else in A.4.3 is reuse.</p>
+<ol>
+<li>
+<p><strong>Multi-asset ForceMove settlement app (ETH-in / USDC-out).</strong> The escrow (<code>MultiAssetHolder</code>), the payout loop (<code>transferAllAssets</code>), and the off-chain negotiation (<code>swap.go</code>) all already support multiple assets. The A.1.8 §2 correction is load-bearing here: the gap is not the holder, it is the app. No shipped ForceMove app produces a multi-asset atomic outcome; <code>HashLockedSwap.sol</code> (<code>examples/…</code> L33–83) is single-asset and 2-party. T0.2 authors an <code>IForceMoveApp</code> whose <code>stateIsSupported</code> validates a state that debits ETH and credits USDC in one outcome, so the exchange leg (C, T4.1) can settle atomically over reused clearing. C authors the real quote/settle variant against this same <code>IForceMoveApp</code> interface and registry; T0.2 ships the reference app and the registration mechanism.</p>
+</li>
+<li>
+<p><strong>Dispute paths driven end-to-end through the node.</strong> The contract <code>challenge</code>, <code>checkpoint</code>, and <code>conclude</code> methods exist and are reused, but go-nitro's default engine does not wire them adversarially the way Armada needs (A.1.6). On an adversarial <code>ChallengeRegistered</code>, a non-initiator engine auto-creates a <code>directdefund</code> (conclude and withdraw), not a higher-turn <code>checkpoint</code> (<code>engine.go</code> L540–612). T0.2's delta is to exercise challenge, checkpoint, and conclude end-to-end from the node (open, fund, dispute, finalize) so the paths are proven and callable. The automatic watch-and-checkpoint control loop and its liveness are T6.3 (A.6), not T0.2.</p>
+</li>
+</ol>
+<p>The dispute lifecycle T0.2 must drive end-to-end (contract methods reused, wiring net-new):</p>
+<pre><code>  open ──deposit──► FUNDED ──(cooperative: final state signed)──► conclude ──► payout (T0.3)
+                       │
+           (party goes silent / stale state)
+                       ▼
+                   challenge(FixedPart, candidate)     ForceMove.sol L39–80
+                       │  emits ChallengeRegistered{FinalizesAt}
+          ┌────────────┴─────────────────────────────┐
+          ▼ higher-turn state exists                  ▼ FinalizesAt reached
+   checkpoint(...)  L88–119  emits ChallengeCleared    conclude(...)  L126–172
+   (defeats stale challenge, NO finalize)              → concludeAndTransferAllAssets → payout
+          │                                            → transferAllAssets loops every asset
+          └──► channel returns to FUNDED (off-chain continues)
+</code></pre>
+<p>The <code>checkpoint</code> branch is the T6.3 primitive. T0.2 proves it is callable and correct; T6.3 (A.6) automates when it fires.</p>
+<h3 id="maturity-gaps-restated-accurately-per-a18">Maturity gaps (restated accurately per A.1.8)</h3>
+<ul>
+<li><strong>Multi-asset app is net-new.</strong> The holder and protocol are multi-asset; the app is the missing piece (delta 1). The accurate framing is that the app is net-new, not that go-nitro outcomes are single-asset (A.1.8 §2 correction).</li>
+<li><strong>Dispute wiring end-to-end.</strong> The paths are reachable but not the engine default; challenge and checkpoint must be driven explicitly (delta 2).</li>
+<li><strong>No auto-watchtower.</strong> There is no automatic higher-turn checkpoint response; only a manual <code>CounterChallengeRequest</code> reaches checkpoint or challenge (<code>engine.go</code> L882–915). The automatic loop that watches, compares <code>turnNum</code>, and submits before <code>FinalizesAt</code> is net-new and owned by T6.3 (see <a href="./A.6-settlement-client-watchtower.html">A.6</a>). It is out of T0.2 scope, named here so the boundary is unambiguous.</li>
+<li><strong>Persistent-connection liveness.</strong> Defending a challenge requires an always-on node for the full challenge window; the browser node (ts-nitro) has no background watch loop or guaranteed relay connection (A.1.6). This is also a T6.3 concern, noted here so T0.2 acceptance does not over-claim liveness.</li>
+</ul>
+<h2 id="a45-interfaces-icd">A.4.5 Interfaces (ICD)</h2>
+<p>What T0.2 exposes to its consumers. These are the surfaces that T0.3 (A.5), C's app (T4.1), and the client/watchtower (A.6) bind to. A.0's WP-level "A exposes" list (<code>00-work-packages.md</code> §22) is the roll-up.</p>
+<ul>
+<li><strong>Adjudicator address.</strong> The deployed <code>NitroAdjudicator</code> address on the fixturenet — the single on-chain target for <code>deposit</code>, <code>challenge</code>, <code>checkpoint</code>, <code>conclude</code>, <code>concludeAndTransferAllAssets</code>. Published to T0.3 (A.5) and to the settlement client (A.6).</li>
+<li><strong>Escrow entrypoint (deposit).</strong> <code>MultiAssetHolder.deposit(asset, channelId, expectedHeld, amount)</code> — T0.3 calls this after <code>IERC20.approve</code>; <code>channelId = NitroUtils.getChannelId(fixedPart)</code>; <code>expectedHeld</code> must equal current <code>holdings[asset][channelId]</code> (reorg guard). ABI per A.4.3 / A.1.3.</li>
+<li><strong>Finalize entrypoint (payout).</strong> <code>concludeAndTransferAllAssets(FixedPart, candidate)</code>: the outcome names T0.3 as an external destination (or an <code>AllocationType.withdrawHelper</code>), and T0.3 receives the ERC20 and re-shields (A.5 owns the encoding).</li>
+<li><strong><code>appDefinition</code> / app-registry surface.</strong> The <code>IForceMoveApp</code> binding point (<code>NitroAdjudicator.sol</code> L193–207, <code>stateIsSupported</code>). T0.2 exposes three things: (a) the trivial single-asset app address (skeleton); (b) the reference multi-asset app address; and (c) the registry convention, meaning how an <code>appDefinition</code> address is chosen per channel and validated. C's quote/settle app (T4.1) registers here, and the T0.3 app registry (A.5) records the mapping. <strong>This is the shared contract between A.4, A.5, and C:</strong> the <code>appDefinition</code> is set in <code>FixedPart</code> at channel open and is immutable for the channel's life.</li>
+<li><strong>Signing domain.</strong> <code>recoverVariablePart</code> (<code>ForceMove.sol</code> L236–268): every state signature is over <code>NitroUtils.hashState(fixedPart, variablePart)</code>. <strong>T0.3 (A.5), T6.2 (A.6), and both apps MUST sign this exact domain</strong>, because a mismatch fails <code>stateIsSupported</code> or <code>recoverVariablePart</code>. This is the single most binding ICD element; publish the exact <code>hashState</code> derivation (the fields and encoding of <code>FixedPart</code> and <code>VariablePart</code>) so consumers cannot drift.</li>
+<li><strong>Outcome wire format.</strong> exit-format <code>Outcome</code> (<code>ExitFormat.sol</code> L26–73): <code>SingleAssetExit[]</code> each with <code>Allocation[]</code> (<code>AllocationType{simple, withdrawHelper, guarantee}</code>). T0.2 fixes which <code>AllocationType</code> the skeleton uses (<code>simple</code> external destination); A.5 owns the T0.3-side encode/decode.</li>
+<li><strong>Dispute events.</strong> <code>ChallengeRegistered</code> / <code>ChallengeCleared</code> (surfaced via chainservice, cf. A.1.6 / <code>eth_chainservice.go</code> L494–539) — the freshness signal T6.3 watches and B (T1.2) indexes. T0.2 guarantees these fire on the redeployed adjudicator; T6.3 owns the response loop.</li>
+</ul>
+<h2 id="a46-acceptance-verification">A.4.6 Acceptance / verification</h2>
+<p>Verified on a laconic fixturenet (per A.0.4 walking skeleton). Two lifecycles must pass:</p>
+<ol>
+<li><strong>Cooperative path — channel open / fund / cooperative-close.</strong>
+   - Deploy <code>NitroAdjudicator</code> @435eb2b; confirm the adjudicator address and <code>appDefinition</code> (trivial single-asset app) resolve.
+   - <code>MultiAssetHolder.deposit</code> funds <code>holdings[asset][channelId]</code>; assert <code>holdings</code> reflects the deposit and <code>expectedHeld</code> guard holds on a second deposit.
+   - Run the settlement app off-chain to a finalizable state, then call <code>concludeAndTransferAllAssets</code>; assert every allocation is transferred to its destination and the T0.3 external destination receives the ERC20 (payout leg reachable). No on-chain dispute is triggered on the happy path.</li>
+<li><strong>Adversarial path — force-close + conclude.</strong>
+   - From a funded channel, submit <code>challenge</code> (<code>ForceMove.sol</code> L39–80), then assert <code>ChallengeRegistered</code> fires with a <code>FinalizesAt</code>.
+   - Submit a higher-turn <code>checkpoint</code> (L88–119), then assert <code>ChallengeCleared</code> and that the challenge is defeated without finalize (this proves the T6.3 primitive is callable; the auto loop is A.6).
+   - Let a challenge run to <code>FinalizesAt</code> and <code>conclude</code> (L126–172), then assert the channel finalizes and <code>concludeAndTransferAllAssets</code> pays out the challenged outcome.
+   - <strong>Signing-domain check:</strong> a state signed against the wrong <code>hashState</code> domain (see A.4.5) is rejected by <code>recoverVariablePart</code>, which proves consumers cannot silently drift.</li>
+<li><strong>Multi-asset app (delta 1):</strong> the reference <code>IForceMoveApp</code> accepts an ETH-in/USDC-out atomic outcome via <code>stateIsSupported</code>, and <code>transferAllAssets</code> pays both assets to their respective destinations in one <code>conclude</code>. The skeleton may run single-asset; this gate proves the net-new app before C builds T4.1 on it.</li>
+</ol>
+<p><strong>Explicitly reported non-claims:</strong> T0.2 does not demonstrate an automatic watchtower response or full-challenge-window liveness; those are T6.3 and A.6. The joined deposit-from-shielded-note skeleton depends on the clean-room pool and circuits (A.4.2, A.1.10; licensing resolved via <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>) for the pool side. The adjudicator lifecycles above run independently of that dependency and are the deliverable proof for T0.2.</p>
+<h2 id="a47-risks-open">A.4.7 Risks / open</h2>
+<ul>
+<li><strong>Licensing (Phase-0 — resolved via clean-room, <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>).</strong> The adjudicator is freely redeployable; the coupled note-to-deposit path waits on the clean-room pool and circuit builds (A.2/A.3), no longer on a Railgun licensing grant. Track the build dependency, but do not block T0.2's own acceptance.</li>
+<li><strong><code>appDefinition</code> immutability.</strong> The app is set at channel open in <code>FixedPart</code>; a channel cannot switch apps mid-life. C (T4.1) and A.5's registry must choose the app before open, so this constraint is surfaced in the registry ICD (A.4.5, A.5).</li>
+<li><strong>Multi-asset app is unaudited net-new.</strong> It is the only novel contract in T0.2; its <code>stateIsSupported</code> predicate is security-critical (atomicity of the swap outcome). Author narrowly, mirror the reused <code>HashLockedSwap</code> shape, and hand C a reviewed reference to fork (T4.1).</li>
+<li><strong>Dispute-path default divergence.</strong> go-nitro's engine defaults to <code>directdefund</code>, not <code>checkpoint</code>, on adversarial challenge (A.1.6). T0.2 must drive checkpoint explicitly for its acceptance; do not assume the stock engine covers it — that assumption is exactly what A.6/T6.3 exists to fix.</li>
+<li><strong>Pin before build.</strong> go-nitro is pinned (@435eb2b); the Railgun side is not (A.1.10). Any integration test spanning A.4 with A.2 or A.5 must pin a Railgun commit first (A.0.6).</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/A-nitro-on-railgun/A.4-adjudicator-integration.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

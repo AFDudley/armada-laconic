@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>4. Solution Strategy — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="4-solution-strategy">4. Solution Strategy</h1>
+<p>arc42 §4 · <strong>2026-09-04</strong></p>
+<p>This section records the fundamental decisions that shape the system and the order in
+which they ship. Every claim grounds in the §5 registry (for item ids) and the §9 ADRs
+(for rationale); the supporting detail lives in the <code>T#.#</code> tier docs, and the risk
+detail lives in §11.</p>
+<h2 id="41-core-strategy-nitro-on-railgun">4.1 Core strategy — <em>nitro-on-railgun</em></h2>
+<p>The load-bearing idea is one sentence (ADR-0004):</p>
+<blockquote>
+<p><strong>notes in → normal Nitro → notes out.</strong></p>
+</blockquote>
+<p>A shielded note is unshielded into a <strong>deposit/payout contract</strong> (T0.3) that funds a
+plain <code>go-nitro</code> channel. Parties then play arbitrary off-chain <strong>ForceMove</strong> games, and
+the channel outcome is shielded back into fresh notes. The Nitro game analysis and the
+Railgun privacy analysis stay fully isolated; they meet only at the allocation→note
+<strong>boundary</strong> (ADR-0010: <em>boundary</em>, not seam). This buys optimistic exits and arbitrary
+settlement games over shielded value <strong>with no new cryptography</strong> and without
+governance-gated RelayAdapt recipes. RelayAdapt is Railgun's own module, used only in
+the T4.2 hedge leg and never for settlement.</p>
+<p><strong>This is integration, not <em>new</em> cryptography — with one caveat (ADR-0014).</strong> The thesis
+holds fully for the <strong>settlement rail</strong> (T0.2 adjudicator + T0.3 deposit/payout + T6.x),
+which is pure reuse and integration. It does <strong>not</strong> hold for the shielded <strong>pool (T0.0)
+and JoinSplit circuits (T0.1)</strong>: because Railgun's contracts/circuits are unlicensed
+(A.1.10), those are <strong>clean-room net-new</strong> — independently authored, spec-compatible with
+the Railgun design, and therefore audit-critical crypto-engineering (of a well-understood,
+de-risked design, not novel cryptography). The hard cryptographic assets break down as:</p>
+<ul>
+<li><strong>T0.0 / T0.1</strong> — the shielded pool and its JoinSplit circuits, <strong>clean-room
+  reimplemented</strong> (spec-compatible with Railgun, fee=0, our POI policy; ADR-0014), plus our
+  own Phase-2 ceremony. Net-new and audit-critical, but a reimplementation of a known
+  design, not novel cryptography. Amounts are hidden in-circuit; the SNARK enforces
+  value-conservation + range, so <em>$50 and $5M are equally opaque</em> — no Tornado-style
+  denomination buckets.</li>
+<li><strong>T0.2</strong> — vanilla <code>go-nitro</code> <code>NitroAdjudicator</code> / <code>ForceMove</code> / <code>MultiAssetHolder</code>,
+  deployed and configured, not forked.</li>
+</ul>
+<p>Against that, the <strong>net-new v1 surface</strong> is enumerable — the clean-room pool/circuits plus
+a thin integration layer:</p>
+<table>
+<thead>
+<tr>
+<th>Net-new for v1</th>
+<th>id</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clean-room shielded pool + JoinSplit circuits (spec-compatible with Railgun; audit-critical)</td>
+<td><strong>T0.0, T0.1</strong></td>
+</tr>
+<tr>
+<td>Deposit/payout contract (the Nitro↔Railgun boundary)</td>
+<td><strong>T0.3</strong></td>
+</tr>
+<tr>
+<td>Watcher ingest config (index pool commitments/nullifiers + T0.3 events)</td>
+<td><strong>T1.2</strong></td>
+</tr>
+<tr>
+<td>Posted-price venue + quote/settle app + fee-split (v1 fills from static inventory)</td>
+<td><strong>T4.0, T4.1, T4.3</strong></td>
+</tr>
+<tr>
+<td>Wallet bits (note-scanner, settlement client, watchtower, transport, proving)</td>
+<td><strong>T6.1–T6.7</strong></td>
+</tr>
+<tr>
+<td>Anonymity-set strategy (process, not code)</td>
+<td><strong>T0.7</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The only <em>novel</em> cryptography optional anywhere in the plan is <strong>T0.6</strong> (native
+channelized commitment, "fork-lite"). It is deferred off the spine (ADR-0005) and, if
+greenlit, re-runs the Phase-2 ceremony over our own circuits (ADR-0003). v1 needs <strong>no
+novel cryptography and zero new consensus/ordering</strong> (ADR-0007) — the clean-room
+pool/circuits (T0.0/T0.1) reimplement a known design rather than invent one — and because
+a posted price has nothing to front-run, the fair-ordering stack (T3) does not exist in v1.</p>
+<h2 id="42-how-the-top-quality-goals-are-met">4.2 How the top quality goals are met</h2>
+<p>Each §10 quality goal maps to a concrete approach realized by named items:</p>
+<table>
+<thead>
+<tr>
+<th>Quality goal (§10)</th>
+<th>Approach</th>
+<th>Realized by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Non-custody</strong> — funds never held by a third party; failure = halt, not loss</td>
+<td>Value lives in Railgun notes or in <code>NitroAdjudicator</code> escrow allocated only by co-signed state; every position is unilaterally <strong>force-closable</strong> to its last co-signed state via the ForceMove dispute game (<code>challenge</code>→<code>checkpoint</code>→<code>conclude</code>)</td>
+<td>T0.2, T0.3; watchtower response T6.3</td>
+</tr>
+<tr>
+<td><strong>Read-time privacy</strong> — sync/read without leaking to a public endpoint</td>
+<td><strong>Proof-carrying feeds</strong>: the watcher serves <code>getStorageAt → {value, proof}</code> verified client-side against the block state root, so a client never calls a public RPC; anonymity-set privacy compounds with the crowd</td>
+<td>feeds T2.0 (ingested via T1); anonymity set T0.7</td>
+</tr>
+<tr>
+<td><strong>Mobile-first</strong> — a phone is a full non-custodial peer</td>
+<td><strong>WebView-first, then native</strong>: interim in-browser ts-nitro stack, then a native gomobile transport behind the same interface; on-device Groth16 proving keeps the shield/unshield prover phone-cheap</td>
+<td>WebView→native T6.5; Groth16 proving T6.6 (ADR-0008)</td>
+</tr>
+<tr>
+<td><strong>Clearing at a fair, un-front-runnable price</strong></td>
+<td><strong>RFQ posted-price</strong> dealer market: Armada posts both sides take-it-or-leave-it and reposts if wrong — a posted price has nothing to front-run; v1 fills from a static inventory (no market-making) and settles non-custodially over the T0.3 rail</td>
+<td>posted-price venue T4.0/T4.1/T4.3 (ADR-0007); solver T4.2 is v2 (ADR-0011)</td>
+</tr>
+</tbody>
+</table>
+<p>Design A (amounts public only at the transparent T0.3 boundary, ADR-0005) is the default
+that makes all four goals reachable with no ceremony. Hiding amounts in-play is the
+opt-in T0.6 upgrade, which sits outside the v1 spine.</p>
+<h2 id="43-delivery-increments">4.3 Delivery increments</h2>
+<p>Increments are the <strong>release</strong> facet of the §5 registry, read as a shipping order:</p>
+<ul>
+<li><strong>v1 — Armada support (the spine).</strong> Clean-room pool + circuits + own Phase-2 (T0.0/T0.1), Nitro
+  adjudicator (T0.2), <strong>deposit/payout boundary (T0.3)</strong>, ingestion (T1.0–T1.2),
+  watcher feeds + metering + transport (T2.0–T2.3), <strong>RFQ posted-price venue filled from a
+  static inventory (T4.0, T4.1, T4.3) + ETH/wstETH yield (T4.4)</strong>, Armada adapters +
+  routing (T5.0/T5.1), full wallet (T6.0–T6.7), anonymity-set bootstrap + Railgun import
+  bridge (T0.7 / ADR-0006). This is the clean-room pool/circuits (audit-critical, of a
+  known design; ADR-0014) plus integration + one small boundary contract + thin app code
+  — no market-making, no new consensus, no novel ZK research (ADR-0011).</li>
+<li><strong>v2 — market-making + ex_net matcher (price discovery + fair ordering).</strong> The venue
+  solver / automated market-making (T4.2) and the LP-buffered USDC-yield rail (T4.5); the
+  whole ordering stack (T3.0–T3.2); the ex_net matcher + LP vault (T4.6); and the
+  economic-security contracts they need on-chain (registry+bond T0.4,
+  sequencing-cert/fraud-proof verifier T0.5, federation+bond DKG T2.4). This layers on the
+  <em>same</em> spine — a DSS-federated venue that also market-makes and proves fair ordering,
+  not a rewrite (ADR-0007, ADR-0011).</li>
+<li><strong>opt — amount-privacy-in-play.</strong> Fork-lite T0.6 (Phase-4, re-runs Phase-2 + fresh
+  audit) and the optional Self zk-passport identity T6.8. This is greenlit only against
+  a concrete requirement; fork-full (Design B) stays excluded (ADR-0005).</li>
+</ul>
+<h3 id="walking-skeleton-the-first-integration-target">Walking skeleton — the first integration target</h3>
+<p>Before hardening any single tier, stand up <strong>one thin end-to-end slice</strong> on a Laconic
+fixturenet that exercises every boundary at least once:</p>
+<pre><code>shield → deposit (T0.3) → trivial ForceMove settle → payout → scan
+  T0.0        T0.3            T0.2 / T4.1 stub          T0.3     T6.1
+</code></pre>
+<p>Concretely, the slice shields a known value into the pool (T0.0), then unshields-in
+through the deposit/payout contract to fund a <code>go-nitro</code> channel (T0.3 over T0.2). It
+drives a <strong>trivial</strong> ForceMove app — a single co-signed fill, HashLockedSwap-grade,
+standing in for the real T4.1 quote/settle — to a finalized outcome, shields that
+outcome into fresh notes via payout (T0.3), and scans and confirms balances on-device
+with <strong>zero</strong> public <code>eth_getStorageAt</code>/<code>eth_getLogs</code> (T6.1 over a T1.2/T2.0 feed). This
+proves the <em>notes-in-Nitro-notes-out</em> thesis end-to-end with the smallest possible game,
+and it turns every subsequent tier task into "deepen a boundary that already works"
+rather than a big-bang integration. The fixturenet E2E is the standing acceptance
+harness each tier doc already references (T0.3, T1.0, T2.0/T2.1, T4, T6.2 all test
+against it).</p>
+<h3 id="critical-path-through-the-dependency-dag">Critical path through the dependency DAG</h3>
+<pre><code>        T0.0 ─┐
+              ├─► T0.3 ──► T1.2 ──► T2.0/T2.1 ─┐
+        T0.2 ─┘    │                            ├─► T4 (venue)  ─► T5
+        T0.1 ──────┘        T1.0/T1.1 ──────────┤
+                                                └─► T6 (wallet) ─► walking skeleton
+</code></pre>
+<ul>
+<li><strong>Do-first:</strong> T0.0 + T0.1 (the clean-room pool and circuits + Phase-2 keys) and T0.2 feed <strong>T0.3</strong>, the
+  boundary contract every other tier binds to. Nothing above T0 can integrate until
+  T0.3's address, ABI, events, and lifecycle exist.</li>
+<li><strong>Then fan out in parallel</strong> once T0.3 is real: the <strong>T1 → T2</strong> feed path (ingest
+  pool + T0.3 events, serve proof-carrying reads), the <strong>T4</strong> venue, and the <strong>T6</strong>
+  wallet can all progress concurrently against T0.3's published interface.</li>
+<li><strong>The long pole is T1 ingestion</strong> (ADR-0009): the nimbus-eth1 state-diff emitter
+  (T1.0) is the one v1 item that is genuinely unbuilt rather than integration, and
+  every read-side consumer (T2 feeds → T4/T6) assumes its fresh, proof-carrying view.
+  The proof-carrying feed leak-safety (T2.0) is the <em>do-first</em> item on the read path
+  because a single leak collapses the whole anonymity set. go-nitro maturity gaps
+  (the net-new multi-asset ForceMove app, dispute wiring) surface first at T0.3 and are Phase-3
+  hardening, not spine blockers.</li>
+</ul>
+<hr />
+<p>Cross-refs: quality goals → §10; runtime flows for these slices → §6; deployment of the
+fixturenet + peers → §7; recurring concepts (privacy, settlement, transport, metering)
+→ §8; the long-pole/maturity risks summarized here → §11; item ids/status/release →
+§5; decisions → §9 (ADR-0002…0010).</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/04-solution-strategy.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

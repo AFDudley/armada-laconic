@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>10. Quality Requirements — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="10-quality-requirements">10. Quality Requirements</h1>
+<p>arc42 §10 · 2026-09-04</p>
+<p>This section refines the quality goals named in §1 into a <strong>quality tree</strong> that decomposes each
+attribute into sub-attributes, then makes those sub-attributes testable as concrete
+<strong>stimulus → response</strong> scenarios. Every scenario names the <code>T#.#</code> item(s) that realize the
+guarantee and, where a decision fixes its shape, the governing <code>ADR-####</code>. The quality tree is a
+view over the §5 registry; it invents no new items.</p>
+<h2 id="quality-tree">Quality tree</h2>
+<pre><code>Armada × Laconic quality
+├─ Security / Privacy         &quot;leak nothing that collapses the anonymity set&quot;
+│  ├─ Custody               non-custodial always — parties serve/meter, never hold value   (T0.2/T0.3, ADR-0004)
+│  ├─ Read-time anonymity   no observer learns which notes a user scans                     (T2.0/T6.1, ADR-0009)
+│  ├─ Write-time origin     on-chain msg.sender is never the user's EOA                     (T6.5/T2.2, ADR-0008)
+│  └─ Amount privacy        amounts opaque in-pool; public only at the transparent boundary (T0.0/T0.7; opt T0.6, ADR-0005)
+├─ Safety / Liveness         &quot;a dead or lying counterparty costs time, never funds&quot;
+│  ├─ Force-closability      an honest party can always exit unilaterally                    (T0.2/T0.3, ADR-0004)
+│  ├─ Watchtower correctness a stale-state force-close is always answered in-window          (T6.3/T0.2)
+│  └─ Feed freshness         staleness is detected (head cursor), never silently missed      (T2.0/T6.3; v2 T2.4)
+├─ Operability               &quot;phone-first, near-zero fixed infra&quot;
+│  ├─ Mobile-first           full shield/trade/settle/scan on-device, keys in the enclave    (T6.0/T6.1/T6.5)
+│  └─ Low fixed infra        only state-diff emitters + STUN/TURN are fixed; rest is P2P     (T1/T2.2/T2.3)
+├─ Performance               &quot;clearing latency + on-device proving are usable&quot;
+│  ├─ RFQ latency            posted-price take-it-or-leave-it over a tens-of-ms hot loop      (T4.0/T4.1/T2.3, ADR-0007)
+│  └─ On-device proving      Groth16 proof within acceptable time/memory                      (T6.6, ADR-0003)
+└─ Auditability              &quot;correctness is checkable, not trusted&quot;
+   ├─ Local verifiability    every feed response carries a storage proof the client checks    (T2.0)
+   └─ On-chain enforceability v2 attestations are slashable fraud proofs on L1                (T2.4/T0.4/T0.5)
+</code></pre>
+<p>The priorities are clear. <strong>Read-time anonymity</strong> is the do-first, load-bearing property: if
+reads fingerprint the user, the anonymity set collapses to one and every other protection is
+moot (T2.0/T6.1 ★). <strong>Watchtower correctness</strong> is the highest-priority <em>safety</em> surface (T6.3).
+Both dominate the test budget.</p>
+<h2 id="quality-scenarios">Quality scenarios</h2>
+<p>Each scenario states a stimulus (its source and trigger), the required response, and the
+observable measure that makes it testable. Measures run on fixturenet unless noted otherwise.</p>
+<p><strong>QS-1 · Read-time anonymity — feed authenticity.</strong>
+<em>Stimulus:</em> a watcher party serves a <strong>tampered <code>value</code></strong> for a pool storage slice.
+<em>Response:</em> the client verifies the <code>{value, proof}</code> storage/Merkle proof against the L1 state
+root <strong>locally</strong> and rejects any mismatch, placing no trust in the watcher.
+<em>Measure:</em> after shielding or depositing a known value, a doctored <code>value</code> MUST fail client-side
+proof verification while the honest slice verifies. → <strong>T2.0</strong> (see §5 T2.0, §8 privacy).</p>
+<p><strong>QS-2 · Read-time anonymity — anti-fingerprint.</strong>
+<em>Stimulus:</em> a data or RPC provider tries to learn <strong>which commitments/nullifiers</strong> a user scans.
+<em>Response:</em> every subscriber to a slice receives <strong>byte-identical</strong> feed responses and scans
+locally, so there is no per-user query to fingerprint.
+<em>Measure:</em> a headless server peer and an in-browser peer subscribed to the same slice receive
+identical bytes, and a device scan issues <strong>zero</strong> <code>eth_getLogs</code> / <code>eth_getStorageAt</code> calls to a
+public endpoint. → <strong>T2.0 / T6.1</strong> (mobile-privacy §4 ★, ADR-0009).</p>
+<p><strong>QS-3 · Watchtower correctness — stale-state force-close.</strong>
+<em>Stimulus:</em> a counterparty <strong>force-closes an old (superseded) state</strong> while the user is offline.
+<em>Response:</em> the phone-resident watchtower submits the user's <strong>higher-turn co-signed state</strong>
+through T0.3 <code>respond</code>/<code>checkpoint</code> <strong>within the challenge window</strong>, and the correct outcome
+finalizes.
+<em>Measure:</em> an old state is force-closed, the offline user's watchtower responds, and funds settle
+to the correct fresh notes rather than the stale allocation. → <strong>T6.3 / T0.2 / T0.3</strong> (ADR-0004).</p>
+<p><strong>QS-4 · Force-closability / non-custody — dead counterparty.</strong>
+<em>Stimulus:</em> a counterparty (or watcher party) goes <strong>unresponsive</strong> mid-channel.
+<em>Response:</em> the honest party <strong>unilaterally force-closes</strong> and exits; because no party ever held
+custody, the worst case is delay, not loss.
+<em>Measure:</em> with the counterparty silent, the honest party drives the force-close to finalize and
+payout mints correct fresh notes, and no configuration lets a party move user value.
+→ <strong>T0.2 / T0.3</strong> (ADR-0004).</p>
+<p><strong>QS-5 · Write-time origin privacy.</strong>
+<em>Stimulus:</em> a user submits an on-chain settlement/shield tx from a phone.
+<em>Response:</em> a <strong>keeper/broadcaster submits on-behalf</strong>, so <code>msg.sender</code> is the relay rather than
+the user's EOA, and the relayed request is metered by the same Nitro voucher stream.
+<em>Measure:</em> the finalized tx's origin is the broadcaster address, unlinkable to the user's key,
+and the request nets a metering voucher. → <strong>T6.5 / T2.2</strong> (ADR-0008).</p>
+<p><strong>QS-6 · Amount privacy at the boundary — large exit.</strong>
+<em>Stimulus:</em> a <strong>large deposit</strong> would re-narrow the anonymity set when it crosses the transparent
+Design-A boundary on exit.
+<em>Response:</em> value is <strong>aggregated over a window or dribbled</strong> in and out incrementally, balancing
+two clocks — window size against LP build-up — so that no single boundary crossing stands out.
+This is deliberately <strong>not</strong> Tornado-style denomination buckets, since in-pool amounts are
+already SNARK-opaque.
+<em>Measure:</em> a whale exit split by the aggregation/dribble policy shows no lone large boundary
+crossing above the configured threshold, and effective-k stays above target. → <strong>T0.7 / T4.5</strong>
+(ADR-0005, ADR-0006).</p>
+<p><strong>QS-7 · On-device proving within budget.</strong>
+<em>Stimulus:</em> a Railgun-scale JoinSplit proof is generated <strong>on a phone</strong>.
+<em>Response:</em> the native Groth16 prover (rapidsnark/mopro) produces a standard proof within
+acceptable time and <strong>stays under the ~3 GB app-memory wall</strong>; low-memory devices fall back to
+the coSNARK server-assist, which still emits a standard Groth16 proof and leaves the verifier
+unchanged.
+<em>Measure:</em> benchmarking the real Railgun circuit on target devices shows proof-gen completing
+without OOM, and the assist path yields a verifier-accepted proof. → <strong>T6.6</strong> (ADR-0003).</p>
+<p><strong>QS-8 · RFQ latency / nothing-to-front-run.</strong>
+<em>Stimulus:</em> two takers hit the venue's posted quote near-simultaneously.
+<em>Response:</em> the v1 venue is a <strong>posted-price dealer market</strong>, so a fixed bid/ask has nothing to
+front-run; the quote/settle ForceMove exchange runs over the tens-of-ms libp2p-noise hot loop and
+reposts if the price is wrong.
+<em>Measure:</em> both fills clear at the posted price with no ordering advantage, and the 1:1 exchange
+completes over direct-noise rather than Waku store-and-forward. → <strong>T4.0 / T4.1 / T2.3</strong>
+(ADR-0007).</p>
+<p><strong>QS-9 · Metering integrity — voucher replay.</strong>
+<em>Stimulus:</em> a peer <strong>replays or reorders</strong> a paid-feed voucher to under-pay or double-count.
+<em>Response:</em> voucher accounting rejects the replayed or out-of-order voucher on go-nitro's
+nonce/redemption logic, and an unpaid or underpaid request is refused; because the design is
+non-custodial, the worst case is denied service.
+<em>Measure:</em> N metered requests net to exactly the expected co-signed allocation, and a replayed
+voucher is rejected without changing the channel balance. → <strong>T2.1</strong> (see §5 T2.1).</p>
+<p><strong>QS-10 · Feed-freshness liveness (withholding watcher).</strong>
+<em>Stimulus:</em> a watcher <strong>withholds</strong> or lags the feed so the storage proof, which only catches a
+<em>lying</em> value, cannot help.
+<em>Response:</em> the consumer detects staleness via the published <strong>head cursor</strong> and treats it as a
+liveness alarm, falling back to a redundant party or direct submit; v2 adds a <strong>bonded
+federation</strong> whose attestation makes a withholding party slashable.
+<em>Measure:</em> an artificially lagged emitter trips the freshness gate before the challenge window
+elapses and the watchtower fails over, never silently missing the window. → <strong>T2.0 / T6.3</strong>;
+v2 <strong>T2.4 / T0.4 / T0.5</strong>.</p>
+<hr />
+<p><strong>Traceability.</strong> These scenarios refine the §1 quality goals and exercise the §6 runtime flows;
+the concepts they defend are described once in §8 (privacy, settlement, transport, metering,
+trusted setup). The open exposures behind the deferred and v2 rows — cold-start anonymity set,
+go-nitro maturity, ingestion freshness, and mobile transport — are tracked in §11.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/10-quality-requirements.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

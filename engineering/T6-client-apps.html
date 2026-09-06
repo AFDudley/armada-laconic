@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>T6 · Client / apps — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="t6-client-apps">T6 · Client / apps</h1>
+<p><strong>Status:</strong> draft · tier doc · 2026-09-04
+<strong>Parent:</strong> <a href="./05-building-block-view.html"><code>05-building-block-view.md</code></a> · <strong>Tier:</strong> T6
+<strong>Release:</strong> v1 (T6.0–T6.7) · opt (T6.8)
+<strong>Depends on / Blocks:</strong> depends on T0.0 (circuit <code>wasm</code>/<code>zkey</code>, pool commitment/nullifier ABI, POI root), T0.3 (deposit/payout + channel lifecycle + app registry + vouchers), T2 (proof-carrying feeds + metering; T6.3 gates on T2 feed freshness). Blocks end-user delivery — nothing downstream.</p>
+<p>The Client tier is the wallet and everything a real user runs on their own device. It shields, trades, settles, and <strong>scans their own notes</strong> end-to-end, and it does so without keys ever leaving the OS secure enclave. It is a fork of <code>laconic-wallet</code> / <code>laconic-wallet-web</code>, a React-Native app with a browser build that already ships production-grade custody (T6.0), extended with a WASM note-scanner (T6.1), a settlement client that drives T0.3 (T6.2), a phone-resident watchtower (T6.3), key-derivation policy for unlinkability (T6.4), the mobile transport crux (T6.5), Groth16 proving (T6.6), and the Armada-branded product build-up plus SDK wiring (T6.7). The wallet is a <strong>watcher-party (P2P) client</strong>, not a client of a server: it talks peer-to-peer to bonded watcher parties (T2) for feeds and metering and to counterparties/hubs for channel play, and it never surrenders custody — a watcher party is exited unilaterally by force-close. The load-bearing constraint is that <strong>mobile is unbuilt</strong>, so this doc states one concrete interim→production path, not a menu.</p>
+<p><strong>What we build vs. reuse</strong> (only three pieces are genuinely new logic; the transport is a <em>port</em>, not new protocol):</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Registry item</th>
+<th>Status</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BIP-39 + HD + secure-enclave key custody</td>
+<td>T6.0</td>
+<td><strong>reuse</strong></td>
+<td><code>laconic-wallet</code> @ <code>bb5223a</code> (<code>src/utils/accounts.ts</code>) · <code>laconic-wallet-web</code> @ <code>2a4a478</code></td>
+</tr>
+<tr>
+<td>In-browser Nitro node + libp2p relay</td>
+<td>T6.5 (interim)</td>
+<td><strong>reuse</strong></td>
+<td><code>ts-nitro</code> @ <code>884d616</code> (<code>@chainsafe/libp2p-noise</code> via <code>@cerc-io/peer</code>)</td>
+</tr>
+<tr>
+<td>Submit-on-behalf keeper / broadcaster relay</td>
+<td>T6.5</td>
+<td><strong>reuse (ref.)</strong></td>
+<td><code>mobymask</code> @ <code>2329198</code> · <code>waku-broadcaster-client</code></td>
+</tr>
+<tr>
+<td>Groth16 prover (Railgun circuits)</td>
+<td>T6.6</td>
+<td><strong>reuse (constraint)</strong></td>
+<td>T0.0 <code>wasm</code>+<code>zkey</code>; snarkjs-WASM (browser) / rapidsnark (mobile)</td>
+</tr>
+<tr>
+<td>WASM note-scanner + WebView↔RN key bridge</td>
+<td>T6.1</td>
+<td><strong>build</strong></td>
+<td>net-new glue</td>
+</tr>
+<tr>
+<td>Self-hosted watchtower loop</td>
+<td>T6.3</td>
+<td><strong>build</strong></td>
+<td>ties to T0.2/T0.3 dispute path</td>
+</tr>
+<tr>
+<td>Address rotation + per-venue loyalty keys</td>
+<td>T6.4</td>
+<td><strong>build</strong></td>
+<td>HD-derivation policy</td>
+</tr>
+<tr>
+<td>Native gomobile transport (production)</td>
+<td>T6.5</td>
+<td><strong>build (port)</strong></td>
+<td><code>go-waku</code> <code>library/mobile</code> · go-libp2p-noise</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What the wallet must blind, and with what</strong> — each surface is a sibling component the wallet <em>drives</em>, not something it re-solves:</p>
+<table>
+<thead>
+<tr>
+<th>Observer</th>
+<th>Would learn without mitigation</th>
+<th>Wallet-side mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RPC / data provider</td>
+<td>Exactly which commitments/nullifiers you scan — fingerprints you against the pool ★</td>
+<td>Local scan+decrypt off the T2 proof-carrying feed (T6.1) — no public RPC query</td>
+</tr>
+<tr>
+<td>On-chain / mempool</td>
+<td>Your EOA as tx origin; amounts in the clear</td>
+<td>Keeper/broadcaster submit-on-behalf (T6.5) + T0.0 shielded pool</td>
+</tr>
+<tr>
+<td>The venue / matcher</td>
+<td>Who you are, funding source, that two trades are you</td>
+<td>Fresh per-channel identity via rotation (T6.4); Design-A boundary (T0.3)</td>
+</tr>
+<tr>
+<td>A misbehaving party</td>
+<td>Could stall you</td>
+<td>Self-hosted watchtower + unilateral force-close (T6.3) — never custody</td>
+</tr>
+</tbody>
+</table>
+<p>The ★ read-path surface is the one the whole anonymity-set guarantee rests on: if reads leak, every other protection is moot. It is therefore the wallet's do-first item (T6.1).</p>
+<h2 id="t60-wallet-base">T6.0 Wallet base</h2>
+<p>The base is the <strong>Laconic wallet</strong>, a React-Native app (Android/iOS) with a browser build that custodies keys and signs both Cosmos and EIP-155 requests. It already ships <strong>BIP-39 mnemonic generation, HD derivation, and OS-secure-enclave storage</strong> (iOS Keychain / Android Keystore) via <code>react-native-keychain</code> in <code>src/utils/accounts.ts</code> — the one piece that is production-grade today. This is <strong>reuse</strong>, not build: fork <a href="https://git.vdb.to/cerc-io/laconic-wallet"><code>laconic-wallet</code></a> @ <code>bb5223a</code> and the browser <a href="https://git.vdb.to/cerc-io/laconic-wallet-web"><code>laconic-wallet-web</code></a> @ <code>2a4a478</code> at pinned commits, then confirm that BIP-39 + HD + <code>react-native-keychain</code> custody builds on device/emulator and in the browser.</p>
+<p>Everything else in T6 is additive signing paths and hosted stacks layered on this base. T6.0 exposes the <strong>enclave-guarded key store</strong> that T6.1's bridge, T6.2's channel signing, T6.3's watchtower submit, and T6.4's derivation policy all consume, and raw key material never leaves it. Custody is the trust root of the tier: an audited leak here is critical, so the enclave boundary — and the T6.1 bridge across it — is the do-first audit surface before mainnet.</p>
+<p><strong>Key tasks.</strong> Fork at pinned commits; confirm the custody path (BIP-39 generate, HD derive, <code>react-native-keychain</code> store/retrieve) builds and runs on device / emulator and in the browser build before anything else lands; establish the enclave as the single key origin every later component calls through.</p>
+<p><em>Risk:</em> the key store is the tier's trust root — any path that materializes a secret outside the enclave is an audit blocker.</p>
+<h2 id="t61-wasm-note-scanner-webviewrn-key-bridge">T6.1 WASM note-scanner + WebView↔RN key bridge</h2>
+<p>Two coupled net-new pieces make on-device privacy real.</p>
+<ol>
+<li><strong>WASM note-scanner.</strong> A local scan-and-decrypt loop pulls the proof-carrying commitment/nullifier slice from T2's watcher feed, verifies the storage/Merkle proof against L1 (so the phone trusts math, not the watcher), then <strong>trial-decrypts commitments locally</strong> to find the user's notes and compute balances. No <code>eth_getLogs</code> / <code>eth_getStorageAt</code> ever leaves the device to a public RPC. This is the ★ read-path property the whole anonymity-set guarantee rests on: if reads fingerprint the user, the set collapses to one and every other protection is moot, which is why it is the wallet's do-first item. The scanner consumes T0.0's commitment-insert / nullifier-spend event ABI and the T2 feed format.</li>
+<li><strong>WebView↔RN key bridge.</strong> Decryption and signing need the HD keys, but keys must never leave the enclave. The bridge exposes a <strong>narrow, audited message channel</strong>: the WebView (scanner / prover / Nitro node) requests a signature or a viewing-key decryption; the RN shell performs it against <code>react-native-keychain</code>-held secrets (T6.0) and returns only the result. Raw key material never crosses into the WebView. This is the net-new glue that lets the reused browser stack operate on enclave-guarded keys.</li>
+</ol>
+<p>The bridge is transport-agnostic and survives the T6.5 interim→production swap unchanged, and the scanner is written once against the feed interface and reused verbatim by the T6.3 watchtower (the same loop on a different event).</p>
+<p><strong>Key tasks.</strong> Build the WebView↔RN bridge (narrow sign / viewing-key-decrypt request-response, keys stay in enclave) before the scanner, then build the scanner (feed pull → proof verify → local trial-decrypt → balances). Assert on network egress: no public-RPC query may ever be issued.</p>
+<p><em>Testing:</em> on the fixturenet, shield then scan on device — balances must match with zero <code>eth_getLogs</code> / <code>eth_getStorageAt</code> to a public endpoint. <em>Risk:</em> the bridge is a trust boundary; a leak of key material across it is critical and gated on audit before mainnet.</p>
+<h2 id="t62-settlement-client">T6.2 Settlement client</h2>
+<p>The settlement client is the wallet logic that <strong>drives T0.3's channel lifecycle</strong>: open / fund-from-note, propose / accept state, cooperative close, force-close, and <code>respond</code>. It binds to T0.3's deposit/payout contract address + ABI, its <code>Deposit</code> / <code>Payout</code> events, its voucher format, and its ForceMove <strong>app registry</strong> (the allow-listed app IDs the wallet may play — e.g. the T4 quote/settle app). A trade runs as follows: shield into the pool (T0.0), fund a channel from a note through T0.3, update channel state off-chain via signed messages with the counterparty/venue, then settle by minting fresh shielded notes back through T0.3's payout path.</p>
+<p>This is the peer that ties the spine together: it consumes T6.1's bridge for state signatures, T6.5's transport for the message hot loop, and T6.6's prover for the shield/unshield proofs. Amounts are public only at the T0.3 deposit/payout boundary (Design A); hiding them in-play is T0.6 (out of this tier). The client reuses go-nitro's channel semantics and never re-derives them — it is a driver over T0.3, not a re-implementation of the adjudicator.</p>
+<p><strong>Interface consumed.</strong> From T0.3: deposit/payout address + ABI, <code>Deposit</code> / <code>Payout</code> events, the channel lifecycle API (open / fund-from-note, propose / accept, cooperative close, force-close, <code>respond</code>), voucher format, and the ForceMove app registry (allow-listed app IDs). It exposes the driven channel state to T6.3 (the co-signed higher-turn states the watchtower replays).</p>
+<p><strong>Key tasks.</strong> Wire the lifecycle calls over T6.5 transport; fund-from-note and cooperative-close happy path first, then force-close / <code>respond</code>. <em>Testing:</em> fixturenet happy path — shield → open+update a channel → settle to fresh notes.</p>
+<h2 id="t63-self-hosted-watchtower">T6.3 Self-hosted watchtower</h2>
+<p>The watchtower is <strong>the same T6.1 note-scanner loop watching a different event</strong>: it subscribes to T0.2's adjudicator <code>ChallengeRegistered</code> feed (delivered over the T2 feed) and, on a challenge that would finalize a <strong>stale</strong> state, submits the user's <strong>higher-turn co-signed state</strong> via the adjudicator's <code>checkpoint</code> (higher-turn, no finalize) within the challenge window. Non-custody means a dead counterparty freezes trading, never funds — but only if <em>someone</em> answers the challenge for an offline user, which is exactly this loop's job.</p>
+<p><strong>The auto challenge-response is trivial once the client/node tooling is correct.</strong> Every hard primitive already exists: <code>ForceMove.checkpoint</code> on the adjudicator (T0.2), the <code>ChallengeRegistered</code> feed off the T2 watcher, and the Checkpoint tx build the T6.2 settlement client already drives. Detecting a stale-finalizing challenge and firing the higher-turn <code>checkpoint</code> before <code>FinalizesAt</code> is a thin loop over those primitives — <strong>not new dispute logic</strong>. The real work is the <strong>tooling + liveness</strong>: ts-nitro today surfaces only fund/defund/pay, so we add an <strong>in-browser dispute API</strong> that exposes the challenge/checkpoint surface to the wallet, plus an <strong>always-on node</strong> so the loop still answers while the phone is asleep.</p>
+<p><strong>A phone can run the loop — but robust liveness needs an always-on node.</strong> It needs only (a) the feed subscription the wallet already maintains and (b) the ability to sign + submit a single <code>checkpoint</code> transaction — the same Checkpoint tx build T6.2 already drives, relayed gaslessly via the keeper/broadcaster (T6.5). With no prover and no heavy state, it is a lightweight reactive loop inside the wallet process, phone-deployable by construction. But because a browser/mobile node has no guaranteed background watch loop, the <strong>liveness prerequisite</strong> is an always-on node: users wanting stronger liveness delegate the identical loop to an always-on watcher party (T2), while the default self-hosted loop runs on the device.</p>
+<p><strong>Freshness gate.</strong> The watchtower is only as safe as the feed is fresh: a lagging T2 emitter means a missed challenge, so the loop <strong>gates on T2 feed freshness</strong> — it treats a stale feed as a liveness alarm (fall back to a redundant party / direct submit) rather than silently missing the window. The safety-critical correctness (never miss a valid challenge, never submit a superseded state) is owned jointly with T0.2/T0.3; this doc owns the phone-resident <em>deployment</em> of that loop. It is the highest-priority test surface in the tier.</p>
+<p><strong>Key tasks.</strong> Build the <strong>in-browser dispute API</strong> (surface challenge/checkpoint over ts-nitro, which today exposes only fund/defund/pay); subscribe to <code>ChallengeRegistered</code> over the T2 feed; on a stale-finalizing challenge, drive the existing Checkpoint tx build to submit the higher-turn state via <code>checkpoint</code> before <code>FinalizesAt</code>, relayed gaslessly (T6.5); add the feed-freshness alarm + always-on/redundant-party fallback for liveness.</p>
+<p><em>Testing (safety-critical, must pass):</em> the phone-resident watchtower defeats a stale-state force-close — a counterparty force-closes an old state, the offline user's watchtower submits the higher-turn state, and the correct outcome finalizes. <em>Risk:</em> a missed or superseded response can cost a user funds — highest-priority test surface, owned with T0.2/T0.3.</p>
+<h2 id="t64-address-rotation-per-venue-loyalty-keys">T6.4 Address rotation + per-venue loyalty keys</h2>
+<p>Both are Client-tier key-derivation policy over T6.0's existing HD tree — no new crypto, no contract change.</p>
+<ul>
+<li><strong>Address rotation.</strong> Derive a <strong>fresh per-channel identity</strong> for each channel/deposit so the venue cannot link two trades to one person and so the transparent Design-A deposit boundary (T0.3) is decorrelated across interactions. Rotation is a derivation-path + note-recipient policy; the T6.1 scanner already sweeps the whole HD range, so rotated notes are found with no extra bookkeeping.</li>
+<li><strong>Per-venue loyalty keys.</strong> For features that <em>want</em> continuity (rebates, reputation, allow-list membership at a chosen venue), derive a <strong>stable per-venue key linkable ONLY to that venue</strong> — a deterministic child key keyed by venue id. It gives the user a persistent handle at exactly one venue while staying unlinkable across venues and unlinkable to the rotating per-channel identities. The T4 venue opts into requiring it as a match filter; the default remains rotated / identity-blind.</li>
+</ul>
+<p><strong>Key tasks.</strong> Implement rotation as a per-channel derivation-path + note-recipient policy (no scanner change — T6.1 sweeps the whole HD range); implement loyalty keys as a deterministic venue-id-keyed child. <em>Testing:</em> rotated notes are still discovered by the scanner; the loyalty key is stable at its venue and unlinkable across venues.</p>
+<h2 id="t65-mobile-transport">T6.5 Mobile transport</h2>
+<p>Transport is the tier crux, the load-bearing unbuilt piece. It carries two traffic classes, per ADR-0008 (both, per need — not one or the other):</p>
+<ul>
+<li><strong>Waku pub/sub</strong> for gossip, discovery, async, and interop with Railgun's broadcaster network (<a href="https://github.com/Railgun-Community/waku-broadcaster-client"><code>waku-broadcaster-client</code></a>): recipient-unlinkable, and mandatory for the gasless origin-privacy submit path.</li>
+<li><strong>libp2p-noise direct streams</strong> for the Nitro settlement hot loop — cooperative fills need tens-of-ms round trips that Waku's multi-hop store-and-forward cannot meet. This is the same <code>/nitro/msg/1.0.0</code> noise transport go-nitro's p2p message service (<code>node/engine/messageservice/p2p-message-service/service.go</code>) uses.</li>
+</ul>
+<p><strong>One sequenced path, interim → production — not competing options:</strong></p>
+<ul>
+<li><strong>Interim (spine demo).</strong> Host the existing browser peer stack <strong>inside a WebView</strong> in the RN wallet: <code>@cerc-io/peer</code> + <a href="https://github.com/cerc-io/ts-nitro"><code>ts-nitro</code></a> @ <code>884d616</code> run unmodified in the WebView JS runtime — circuit-relay + webrtc-star + gossipsub for connectivity, <code>@chainsafe/libp2p-noise</code> for direct streams. The RN shell owns keys + UI; the WebView owns the Nitro node + p2p. This reuses production browser code verbatim and is the realistic v1 mobile client (foreground-only) that validates the whole flow.</li>
+<li><strong>Production (Phase-3 hardening, before mainnet).</strong> Move the hard layer native: the whole p2p / channel / messaging layer becomes <strong>one gomobile module</strong> — <strong>go-nitro + <a href="https://github.com/waku-org/go-waku">go-waku</a></strong> (<code>library/mobile</code>), both Go on mature go-libp2p + noise, compiled to <code>.aar</code> / <code>.xcframework</code> and bridged to the RN shell (the proven <code>status-go</code> pattern). The port is required, not optional polish, because <code>@waku/sdk</code> / js-libp2p is not React-Native-compatible (no WebCrypto / WebRTC / Node built-ins in Hermes), and the interim WebRTC-over-tunnel path is the least-proven part of the combination. Native modules escape the WebView's background-execution constraint and give the phone a first-class libp2p peer. RN stays the <strong>shell only</strong>; <code>ts-nitro</code> remains the browser build's node.</li>
+</ul>
+<p>The boundary between the phases is the transport interface T6.2/T6.3 consume, and the scanner, prover, and channel-driving logic are written <strong>once</strong> against it and survive the swap. <strong>Write-time origin privacy</strong> uses the keeper/broadcaster submit-on-behalf pattern (<a href="https://github.com/cerc-io/mobymask"><code>mobymask</code></a> @ <code>2329198</code> keeper / Railgun broadcaster) so on-chain <code>msg.sender</code> is never the user's EOA — metered by the same T2 voucher mechanism.</p>
+<p><strong>Key tasks.</strong> Stand up the interim WebView stack and smoke a direct + virtual channel against a T0.3 fixturenet; define the transport interface T6.2/T6.3 bind to; then build the go-nitro + go-waku gomobile module behind that same interface and re-run E2E. <em>Risk:</em> WebRTC-over-tunnel in the interim may not traverse a network underlay cleanly — the least-proven part of the combination and a core reason the native port exists, not optional polish. Native gomobile E2E is a Phase-3 gate before mainnet, not before the demo.</p>
+<h2 id="t66-groth16-mobile-proving">T6.6 Groth16 mobile proving</h2>
+<p>Client-side proving is the dominant mobile difficulty, and the decision is settled: <strong>keep Railgun's Circom + Groth16 / BN254 construction</strong> — the win is a better <em>prover runtime</em>, not a different pool. The prover loads T0.0's circuit <code>wasm</code> + <code>zkey</code> artifacts + hashes (produced by T0.0 / T0.1's trusted setup) and never regenerates them.</p>
+<ul>
+<li><strong>Browser build:</strong> snarkjs-WASM (<a href="https://github.com/iden3/snarkjs">snarkjs</a>) against T0.0's <code>wasm</code> + <code>zkey</code>.</li>
+<li><strong>Mobile:</strong> a <strong>native Groth16 prover</strong> (mopro / rapidsnark). Measured on a 2024 phone, native proof-gen is ~0.15–3.4 s and <strong>~8–20× faster than browser snarkjs</strong> for small-to-medium circuits — a mostly-solved <em>engineering</em> problem, shipped at scale by World App.</li>
+</ul>
+<p>The <strong>binding limit is memory, not speed</strong>: a Railgun-scale transaction circuit (large Merkle note-scan + shielded transfer) sits at the upper edge of on-device provers and can hit the ~3 GB app-memory wall that crashes heavier circuits (<code>mobile-proving-research.md</code>; <a href="https://zkmopro.org/docs/performance">zkmopro</a>). The mitigations, in maturity order, are to <strong>benchmark the actual Railgun circuit first</strong> on target devices (mopro's own advice), then add a <strong>coSNARK server-assist fallback</strong> for weak / low-memory devices — its output is still a standard Groth16 proof, verifier unchanged — which may become the default floor on low-end hardware. Switching to Halo2 / UltraHonk is rejected: it costs mobile prover perf, on-chain gas, and a fresh audit, and Halo2-RSA already crashes on today's phones. Groth16 stays.</p>
+<p><strong>Key tasks.</strong> Wire snarkjs-WASM (browser) and native rapidsnark (mobile) against T0.0 artifacts; <strong>benchmark the real Railgun circuit</strong> on target devices before committing to on-device-only; implement the coSNARK server-assist fallback path for low-memory devices. <em>Risk:</em> a Railgun-scale circuit may exceed phone app-memory; the assist may have to be the default floor on low-end hardware.</p>
+<h2 id="t67-armada-branded-app-sdk-wiring">T6.7 Armada-branded app + SDK wiring</h2>
+<p>The shipped starting point is honest: the Laconic wallet is <strong>bare-bones</strong>, and MobyMask / the swap flows are <strong>demo fragments, not products</strong> — the right foundation, not a finished front-end. T6.7 is the product build-up on top of T6.0: grow the bare-bones wallet into the <strong>Armada-branded app</strong> and <strong>wire the Armada SDK</strong> so integrator apps, treasury / payment tools, and the front-end all sit on the same client stack.</p>
+<p>Concretely this is net-new "build up," not new protocol. First brand + productize the RN shell and browser build (UI, WalletConnect, orchestration in Hermes), then expose the T6.1–T6.6 capabilities — local scan, T6.2 settlement, T6.5 transport, T6.6 proving — as a coherent <strong>Armada SDK surface</strong> that integrator apps call without re-solving privacy. Armada is pluggable asset-privacy infrastructure for USDC (shielded pool + governance-added adapters + apps/SDK tier); T6.7 is that apps/SDK tier, funded by integrator revenue-share. It routes to the T4 venue and, through T5, to Armada's adapters (Swaps, Aave-v4 yield, CCTP), so an app built on the SDK gets shield → trade → settle → scan for free.</p>
+<p><strong>Key tasks.</strong> Brand + productize the RN shell and browser build; define the Armada SDK surface over T6.1–T6.6; wire routing to the T4 venue and, via T5, to the Swaps / Aave-v4 / CCTP adapters so an SDK app inherits shield → trade → settle → scan without re-solving privacy.</p>
+<h2 id="t68-identity-optional">T6.8 Identity (optional)</h2>
+<p>Identity is <strong>not</strong> cross-cutting: it is a single optional parameter the wallet may attach, default off. A user can source a selective-disclosure attestation off-band — e.g. <a href="https://github.com/selfxyz/self">Self</a> (zk-passport): prove nationality / age / OFAC-clear / personhood on-device from a passport or EU-ID chip in the standalone Self app, verified <strong>off-chain and anchored to an Ethereum address</strong>, with the shielded Railgun identity left unlinked. The wallet stores the resulting attestation as one more optional signing input, surfaced only when a T4 venue's match filter requires it. Deferred, not built.</p>
+<h2 id="sources">Sources</h2>
+<ul>
+<li>laconic-wallet (custody base) — https://git.vdb.to/cerc-io/laconic-wallet @ <code>bb5223a</code> · browser build https://git.vdb.to/cerc-io/laconic-wallet-web @ <code>2a4a478</code></li>
+<li>ts-nitro (in-browser / mobile Nitro node; <code>@chainsafe/libp2p-noise</code> via <code>@cerc-io/peer</code>) — https://github.com/cerc-io/ts-nitro @ <code>884d616</code></li>
+<li>go-nitro p2p message service (libp2p-noise <code>/nitro/msg/1.0.0</code>) — https://github.com/cerc-io/go-nitro (<code>node/engine/messageservice/p2p-message-service/service.go</code>)</li>
+<li>go-waku (gomobile <code>library/mobile</code> bindings) — https://github.com/waku-org/go-waku</li>
+<li>Railgun Waku broadcaster client (submit-on-behalf) — https://github.com/Railgun-Community/waku-broadcaster-client</li>
+<li>mobymask keeper (submit-on-behalf reference) — https://github.com/cerc-io/mobymask @ <code>2329198</code> (<code>packages/server/index.ts</code>)</li>
+<li>watcher-ts (proof-carrying feed, voucher metering) — https://github.com/cerc-io/watcher-ts @ <code>18ca4e1</code> (<code>indexer.ts</code>, <code>payments.ts</code>)</li>
+<li>Railgun contracts / circuits — https://github.com/Railgun-Privacy/contract · https://github.com/Railgun-Privacy/circuits-v2</li>
+<li>snarkjs (browser Groth16 prover) — https://github.com/iden3/snarkjs</li>
+<li>Mobile proving — <code>mobile-proving-research.md</code> (in repo) · https://zkmopro.org/docs/performance</li>
+<li>Self (optional zk-passport identity) — https://github.com/selfxyz/self</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/T6-client-apps.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

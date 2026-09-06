@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>0. Work Packages (WBS) — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="0-work-packages-wbs">0. Work Packages (WBS)</h1>
+<p>delivery frame · <strong>2026-09-05</strong> · operating model: <a href="./09-architecture-decisions.html#adr-0012">ADR-0012</a></p>
+<p>This is the <strong>work breakdown</strong>: the deliverable-oriented decomposition of the programme, sitting above the arc42 architecture description. It is MECE and obeys the 100% rule — the four work packages together are the whole programme's scope (the entire Armada product; <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a>), and none overlaps another. Each work package is a <strong>system with a boundary</strong>: it <em>owns</em> a set of <code>T#.#</code> items from the <a href="./05-building-block-view.html">§5 registry</a> (the shared building-block vocabulary — the tiers are <strong>not</strong> re-partitioned) and <em>consumes</em> everything else across a named interface (ICD). A work package may only touch its own boundary and its own deltas; everything else is a cited <a href="./09-architecture-decisions.html">baseline decision</a> or an external interface. That constraint is what keeps each scope from drifting into the others.</p>
+<h2 id="the-work-packages">The work packages</h2>
+<table>
+<thead>
+<tr>
+<th>WP</th>
+<th>Mission</th>
+<th>Owns (<code>T#.#</code>)</th>
+<th>Consumes (ICD from)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A · nitro-on-railgun</strong></td>
+<td>Non-custodial private <strong>settlement of shielded value</strong> over Nitro — <em>notes in → normal Nitro → notes out</em> — delivering <strong>shielded payments</strong> and the rail the others build on.</td>
+<td>T0.0, T0.1, T0.2, <strong>T0.3</strong>, T0.6 <em>(opt)</em>, T0.7; settlement client T6.2, watchtower T6.3</td>
+<td>B (feeds), D (host)</td>
+</tr>
+<tr>
+<td><strong>B · watcher parties</strong></td>
+<td>Private, metered, proof-carrying <strong>sync</strong> so browser/mobile/server peers discover &amp; verify pool/adjudicator state without leaking the anonymity set.</td>
+<td>T1.0, T1.1, T1.2, T2.0, T2.1, T2.2, T2.3, T2.4 <em>(v2)</em>; note-scanner T6.1</td>
+<td>A (contract event ABIs to index)</td>
+</tr>
+<tr>
+<td><strong>C · yield &amp; exchange</strong></td>
+<td>Let users <strong>earn yield (USDC first) and swap privately</strong>, cleared over A's rail; owns the venue <strong>and the adapters</strong>.</td>
+<td>T4.0, T4.1, T4.3, T4.4; T4.2 <em>(v2)</em>, T4.5 <em>(v2)</em>, T3.* <em>(v2)</em>, T4.6 <em>(v2)</em>; <strong>T5.0 adapters (CCTP built · Aave-v4 yield · Swaps), T5.1 routing</strong></td>
+<td>A (settlement), B (feeds); Aave · Circle-CCTP (external protocols)</td>
+</tr>
+<tr>
+<td><strong>D · client</strong></td>
+<td>The <strong>wallet/app</strong> that hosts A/B/C on a phone with almost no fixed infra.</td>
+<td>T6.0, T6.4, T6.5, T6.6, T6.7, T6.8 <em>(opt)</em></td>
+<td>A, B, C (their client edges)</td>
+</tr>
+</tbody>
+</table>
+<p>Note the deliberate split of the T6 client tier: <strong>A</strong> owns the settlement client (T6.2) and watchtower (T6.3), <strong>B</strong> owns the note-scanner (T6.1), and <strong>D</strong> owns the host, transport, proving, and app shell — because each of those pieces is a client edge of a different scope, hosted by D.</p>
+<h2 id="interface-contracts-icds">Interface contracts (ICDs)</h2>
+<p>Each work package binds to its siblings only through these; the interface <em>is</em> the boundary.</p>
+<ul>
+<li><strong>A exposes:</strong> deposit/payout contract address + ABI + events (<code>Deposit</code>/<code>Payout</code>, adjudicator <code>Challenge</code>/<code>Checkpoint</code>/<code>Finalized</code>); the channel-lifecycle API; the ForceMove app registry; the voucher format; the pool commitment/nullifier event ABI; circuit <code>wasm</code>/<code>zkey</code> artifacts; the POI allow-list root.</li>
+<li><strong>B exposes:</strong> the proof-carrying feed schema (<code>getStorageAt → {value, proof}</code>); the Nitro voucher metering interface; the per-contract head-cursor freshness signal (which T6.3 gates on).</li>
+<li><strong>C exposes:</strong> the quote RPC; the posted price + <code>priceSetter</code> authority; the quote/settle app id; the per-venue loyalty-key scheme; the capacity hint.</li>
+<li><strong>D exposes:</strong> the Armada-branded app + SDK surface over A/B/C.</li>
+</ul>
+<h2 id="sequencing-risk-first-one-walking-skeleton">Sequencing (risk-first, one walking skeleton)</h2>
+<p>Per <a href="./09-architecture-decisions.html#adr-0012">ADR-0012</a> rule 5:</p>
+<ol>
+<li><strong>A is work package #1</strong> — it lands the deposit/payout interface every other WP binds to; nothing above it can integrate until that interface exists.</li>
+<li><strong>Walking skeleton</strong> — a thin slice spanning A + B + D (shield → deposit → trivial ForceMove settle → payout → scan on a fixturenet) retires integration risk before any tier is deepened (see §4).</li>
+<li><strong>B's T1 ingestion is the long pole</strong> — the nimbus-eth1 emitter is the one genuinely-unbuilt v1 item; spike it first (§11 R3, ADR-0009).</li>
+<li><strong>C builds on A + B</strong> once their interfaces are real; <strong>D</strong> proceeds in parallel against the same interfaces.</li>
+</ol>
+<h2 id="open-decisions-by-owning-work-package">Open decisions, by owning work package</h2>
+<p>Kept with their owner so they no longer contaminate the core scope:</p>
+<ul>
+<li><strong>A:</strong> native amount-privacy (T0.6, opt, ADR-0005); cross-pool membership proofs (T0.7, opt, ADR-0006).</li>
+<li><strong>B:</strong> federation bonding + threshold DKG (T2.4, v2); the T1 nimbus long pole (ADR-0009).</li>
+<li><strong>C:</strong> <strong>USDC yield is the priority and in scope</strong> via the Aave-v4 adapter (ADR-0013); the open decision is the <strong>v1 mechanism</strong> — direct adapter recipe (public Design-A boundary) vs the private <strong>LP-buffered rail</strong> (T4.5, which needs v2 market-making, ADR-0011) — and may amend ADR-0011. <strong>Adapter source + license</strong> (build vs reuse Railgun's Cookbook Aave/Swaps recipes) is an open gate. ETH/wstETH yield (T4.4) is the trivial path; market-making stays v2 (ADR-0011).</li>
+<li><strong>D:</strong> mobile transport crux (T6.5, ADR-0008); optional identity (T6.8).</li>
+</ul>
+<h2 id="relationship-to-the-arc42-docs">Relationship to the arc42 docs</h2>
+<p>The arc42 set is the <strong>architecture description</strong>; this WBS is the <strong>delivery frame</strong> around it. The tier docs (<code>T0</code>–<code>T6</code>) are the building-block detail each work package points into — A → T0/T6.2/T6.3, B → T1/T2/T6.1, C → T3/T4/T5, D → T6.0/T6.4–T6.8. When a work package is picked up for delivery, its scope is written to the six-part reuse-spec bar (goal + boundary + reuse inventory + delta + ICD + acceptance) defined in ADR-0012, against the frozen baseline.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/00-work-packages.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

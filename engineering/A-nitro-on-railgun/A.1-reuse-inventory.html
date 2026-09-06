@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A.1 — Reuse Inventory (the deep dive) — Armada × Laconic</title>
+<link rel="stylesheet" href="../../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../../index.html">Overview</a>
+  <a href="../../architecture.html">Architecture</a>
+  <a href="../../build-plan.html">Build plan</a>
+  <a href="../../execution-platform.html">Execution platform</a>
+  <a href="../../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../../mobile-privacy.html">Mobile privacy</a>
+  <a href="../../glossary.html">Glossary</a>
+  <a href="../../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../../builder-codes.html">Builder codes</a>
+  <a href="../../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="a1-reuse-inventory-the-deep-dive">A.1 — Reuse Inventory (the deep dive)</h1>
+<p>work package A · reuse-oriented spec · <strong>2026-09-05</strong>
+<strong>Parent:</strong> <a href="./A.0-overview.html"><code>A.0</code></a> · <strong>Feeds:</strong> A.2–A.9</p>
+<p>This is the grounded inventory of what already exists for work package A, with pinned file and line citations, what each piece gives us, which A-item it serves, and the net-new deltas. Per <a href="../09-architecture-decisions.html#adr-0012">ADR-0012</a>, specs cite these rather than re-documenting them. <strong>Provenance:</strong> go-nitro <code>@435eb2b</code>, ts-nitro <code>@884d616</code>, and mobymask <code>@2329198</code> are pinned. The Railgun repos were read at <code>master</code>/<code>main</code> HEAD (2026-09-05) and must be pinned to a commit before build (A.2/A.3/A.5).</p>
+<p><strong>Clean-room reframe (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>).</strong> Railgun's on-chain pool and <code>circuits-v2</code> are unlicensed, so T0.0 and T0.1 are not reuse. Our engineers clean-room reimplement them, spec-compatible with the Railgun design pinned here. A.1.1 (pool) and A.1.2 (circuits) are therefore the <em>reference spec</em> the clean-room implements, not reuse as deployed OSS; this whole inventory doubles as that reference spec. <code>go-nitro</code> and <code>ts-nitro</code> (A.1.3/A.1.5), along with Railgun's MIT <code>engine</code> and <code>cookbook</code>, remain genuine OSS reuse, unaffected.</p>
+<hr />
+<h2 id="a11-shielded-pool-t00-clean-room-reference-spec">A.1.1 Shielded pool (T0.0) — clean-room reference spec</h2>
+<p>This is the reference spec T0.0 clean-room reimplements: a spec-compatible shielded pool, independently authored under no Railgun license (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>). The citations below pin the exact behavior and format our contracts must match; they are not reused-as-deployed OSS. The pool is an upgradeable proxy over <code>RailgunSmartWallet</code>, which is <code>RailgunLogic</code>, which is <code>{Commitments, TokenBlocklist, Verifier}</code>. There are only two public mutating entrypoints, and there is no separate deposit or withdraw: deposit and withdraw <em>are</em> shield and unshield-via-transact.</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Citation (<code>Railgun-Privacy/contract</code> @HEAD)</th>
+<th>Gives us / A-item</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>shield(ShieldRequest[])</code></td>
+<td><code>contracts/logic/RailgunSmartWallet.sol</code> L23–97</td>
+<td><strong>T0.3 payout</strong> entrypoint: mints fresh commitments; emits <code>Shield</code>.</td>
+</tr>
+<tr>
+<td><code>transact(Transaction[])</code></td>
+<td><code>RailgunSmartWallet.sol</code> L102–224</td>
+<td><strong>T0.3 deposit</strong>: a tx with <code>boundParams.unshield=NORMAL</code> unshields ERC20 out; emits <code>Transact</code>,<code>Nullified</code>.</td>
+</tr>
+<tr>
+<td><code>transferTokenOut</code> (unshield recipient = <code>address(npk)</code>)</td>
+<td><code>RailgunLogic.sol</code> L318–364</td>
+<td>Confirms <strong>deposit target</strong>: set <code>unshieldPreimage.npk = T0.3 address</code> to escrow into the channel.</td>
+</tr>
+<tr>
+<td><code>changeFee(shield,unshield,nft)</code></td>
+<td><code>RailgunLogic.sol</code> L146–161</td>
+<td><strong>T0.0 fee=0 lever</strong>: call <code>changeFee(0,0,0)</code>.</td>
+</tr>
+<tr>
+<td>Events <code>Action/Transact/Shield/Unshield/Nullified</code></td>
+<td><code>RailgunLogic.sol</code> L57–77</td>
+<td>Commitment-insert + nullifier-spend feed <strong>B (T1.2)</strong> indexes and <strong>T6.1</strong> scans.</td>
+</tr>
+<tr>
+<td>Merkle accumulator + nullifier set (<code>TREE_DEPTH=16</code>, <code>rootHistory</code>)</td>
+<td><code>Commitments.sol</code> L28–55, L108–252</td>
+<td>The tree <strong>T6.1</strong> rebuilds and <strong>T0.3</strong> proofs reference a historical root of.</td>
+</tr>
+<tr>
+<td>Groth16 verifier registry <code>verificationKeys[nIn][nOut]</code>, <code>setVerificationKey</code></td>
+<td><code>Verifier.sol</code> L27, L36–45; <code>Snark.sol</code> L157–188</td>
+<td><strong>T0.0/T0.1</strong> register one vkey per circuit combo after the ceremony.</td>
+</tr>
+<tr>
+<td>ABI structs (<code>ShieldRequest</code>,<code>CommitmentPreimage</code>,<code>TokenData</code>,<code>Transaction</code>,<code>BoundParams</code>,<code>SnarkProof</code>)</td>
+<td><code>Globals.sol</code> L21–122</td>
+<td>Exact encode surface for <strong>T0.3</strong> + <strong>T6.2</strong>.</td>
+</tr>
+<tr>
+<td><code>TokenBlocklist</code></td>
+<td><code>TokenBlocklist.sol</code> L33–73</td>
+<td>T0.0 leaves USDC unblocked; unshield always allowed.</td>
+</tr>
+</tbody>
+</table>
+<p>POI is not in these contracts; it is an alongside partner system (A.1.7). The pool-side levers are <code>changeFee(0,0,0)</code> and vkey registration; everything else is client-side or settlement-side policy.</p>
+<h2 id="a12-joinsplit-circuits-trusted-setup-t01-clean-room-reference-spec">A.1.2 JoinSplit circuits &amp; trusted setup (T0.1) — clean-room reference spec</h2>
+<p>This is the reference spec T0.1's circuits are authored clean-room against: independently written, spec-compatible with the JoinSplit behavior below, under no <code>circuits-v2</code> license (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>). The citations pin the note, commitment, and nullifier format and the public-signal arity our own circuits must reproduce. They are the design we match, not source we reuse.</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Citation (<code>circuits-v2</code> @HEAD)</th>
+<th>Gives us</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JoinSplit circuit (the payments primitive)</td>
+<td><code>src/library/joinsplit.circom</code> L11–118</td>
+<td>Public signals <code>merkleRoot,boundParamsHash,nullifiers[],commitmentsOut[]</code>; proves EdDSA ownership, Merkle membership, nullifier, range <code>&lt;2^120</code>, <code>sumIn===sumOut</code>. Defines note/commitment/nullifier format <strong>T6.1/T0.3</strong> must match.</td>
+</tr>
+<tr>
+<td>Nullifier derivation</td>
+<td><code>src/library/nullifier-check.circom</code> L11–13</td>
+<td><code>nullifier = Poseidon(nullifyingKey, leafIndex)</code>.</td>
+</tr>
+<tr>
+<td>Circuit-combo generator</td>
+<td><code>lib/circuitConfigs.js</code></td>
+<td>Generates 91 <code>(nIn,nOut)</code> combos (<code>nIn+nOut ≤ 14</code>); the registered subset is reconciled against the cited "~54" in A.3.</td>
+</tr>
+<tr>
+<td>Ceremony driver</td>
+<td><code>scripts/prepare_ceremony</code> L23–79</td>
+<td>Phase-1 = reuse <code>powersOfTau28_hez_final_20.ptau</code> (2²⁰); Phase-2 = per-circuit zkey from r1cs+ptau. Confirms ADR-0003 shape.</td>
+</tr>
+<tr>
+<td>Trusted-setup docs</td>
+<td>docs.railgun.org/…/trusted-setup-ceremony</td>
+<td>Groth16 + Perpetual PoT Phase-1 + per-circuit Phase-2; new ceremony on any circuit change.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="a13-go-nitro-adjudicator-t02-reuse-as-is">A.1.3 go-nitro adjudicator (T0.2) — reuse as-is</h2>
+<p><code>NitroAdjudicator = ForceMove + MultiAssetHolder + exit-format Outcome</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Citation (<code>cerc-io/go-nitro</code> @435eb2b)</th>
+<th>Gives us / A-item</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>deposit(asset, channelId, expectedHeld, amount)</code></td>
+<td><code>packages/nitro-protocol/contracts/MultiAssetHolder.sol</code> L36–70</td>
+<td><strong>The escrow entrypoint T0.3 calls</strong> after unshield; <code>holdings[asset][channelId]</code> L24–29; <code>expectedHeld</code> reorg guard.</td>
+</tr>
+<tr>
+<td><code>concludeAndTransferAllAssets(FixedPart, candidate)</code></td>
+<td><code>NitroAdjudicator.sol</code> L33–42; <code>transferAllAssets</code> L123–190</td>
+<td><strong>Finalize + payout</strong>; loops all assets → payouts to destinations.</td>
+</tr>
+<tr>
+<td><code>_executeSingleAssetExit</code> / <code>_isExternalDestination</code></td>
+<td><code>MultiAssetHolder.sol</code> L411–427</td>
+<td>External destinations get funds transferred out → <strong>T0.3 payout</strong> is an external destination that re-shields.</td>
+</tr>
+<tr>
+<td><code>challenge</code> / <code>checkpoint</code> / <code>conclude</code></td>
+<td><code>ForceMove.sol</code> L39–80 / L88–119 / L126–172</td>
+<td>Dispute state machine; <strong><code>checkpoint</code> (higher-turn, no finalize) is the exact primitive T6.3 uses</strong> to defeat a stale challenge.</td>
+</tr>
+<tr>
+<td><code>recoverVariablePart</code> (signing domain)</td>
+<td><code>ForceMove.sol</code> L236–268</td>
+<td>State sigs = <code>NitroUtils.hashState(fixedPart, variablePart)</code> — <strong>T0.3/T6.2 must match</strong>.</td>
+</tr>
+<tr>
+<td>Outcome encoding (<code>SingleAssetExit</code>,<code>Allocation</code>,<code>AllocationType{simple,withdrawHelper,guarantee}</code>)</td>
+<td>exit-format <code>ExitFormat.sol</code> L26–73</td>
+<td>The wire format <strong>T0.3 ABI-encodes</strong> for payout.</td>
+</tr>
+<tr>
+<td><code>HashLockedSwap.sol</code> reference app</td>
+<td><code>examples/HashLockedSwap.sol</code> L33–83</td>
+<td>Pattern for a ForceMove app — <strong>but single-asset/2-party only</strong> (A.1.9 delta).</td>
+</tr>
+<tr>
+<td>multi-asset swap negotiation</td>
+<td><code>protocols/swap/swap.go</code> L105–408</td>
+<td>Confirms <strong>multi-asset ETH-in/USDC-out IS supported off-chain</strong> (corrects our "single-asset gap").</td>
+</tr>
+<tr>
+<td>vouchers</td>
+<td><code>payments/vouchers.go</code> L23–52</td>
+<td>Incremental in-channel micropayment primitive (reused by C metering + settlement).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="a14-the-depositpayout-binding-t03-how-the-two-systems-wire">A.1.4 The deposit/payout binding (T0.3) — how the two systems wire</h2>
+<p>T0.3 is a public-side ERC20 counterparty. It touches the pool and the adjudicator only through the ABIs above:</p>
+<ul>
+<li><strong>Deposit-in:</strong> <code>RailgunSmartWallet.transact([...])</code> runs with <code>boundParams.unshield=NORMAL</code> and <code>unshieldPreimage.npk = bytes32(uint160(T0.3))</code>; <code>transferTokenOut</code> then sends the ERC20 to T0.3, which calls <code>IERC20.approve</code> and <code>MultiAssetHolder.deposit(asset, channelId, expectedHeld, amount)</code>. Here <code>channelId = NitroUtils.getChannelId(fixedPart)</code>.</li>
+<li><strong>Payout-out:</strong> the channel finalizes via <code>concludeAndTransferAllAssets</code>. The outcome names T0.3 as an external destination, or uses an <code>AllocationType.withdrawHelper</code>. T0.3 then receives the ERC20 and calls <code>RailgunSmartWallet.shield([ShieldRequest...])</code> to mint fresh notes, built like engine <code>ShieldNote.serialize</code> (<code>Railgun-Community/engine</code> <code>src/note/shield-note.ts</code> L46–121).</li>
+<li><strong>App:</strong> the channel's <code>appDefinition</code> (<code>NitroAdjudicator.sol</code> L193–207, which calls <code>IForceMoveApp.stateIsSupported</code>) is a plain settlement app for the walking skeleton; C's real quote/settle app registers here.</li>
+</ul>
+<h2 id="a15-settlement-client-t62">A.1.5 Settlement client (T6.2)</h2>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Citation</th>
+<th>Gives us</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>In-browser Nitro node</td>
+<td><code>cerc-io/ts-nitro</code> @884d616 <code>packages/nitro-node/src/node/node.ts</code> L69–190</td>
+<td>The client engine (fund/defund/pay). <strong>Dispute API thinner than go-nitro</strong> — no challenge/checkpoint surfaced (A.1.9).</td>
+</tr>
+<tr>
+<td>Browser P2P over <code>@cerc-io/peer</code></td>
+<td>ts-nitro <code>…/p2p-message-service/service.ts</code> L16–120, 453–527</td>
+<td><code>/nitro/msg/1.0.0</code> + <code>/nitro/peerinfo/1.0.0</code>; relay/WebRTC dial (no inbound listen).</td>
+</tr>
+<tr>
+<td>Reference libp2p host (server side)</td>
+<td>go-nitro <code>node/engine/messageservice/p2p-message-service/service.go</code> L36–46, 105–140</td>
+<td>noise/tcp/ws + DHT <code>scaddr→peerID</code>.</td>
+</tr>
+<tr>
+<td><strong>Submit-on-behalf keeper</strong> (origin-private submission)</td>
+<td><code>cerc-io/mobymask</code> @2329198 <code>packages/server/index.ts</code> L48–58; <code>Delegatable.sol</code> <code>execute</code>/<code>_msgSender</code></td>
+<td>The <strong>broadcaster analog</strong>: a funded relayer submits on behalf of a signer who stays origin-private — reusable <em>shape</em> for T6.2 submission (write-side privacy).</td>
+</tr>
+<tr>
+<td>Invocation build/sign + OpenRPC client (iframe/postMessage)</td>
+<td>mobymask <code>packages/react-app/src/reportPhishers.js</code>; <code>packages/client/typescript/src/index.ts</code></td>
+<td>Templates for a wallet-hosted (iframe) submission client.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="a16-self-watchtower-t63-partly-reusable-core-is-net-new">A.1.6 Self-watchtower (T6.3) — partly reusable, core is net-new</h2>
+<table>
+<thead>
+<tr>
+<th>Reusable</th>
+<th>Citation (go-nitro @435eb2b)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Event source (<code>ChallengeRegistered</code>/<code>ChallengeCleared</code>)</td>
+<td><code>node/engine/chainservice/eth_chainservice.go</code> L494–539; <code>chainservice.go</code> L86–160 (<code>ChallengeRegisteredEvent{candidate,sigs,FinalizesAt,IsInitiatedByMe}</code>)</td>
+</tr>
+<tr>
+<td>Tx submit (<code>Challenge</code>/<code>Checkpoint</code>)</td>
+<td><code>eth_chainservice.go</code> L376–386; payloads <code>protocols/interfaces.go</code> L59–114</td>
+</tr>
+<tr>
+<td>Manual trigger</td>
+<td><code>engine.go</code> L882–915 (<code>handleCounterChallengeRequest</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Net-new (confirmed):</strong> there is no automatic watchtower. On an adversarial <code>ChallengeRegistered</code>, a non-initiator engine auto-creates a <code>directdefund</code> (conclude and withdraw), not a higher-turn <code>checkpoint</code> (<code>engine.go</code> L540–612). Only a <em>manual</em> <code>CounterChallengeRequest</code> reaches checkpoint or challenge. T6.3 is the missing loop that watches for the challenge, compares <code>turnNum</code>, and auto-submits a higher-turn checkpoint before <code>FinalizesAt</code>. It also adds always-on liveness, since the browser node has no background watch loop or guaranteed relay connection. See A.6.</p>
+<h2 id="a17-anonymity-set-t07-the-payments-primitive">A.1.7 Anonymity set (T0.7) &amp; the payments primitive</h2>
+<ul>
+<li><strong>Shielded payments</strong> are a <code>transact()</code> with <code>unshield=NONE</code>: inputs are nullified, outputs are created, and <code>sumIn==sumOut</code> holds in-circuit. The sender, recipient, and amount stay hidden; only the root, <code>boundParamsHash</code>, nullifiers, and output-commitment hashes are public. This is the base capability A inherits for free.</li>
+<li><strong>POI</strong> (docs.railgun.org/…/private-proofs-of-innocence) is an alongside partner system, not in the pool. On shield, an Unshield-Only Standby Period (default 1h) precedes a blinded non-inclusion ZK proof against list-provider datasets; proofs carry forward through transfers. The T0.0 POI configuration selects list providers and the standby period at the client and POI node, while T0.3 gated-entry enforces a valid POI in the settlement path. The POI node stack is a separate dependency, not redeployable from the four repos scoped here.</li>
+</ul>
+<h2 id="a18-corrections-to-earlier-docs-the-deep-dive-caught-these">A.1.8 Corrections to earlier docs (the deep dive caught these)</h2>
+<ol>
+<li><strong>mobymask <code>@2329198</code> is not a browser-peer or watcher.</strong> It is classic delegatable MobyMask (hardhat, react-app, and OpenRPC server), with no libp2p and no watcher loop. It gives the submit-on-behalf keeper only. The browser-peer and watcher lineage lives in <code>mobymask-v2</code>, <code>mobymask-v2-watcher-ts</code>, and <code>@cerc-io/peer</code>. The P2P substrate is therefore attributed to ts-nitro and <code>@cerc-io/peer</code>, not to <code>@2329198</code>, throughout the T2, T6, and §8 citations.</li>
+<li><strong>The claim that go-nitro outcomes are effectively single-asset is overstated.</strong> <code>MultiAssetHolder</code>, <code>transferAllAssets</code>, and <code>swap.go</code> support multi-asset outcomes; the <em>gap</em> is that no shipped ForceMove app performs a multi-asset atomic swap, since HashLockedSwap is single-asset. The §11 and T0.2 maturity gap is therefore the missing multi-asset app, not a limitation of the outcome format.</li>
+<li><strong>The circuit count is 91, not 54.</strong> The registered subset is reconciled in A.3, and the figure 54 is not asserted.</li>
+<li><strong>Railgun citations are unpinned.</strong> Pin a commit before build.</li>
+</ol>
+<h2 id="a19-net-new-deltas-what-a-actually-builds">A.1.9 Net-new deltas (what A actually builds)</h2>
+<ol>
+<li><strong>T0.3 deposit/payout contract</strong> — no Railgun or Nitro equivalent, since RelayAdapt is atomic-multicall, not channel-escrow. It handles deposit-in, <code>MultiAssetHolder.deposit</code>, the outcome-to-external-destination step, and re-shield. (A.5)</li>
+<li><strong>Multi-asset ForceMove settlement app</strong> — for ETH-in/USDC-out atomicity, where HashLockedSwap is single-asset only. (A.4/A.5; C authors the real quote/settle variant.)</li>
+<li><strong>T6.3 auto-watchtower loop and liveness</strong> — it watches <code>ChallengeRegistered</code> and submits a higher-turn <code>checkpoint</code> before <code>FinalizesAt</code>, on an always-on node. (A.6)</li>
+<li><strong><code>changeFee(0,0,0)</code> governance action and vkey registration</strong> for the chosen combo subset. (A.2/A.3)</li>
+<li><strong>POI policy wiring</strong> in the settlement path, plus integration of the separate POI node stack. (A.7)</li>
+<li><strong>In-browser dispute API</strong> — ts-nitro exposes only fund/defund/pay, so the challenge/checkpoint surface is net-new. (A.6)</li>
+<li><strong>(opt) native-ETH / native-commitment</strong> — the pool is ERC20/721 only, so this needs a WETH wrap or T0.6. (A.9)</li>
+</ol>
+<h2 id="a110-licensing-risks">A.1.10 Licensing &amp; risks</h2>
+<ul>
+<li><strong>Licensing — resolved via clean-room (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>).</strong> <code>circuits-v2</code> <code>License.md</code> states <em>"No License is provided for any party under any circumstances"</em>, and the pool contracts are SPDX <code>UNLICENSED</code>. Redeploying them was never executable, so T0.0 (pool) and T0.1 (circuits) are clean-room reimplemented by our engineers, spec-compatible with the design pinned in A.1.1/A.1.2, using no Railgun-licensed source. This turns the single largest risk from an open blocker into a resolved gate and reclassifies T0.0/T0.1 as audit-critical net-new. <code>Railgun-Community/engine</code> and <code>cookbook</code> remain MIT reference; <code>go-nitro</code> and <code>ts-nitro</code> are unaffected OSS reuse.</li>
+<li><strong>Unpinned Railgun commit</strong> — pin before build.</li>
+<li><strong>91-vs-54 circuit ambiguity</strong> — the registered subset must be decided, which drives the ceremony count.</li>
+<li><strong><code>snarkSafetyVector</code>/<code>checkSafetyVectors</code></strong> magic constants must be reproduced verbatim in our clean-room implementation, matching the reference <code>RailgunLogic.sol</code> L111–127, or <code>transact</code> reverts.</li>
+<li><strong>POI is a separate partner stack</strong>, not redeployable from these repos.</li>
+<li><strong>ERC1155 unsupported</strong> by the pool (bounds T0.6).</li>
+</ul>
+<hr />
+<p>See also — item specs build on this: <a href="./A.2-pool-deployment.html">A.2</a> · <a href="./A.3-trusted-setup.html">A.3</a> · <a href="./A.4-adjudicator-integration.html">A.4</a> · <a href="./A.5-deposit-payout-contract.html">A.5</a> · <a href="./A.6-settlement-client-watchtower.html">A.6</a> · <a href="./A.7-anonymity-set.html">A.7</a> · <a href="./A.8-interfaces-acceptance.html">A.8</a> · <a href="./A.9-native-commitment.html">A.9</a>.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/A-nitro-on-railgun/A.1-reuse-inventory.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

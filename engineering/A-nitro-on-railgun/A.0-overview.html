@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A.0 — nitro-on-railgun · Overview & Scope — Armada × Laconic</title>
+<link rel="stylesheet" href="../../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../../index.html">Overview</a>
+  <a href="../../architecture.html">Architecture</a>
+  <a href="../../build-plan.html">Build plan</a>
+  <a href="../../execution-platform.html">Execution platform</a>
+  <a href="../../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../../mobile-privacy.html">Mobile privacy</a>
+  <a href="../../glossary.html">Glossary</a>
+  <a href="../../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../../builder-codes.html">Builder codes</a>
+  <a href="../../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="a0-nitro-on-railgun-overview-scope">A.0 — nitro-on-railgun · Overview &amp; Scope</h1>
+<p>work package A · reuse-oriented spec · <strong>2026-09-05</strong>
+<strong>Parent:</strong> <a href="../00-work-packages.html"><code>../00-work-packages.md</code></a> · <a href="../05-building-block-view.html"><code>../05-building-block-view.md</code></a>
+<strong>Owns:</strong> T0.0 pool · T0.1 trusted setup · T0.2 adjudicator · <strong>T0.3 deposit/payout contract (net-new)</strong> · T0.6 native commitment <em>(opt)</em> · T0.7 anonymity-set strategy · T6.2 settlement client · T6.3 self-watchtower
+<strong>Baseline (frozen):</strong> ADRs 0002–0011 · <strong>operating model:</strong> <a href="../09-architecture-decisions.html#adr-0012">ADR-0012</a> · <strong>scope:</strong> <a href="../09-architecture-decisions.html#adr-0013">ADR-0013</a></p>
+<hr />
+<h2 id="a01-goal">A.0.1 Goal</h2>
+<p>Deliver the <strong>settlement substrate</strong> of Armada: the Railgun-based rail on which payments, yield (C), and exchange (C) all clear, following the motto <em>notes in, normal Nitro, notes out</em>. A shielded Railgun note is unshielded into a net-new <strong>deposit/payout contract</strong> that escrows the value into a <code>go-nitro</code> state channel. Parties settle off-chain via ForceMove, and the channel outcome is re-shielded into fresh notes. A also delivers the base shielded-payments capability, a native Railgun transfer, together with the client that drives settlement and a self-watchtower.</p>
+<p>Per <a href="../09-architecture-decisions.html#adr-0012">ADR-0012</a>, the settlement rail is <strong>integration, not new cryptography</strong>. The adjudicator is reused as-is (T0.2); the net-new settlement code is the deposit/payout contract (T0.3), the T6.3 auto-watchtower loop, and a multi-asset ForceMove settlement app. One caveat applies (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>): the pool (T0.0) and the JoinSplit circuits (T0.1) are not reuse. Our engineers clean-room reimplement them, spec-compatible with the Railgun design the deep dive pins (A.1.1/A.1.2), using no Railgun-licensed source. That is a real, <strong>audit-critical</strong> crypto-engineering workstream, though of a well-understood and de-risked design, so the "not new cryptography" thesis holds for the rail but not for the pool and circuits.</p>
+<h2 id="a02-the-construction-concretely">A.0.2 The construction, concretely</h2>
+<p>The deep dive (A.1) pins the exact binding surface:</p>
+<pre><code> shielded note ──transact() unshield-in──►  DEPOSIT (T0.3)
+   RailgunSmartWallet.transact([...])           │ MultiAssetHolder.deposit(asset, channelId, expectedHeld, amount)
+   unshieldPreimage.npk = T0.3 address           ▼
+                                            go-nitro channel (holdings[asset][channelId])
+                                                  │ off-chain ForceMove states / vouchers
+                                                  ▼
+ fresh notes ◄──shield() shield-out── PAYOUT (T0.3) ◄── concludeAndTransferAllAssets(...) → external destination
+   RailgunSmartWallet.shield([ShieldRequest...])
+</code></pre>
+<p>Deposit-in is a Railgun <code>transact()</code> whose <code>unshieldPreimage.npk</code> is the T0.3 address, so <code>transferTokenOut</code> lands the ERC20 in T0.3, which calls <code>MultiAssetHolder.deposit</code>. Payout-out is the channel's <code>concludeAndTransferAllAssets</code> routing the outcome to T0.3, an external destination, which <code>shield()</code>s fresh notes to each beneficiary. <strong>T0.3 never touches pool or adjudicator internals</strong>; it is a public-side ERC20 counterparty of unshield and shield and of channel deposit and conclude. Full citations: <a href="./A.1-reuse-inventory.html">A.1</a>.</p>
+<h2 id="a03-document-map">A.0.3 Document map</h2>
+<table>
+<thead>
+<tr>
+<th>Doc</th>
+<th>Item(s)</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="./A.1-reuse-inventory.html">A.1</a></td>
+<td>all</td>
+<td>The deep dive: reuse inventory with pinned file/line citations (Railgun, go-nitro/ts-nitro, mobymask), corrections, net-new deltas, licensing</td>
+</tr>
+<tr>
+<td><a href="./A.2-pool-deployment.html">A.2</a></td>
+<td>T0.0</td>
+<td>Clean-room reimplement the pool (spec-compatible with Railgun, <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>); fee=0; POI policy; token allow-list; vkey registration</td>
+</tr>
+<tr>
+<td><a href="./A.3-trusted-setup.html">A.3</a></td>
+<td>T0.1</td>
+<td>Clean-room JoinSplit circuits (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>); Phase-1 reuse + own Phase-2; circuit-set reconciliation (91 vs 54); artifacts</td>
+</tr>
+<tr>
+<td><a href="./A.4-adjudicator-integration.html">A.4</a></td>
+<td>T0.2</td>
+<td>go-nitro adjudicator reuse; the ForceMove app choice; maturity gaps</td>
+</tr>
+<tr>
+<td><a href="./A.5-deposit-payout-contract.html">A.5</a></td>
+<td>T0.3</td>
+<td>The net-new contract: deposit-in, payout-out, outcome encoding, app registry</td>
+</tr>
+<tr>
+<td><a href="./A.6-settlement-client-watchtower.html">A.6</a></td>
+<td>T6.2, T6.3</td>
+<td>ts-nitro client + submit-on-behalf keeper; the net-new auto-watchtower loop</td>
+</tr>
+<tr>
+<td><a href="./A.7-anonymity-set.html">A.7</a></td>
+<td>T0.7</td>
+<td>Bootstrap + Railgun import bridge; POI binding; shielded-payments primitive</td>
+</tr>
+<tr>
+<td><a href="./A.8-interfaces-acceptance.html">A.8</a></td>
+<td>ICD</td>
+<td>What A exposes to B/C/D; the walking skeleton; acceptance/verification</td>
+</tr>
+<tr>
+<td><a href="./A.9-native-commitment.html">A.9</a></td>
+<td>T0.6 <em>(opt)</em></td>
+<td>Amount-privacy-in-play; circuit delta ⇒ re-run T0.1</td>
+</tr>
+</tbody>
+</table>
+<p>Each doc is written to the six-part reuse-spec bar (<a href="../09-architecture-decisions.html#adr-0012">ADR-0012</a>): goal · boundary · reuse inventory · delta · ICD · acceptance.</p>
+<h2 id="a04-walking-skeleton-as-first-integration-target">A.0.4 Walking skeleton (A's first integration target)</h2>
+<p>A thin end-to-end slice on a laconic fixturenet, exercising every A boundary once:</p>
+<pre><code>shield → transact()/unshield-in → MultiAssetHolder.deposit → trivial ForceMove settle
+       → concludeAndTransferAllAssets → shield()/payout → scan
+  T0.0        T0.3                         T0.2                T0.2/T0.3
+</code></pre>
+<p>Use a trivial single-asset ForceMove app (HashLockedSwap-grade) as a stand-in for C's real quote/settle app. This proves <em>notes in, Nitro, notes out</em> before deepening any item. Detail: <a href="./A.8-interfaces-acceptance.html">A.8</a>.</p>
+<h2 id="a05-open-gates-must-resolve-before-during-a">A.0.5 Open gates (must resolve before / during A)</h2>
+<ol>
+<li><strong>Licensing — resolved via clean-room</strong> (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>). Railgun's <code>circuits-v2</code> carries an explicit <em>"No License is provided for any party under any circumstances"</em> file, and the pool contracts are SPDX <code>UNLICENSED</code> (A.1.10), so redeploying them was never executable. The resolution is that our engineers clean-room reimplement the pool (T0.0) and the JoinSplit circuits (T0.1), independently authored, spec-compatible with the Railgun design (A.1.1/A.1.2), using no Railgun-licensed source. This unblocks A.2 and A.3, which build our own contracts and circuits, and converts T0.0/T0.1 from reuse to audit-critical net-new. (<code>go-nitro</code> and <code>ts-nitro</code> are separately-licensed OSS and unaffected; <code>engine</code> and <code>cookbook</code> remain MIT reference.)</li>
+<li><strong>Circuit-set count.</strong> The source generates 91 <code>(nInputs,nOutputs)</code> combos; the widely-cited "~54" is a registered subset. T0.1/T0.0 must reconcile which subset to ceremony and register (A.3).</li>
+<li><strong>POI is not on-chain.</strong> POI is an alongside partner system, not a pool setting. T0.3 gated-entry is client-side and settlement-side policy, and the POI node stack is a separate dependency (A.7).</li>
+<li><strong>Multi-asset ForceMove app is net-new.</strong> <code>MultiAssetHolder</code> supports multiple assets, but no shipped ForceMove app does ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).</li>
+<li><strong>Watchtower liveness.</strong> T6.3 auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).</li>
+</ol>
+<h2 id="a06-provenance">A.0.6 Provenance</h2>
+<p>Pinned commits for the deep dive: go-nitro @435eb2b, ts-nitro @884d616, mobymask @2329198. Railgun repos were read at <code>master</code>/<code>main</code> HEAD (2026-09-05). <strong>No SHA was pinned; A.2/A.3/A.5 must pin a Railgun commit before build.</strong> Full citations: <a href="./A.1-reuse-inventory.html">A.1</a>.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/A-nitro-on-railgun/A.0-overview.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

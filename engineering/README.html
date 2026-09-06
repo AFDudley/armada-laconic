@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Armada × Laconic — Engineering Documentation — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="armada-laconic-engineering-documentation">Armada × Laconic — Engineering Documentation</h1>
+<p>This folder is the engineering architecture documentation for the Laconic work that surrounds Armada's shielded pool. The system it describes is a non-custodial, privately-settled exchange and settlement substrate built largely by composing existing, battle-tested parts — vanilla <code>go-nitro</code> state channels, the cerc-io watcher stack, and a mobile wallet — around a <strong>clean-room, Railgun-spec-compatible shielded pool</strong> (<a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>: Railgun's own contracts/circuits are unlicensed, so we reimplement them independently). Its load-bearing construction is <strong>nitro-on-railgun</strong> — <em>notes in, normal Nitro, notes out</em> — and the recurring theme throughout these documents is that the hard problem here is integration, not new cryptography, with one caveat: the pool and its circuits are net-new, audit-critical crypto-engineering of a known design, while the settlement rail is pure integration.</p>
+<p>The documentation is organized according to <strong><a href="https://arc42.org">arc42</a></strong> (Starke and Hruschka), a fixed twelve-section template for architecture description. We adopted it deliberately, as recorded in <a href="./09-architecture-decisions.html#adr-0001">ADR-0001</a>, after an earlier single planning document collapsed under its own weight: it was trying to be a system decomposition, a work breakdown, a decision log, and a schedule all at once, and it had to be re-cut every time one of those roles pulled against another. arc42 separates those concerns into sections that each do one job, which is what keeps this set stable as the design evolves.</p>
+<p>Three ideas make the structure hold together. <strong>One model, many views:</strong> the item registry in <a href="./05-building-block-view.html">§5 Building Block View</a> is the single source of truth — every buildable item has one <code>T#.#</code> id carrying its tier, status, and release facets, so tiers and delivery groupings are views over one registry rather than competing hierarchies. <strong>Immutable decisions:</strong> every significant choice is an append-only ADR in <a href="./09-architecture-decisions.html">§9</a>; a decided ADR is superseded, never edited, so the reasoning stays legible. <strong>A work breakdown over a fixed baseline:</strong> because the requirements are given and most components already exist, delivery is organized as a WBS of interface-bounded work packages (<a href="./00-work-packages.html">§0 Work Packages</a>) built incrementally against the frozen ADR baseline (<a href="./09-architecture-decisions.html#adr-0012">ADR-0012</a>).</p>
+<p>If you are new to the system, read it in this order: <a href="./01-introduction-and-goals.html">§1 Introduction &amp; Goals</a> for what is being built and why; <a href="./00-work-packages.html">§0 Work Packages</a> for how the scope is split for delivery; <a href="./04-solution-strategy.html">§4 Solution Strategy</a> for the approach and increments; then the <a href="./05-building-block-view.html">§5 registry</a> for the whole item map. From there, follow any <code>T#.#</code> id into its tier document. When a document states a choice rather than a mechanism, it cites the governing <code>ADR-####</code>; follow that link for the context and the alternatives weighed.</p>
+<h2 id="sections">Sections</h2>
+<table>
+<thead>
+<tr>
+<th>§</th>
+<th>Doc</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><a href="./00-work-packages.html">Work Packages (WBS)</a></td>
+<td>delivery breakdown into A/B/C/D scopes; operating model <a href="./09-architecture-decisions.html#adr-0012">ADR-0012</a></td>
+</tr>
+<tr>
+<td>1</td>
+<td><a href="./01-introduction-and-goals.html">Introduction &amp; Goals</a></td>
+<td>thesis, v1 capabilities, quality goals, v1 requirements traceability</td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="./02-constraints.html">Constraints</a></td>
+<td>non-custodial, pool immutable, Ethereum-anchored, mobile-first</td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="./03-context-and-scope.html">Context &amp; Scope</a></td>
+<td>Armada-builds vs Laconic-builds boundary; external systems</td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="./04-solution-strategy.html">Solution Strategy</a></td>
+<td>nitro-on-railgun; integration-not-new-crypto; delivery increments</td>
+</tr>
+<tr>
+<td>5</td>
+<td><a href="./05-building-block-view.html">Building Block View</a></td>
+<td>the tier stack + <strong>item registry</strong> (T0–T6 detail docs)</td>
+</tr>
+<tr>
+<td>6</td>
+<td><a href="./06-runtime-view.html">Runtime View</a></td>
+<td>swap, deposit→Nitro→payout, challenge/watchtower flows</td>
+</tr>
+<tr>
+<td>7</td>
+<td><a href="./07-deployment-view.html">Deployment View</a></td>
+<td>watcher parties (browser/mobile/server peers), relays, fixturenet</td>
+</tr>
+<tr>
+<td>8</td>
+<td><a href="./08-crosscutting-concepts.html">Cross-cutting Concepts</a></td>
+<td>privacy, settlement, transport, metering, identity, trusted setup</td>
+</tr>
+<tr>
+<td>9</td>
+<td><a href="./09-architecture-decisions.html">Architecture Decisions</a></td>
+<td>ADRs 0001–0014</td>
+</tr>
+<tr>
+<td>10</td>
+<td><a href="./10-quality-requirements.html">Quality Requirements</a></td>
+<td>non-custody, read-time privacy, latency, force-closability</td>
+</tr>
+<tr>
+<td>11</td>
+<td><a href="./11-risks-and-technical-debt.html">Risks &amp; Technical Debt</a></td>
+<td>cold-start, go-nitro maturity, ingestion long pole, mobile transport</td>
+</tr>
+<tr>
+<td>12</td>
+<td><a href="../glossary.html">Glossary</a></td>
+<td>canonical <code>glossary.md</code> (rendered to <code>../glossary.html</code>); terms &amp; collision resolutions</td>
+</tr>
+</tbody>
+</table>
+<p>The seven building-block detail documents referenced by §5 are the tier specs: <a href="./T0-ethereum-anchor.html"><code>T0-ethereum-anchor</code></a>, <a href="./T1-ingestion.html"><code>T1-ingestion</code></a>, <a href="./T2-watcher-substrate.html"><code>T2-watcher-substrate</code></a>, <a href="./T3-ordering.html"><code>T3-ordering</code></a>, <a href="./T4-execution-venue.html"><code>T4-execution-venue</code></a>, <a href="./T5-adapters.html"><code>T5-adapters</code></a>, and <a href="./T6-client-apps.html"><code>T6-client-apps</code></a>. A public-facing overview of the same system lives at <a href="../index.html"><code>../index.html</code></a>.</p>
+<h2 id="conventions">Conventions</h2>
+<p>A few rules keep the set consistent. Refer to items by their <code>T#.#</code> id and to decisions by their <code>ADR-####</code> id, so that cross-references survive edits and reorganization. Treat the ADR log as append-only: when a decision changes, supersede the old ADR rather than editing it. Finally, the project's terminology is fixed by <a href="./09-architecture-decisions.html#adr-0010">ADR-0010</a>, which resolves the word collisions that repeatedly caused confusion — use <em>deposit/payout contract</em> rather than "adapter," <em>boundary</em> rather than "seam," <em>tier</em> rather than "layer," and <em>venue</em> or <em>clearing</em> rather than "marketplace."</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/README.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

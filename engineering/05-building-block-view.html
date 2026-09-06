@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>5. Building Block View — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="5-building-block-view">5. Building Block View</h1>
+<p>arc42 §5 · <strong>2026-09-06</strong></p>
+<p>This section gives the static decomposition of the system. <strong>Level 1</strong> is the seven <strong>tiers</strong> (T0–T6) — horizontal building-block layers running from the on-chain anchor up to the client — and each tier's whitebox detail lives in its own doc (<code>T0-ethereum-anchor.md</code> … <code>T6-client-apps.md</code>). The four <strong>subsystems</strong> — work packages A/B/C/D (<a href="./00-work-packages.html">§0</a>) — are the <strong>vertical slices</strong>: each owns <code>T#.#</code> items across several tiers and consumes the rest across ICDs. Tiers and subsystems are two axes over one item set — the familiar layered view with feature slices crossing it — and the <strong>item registry</strong> below is the single model of record, every buildable item carrying one <code>T#.#</code> id with its <code>status</code> and <code>release</code> facets. (The "lines" of §4/§8 are a third grouping of those same items.)</p>
+<h2 id="level-1-the-tier-stack">Level 1 — the tier stack</h2>
+<pre><code> tier                    building blocks                                    owner    release
+ ------------------------------------------------------------------------------------------
+ T6  CLIENT / apps       wallet · light client · self-watchtower · SDK      A·B·D    v1
+ T5  ADAPTERS            Swaps · Aave-v4 yield · CCTP                        C        v1
+ T4  EXECUTION / venue   posted-price venue + clearing                       C        v1  (matcher v2)
+ T3  ORDERING            commit-reveal + beacon · epoch set-agreement · DA   C        v2
+ T2  WATCHER substrate   proof-carrying feeds · metering · relay             B        v1  (federation v2)
+ T1  INGESTION           nimbus-eth1 state-diff → IPLD → watcher ingest      B        v1
+ T0  ETHEREUM anchor     pool · circuits · adjudicator · deposit/payout      A        v1  (econ-security v2)
+</code></pre>
+<p>Read this as a layered building-block view: the tiers are horizontal layers, and the subsystems (A/B/C/D) are vertical slices that cross them — the standard shape of a layered architecture with feature slices. The <code>owner</code> column is each tier's primary subsystem; <strong>T6 is deliberately shared</strong> (A owns the settlement client and watchtower, B the note-scanner, D the host, transport, proving, and app). Vertical position is on-chain-to-client proximity and <code>release</code> marks v1/v2 phasing; neither is a strict call-dependency order — for example the ordering tier (T3) is v2-only, and some v2 items (T0.4/T0.5 economic-security, T2.4 federation) light up later inside otherwise-v1 tiers.</p>
+<p><img src="./tiers.svg" alt="Armada tiers and subsystems: T0–T6 horizontal building-block layers crossed by A/B/C/D subsystem slices, coloured by owner with v1/v2 phasing" style="width:100%;height:auto;border:1px solid #223047;border-radius:10px;margin:16px 0"/></p>
+
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Responsibility</th>
+<th>Owner(s)</th>
+<th>Whitebox</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>T0</strong> Ethereum anchor</td>
+<td>On-chain pool, adjudicator, the deposit/payout settlement boundary, trusted setup, economic-security contracts</td>
+<td>A (T0.4/T0.5 v2)</td>
+<td><a href="./T0-ethereum-anchor.html"><code>T0-ethereum-anchor.md</code></a></td>
+</tr>
+<tr>
+<td><strong>T1</strong> Ingestion</td>
+<td>Proof-carrying Ethereum state feed (nimbus-eth1 → IPLD → watcher ingest)</td>
+<td>B</td>
+<td><a href="./T1-ingestion.html"><code>T1-ingestion.md</code></a></td>
+</tr>
+<tr>
+<td><strong>T2</strong> Watcher substrate</td>
+<td>Private, metered, P2P proof-carrying feeds + federation</td>
+<td>B</td>
+<td><a href="./T2-watcher-substrate.html"><code>T2-watcher-substrate.md</code></a></td>
+</tr>
+<tr>
+<td><strong>T3</strong> Ordering (v2)</td>
+<td>Provably-fair sequencing for the matcher</td>
+<td>C (v2)</td>
+<td><a href="./T3-ordering.html"><code>T3-ordering.md</code></a></td>
+</tr>
+<tr>
+<td><strong>T4</strong> Execution / venue</td>
+<td>Posted-price RFQ clearing + yield rails; v2 matcher</td>
+<td>C</td>
+<td><a href="./T4-execution-venue.html"><code>T4-execution-venue.md</code></a></td>
+</tr>
+<tr>
+<td><strong>T5</strong> Adapters</td>
+<td>Swaps, Aave-v4 yield, CCTP + the routing interface</td>
+<td>C</td>
+<td><a href="./T5-adapters.html"><code>T5-adapters.md</code></a></td>
+</tr>
+<tr>
+<td><strong>T6</strong> Client / apps</td>
+<td>Wallet, mobile light client, self-watchtower, app</td>
+<td>A · B · D</td>
+<td><a href="./T6-client-apps.html"><code>T6-client-apps.md</code></a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="item-registry-the-single-model">Item registry (the single model)</h2>
+<p>Facets: <strong>status</strong> (<code>net-new</code> · <code>net-new (clean-room)</code> · <code>reuse</code> / <code>built/reuse</code> · <code>partial</code>) · <strong>release</strong> (<code>v1</code> ship first · <code>v2</code> later · <code>opt</code>).</p>
+<h3 id="t0-ethereum-anchor">T0 · Ethereum anchor</h3>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>item</th>
+<th>status</th>
+<th>release</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T0.0</td>
+<td>Shielded pool — clean-room reimplement (spec-compatible with Railgun); POI policy; fee=0 (ADR-0014)</td>
+<td>net-new (clean-room)</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T0.1</td>
+<td>Circuits + trusted setup — clean-room JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N) (ADR-0014)</td>
+<td>net-new (clean-room)</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T0.2</td>
+<td>Nitro adjudicator — <code>go-nitro</code> NitroAdjudicator / ForceMove / MultiAssetHolder</td>
+<td>built/reuse</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T0.3</td>
+<td>Deposit/payout contract — the Nitro↔Railgun boundary (notes in / notes out)</td>
+<td>net-new</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T0.4</td>
+<td>Registry + bond contract — venue/party bonding</td>
+<td>net-new</td>
+<td>v2</td>
+</tr>
+<tr>
+<td>T0.5</td>
+<td>Sequencing-cert + fraud-proof verifier</td>
+<td>net-new</td>
+<td>v2</td>
+</tr>
+<tr>
+<td>T0.6</td>
+<td>Native channelized commitment — amount-privacy-in-play (change to our own circuits ⇒ re-run T0.1)</td>
+<td>net-new</td>
+<td>opt</td>
+</tr>
+<tr>
+<td>T0.7</td>
+<td>Anonymity-set strategy — bootstrap own crowd + Railgun import bridge</td>
+<td>strategy</td>
+<td>v1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="t1-ingestion">T1 · Ingestion</h3>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>item</th>
+<th>status</th>
+<th>release</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1.0</td>
+<td>State-diff source — nimbus-eth1 stateless/witness + Aristo emitter</td>
+<td>partial</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T1.1</td>
+<td>IPLD proof-carrying state diffs</td>
+<td>partial</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T1.2</td>
+<td>Watcher ingest config — index T0.0 commitments/nullifiers + T0.2/T0.3 events</td>
+<td>net-new</td>
+<td>v1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="t2-watcher-party-substrate">T2 · Watcher-party substrate</h3>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>item</th>
+<th>status</th>
+<th>release</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T2.0</td>
+<td>Proof-carrying feeds — watcher-ts <code>getStorageAt → {value, proof}</code> GraphQL</td>
+<td>reuse+config</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T2.1</td>
+<td>Nitro voucher metering — <code>payments.ts</code>; funded at note creation</td>
+<td>reuse+config</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T2.2</td>
+<td>P2P peer substrate — <code>ts-nitro</code> / <code>@cerc-io/peer</code> (browser/mobile/server)</td>
+<td>reuse</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T2.3</td>
+<td>Transport — Waku pub/sub + libp2p-noise 1:1; circuit-relay + STUN/TURN</td>
+<td>reuse</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T2.4</td>
+<td>Federation + bond + threshold DKG signing — <code>chain-signatures</code> DSS (bond = T0.4)</td>
+<td>partial</td>
+<td>v2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="t3-ordering-v2">T3 · Ordering (v2)</h3>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>item</th>
+<th>status</th>
+<th>release</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T3.0</td>
+<td>Commit-reveal sequencer + randomness beacon</td>
+<td>net-new</td>
+<td>v2</td>
+</tr>
+<tr>
+<td>T3.1</td>
+<td>Epoch set-agreement / DA</td>
+<td>net-new</td>
+<td>v2</td>
+</tr>
+<tr>
+<td>T3.2</td>
+<td>DSS attestation — sequencing certs / inclusion receipts (slashing via T0.4/T0.5)</td>
+<td>net-new</td>
+<td>v2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="t4-execution-venue">T4 · Execution / venue</h3>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>item</th>
+<th>status</th>
+<th>release</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T4.0</td>
+<td>Posted-price contract — <code>priceSetter</code> → governance</td>
+<td>net-new</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T4.1</td>
+<td>Quote/settle ForceMove app — registered in the T0.3 app registry</td>
+<td>net-new</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T4.2</td>
+<td>Venue solver — automated market-making (internalization, flash-loan hedge, Aave rebalance); <em>v1 fills from static inventory instead</em></td>
+<td>net-new</td>
+<td>v2</td>
+</tr>
+<tr>
+<td>T4.3</td>
+<td>Fee-split allocation — user / protocol / integrator on channel state</td>
+<td>net-new</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T4.4</td>
+<td>ETH yield — shielded wstETH note (intrinsic, non-rebasing)</td>
+<td>config</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T4.5</td>
+<td>USDC yield — LP-buffered batched Aave rail; saturation → dribble / become-LP</td>
+<td>net-new</td>
+<td>v2</td>
+</tr>
+<tr>
+<td>T4.6</td>
+<td>ex_net matcher + LP vault (= T4 venue + T3 ordering)</td>
+<td>net-new</td>
+<td>v2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="t5-adapters">T5 · Adapters</h3>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>item</th>
+<th>status</th>
+<th>release</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T5.0</td>
+<td>Adapters — CCTP (built) · Aave-v4 yield · Swaps; build or reuse Railgun Cookbook recipe (license gate)</td>
+<td>reuse/net-new</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T5.1</td>
+<td>Routing interface — how the T4 venue routes to/from the adapters</td>
+<td>interface</td>
+<td>v1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="t6-client-apps">T6 · Client / apps</h3>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>item</th>
+<th>status</th>
+<th>release</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T6.0</td>
+<td>Wallet base — laconic-wallet fork; BIP-39/HD/secure-enclave custody</td>
+<td>partial/reuse</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T6.1</td>
+<td>WASM note-scanner + WebView↔RN key bridge</td>
+<td>net-new</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T6.2</td>
+<td>Settlement client — drive T0.3 deposit/payout; channel lifecycle</td>
+<td>net-new</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T6.3</td>
+<td>Self-hosted watchtower — challenge response (with T0.2); gated on T2 feed freshness</td>
+<td>net-new</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T6.4</td>
+<td>Address rotation + per-venue loyalty keys</td>
+<td>net-new</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T6.5</td>
+<td>Mobile transport — native gomobile (go-waku, go-libp2p-noise); interim WebView</td>
+<td>net-new (crux)</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T6.6</td>
+<td>Groth16 mobile proving — snarkjs-WASM / rapidsnark; artifacts from T0.0/T0.1</td>
+<td>reuse (constraint)</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T6.7</td>
+<td>Armada-branded app + SDK wiring</td>
+<td>product</td>
+<td>v1</td>
+</tr>
+<tr>
+<td>T6.8</td>
+<td>Identity — optional Self zk-passport attestation</td>
+<td>opt</td>
+<td>opt</td>
+</tr>
+</tbody>
+</table>
+<p><em>Decisions that shaped these items: <a href="./09-architecture-decisions.html">§9 ADRs</a>. Recurring concerns spanning tiers: <a href="./08-crosscutting-concepts.html">§8 cross-cutting concepts</a>.</em></p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/05-building-block-view.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

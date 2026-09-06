@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>6. Runtime View — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="6-runtime-view">6. Runtime View</h1>
+<p>arc42 §6 · 2026-09-04</p>
+<p>Four key scenarios show how the static building blocks of §5 collaborate at run time. Each scenario is a sequence of steps that names the <code>T#.#</code> items involved; the <a href="./05-building-block-view.html">§5 registry</a> remains authoritative for those ids and their status. Every scenario shares one spine construction — <em>notes in → normal Nitro → notes out</em> (<a href="./09-architecture-decisions.html#adr-0004">ADR-0004</a>) — and amounts become public only at the T0.3 boundary (Design A, <a href="./09-architecture-decisions.html#adr-0005">ADR-0005</a>).</p>
+<h2 id="61-shield-settle-nitro-on-railgun-happy-path">6.1 Shield &amp; settle — nitro-on-railgun happy path</h2>
+<p>This is the base spine. A user brings value into the pool, funds a channel, plays cooperatively off-chain, and exits to fresh notes, with no swap and no dispute.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+  participant W as Wallet (T6)
+  participant P as Pool T0.0
+  participant D as Deposit/Payout T0.3
+  participant N as Adjudicator T0.2
+  participant F as Feed T2.0
+  W-&gt;&gt;P: shield (T6.6 Groth16 proof)
+  W-&gt;&gt;D: unshield-in → fund channel (public amount)
+  D-&gt;&gt;N: escrow into NitroAdjudicator (channelId)
+  W--&gt;&gt;N: off-chain ForceMove states + vouchers
+  W-&gt;&gt;D: cooperative close → outcome
+  D-&gt;&gt;P: PAYOUT shields fresh notes
+  F--&gt;&gt;W: Payout event over feed → local scan
+</code></pre>
+<ol>
+<li><strong>Shield.</strong> The wallet (T6.2) shields value into the T0.0 pool, generating the Groth16 proof on device via T6.6 — browser snarkjs-WASM or mobile rapidsnark run against the T0.0 <code>wasm</code>+<code>zkey</code>. Custody remains a shielded note throughout.</li>
+<li><strong>Deposit / unshield-in.</strong> T6.2 drives the T0.3 deposit endpoint, which unshields the note and uses its value to open and fund a Nitro channel via the T0.2 <code>NitroAdjudicator</code>. <strong>This is the one public boundary amount</strong> (Design A). T0.3 records the consumed nullifier and the funded <code>channelId</code> (<code>Deposit(channelId, asset, amount, consumedNullifier)</code>).</li>
+<li><strong>Off-chain play.</strong> Counterparties exchange <strong>signed ForceMove states and payment vouchers</strong> (T0.2) over virtual channels routed through a hub; these are pure state machines with no circuits involved. Delivery rides the T2.3 libp2p-noise 1:1 hot loop, and metering vouchers (T2.1) pay for any watcher reads.</li>
+<li><strong>Cooperative close.</strong> When both sides agree, T6.2 co-signs a final state and calls the T0.3 cooperative close, and the adjudicator finalizes without opening a challenge window.</li>
+<li><strong>Payout / shield-out.</strong> The T0.3 payout endpoint reads the channel outcome and <strong>shields it into fresh notes</strong>, a fresh-shield exit that preserves POI (T0.0). Settlement returns to notes rather than public keys (<code>Payout(channelId, newCommitments[])</code>).</li>
+<li><strong>Scan.</strong> The wallet's T6.1 WASM note-scanner pulls the <code>Payout</code> commitment slice from the T2.0 proof-carrying feed, verifies the storage proof against L1, and <strong>trial-decrypts locally</strong> to find the new notes. No public RPC query ever leaves the device.</li>
+</ol>
+<p>→ boundary detail §5 T0.3; read-path privacy §8.</p>
+<h2 id="62-private-yieldusdc-swap">6.2 Private yield→USDC swap</h2>
+<p>This is the end-to-end v1 product deliverable: a shielded ETH-yield note (wstETH) swapped to shielded USDC at a posted price, with custody retained throughout (<a href="./09-architecture-decisions.html#adr-0007">ADR-0007</a>: RFQ posted-price venue).</p>
+<pre><code class="language-mermaid">sequenceDiagram
+  participant W as Wallet (T6)
+  participant D as Deposit/Payout T0.3
+  participant Q as Quote/Settle app T4.1
+  participant PP as Posted price T4.0
+  participant I as Venue inventory (static · v1)
+  W-&gt;&gt;D: unshield wstETH note → fund channel
+  W-&gt;&gt;Q: request quote
+  Q-&gt;&gt;PP: read signed bid/ask
+  PP--&gt;&gt;Q: posted price
+  Q--&gt;&gt;W: take-it-or-leave-it quote
+  W-&gt;&gt;Q: accept → co-signed fill state
+  Q-&gt;&gt;I: fill USDC leg from pre-funded inventory
+  Note over I: no hedge/rebalance in v1 (T4.2/T4.5 = v2)
+  Q-&gt;&gt;D: finalize → PAYOUT fresh USDC notes
+</code></pre>
+<ol>
+<li><strong>Note → channel</strong> (T0.3). The wallet unshields a shielded wstETH note into the deposit endpoint, opening and funding a Nitro channel at the one public boundary amount. wstETH is non-rebasing (T4.4), so it is a clean shielded note that already earned staking yield simply by being held; the venue is needed only to swap it to USDC.</li>
+<li><strong>Quote</strong> (T4.1 → T4.0). The wallet requests a quote over the metered feed. The T4.1 quote/settle ForceMove app reads the current signed posted bid/ask from the T4.0 <code>priceSetter</code>-gated contract and returns a take-it-or-leave-it quote, which the wallet displays and verifies before filling against it.</li>
+<li><strong>Settle</strong> (T4.1). On acceptance, the quote/settle app — registered in the T0.3 ForceMove app registry — advances <code>propose-quote → accept → fill → settle</code> to a co-signed fill state at the posted price, taking the user leg (wstETH) out and the venue leg (USDC) in. A <strong>missing settlement receipt ⇒ force-close to the pre-fill state</strong>, so a stalled settle never costs funds.</li>
+<li><strong>Fill from inventory</strong> (v1). The venue fills the USDC leg from its <strong>pre-funded static inventory</strong> at the posted price. No market-making runs in v1 — no internalization, no hedge, no Aave rebalance; the automated solver (<strong>T4.2</strong>) and the LP-buffered USDC rail (<strong>T4.5</strong>) are <strong>v2</strong> (<a href="./09-architecture-decisions.html#adr-0011">ADR-0011</a>). The venue sees only a shielded note address, never a user identity. When inventory runs low the venue withdraws quotes until refilled; nothing is ever at custody risk.</li>
+<li><strong>Payout → fresh USDC notes</strong> (T0.3). Channel finalize routes the outcome through the payout endpoint, which shields fresh USDC notes to the user with no linkage back to the deposit note beyond the boundary amount.</li>
+<li><strong>Clearing &amp; fee-split</strong> (T4.3). The trade and the venue's fee <strong>clear the same way</strong>: the co-signed channel allocation splits value across <strong>user / protocol / integrator</strong> and nets to L1 in USDC over go-nitro <code>MultiAssetHolder</code>/<code>virtualfund</code>/<code>payments</code>. Per-quote and per-settle RPC is metered with T2.1 vouchers, so the venue is paid for quoting without ever taking custody. The wallet then scans the new notes (T6.1) as in §6.1.</li>
+</ol>
+<p>→ USDC-yield (LP-buffered Aave rail) variant §5 T4.5; ex_net v2 upgrade §5 T4.6.</p>
+<h2 id="63-dispute-force-close">6.3 Dispute / force-close</h2>
+<p>This is the safety scenario. A counterparty tries to steal by force-closing an old state that favours them while the user is offline, and the watchtower defeats the attempt. It is the highest-priority test surface in the tier.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+  participant C as Counterparty
+  participant N as Adjudicator T0.2
+  participant F as Feed T2.0/T1
+  participant WT as Watchtower T6.3
+  participant D as Deposit/Payout T0.3
+  C-&gt;&gt;N: forceMove(stale state) → challenge window opens
+  N--&gt;&gt;F: Challenge event
+  F--&gt;&gt;WT: Challenge over feed (freshness-gated)
+  WT-&gt;&gt;WT: check feed fresh; find higher-turn co-signed state
+  WT-&gt;&gt;D: respond/checkpoint(higher-turn state) in window
+  D-&gt;&gt;N: finalize on correct latest state
+  D-&gt;&gt;D: PAYOUT fresh notes to honest user
+</code></pre>
+<ol>
+<li><strong>Stale-state challenge.</strong> The counterparty submits a superseded state via <code>forceMove</code> on the T0.2 <code>NitroAdjudicator</code>, opening a challenge window that will finalize the stale state if left unanswered. The challenge/dispute <em>machinery</em> is owned by T0.2.</li>
+<li><strong>Event over feed.</strong> The adjudicator emits a <code>Challenge</code> event, which T1.2 indexes and the T2.0 proof-carrying feed serves (<code>Challenge</code>/<code>Checkpoint</code>/<code>Finalized</code>). The T2.0 head cursor exposes feed freshness.</li>
+<li><strong>Watchtower fires, gated on freshness.</strong> The phone-resident T6.3 watchtower — the same T6.1 scanner loop watching a different event — sees the <code>Challenge</code>. It <strong>gates on T2 feed freshness</strong>: a stale or lagging feed is treated as a liveness alarm, prompting a fall back to a redundant party or direct submit rather than a silently missed window.</li>
+<li><strong>Higher-turn response.</strong> T6.3 signs and submits the user's <strong>higher-turn co-signed state</strong> — drawn from T6.2's driven channel state — through the T0.3 <code>respond</code>/<code>checkpoint</code> path within the window, relayed gaslessly via the keeper/broadcaster (T6.5). Correctness — never miss a valid challenge, never submit a superseded state — is owned jointly with T0.2/T0.3.</li>
+<li><strong>Correct finalize → payout.</strong> The adjudicator finalizes on the correct latest state, and the T0.3 payout endpoint shields that outcome into fresh notes for the honest user. Non-custody holds: a dead or malicious counterparty can freeze trading but never the funds.</li>
+</ol>
+<p>→ watchtower deployment §5 T6.3; freshness gate §5 T2.0; go-nitro dispute-wiring long pole §11.</p>
+<h2 id="64-private-metered-read">6.4 Private metered read</h2>
+<p>This is the read-path scenario on which the whole anonymity-set guarantee rests (<a href="./09-architecture-decisions.html#adr-0008">ADR-0008</a> transport; ★ do-first): a wallet consumes a proof-carrying feed and pays per request over private Nitro vouchers, leaking nothing about what it reads or who reads it.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+  participant W as Wallet (T6.1)
+  participant WP as Watcher party T2.0
+  participant V as Metering T2.1
+  W-&gt;&gt;WP: subscribe (Waku topic) / 1:1 read (noise)
+  WP--&gt;&gt;W: {value, proof} — identical bytes to all
+  W-&gt;&gt;W: verify storage proof vs L1 state root
+  W-&gt;&gt;V: per-request Nitro voucher
+  V-&gt;&gt;V: voucher nets into virtual-channel allocation
+</code></pre>
+<ol>
+<li><strong>Subscribe.</strong> The wallet (T6.1 scanner / watchtower loop) discovers a feed by Waku content-topic (T2.3, e.g. <code>/armada/v1/${chainId}-pool-commitments/json</code>) and reads slices, using async gossip over Waku or the libp2p-noise 1:1 hot loop for low-latency reads.</li>
+<li><strong>Proof-carrying response.</strong> The T2.0 watcher party serves each read as <code>getStorageAt → {value, proof}</code> from <code>watcher-ts</code>. Every subscriber to a slice receives <strong>byte-identical</strong> responses, the anti-fingerprint property that stops the data provider from learning which commitments or nullifiers the user scans.</li>
+<li><strong>Verify locally.</strong> The wallet verifies the storage/Merkle proof against the L1 block state root, trusting the math rather than the watcher. A lying <code>value</code> fails the proof, and no <code>eth_getLogs</code>/<code>eth_getStorageAt</code> ever leaves the device to a public RPC.</li>
+<li><strong>Pay per request</strong> (T2.1). The wallet pays a go-nitro payment voucher (<code>payments/vouchers.go</code> via <code>payments.ts</code>) for each paid feed method. Metering funds were provisioned <strong>at note creation</strong> and stay private; because this is the same voucher mechanism T0.2/T0.3 publishes, watcher payment leaks nothing about the reader.</li>
+<li><strong>Net &amp; settle.</strong> Vouchers net into a co-signed <strong>virtual-channel</strong> allocation (<code>virtualfund.go</code>), settled to L1 in USDC on close. A replayed or out-of-order voucher is rejected (go-nitro nonce/redemption), and an unpaid request is refused without exposing the requester. Watcher metering is one of the two revenue pillars (venue spread + watcher metering).</li>
+</ol>
+<p>→ feed schema &amp; identical-bytes invariant §5 T2.0; metering interface §5 T2.1; read/write privacy duality §8.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/06-runtime-view.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A.7 — Anonymity-Set Strategy — Armada × Laconic</title>
+<link rel="stylesheet" href="../../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../../index.html">Overview</a>
+  <a href="../../architecture.html">Architecture</a>
+  <a href="../../build-plan.html">Build plan</a>
+  <a href="../../execution-platform.html">Execution platform</a>
+  <a href="../../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../../mobile-privacy.html">Mobile privacy</a>
+  <a href="../../glossary.html">Glossary</a>
+  <a href="../../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../../builder-codes.html">Builder codes</a>
+  <a href="../../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="a7-anonymity-set-strategy">A.7 — Anonymity-Set Strategy</h1>
+<p>work package A · reuse-oriented spec · <strong>2026-09-05</strong>
+<strong>Parent:</strong> <a href="./A.0-overview.html"><code>A.0</code></a>
+<strong>Owns:</strong> T0.7 (anonymity-set strategy — bootstrap own crowd + Railgun import bridge; POI binding)</p>
+<hr />
+<h2 id="a71-goal">A.7.1 Goal</h2>
+<p>Make the shielded value that A settles actually private in practice, not merely private in principle. The base construction (A.0.1) hides sender, recipient, and amount in-circuit; what it cannot manufacture is the <strong>crowd</strong> those hidden transactions blend into. A fresh pool starts with an anonymity set near zero, which <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a> records as <em>the biggest non-engineering risk</em> to A. T0.7 is therefore a <strong>strategy item</strong> (per <a href="../05-building-block-view.html">§5</a>, status "strategy", not net-new crypto). It specifies the base shielded-payments primitive A delivers, the cold-start bootstrap plan, the Railgun onboarding bridge that imports day-one liquidity, the POI binding that connects the pool to its alongside proof-of-innocence stack, and the concrete deltas and acceptance those imply.</p>
+<p>The load-bearing distinction this doc defends end-to-end is that <strong>liquidity import is not anonymity-set inheritance</strong> (A.7.4). Accepting Railgun's value is a public boundary hop, never native ingestion of their crowd.</p>
+<h2 id="a72-boundary">A.7.2 Boundary</h2>
+<ul>
+<li><strong>In scope.</strong> The shielded-payments primitive as a <em>capability statement</em> (it is inherited, not built, per A.7.3); bootstrap incentive and flywheel policy; the Railgun-to-ours import bridge script and flow (client-side orchestration of two existing entrypoints); POI-node integration and the settlement-side gated-entry policy; the ICD surface (POI allow-list root and policy) consumed by <a href="./A.5-deposit-payout-contract.html">A.5</a>; and privacy metrics.</li>
+<li><strong>Out of scope.</strong> The pool contract itself and the <code>changeFee</code>/vkey levers; see <a href="./A.2-pool-deployment.html">A.2</a>. The circuit and ceremony that a cross-pool proof would need; see <a href="./A.3-trusted-setup.html">A.3</a> and <a href="./A.9-native-commitment.html">A.9</a>. The deposit/payout contract internals that <em>enforce</em> gated-entry; see <a href="./A.5-deposit-payout-contract.html">A.5</a>. Native amount-privacy-in-play; see <a href="./A.9-native-commitment.html">A.9</a>.</li>
+<li><strong>Phase-0 assumption.</strong> T0.7's bootstrap and bridge presume a live clean-room pool (T0.0, <a href="./A.2-pool-deployment.html">A.2</a>) and ceremony (T0.1, <a href="./A.3-trusted-setup.html">A.3</a>). The licensing gate (<a href="./A.1-reuse-inventory.html">A.1.10</a> and <a href="./A.0-overview.html">A.0.5</a> gate 1) is resolved via clean-room (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>); no grant or relicense is needed. The residual dependency is simply that those clean-room builds ship before the crowd or import path carries real value. Until they do, A.7 is a design and fixturenet exercise only.</li>
+</ul>
+<h2 id="a73-reuse-inventory-cite-a1-pinned-commits">A.7.3 Reuse inventory (cite A.1 + pinned commits)</h2>
+<p>Everything T0.7 leans on already exists; T0.7 adds no cryptography. Cite, don't re-document.</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Source (see A.1)</th>
+<th>What it gives T0.7</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Shielded-payments primitive</strong> = <code>transact()</code> with <code>unshield=NONE</code></td>
+<td><a href="./A.1-reuse-inventory.html">A.1.7</a> (primitive); <code>transact</code> in <a href="./A.1-reuse-inventory.html">A.1.1</a>, <code>RailgunSmartWallet.sol</code> L102–224</td>
+<td>The base capability A delivers <strong>for free</strong>: inputs nullified, outputs created, <code>sumIn==sumOut</code> in-circuit; <strong>sender/recipient/amount hidden</strong> — only <code>merkleRoot</code>, <code>boundParamsHash</code>, <code>nullifiers[]</code>, output-commitment hashes are public. This is a <em>native Railgun transfer</em>, no deposit/payout contract, no channel.</td>
+</tr>
+<tr>
+<td>JoinSplit circuit (defines the primitive)</td>
+<td><a href="./A.1-reuse-inventory.html">A.1.2</a>, <code>src/library/joinsplit.circom</code> L11–118</td>
+<td>Fixes note/commitment/nullifier format; proves EdDSA ownership + Merkle membership + range + value conservation. The privacy set = the commitments in the accumulator this circuit proves membership of.</td>
+</tr>
+<tr>
+<td>Merkle accumulator + nullifier set (<code>TREE_DEPTH=16</code>, <code>rootHistory</code>)</td>
+<td><a href="./A.1-reuse-inventory.html">A.1.1</a>, <code>Commitments.sol</code> L28–55, L108–252</td>
+<td><strong>The anonymity set, concretely</strong>: every shielded commitment ever inserted. Its cardinality (and recent activity) is what T0.7 metrics measure.</td>
+</tr>
+<tr>
+<td><code>shield(ShieldRequest[])</code> / <code>transact()</code> unshield</td>
+<td><a href="./A.1-reuse-inventory.html">A.1.1</a>, <code>RailgunSmartWallet.sol</code> L23–97 / L102–224</td>
+<td>The <strong>two hops</strong> the import bridge chains: unshield-out of Railgun's pool, then shield-in to ours. Both are pre-existing public entrypoints on each respective pool.</td>
+</tr>
+<tr>
+<td><strong>POI</strong> — Private Proofs of Innocence</td>
+<td><a href="./A.1-reuse-inventory.html">A.1.7</a>; docs.railgun.org/…/private-proofs-of-innocence</td>
+<td>An <strong>alongside partner system, not in the pool contracts</strong> (<a href="./A.1-reuse-inventory.html">A.1.1</a> L26). On shield, an <strong>Unshield-Only Standby Period</strong> (default 1h) precedes a blinded non-inclusion ZK proof vs list-provider datasets; proofs carry forward through transfers.</td>
+</tr>
+<tr>
+<td>Cross-pool proofs — <em>not present</em></td>
+<td><a href="./A.1-reuse-inventory.html">A.1.9</a> delta; <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a></td>
+<td>No shipped mechanism spends/nullifies a foreign-pool note in ours. Would need a circuit that trusts Railgun's root ⇒ a <strong>T0.1 re-run</strong> (A.3/A.9). Deferred/optional.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pins.</strong> Railgun repos (pool, <code>circuits-v2</code>, engine) are <strong>UNPINNED</strong> — read at <code>master</code>/<code>main</code> HEAD 2026-09-05; <strong>pin a commit before build</strong> (<a href="./A.1-reuse-inventory.html">A.1</a>, A.0.6). The bridge and POI integration reference Railgun's <em>own live</em> pool + list-provider stack, which are external and independently versioned.</p>
+<h2 id="a74-net-new-delta-what-a-actually-builds">A.7.4 Net-new delta (what A actually builds)</h2>
+<p>T0.7 is mostly policy, orchestration, and one external-dependency integration. Four deltas:</p>
+<ol>
+<li><strong>Bootstrap incentives and LP flywheel.</strong> Per <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a>, seed our own crowd via incentives, our own market-making capital, and an LP flywheel, so that shield and transact volume compounds the effective anonymity set. k-anonymity compounds with volume (<a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a> consequences). Early transactions have a small, weak set; the strategy's job is to grow it fast enough that effective-k crosses a usable threshold before real value depends on it. This is program and economic policy, not contract code, and A.7 owns the <em>specification</em>, not the treasury.</li>
+<li><strong>Railgun onboarding import-bridge script.</strong> A client-side flow that chains unshield-from-Railgun to shield-into-ours in one public boundary hop. It composes two pre-existing entrypoints (A.7.3) and mints fresh commitments in our accumulator; it deploys no new contract and touches neither pool's internals. This gives day-one dual liquidity (<a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a>).</li>
+<li><strong>POI-node integration.</strong> Stand up or connect the separate POI node stack, a dependency not redeployable from the four repos scoped here (<a href="./A.1-reuse-inventory.html">A.1.7</a>, <a href="./A.1-reuse-inventory.html">A.1.10</a>, <a href="./A.0-overview.html">A.0.5</a> gate 3). This includes choosing list providers and the <strong>Unshield-Only Standby Period</strong> at the client and POI node (the T0.0 "POI config", a client or node setting, not a pool setting), and running the list-provider dataset feed that the standby proof checks against.</li>
+<li><strong>Gated-entry policy in the settlement path.</strong> T0.3 enforces that value entering a channel carries a valid POI (A.7.5 ICD). This is settlement-side policy, not an on-chain pool flag. The pool has no POI hook (<a href="./A.1-reuse-inventory.html">A.1.1</a> L26), so the check lives in the deposit path A.5 implements against the allow-list root A.7 supplies.</li>
+</ol>
+<p><strong>Liquidity import is not anonymity-set inheritance.</strong> A Railgun note cannot be spent or nullified in our contract. Our JoinSplit circuit proves membership in <em>our</em> accumulator against <em>our</em> nullifier set, not Railgun's. So "accept Railgun's liquidity" means the unshield-then-shield hop (delta 2), which lands <em>fresh</em> commitments in <em>our</em> set. It does not import their crowd: the imported value contributes to our k only from the moment it is shielded into us, exactly like any other deposit. Inheriting their set would require cross-pool membership proofs. Those are deferred and optional (<a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a>), because they would need a T0.1 re-run and would trust Railgun's root (A.7.7; see A.3 and A.9).</p>
+<h2 id="a75-interfaces-icd">A.7.5 Interfaces (ICD)</h2>
+<p><strong>A.7 to A.5 (consumed by the deposit/payout contract).</strong>
+- <strong>POI allow-list root and policy.</strong> A.7 owns the choice of list providers and standby period, and publishes the resulting allow-list root and the policy predicate it stands for. A.5's deposit path consults this root to enforce gated-entry: a <code>transact()</code> unshield-in whose value lacks a valid POI is rejected before <code>MultiAssetHolder.deposit</code>. The root and policy are the ICD; the check is A.5's (<a href="./A.1-reuse-inventory.html">A.1.4</a> deposit-in).
+- This is the same <strong>POI allow-list root</strong> A exposes at the work-package boundary (<a href="../00-work-packages.html"><code>00-work-packages.md</code></a> "A exposes"). Consumers treat it as opaque; only its freshness and validity semantics are contractual.</p>
+<p><strong>A.7 with the POI node stack (external dependency).</strong>
+- <strong>In:</strong> shield events and the commitment stream from the pool (<a href="./A.1-reuse-inventory.html">A.1.1</a> events), plus list-provider datasets. <strong>Out:</strong> blinded non-inclusion proofs and the allow-list root A.7 republishes. The standby period (default 1h) is a latency term that downstream flows (bridge, deposit) must budget for.</p>
+<p><strong>Import bridge (client flow, no on-chain ICD).</strong>
+- Two calls, two pools: <code>Railgun.transact()</code> unshield-out, then <code>Ours.shield([ShieldRequest…])</code> in. There is no contract-to-contract interface; the only shared artifact is the ERC20 that transits the public boundary hop between them.</p>
+<p><strong>Non-interfaces (explicit).</strong> T0.7 exposes no pool-side POI setting (there is none, <a href="./A.1-reuse-inventory.html">A.1.1</a> L26) and no cross-pool proof surface in v1.</p>
+<h2 id="a76-acceptance-verification">A.7.6 Acceptance / verification</h2>
+<ol>
+<li><strong>Shielded-payments primitive (inherited-capability check).</strong> On the fixturenet, a <code>transact()</code> with <code>unshield=NONE</code> moves value between two of our notes; assert the public transcript exposes only <code>merkleRoot</code>/<code>boundParamsHash</code>/<code>nullifiers[]</code>/output-commitment hashes, and no sender, recipient, or amount (<a href="./A.1-reuse-inventory.html">A.1.7</a>). This confirms A delivers shielded payments without any A-net-new code.</li>
+<li><strong>Import-path smoke.</strong> End-to-end on a fixturenet with a stand-in "foreign" pool: run the bridge script <code>unshield-from-Railgun → shield-into-ours</code>; assert (a) exactly one public boundary hop (one unshield, one shield, value conserved across it), (b) a fresh commitment appears in <em>our</em> accumulator, and (c) the foreign note's nullifier is spent in the foreign pool only, never referenced by ours (proving import is not inheritance, A.7.4).</li>
+<li><strong>Gated-entry enforcement.</strong> A deposit-in carrying a valid POI proceeds to <code>MultiAssetHolder.deposit</code>; one lacking a valid POI, or checked against a stale allow-list root, is rejected in the settlement path before escrow (with A.5). This confirms the A.7-to-A.5 ICD is load-bearing.</li>
+<li><strong>POI standby honored.</strong> A shield followed by a bridge or deposit before the <strong>Unshield-Only Standby Period</strong> elapses is treated per policy (no valid POI yet); after the period and non-inclusion proof, it passes. This confirms the POI-node integration and its latency term.</li>
+<li><strong>Privacy metrics (the strategy's real KPI).</strong> Instrument and report:
+   - <strong>Anonymity-set size</strong> — cardinality of live commitments in our accumulator (<a href="./A.1-reuse-inventory.html">A.1.1</a> <code>Commitments.sol</code>).
+   - <strong>Effective-k</strong> — the realistic same-denomination/recent-activity crowd a given transaction blends into (not raw set size; volume-weighted per <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a> "compounds with volume").
+   - <strong>Boundary-exposure</strong> — count and volume of public boundary hops (deposit/payout per <a href="../09-architecture-decisions.html#adr-0005">ADR-0005</a>, plus each import hop), since these are where amounts are transparent and are what the metric bootstrap trades against.</li>
+</ol>
+<p>Acceptance means these three are computed and trend-visible on the fixturenet; the bootstrap target is effective-k rising with volume, not a fixed one-shot number.</p>
+<h2 id="a77-risks-open">A.7.7 Risks / open</h2>
+<ul>
+<li><strong>Cold-start weakness window.</strong> Until the bootstrap flywheel lifts effective-k, early users have a small crowd, and large or oddly-denominated transactions are self-deanonymizing. The mitigation is policy: incentivize volume and encourage denomination bucketing. There is no engineering fix in v1.</li>
+<li><strong>Cross-pool proofs deferred (optional/future).</strong> Inheriting Railgun's set is the strong-privacy prize, but it needs a T0.1 re-run and trusts Railgun's root (<a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a>); it is scoped to A.3/A.9, not v1. If greenlit, it changes circuits, which means a Phase-2 re-run and a fresh audit (compare the <a href="../09-architecture-decisions.html#adr-0003">ADR-0003</a> and <a href="../09-architecture-decisions.html#adr-0005">ADR-0005</a> cost shape).</li>
+<li><strong>POI is an external stack.</strong> The POI node and list-provider datasets are a separate dependency (<a href="./A.1-reuse-inventory.html">A.1.10</a>); the list-provider choice is a trust and liveness surface, and their downtime stalls gated-entry. Own the failure mode (degrade-closed versus open) as a policy decision with A.5.</li>
+<li><strong>Licensing gate (Phase-0), resolved via clean-room (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>).</strong> Per A.7.2, the pool the crowd lives in is clean-room reimplemented, with no Railgun grant needed. The residual dependency is only that the clean-room pool ships before real-value bootstrap or import.</li>
+<li><strong>Boundary-exposure versus liquidity tension.</strong> Each import hop and each deposit/payout is a transparent-amount event (<a href="../09-architecture-decisions.html#adr-0005">ADR-0005</a>); more liquidity import can <em>raise</em> boundary-exposure even as it raises set size. The metric suite (A.7.6.5) exists to keep this trade visible.</li>
+</ul>
+<p>See also: feeds <a href="./A.5-deposit-payout-contract.html">A.5</a> (gated-entry, POI root ICD); relates to <a href="./A.8-interfaces-acceptance.html">A.8</a> (POI allow-list root at the WP boundary) and to <a href="./A.3-trusted-setup.html">A.3</a>/<a href="./A.9-native-commitment.html">A.9</a> (cross-pool proofs if greenlit). Grounded in <a href="./A.1-reuse-inventory.html">A.1.7</a> and <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a>.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/A-nitro-on-railgun/A.7-anonymity-set.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

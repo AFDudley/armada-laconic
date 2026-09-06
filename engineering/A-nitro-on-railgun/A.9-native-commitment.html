@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A.9 — Native channelized commitment (amount-privacy-in-play) — Armada × Laconic</title>
+<link rel="stylesheet" href="../../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../../index.html">Overview</a>
+  <a href="../../architecture.html">Architecture</a>
+  <a href="../../build-plan.html">Build plan</a>
+  <a href="../../execution-platform.html">Execution platform</a>
+  <a href="../../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../../mobile-privacy.html">Mobile privacy</a>
+  <a href="../../glossary.html">Glossary</a>
+  <a href="../../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../../builder-codes.html">Builder codes</a>
+  <a href="../../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="a9-native-channelized-commitment-amount-privacy-in-play">A.9 — Native channelized commitment (amount-privacy-in-play)</h1>
+<p>work package A · reuse-oriented spec · <strong>2026-09-05</strong>
+<strong>Parent:</strong> <a href="./A.0-overview.html"><code>A.0</code></a>
+<strong>Owns:</strong> T0.6 <em>(optional; Phase-4)</em></p>
+<hr />
+<h2 id="a91-goal">A.9.1 Goal</h2>
+<p>Armada needs <strong>amount-privacy-in-play</strong>: the <em>value</em> of an in-flight
+settlement should stay hidden not only off-chain but even when a channel is
+force-closed on-chain. In the v1 spine (Design A,
+<a href="../09-architecture-decisions.html#adr-0005">ADR-0005</a>) amounts are public at the
+transparent deposit/payout boundary (see <a href="./A.5-deposit-payout-contract.html">A.5</a>)
+and become fully cleartext on dispute, because <code>MultiAssetHolder.holdings</code> and
+the <code>ExitFormat.Allocation.amount</code> fields that finalize a channel are plain
+<code>uint256</code> on the public chain. Native channelized commitment, the "fork-lite"
+upgrade (T0.6), closes that last leak. It makes channel allocations reference
+<em>hidden-amount commitments</em> rather than cleartext <code>uint256</code>, so a force-close
+reveals no amount.</p>
+<p>This is a circuit change, and it sits deliberately off the v1 critical path.
+The decision of record (ADR-0005) is to ship Design A first, defer fork-lite to
+Phase-4, and exclude fork-full (shielded ForceMove, research-grade) unless
+separately greenlit. This document specifies T0.6 as a scoped, optional upgrade
+so it can be greenlit cleanly later; it does not authorise build now.</p>
+<h2 id="a92-boundary">A.9.2 Boundary</h2>
+<p>Three concentric privacy postures; T0.6 moves the amount-leak inward by exactly
+one boundary.</p>
+<table>
+<thead>
+<tr>
+<th>Posture</th>
+<th>Amounts hidden off-chain?</th>
+<th>Amounts hidden at deposit/payout?</th>
+<th>Amounts hidden on force-close?</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Design A</strong> (v1 default)</td>
+<td>yes (in-channel)</td>
+<td><strong>no</strong> — public at the T0.3 boundary (→ A.5)</td>
+<td><strong>no</strong> — cleartext in the on-chain outcome</td>
+<td>shipping</td>
+</tr>
+<tr>
+<td><strong>Fork-lite</strong> (T0.6, this doc)</td>
+<td>yes</td>
+<td>still public at the boundary hop</td>
+<td><strong>yes</strong> — allocation→note boundary hides amounts across dispute</td>
+<td><strong>deferred, Phase-4</strong></td>
+</tr>
+<tr>
+<td><strong>Fork-full</strong></td>
+<td>yes</td>
+<td>yes (shielded ForceMove)</td>
+<td>yes</td>
+<td><strong>excluded</strong> (ADR-0005)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>In scope (T0.6):</strong> hide amounts across the allocation-to-note boundary, the
+  encoding by which a channel outcome maps to Railgun commitments, so that
+  <code>challenge</code>/<code>conclude</code> expose no cleartext value. The transparent boundary hop
+  itself, the moment value crosses in or out of the shielded pool at T0.3, is
+  unchanged, and Design A's public boundary is retained.</li>
+<li><strong>Out of scope (T0.6):</strong> shielding the ForceMove state machine, hiding
+  <em>participants</em> or <em>channel topology</em>, and native-ETH support (a related but
+  distinct net-new item, A.1.9 item 7; see A.9.4). Fork-full is excluded.</li>
+<li><strong>Asset boundary:</strong> the pool is ERC20/721 only, and ERC1155 is unsupported
+  (A.1.10). T0.6 inherits that bound and must not assume multi-standard notes.</li>
+</ul>
+<h2 id="a93-reuse-inventory-cite-a1-pinned-commits">A.9.3 Reuse inventory (cite A.1 + pinned commits)</h2>
+<p>T0.6 reuses the <em>same</em> two systems as the spine and changes only the
+note/commitment cryptography that binds them — see A.1 for pinned citations.</p>
+<table>
+<thead>
+<tr>
+<th>Reused piece</th>
+<th>Source (A.1 ref)</th>
+<th>Role in T0.6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JoinSplit circuit — note/commitment/nullifier format, <code>sumIn===sumOut</code>, range <code>&lt;2^120</code></td>
+<td>A.1.2 (<code>circuits-v2</code> <code>src/library/joinsplit.circom</code> L11–118, <strong>reference — pin before build</strong>)</td>
+<td>Our <strong>clean-room</strong> JoinSplit format (spec-compatible with A.1.2, <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>) is what T0.6 <strong>extends</strong>; the sum-check is the invariant the hidden-amount variant must preserve.</td>
+</tr>
+<tr>
+<td>Nullifier derivation <code>Poseidon(nullifyingKey, leafIndex)</code></td>
+<td>A.1.2 (<code>nullifier-check.circom</code> L11–13)</td>
+<td>Unchanged; hidden-amount notes still nullify identically.</td>
+</tr>
+<tr>
+<td>Circuit-combo generator (<strong>91</strong> combos) + ceremony driver</td>
+<td>A.1.2 (<code>lib/circuitConfigs.js</code>; <code>scripts/prepare_ceremony</code> L23–79)</td>
+<td>The <strong>Phase-2 machinery re-run</strong> for the changed circuit set (→ A.3).</td>
+</tr>
+<tr>
+<td>Groth16 verifier registry <code>verificationKeys[nIn][nOut]</code>, <code>setVerificationKey</code></td>
+<td>A.1.1 (<code>Verifier.sol</code> L27, L36–45)</td>
+<td>New/updated vkeys registered post-ceremony (→ A.2/A.3).</td>
+</tr>
+<tr>
+<td>Outcome encoding <code>SingleAssetExit</code>/<code>Allocation</code>/<code>AllocationType</code></td>
+<td>A.1.3 (exit-format <code>ExitFormat.sol</code> L26–73)</td>
+<td>The wire format whose <code>amount</code>/<code>metadata</code> fields T0.6 repurposes to carry a <strong>commitment</strong> instead of cleartext value.</td>
+</tr>
+<tr>
+<td><code>MultiAssetHolder.deposit</code> / <code>concludeAndTransferAllAssets</code></td>
+<td>A.1.3 (<code>MultiAssetHolder.sol</code> L36–70; <code>NitroAdjudicator.sol</code> L33–42)</td>
+<td>Escrow + finalize; T0.6 changes <em>what the allocation means</em>, not these entrypoints.</td>
+</tr>
+<tr>
+<td>T0.3 deposit/payout contract</td>
+<td>A.1.4 / <a href="./A.5-deposit-payout-contract.html">A.5</a></td>
+<td>The public-side counterparty that must learn the new allocation↔note encoding on payout.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pinning:</strong> go-nitro <strong>@435eb2b</strong>, ts-nitro <strong>@884d616</strong>, mobymask <strong>@2329198</strong>
+are pinned; <strong>Railgun (<code>circuits-v2</code>, <code>contract</code>) is UNPINNED — pin a commit
+before any T0.6 build</strong> (A.1.10).</p>
+<h2 id="a94-net-new-delta-what-t06-actually-builds">A.9.4 Net-new delta (what T0.6 actually builds)</h2>
+<p>This is A.1.9 item 7 (opt), narrowed to fork-lite.</p>
+<ol>
+<li><strong>Hidden-amount commitment format.</strong> Extend the JoinSplit note/commitment
+   format so a channel <em>allocation</em> references a hidden-amount commitment (a
+   Pedersen or Poseidon-style value commitment) rather than a cleartext
+   <code>uint256</code>. The public outcome carries the commitment; the amount is a private
+   witness.</li>
+<li><strong>Allocations-sum circuit constraint.</strong> Add an in-circuit proof that the
+   committed allocation amounts sum to the committed channel deposit, the
+   fork-lite analogue of JoinSplit's <code>sumIn===sumOut</code> (A.1.2). This ensures a
+   hidden-amount force-close cannot create value, and it is the core new
+   constraint.</li>
+<li><strong>Circuit change requires a ceremony re-run.</strong> Any change to the circuit set
+   forces a fresh Phase-2 MPC over the changed circuits
+   (<a href="../09-architecture-decisions.html#adr-0003">ADR-0003</a>, ADR-0005). Re-run T0.1
+   Phase-2 and register new or updated vkeys (see <a href="./A.3-trusted-setup.html">A.3</a>,
+   A.2). Phase-1 (<code>powersOfTau28_hez_final_20.ptau</code>, 2²⁰) is still inherited.</li>
+<li><strong>T0.3 payout adaptation.</strong> T0.3 must decode the new allocation-to-note
+   encoding and re-shield against hidden-amount commitments rather than cleartext
+   exit amounts (see <a href="./A.5-deposit-payout-contract.html">A.5</a>).</li>
+<li><strong>Fresh audit and heavier mobile proving.</strong> New circuits invalidate the v1
+   audit and enlarge the proving witness, so they require a fresh security audit
+   and heavier mobile proving. A wider or deeper circuit costs the D-owned mobile
+   prover (T6.6). Both are ADR-0005 consequences.</li>
+</ol>
+<p><strong>Related net-new (adjacent, not T0.6):</strong> the pool is ERC20/721 only, with no
+native ETH (A.1.10). Native-ETH settlement needs either a WETH-wrap path at the
+T0.3 boundary or a native path, which is A.1.9 item 7's other half. It is
+separable from fork-lite, since Design A can gain WETH-wrap without any circuit
+change, and should be scoped independently; T0.6 does not deliver it.</p>
+<h2 id="a95-interfaces-icd">A.9.5 Interfaces (ICD)</h2>
+<p>T0.6 is inward-facing: it changes cryptography and the T0.3 payout encoding,
+not the A-to-B/C/D surface shape.</p>
+<ul>
+<li><strong>Circuit set to T0.1/T0.0.</strong> The changed <code>(nInputs,nOutputs)</code> circuit set (a
+  superset or variant of the reconciled combo subset, A.3) plus its Phase-2
+  transcript and per-circuit vkeys, registered via <code>setVerificationKey</code> (A.1.1).
+  Consumers: A.2 (registration), A.3 (ceremony).</li>
+<li><strong>Allocation encoding to T0.3.</strong> A revised mapping between allocations and
+  notes: outcome <code>Allocation</code> fields carry a hidden-amount commitment, plus any
+  <code>withdrawHelper</code> or <code>metadata</code> payload, instead of cleartext <code>uint256</code>.
+  Consumer: <a href="./A.5-deposit-payout-contract.html">A.5</a> (payout decode and
+  re-shield). The <code>MultiAssetHolder</code>/<code>NitroAdjudicator</code> entrypoints (A.1.3) are
+  unchanged.</li>
+<li><strong>Note format to T6.1 scanner / B.</strong> Hidden-amount output commitments must
+  still be <em>scannable</em> (same nullifier derivation, A.1.2) so B's note-scanner
+  (T6.1) and indexers keep working; only the value field's opacity changes.</li>
+<li>No new on-chain governance surface is introduced beyond the vkey
+  re-registration Design A already performs (A.2).</li>
+</ul>
+<h2 id="a96-acceptance-verification">A.9.6 Acceptance / verification</h2>
+<p>Because T0.6 is optional and deferred, its gate is a lighter PoC rather than a
+full-spine acceptance run. Greenlight is a Phase-4 decision, and this PoC
+de-risks that decision.</p>
+<ol>
+<li><strong>Force-close reveals no cleartext amount.</strong> Drive a hidden-amount channel to
+   an adversarial <code>challenge</code>/<code>conclude</code> on a fixturenet and confirm the on-chain
+   outcome (<code>ExitFormat</code> allocations, emitted events, <code>holdings</code>) exposes no
+   cleartext value, only commitments. <em>Fail: any recoverable plaintext amount.</em></li>
+<li><strong>Allocations-sum proof rejects value creation.</strong> Feed the circuit an outcome
+   whose committed allocations do not sum to the committed deposit, and confirm
+   that proof generation and verification reject it (the value-conservation
+   invariant, A.9.4 item 2). <em>Fail: a value-creating outcome verifies.</em></li>
+<li><strong>Payout round-trips.</strong> A hidden-amount channel finalizes, T0.3 decodes the
+   new allocation encoding, then re-shields fresh notes whose scanned balances
+   match the private intended split (see A.5). <em>Fail: amount mismatch or
+   unscannable note.</em></li>
+<li><strong>Ceremony/audit prerequisites named, not run.</strong> The PoC MAY use a throwaway
+   Phase-2 over the changed circuits. Production greenlight is contingent on a
+   real T0.1 Phase-2 re-run and a fresh audit (A.9.4 items 3, 5), recorded as the
+   Phase-4 entry criteria and not exercised at PoC.</li>
+</ol>
+<h2 id="a97-risks-open">A.9.7 Risks / open</h2>
+<ul>
+<li><strong>Cost vs benefit (ADR-0005).</strong> Fork-lite adds ceremony, audit, and prover
+  cost for a privacy gain the v1 feature set does not require, hence its
+  deferral. Revisit only if a concrete requirement emerges, such as large-value
+  settlement de-anonymisation on dispute.</li>
+<li><strong>Mobile proving budget (T6.6).</strong> Heavier circuits may exceed the D-owned
+  mobile prover's practical bound; quantify witness and proving-time growth in
+  the PoC before greenlight.</li>
+<li><strong>Licensing (Phase-0) — resolved via clean-room (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>).</strong> T0.6 edits our own clean-room circuits and re-runs Phase-2 over them. The <code>UNLICENSED</code> blocker that once applied to Railgun's <code>circuits-v2</code> is removed, because T0.0/T0.1 are themselves clean-room (<a href="./A.2-pool-deployment.html">A.2</a>, <a href="./A.3-trusted-setup.html">A.3</a>). Fork-lite's gate is now cost and audit (A.9.1, A.9.7), not licensing.</li>
+<li><strong>Unpinned Railgun commit.</strong> Pin <code>circuits-v2</code>/<code>contract</code> before build (A.1.10).</li>
+<li><strong>Native-ETH is separable.</strong> Do not let the WETH-wrap/native-ETH item ride on
+  the T0.6 greenlight; scope it independently (A.9.4).</li>
+<li><strong>Fork-full</strong> stays excluded unless separately greenlit (ADR-0005).</li>
+</ul>
+<hr />
+<p>See also: <a href="./A.5-deposit-payout-contract.html">A.5</a> (payout adaptation), <a href="./A.3-trusted-setup.html">A.3</a> (ceremony re-run), <a href="./A.1-reuse-inventory.html">A.1.9</a>/<a href="./A.1-reuse-inventory.html">A.1.10</a> (deltas &amp; risks), <a href="../09-architecture-decisions.html#adr-0005">ADR-0005</a>, <a href="../09-architecture-decisions.html#adr-0003">ADR-0003</a>.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/A-nitro-on-railgun/A.9-native-commitment.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

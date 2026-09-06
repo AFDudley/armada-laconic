@@ -18,6 +18,7 @@
   <a href="glossary.html">Glossary</a>
   <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
   <a href="builder-codes.html">Builder codes</a>
+  <a href="engineering/README.html">Engineering</a>
 </nav>
 
 <h1>Armada × Laconic</h1>
@@ -100,6 +101,9 @@ ex_net is <strong>not</strong> a sibling adapter — the venue is a private exec
   <li><strong>Pool stays immutable.</strong> ex_net operates at the adapter/execution tier; nothing here alters Armada's core contracts or takes custody.</li>
   <li><strong>Depth is uneven.</strong> Only the execution platform (ex_net → matcher) has been validated in depth so far; the rest is design-level / net-new. The <a href="build-plan.html">Build plan</a> marks per-component confidence.</li>
 </ul>
+
+<h2>Engineering documentation</h2>
+<p>The full engineering architecture — organized as <a href="https://arc42.org">arc42</a> — lives under <a href="engineering/README.html"><strong>Engineering</strong></a>. Start with the <a href="engineering/README.html">overview</a>, then the <a href="engineering/05-building-block-view.html">§5 building-block view</a> and its tier specs (<a href="engineering/T0-ethereum-anchor.html">T0</a>–<a href="engineering/T6-client-apps.html">T6</a>), the <a href="engineering/09-architecture-decisions.html">architecture decisions (ADRs)</a>, and the <a href="engineering/A-nitro-on-railgun/A.0-overview.html">nitro-on-railgun</a> deep dive. These pages are generated from the Markdown in <code>engineering/</code> by <code>tools/render-engineering.sh</code>.</p>
 
 <hr/>
 <p class="small">Generated for the Armada dev team. Non-custodial; Armada's shielded pool is immutable and untouched. Internal Google Docs require Laconic/Vulcanize access.</p>

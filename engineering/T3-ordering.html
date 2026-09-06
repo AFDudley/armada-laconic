@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>T3 · Ordering — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="t3-ordering">T3 · Ordering</h1>
+<p><strong>Status:</strong> draft · tier doc · 2026-09-04
+<strong>Parent:</strong> <a href="./05-building-block-view.html"><code>05-building-block-view.md</code></a> · <strong>Tier:</strong> T3
+<strong>Release:</strong> v2 (T3.0, T3.1, T3.2)
+<strong>Depends on / Blocks:</strong> consumes T2.4 (threshold DKG signing), T0.4 (venue bond), T0.5 (sequencing-cert + fraud-proof verifier); depends on T3.2 for the receipts T3.0 emits and T3.1 attests; <strong>blocks T4.6</strong> (ex_net matcher + LP vault) — this whole tier exists only to feed it.</p>
+<p>T3 is the <strong>fair-ordering stack</strong>, and it is <strong>v2 in its entirety</strong>. It becomes necessary <em>only</em> when a venue upgrades to the ex_net matcher (<strong>T4.6</strong>), where price <em>discovery</em> runs across multiple LPs with competitive quotes and a book therefore exists to front-run. The v1 posted-price venue (T4.0) has <strong>nothing to front-run</strong>: Armada posts bid/ask on both sides, take-it-or-leave-it, cleared over Nitro, so v1 needs neither commit-reveal ordering nor epoch set-agreement (ADR-0007; architecture T4 note). These are the two highest-design-risk, research-adjacent items in the whole system, and confining them here is precisely what lets v1 collapse to integration plus a small posted-price contract plus the Design-A boundary.</p>
+<p>The tier's job is narrow: <strong>fix which orders are in an epoch and fix their order</strong>, then prove it. It does <strong>not</strong> run global execution, because balances are enforced by the Nitro channel adjudicator (T0.2) rather than by a shared state root. In Ethereum terms, this is a <strong>decentralized sequencer + DA + fraud-proof ordering</strong> <em>over state-channel settlement</em> — <strong>not a rollup</strong> (architecture T3). A stalled or sub-threshold party therefore means <strong>halt, not loss</strong>: users force-close to their last signed state, and a watchtower (T6.3) guarantees the latest state even for an offline user.</p>
+<p>Fairness rests on <strong>commit-reveal</strong> (T3.0) rather than a per-order client SNARK, because a phone SNARK per order costs seconds while a reveal round-trip costs tens of milliseconds; it also avoids a threshold-encrypted mempool, since a colluding threshold that is also the sequencer gains no real fairness from encryption (architecture T2 note). The three items compose as a pipeline: <strong>T3.0</strong> hides and orders, <strong>T3.1</strong> agrees the set and publishes it, and <strong>T3.2</strong> signs each step so a violation is slashable on L1 (the T0.5 verifier against the T0.4 bond). Everything below is <strong>months of work per venue, opt-in</strong>, and never a v1 prerequisite.</p>
+<h2 id="t30-commit-reveal-sequencer-randomness-beacon">T3.0 Commit-reveal sequencer + randomness beacon</h2>
+<p><strong>What it is.</strong> This is the core fair-ordering primitive: orders stay hidden from the venue <em>during ordering</em> through <strong>commit-reveal</strong>, not client-side ZK. A phone generating a SNARK per order costs seconds, whereas a commit → reveal round-trip costs tens of milliseconds, and the user is already interactive through settlement anyway. Commit-reveal defeats <strong>both</strong> latency games and <strong>operator front-running</strong> without imposing per-order proving cost on the client.</p>
+<p><strong>Flow (one epoch).</strong>
+1. <strong>Commit.</strong> Each order enters as <code>commit = H(order ‖ salt)</code> — a hiding, binding hash. The venue sees only hashes, so it cannot content-front-run.
+2. <strong>Seal.</strong> The party seals the epoch, admitting no further commits. On seal it emits <strong>threshold-signed inclusion receipts</strong> (T3.2) for every commit it accepted, so <em>censorship of a commit becomes slashable</em> (T0.4/T0.5).
+3. <strong>Beacon.</strong> A <strong>post-seal randomness beacon</strong> fixes intra-epoch positions. Because the beacon is drawn <em>after</em> the seal, the party cannot position-manipulate: it committed to the set before knowing the order.
+4. <strong>Reveal.</strong> Users reveal <code>order ‖ salt</code>; the matcher (T4.6) runs over the revealed orders <strong>in the beacon-fixed order</strong> and clears the epoch as a <strong>batch auction at a uniform price</strong> (Budish–Cramton–Shim frequent-batch-auction), which removes the intra-epoch latency race entirely (architecture T3).</p>
+<p>The party therefore <strong>cannot content-front-run</strong>, because it only saw hashes, and <strong>cannot position-manipulate</strong>, because the beacon is post-seal. ZK order submission remains an <strong>opt-in</strong> for offline submitters who cannot stay online for the reveal leg; it is a fallback, not the default path.</p>
+<p><strong>Latency &amp; receipts.</strong> A cooperative fill takes <strong>3 RTT + Δ</strong> — commit, reveal, settle — with Δ ≈ the party's co-located sealing window (single-digit ms). Settlement is one round trip whose two legs are <strong>both mandatory</strong>: the user signs first, and the venue returns a <strong>bond-enforced settlement receipt</strong> (T3.2). Nothing is fire-and-forget; every fill terminates in either a co-signed receipt <strong>or</strong> a slashable proof of its absence.</p>
+<p><strong>Griefing is a non-issue.</strong> Because the venue is the one <em>providing asks</em>, a user who withholds a reveal harms no third party: the ask is a standing quote available to all, so a non-revealed commit blocks no other user's liquidity. The only theoretical residual is a sub-second free option on a stale quote, worth ≈ nothing as long as the reveal timeout ≤ the quote-repricing interval — a knob the venue controls. Anti-griefing thus collapses to a nominal anti-spam commit fee.</p>
+<p><strong>Reuse vs build.</strong> Net-new. The commit-reveal mempool and the post-seal beacon have no upstream to reuse; the beacon can be sourced from the sealed-set hash plus a delay/VDF-style draw, but the sequencing protocol itself is new work.</p>
+<p><strong>Key tasks.</strong>
+- Define the commit encoding <code>H(order ‖ salt)</code>, salt entropy, and the nominal anti-spam commit fee.
+- Implement the epoch clock + <strong>seal barrier</strong> (co-located sealing window Δ, single-digit ms).
+- Source the <strong>post-seal randomness beacon</strong> (sealed-set hash + delay/VDF-style draw); show it is unbiasable before seal.
+- Wire the reveal collector and hand the <strong>beacon-fixed order</strong> to the matcher (T4.6).
+- Implement the two-leg settlement exchange (user-signs-first → bond-enforced receipt) and the force-close fallback (T0.2 / T6.3).
+- Tune the reveal timeout ≤ quote-repricing interval to bound the stale-quote free option.</p>
+<p><strong>Interface.</strong> Consumes the epoch set membership and DA guarantee from <strong>T3.1</strong>, so reveals are checked against the sealed set, and the inclusion/settlement receipts from <strong>T3.2</strong>. Emits the <strong>beacon-fixed revealed order</strong> to the matcher (<strong>→ T4.6</strong>); a missing settlement leg force-closes to the pre-fill channel state on T0.2, made whole by the watchtower (T6.3).</p>
+<p><strong>Testing / risk.</strong> The adversarial cases are a party that seals <em>after</em> peeking (defeated by pre-seal receipts + post-seal beacon), a withheld reveal (bounded free option, above), and a censored commit (a receipt-backed fraud proof, T3.2). This is the highest-design-risk area of the system after T3.1.</p>
+<h2 id="t31-epoch-set-agreement-da">T3.1 Epoch set-agreement / DA</h2>
+<p><strong>What it is.</strong> This is the agreement layer under the sequencer: the federation must (a) agree on <strong>which</strong> commitments are in an epoch and (b) publish that revealed epoch so anyone can verify the clear. It is the <strong>rollup-flavored set-agreement</strong> — leader-proposes + threshold-attest + receipt-backed censorship fraud proofs — but deliberately <strong>not BFT consensus</strong>. The party only needs to fix a <em>set</em> and an <em>order</em>, a sequencing-and-attestation task rather than replicated global execution; that is a far weaker and cheaper primitive than BFT, and it is what lets the network live on phones (architecture T3 note). It is the <strong>highest-risk, research-adjacent</strong> item in the plan (build-plan T3).</p>
+<p><strong>Set-agreement.</strong> A leader proposes the sealed commit set for the epoch, and the federation <strong>threshold-attests</strong> it (T3.2). A member that observes its own accepted commit <strong>excluded</strong> from the attested set holds an inclusion receipt (T3.2) that contradicts the sealed set — a <strong>censorship fraud proof</strong> slashable on L1 (the T0.5 verifier against the T0.4 bond). Safety is favored over liveness: a stalled or sub-threshold party <strong>halts</strong>, and users force-close to their last signed state (non-custody, architecture T3).</p>
+<p><strong>Data availability.</strong> Set-agreement is worthless if the revealed epoch is not <strong>available</strong>, since a censored reveal set would let the party equivocate about what was cleared. The revealed epoch is therefore <strong>published (DA)</strong> after reveal: the ordered, revealed order set backing each uniform-price clear is made retrievable, so any watcher can independently re-run the batch auction and check the clear against the beacon-fixed order from T3.0. Without this DA step there is no external check on the matcher's output and no ground truth for a fraud proof. DA publish is <strong>net-new</strong> (build-plan T3); its substrate is the same watcher-party feeds (T2) rather than a separate DA chain.</p>
+<p><strong>Reuse vs build.</strong> Net-new; both the leader/attest/fraud-proof protocol and the DA publish path are new. It reuses the threshold-signing primitive (T3.2 / T2.4) for the attestations, but the sequencing protocol around it is new.</p>
+<p><strong>Key tasks.</strong>
+- Leader election / rotation for epoch proposal (deliberately non-BFT).
+- The sealed-set proposal + <strong>threshold-attest</strong> exchange (signed via T3.2).
+- Exclusion detection: match member inclusion receipts against the attested set; assemble the <strong>censorship fraud proof</strong> for T0.5.
+- <strong>DA publish</strong> path for the revealed epoch over T2 feeds; retrievability + an independent re-clear check.
+- Halt semantics: sub-threshold ⇒ stop and surface the force-close signal to clients (no partial epoch).</p>
+<p><strong>Interface.</strong> Consumes commits + reveals from <strong>T3.0</strong> and threshold attestations from <strong>T3.2</strong>. Produces the <strong>sealed epoch set</strong> (to T3.0, gating reveals) and the <strong>published revealed epoch</strong> (to any watcher, and to T4.6 as the auditable input to each clear). A disagreement is resolved on L1 via T0.5 against T0.4.</p>
+<p><strong>Testing / risk.</strong> Simulate a leader that omits a commit (caught by the excluded member's receipt), a party that stalls below threshold (must halt, users made whole), and a withheld reveal set (the DA gap must be detectable, not silently absorbed). Because there is no shared state root, tests assert <em>ordering + availability</em>, not global-state equivalence.</p>
+<h2 id="t32-dss-attestation">T3.2 DSS attestation</h2>
+<p><strong>What it is.</strong> This is the signature layer that makes the tier's claims <strong>on-chain verifiable and slashable</strong>. The federation signs everything it attests to — <strong>sequencing certificates</strong>, per-commit <strong>inclusion receipts</strong>, and <strong>liquidity-proof snapshots</strong> — with a <strong>threshold Schnorr</strong> signature. Concretely, this means <code>chain-signatures</code> Ethereum-compatible Schnorr (<code>ethschnorr.Sign</code> / <code>Verify</code>) and the Stinson–Strobl <code>(t, n)</code> <strong>Distributed Schnorr Signature</strong> protocol in <code>ethdss</code>, built over a <code>kyber</code> DKG (architecture "federation signature"). This is the mechanism that turns a <strong>censored commit</strong> into a <strong>slashable fraud proof</strong>: the missing or contradicted receipt is verified by an L1 contract (T0.5) against the venue bond (T0.4).</p>
+<p><strong>Why it works on-chain.</strong> Because it is <strong>Ethereum-flavoured Schnorr</strong>, an L1 contract can verify the party's <em>aggregate</em> signature directly, so a sequencing cert or a censored-commit inclusion receipt becomes a slashable fraud proof against the bond with no re-execution needed (architecture DSS §). The threshold direction is <strong>safety-first</strong>: <code>t</code>-of-<code>n</code> tolerates <code>t−1</code> malicious for safety and <code>n−t</code> offline for liveness. We pick <strong>t high</strong> (e.g. <strong>4-of-7</strong>) so that forging an attestation needs a large coalition, and liveness failure degrades to <strong>halt, not loss</strong> because settlement is non-custodial. A BFT-style small quorum (e.g. 3-of-11) would be <em>wrong</em>, since it would let any 3 forge (architecture DSS §).</p>
+<p><strong>Signing only — no encrypted mempool.</strong> The threshold key is used for <strong>signing only</strong>. We deliberately do <strong>not</strong> run a threshold-encrypted mempool: with the sequencer and the key-holders being the same federation, encryption gives no real fairness, because a colluding threshold can decrypt-then-order. Fair ordering comes from commit-reveal (T3.0), not encryption (architecture T2 note).</p>
+<p><strong>Reuse vs build.</strong> The <strong>signing primitive is built</strong> — <code>ethschnorr</code> / <code>ethdss</code> in <code>chain-signatures</code> — and the <strong>DKG / reshare / signing wiring is T2.4</strong> (federation + bond + threshold DKG). What is net-new <em>here</em> is the <strong>attestation protocol</strong>: which objects get signed (sequencing cert, inclusion receipt, liquidity-proof snapshot), their wire encoding, and the receipt-emission points inside the T3.0/T3.1 flow. The <strong>L1 verifier is T0.5</strong> and the <strong>bond it slashes is T0.4</strong> — both referenced, not built here.</p>
+<p><strong>Key tasks.</strong>
+- Define the signed-object schemas — sequencing certificate, inclusion receipt, liquidity-proof snapshot — and their wire encoding.
+- Bind <code>ethschnorr</code> / <code>ethdss</code> signing (from the T2.4 DKG) to the seal/attest emission points in T3.0 / T3.1.
+- Produce an aggregate-signature format the <strong>T0.5</strong> L1 verifier can check, gas-bounded.
+- Index receipts so a client/watcher can assemble a fraud proof and submit it against the <strong>T0.4</strong> bond.
+- Choose <code>(t, n)</code> parameters (t high, e.g. 4-of-7) jointly with T2.4.</p>
+<p><strong>Interface.</strong> Consumes the threshold key material and signing service from <strong>T2.4</strong>. Emits <strong>inclusion receipts</strong> at seal-time to <strong>T3.0</strong>, <strong>sequencing certificates</strong> over the attested set to <strong>T3.1</strong>, and both — plus liquidity-proof snapshots — to the <strong>T0.5</strong> verifier, so a bad or missing attestation slashes <strong>T0.4</strong>. The matcher (<strong>T4.6</strong>) consumes liquidity-proof snapshots as its auditable inventory basis.</p>
+<p><strong>Testing / risk.</strong> Verify that (1) a valid <code>(t,n)</code> aggregate verifies on the L1 verifier (T0.5) while an under-threshold or forged one does not; (2) an inclusion receipt contradicting a sealed set (T3.1) is accepted as a fraud proof and slashes the bond (T0.4); (3) a <code>t</code>-high quorum halts rather than forges under <code>≥ n−t</code> offline. The DSS/sequencer upgrade adds a <strong>larger shared-substrate audit surface</strong> than a single posted-price contract, so it is audit-critical before any mainnet ex_net venue (architecture audit note).</p>
+<h2 id="sources">Sources</h2>
+<ul>
+<li>Architecture — T3 ordering (commit-reveal + post-seal beacon, latency/receipts, halt-not-loss, "sequencer + DA + fraud-proof, not a rollup"); the federation signature (threshold Schnorr / DSS, on-chain verifiable, safety-first <code>t</code>-high, signing-only / no encrypted mempool); T4 v1-vs-v2 posted-price note — <code>architecture.html</code></li>
+<li>Build plan — T3 net-new breakdown (commit-reveal mempool + beacon, <strong>epoch set-agreement</strong> = highest risk, inclusion receipts + sequencing certificate, DA publish, watchtower); v2 = ex_net/matcher scope — <code>build-plan.html</code></li>
+<li>Venue / RFQ — the optional provably-fair CLOB path (commit-reveal sequencer, DSS attestation, inclusion receipts, liquidity-proof snapshots, L1 slashing), months-per-venue / opt-in framing — see T4.6 and <code>execution-platform.html</code></li>
+<li>chain-signatures (threshold Schnorr <code>ethschnorr</code>, Stinson–Strobl <code>(t,n)</code> DSS <code>ethdss</code>, <code>kyber</code> DKG) — https://git.vdb.to/cerc-io/chain-signatures</li>
+<li>Registry / bond and cert + fraud-proof verifier referenced by id — T0.4, T0.5; threshold DKG signing — T2.4; matcher consumer — T4.6</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/T3-ordering.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

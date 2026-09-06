@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>3. Context & Scope — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="3-context-scope">3. Context &amp; Scope</h1>
+<p>arc42 §3 · <strong>2026-09-05</strong></p>
+<p>This section draws the system boundary and catalogues the external systems the build touches. Per <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a>, this is <strong>one engineering team building the whole Armada product</strong> — a Railgun-based privacy layer for USDC — reusing Laconic's prior work as the substrate. The boundary is therefore <strong>reuse vs net-new</strong>, not an Armada-vs-Laconic org split. The static decomposition of the in-scope side is the <a href="./05-building-block-view.html">§5 registry</a>; here we fix only the perimeter. Terminology follows <a href="./09-architecture-decisions.html#adr-0010">ADR-0010</a>.</p>
+<h2 id="the-product">The product</h2>
+<p>Armada is pluggable asset-privacy infrastructure for USDC: routine flows (payments, payroll, treasury, yield) route through a single <strong>immutable Railgun shielded pool</strong> (one anonymity set), and privacy compounds as more flows join (<code>index.html</code>; Armada thesis, blog.armada.blue). The team builds this whole product — the Railgun-based settlement core (nitro-on-railgun), the watcher-party sync substrate, the yield &amp; exchange venue and its adapters, and the mobile client — <strong>reusing Laconic prior art</strong> (nitro integration, watchers, wallet, chain-signatures, ingestion) throughout. There is no internal org boundary; the whole product is in scope.</p>
+<h2 id="in-scope-the-whole-product-by-work-package">In scope — the whole product (by work package)</h2>
+<p>The four <a href="./00-work-packages.html">work packages (§0)</a> are the entire scope; each owns a set of <code>T#.#</code> items.</p>
+<table>
+<thead>
+<tr>
+<th>WP</th>
+<th>§5 items</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A · nitro-on-railgun</strong></td>
+<td>T0.0–T0.3, T0.6 <em>(opt)</em>, T0.7; T6.2, T6.3</td>
+<td>Clean-room pool + circuits + own Phase-2 (ADR-0014); the deposit/payout boundary is the net-new integration contract (ADR-0002/0003/0004).</td>
+</tr>
+<tr>
+<td><strong>B · watcher parties</strong></td>
+<td>T1.0–T1.2, T2.0–T2.4; T6.1</td>
+<td>Proof-carrying ingest + metered private feeds; reuse the cerc-io watcher / ipld / nimbus lineage (ADR-0008/0009).</td>
+</tr>
+<tr>
+<td><strong>C · yield &amp; exchange</strong></td>
+<td>T4.0–T4.6, T3.* <em>(v2)</em>; <strong>T5.0 adapters (CCTP built · Aave-v4 yield · Swaps), T5.1 routing</strong></td>
+<td>Posted-price venue v1; adapters build-or-reuse Railgun's Cookbook recipe (license gate). <strong>USDC yield is the priority</strong> (ADR-0007/0011/0013).</td>
+</tr>
+<tr>
+<td><strong>D · client</strong></td>
+<td>T6.0, T6.4–T6.8</td>
+<td>Wallet/app, mobile transport, on-device proving (ADR-0008).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="reused-not-built-prior-art-reference">Reused, not built (prior art &amp; reference)</h2>
+<p>Cited at pinned commits; never re-documented (ADR-0012 reuse-spec discipline).</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Railgun design</strong> (<code>contract</code> / <code>circuits-v2</code> spec; MIT <code>engine</code> / <code>cookbook</code> as reference)</td>
+<td><strong>Reference spec only</strong> — the shielded pool + JoinSplit circuits are <strong>clean-room reimplemented</strong> (T0.0/T0.1, spec-compatible, no Railgun-licensed source), not reused OSS (ADR-0014).</td>
+</tr>
+<tr>
+<td><code>go-nitro</code>, <code>watcher-ts</code>, <code>ts-nitro</code>, <code>@cerc-io/peer</code>, <code>mobymask</code>, <code>laconic-wallet</code>, <code>chain-signatures</code>, <code>ipld-eth-*</code></td>
+<td>Laconic / cerc-io prior art, reused at pinned commits.</td>
+</tr>
+<tr>
+<td><strong>Perpetual Powers of Tau</strong> Phase-1</td>
+<td>Inherited universal ceremony; we run only our own Phase-2 (ADR-0003).</td>
+</tr>
+<tr>
+<td>Railgun <strong>RelayAdapt / Cookbook</strong> recipe</td>
+<td>Railgun's own value-moving recipe; the C adapters may reuse it (license permitting), distinct from our T0.3 deposit/payout contract (ADR-0010).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="external-systems-interfaces-genuine-third-parties">External systems &amp; interfaces (genuine third parties)</h2>
+<p>Direction is stated relative to our system.</p>
+<table>
+<thead>
+<tr>
+<th>External system</th>
+<th>Interface &amp; direction</th>
+<th>Touched by</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Ethereum L1</strong></td>
+<td>Settlement root: our clean-room pool, <code>go-nitro</code> adjudicator, and deposit/payout contract live here. Bidirectional — write channel state, read commitment/nullifier/adjudicator events.</td>
+<td>T0.0, T0.2, T0.3 (read at T1.2)</td>
+<td>ADR-0002/0004/0014</td>
+</tr>
+<tr>
+<td><strong>Railgun deployed pool</strong> (live)</td>
+<td>Onboarding bridge: user <strong>unshields from Railgun → shields into our pool</strong> — one public boundary hop; a Railgun note is never spent/nullified in our contract. Inbound.</td>
+<td>T0.7</td>
+<td>ADR-0006</td>
+</tr>
+<tr>
+<td><strong>Aave v4</strong></td>
+<td>The yield protocol the USDC-yield rail reaches through, via our Aave-v4 adapter's recipe (<code>unshield USDC → supply → reshield aUSDC</code>). Amounts public only at the transparent supply boundary (Design A).</td>
+<td>T5.0 (C)</td>
+<td>ADR-0005</td>
+</tr>
+<tr>
+<td><strong>Circle CCTP</strong></td>
+<td>Cross-chain USDC mint wrapped into the shield by our CCTP adapter — arrives as a fresh shielded USDC note. Inbound; adapter already built.</td>
+<td>T5.0 (C), enters via T0.3</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Public Waku network</strong></td>
+<td>Transport underlay: pub/sub for feed/quote gossip + discovery; libp2p-noise direct streams for the 1:1 hot loop. Bidirectional P2P. Noise gives peer-auth, <strong>not</strong> IP privacy.</td>
+<td>T2.3 (T6.5 mobile)</td>
+<td>ADR-0008</td>
+</tr>
+<tr>
+<td><strong>nimbus-eth1</strong> (upstream)</td>
+<td>State-diff source: stateless/witness + Aristo, mapped into IPLD for proof-carrying diffs. Inbound; we build only enough local cache to serve, not a full archive EL. Upstream path in-progress (§11).</td>
+<td>T1.0, T1.1</td>
+<td>ADR-0009</td>
+</tr>
+</tbody>
+</table>
+<h2 id="not-in-v1-excluded">Not in v1 / excluded</h2>
+<ul>
+<li>Amount privacy in-play beyond Design A: <strong>T0.6 fork-lite</strong> is optional (Phase-4); <strong>fork-full</strong> is excluded unless separately greenlit (ADR-0005).</li>
+<li><strong>Market-making</strong> (venue solver T4.2) and the <strong>LP-buffered private USDC-yield rail</strong> (T4.5) are <strong>v2</strong> (ADR-0011); v1 fills from a static inventory and does basic USDC yield via the direct adapter recipe.</li>
+</ul>
+<hr />
+<p>→ Building-block detail and every <code>T#.#</code> id: <a href="./05-building-block-view.html">§5</a>. Scope decision: <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a> (whole-product scope; reuse boundary). Adapter detail: <a href="./T5-adapters.html"><code>T5-adapters.md</code></a>.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/03-context-and-scope.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

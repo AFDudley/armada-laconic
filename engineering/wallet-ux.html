@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wallet User Experience — browser & mobile — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="wallet-user-experience-browser-mobile">Wallet User Experience — browser &amp; mobile</h1>
+<p>UX description · 2026-09-10 · maps to the <strong>T6 client tier</strong> (§5) · settlement rail per §6</p>
+<p>This describes what a person actually does and sees in the Armada wallet, on a browser and on a phone, and which building blocks make each surface work. It is the user-facing companion to the arc42 runtime view (§6) and the cross-chain swap construction (<code>shielded-nitro-bridge-design.md</code>). Guiding constraint: <strong>a phone is a full non-custodial peer, not a thin client of a server</strong> (ADR-0008).</p>
+<h2 id="1-platforms-one-wallet-two-shells">1. Platforms — one wallet, two shells</h2>
+<p>The wallet logic is identical across platforms; only the shell and transport differ (T6.5, ADR-0008).</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Browser</th>
+<th>Mobile</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shell</td>
+<td>PWA / WebView carrying the in-browser <code>ts-nitro</code> stack</td>
+<td>Native app (React Native) over a <strong>native gomobile</strong> transport (go-waku + go-libp2p-noise), T6.5</td>
+</tr>
+<tr>
+<td>Custody</td>
+<td>BIP-39/HD keys; WebCrypto/OS keystore</td>
+<td>Keys in the <strong>device secure enclave</strong>; never leave it (T6.0, TC-5)</td>
+</tr>
+<tr>
+<td>Note-scanner</td>
+<td>WASM in a worker (T6.1)</td>
+<td>WASM behind a WebView↔RN <strong>key bridge</strong> (T6.1)</td>
+</tr>
+<tr>
+<td>Proving</td>
+<td>Groth16 in WASM (snarkjs)</td>
+<td>on-device Groth16 (snarkjs-WASM / rapidsnark), T6.6</td>
+</tr>
+<tr>
+<td>Transport</td>
+<td>Waku pub/sub + libp2p-noise; interim WebView relay</td>
+<td>native libp2p peer; same interface (T6.5)</td>
+</tr>
+</tbody>
+</table>
+<p>The interim WebView stack ships first (spine demo); the native module lands behind the <em>same</em> transport interface the settlement client (T6.2) and watchtower (T6.3) already bind to, so screens don't change when it arrives.</p>
+<h2 id="2-onboarding-custody">2. Onboarding &amp; custody</h2>
+<ul>
+<li><strong>Create / import.</strong> Standard BIP-39 seed; keys derived and held in the platform secure enclave (T6.0). The seed is shown once for backup and never leaves the device; the app cannot exfiltrate it.</li>
+<li><strong>No accounts, no server login.</strong> There is no Armada account. The wallet is peer software — it joins the transport (T2.3), scans, and transacts. Nothing to sign up for.</li>
+<li><strong>What the user sees:</strong> a shielded balance per asset, a receive address (rotating — T6.4), and actions: <strong>Add funds</strong>, <strong>Send</strong>, <strong>Swap / Earn</strong>, <strong>Withdraw</strong>.</li>
+</ul>
+<h2 id="3-core-surfaces">3. Core surfaces</h2>
+<h3 id="31-shielded-balance-read">3.1 Shielded balance (read)</h3>
+<p>The balance is computed <strong>on-device</strong> by the WASM note-scanner (T6.1) from a <strong>proof-carrying feed</strong> (T2.0): the wallet reads <code>getStorageAt → {value, proof}</code> slices over the transport, verifies each proof against the L1 state root, and trial-decrypts locally to find its notes. <strong>No <code>eth_getStorageAt</code>/<code>eth_getLogs</code> ever leaves the device to a public RPC</strong> — the act of checking your balance does not deanonymize you (ADR-0006). Every subscriber to a slice gets byte-identical bytes, so the feed provider can't learn which notes are yours.</p>
+<h3 id="32-add-funds-shield-in">3.2 Add funds / shield-in</h3>
+<p>Bring an ERC-20 (e.g. USDC) into the shield: the wallet builds a shield transaction that mints a fresh shielded note (T0.0 <code>shield</code>). <strong>This is the one moment an amount is public</strong> (Design A, ADR-0005). The deposit path checks the POI allow-list root before admitting value (gated entry, ADR-0006). Cross-chain inbound (e.g. CCTP) arrives the same way — as a fresh shielded note.</p>
+<h3 id="33-send-private-transfer">3.3 Send / private transfer</h3>
+<p>A shielded payment: a <code>transact</code> with <code>unshield=NONE</code> (T0.0). Sender, recipient, and amount are hidden in-circuit; only nullifiers and output-commitment hashes are public. The user picks a recipient shielded address and amount; the wallet proves on-device (T6.6) and submits — optionally via the <strong>submit-on-behalf keeper</strong> so no EOA of yours appears on-chain (write-side unlinkability, §8.4).</p>
+<h3 id="34-swap-earn-same-chain">3.4 Swap &amp; earn (same-chain)</h3>
+<p>Cleared over Nitro at a <strong>posted price</strong> with nothing to front-run (T4, ADR-0007). Two shapes the user won't distinguish visually:
+- <strong>Yield (mint/redeem):</strong> USDC → aUSDC or ETH → wstETH is a protocol deposit, no counterparty needed; the wallet can self-serve the adapter recipe, or route through an LP for extra privacy (the ADR-0011 direct-vs-LP-buffered choice) — either way the user just taps <strong>Earn</strong>.
+- <strong>Swap (A↔B):</strong> filled from venue inventory at the posted quote (T4.0/T4.1), settled non-custodially over the T0.3 rail.</p>
+<h3 id="35-cross-chain-swap-the-fronted-instant-experience">3.5 Cross-chain swap (the fronted, instant experience)</h3>
+<p>This is the surface the <code>shielded-nitro-bridge-design.md</code> construction powers (ADR-0015/0016). The user picks <strong>source chain + asset</strong> and <strong>destination chain + asset</strong>, sees an instant quote, and taps <strong>Swap</strong>. From the user's side it feels like an instant swap; underneath:
+- the wallet funds a channel to a hub from a shielded note (amortized — reused across swaps),
+- the hub <strong>fronts</strong> the destination asset from standing inventory, bound by an HTLC so the advance is atomic,
+- the user receives the destination asset <strong>immediately</strong> as a fresh shielded note on the destination chain.</p>
+<p>The user never performs an on-chain cross-chain crossing, so nothing links the two sides. Latency is one round-trip, not a bridge-settlement wait. If the user opts into the <strong>Nym privacy mode</strong> (below), the same swap runs with IP/metadata hidden at a small latency cost.</p>
+<h3 id="36-withdraw-exit">3.6 Withdraw / exit</h3>
+<p><strong>Unshield-out</strong> to a public address, or <strong>force-exit</strong> a channel. The happy path is a cooperative close that shields the outcome back into fresh notes (T0.3 payout). If a counterparty or hub misbehaves or goes silent, the wallet's <strong>self-watchtower</strong> force-closes at the latest signed state and re-shields — funds are never trapped (ADR-0004, T6.3). The user is guaranteed to be able to exit at the last state they signed.</p>
+<h2 id="4-services-the-user-relies-on-but-never-operates">4. Services the user relies on but never operates</h2>
+<ul>
+<li><strong>Note scanning (T6.1)</strong> runs continuously in the background over private feeds; new incoming notes appear without any query the user issues.</li>
+<li><strong>Self-watchtower (T6.3)</strong> watches for adversarial force-closes and submits a higher-turn checkpoint inside the challenge window. On a phone that can sleep through that window, the user is offered a one-tap <strong>delegate to a keeper</strong>: an always-on relayer that watches and checkpoints on their behalf, learning <em>that</em> a dispute occurred but not who they are or the channel contents (§8.4 write-side privacy). This is the "never lose funds while offline" affordance.</li>
+<li><strong>Transport (T2.3)</strong> — the unified Waku + libp2p-noise transport, shared by every service. Invisible.</li>
+<li><strong>Proving (T6.6)</strong> — shield/unshield/transfer proofs are generated on-device; the user sees a brief "preparing" state. Mobile proving cost is a real budget (T6.6 constraint), so the wallet batches and pre-proves where it can.</li>
+<li><strong>Metering (T2.1)</strong> — per-read payments to watcher parties ride Nitro vouchers funded <strong>at note creation</strong>; the user never tops up a separate balance and the payment leaks nothing about what they read.</li>
+</ul>
+<h2 id="5-privacy-controls-the-user-actually-holds">5. Privacy controls the user actually holds</h2>
+<ul>
+<li><strong>Nym privacy mode (opt-in).</strong> A toggle for the <strong>optional Nym mixnet underlay</strong> (ADR-0008): off by default for lowest latency; on to hide IP/metadata for maximum privacy. Uniform across every service the wallet uses, not a per-feature setting.</li>
+<li><strong>Address rotation / per-venue keys (T6.4).</strong> Receive addresses rotate, and venue interactions use per-venue loyalty keys, so activity doesn't cluster under one identity.</li>
+<li><strong>Submit-on-behalf.</strong> On-chain submissions can be relayed by a keeper so no EOA links the user to <em>writing</em> (write-side unlinkability), complementing the read-side privacy of §3.1.</li>
+<li><strong>What stays public:</strong> exactly the shield/unshield <strong>boundary amounts</strong> (Design A, ADR-0005) — surfaced honestly in the UI as "this amount is visible on-chain," never hidden from the user.</li>
+</ul>
+<h2 id="6-browser-vs-mobile-the-honest-differences">6. Browser vs mobile — the honest differences</h2>
+<ul>
+<li><strong>Background execution.</strong> A browser tab and a WebView can be suspended, which is why the watchtower's keeper-delegation matters most on mobile, and why the <strong>native</strong> module (T6.5) exists — it keeps a first-class libp2p peer alive for the challenge window. Until native ships, the WebView build leans on delegated keepers for liveness.</li>
+<li><strong>Proving cost.</strong> Phones are slower at Groth16; the mobile UX shows proof progress and pre-proves opportunistically (T6.6).</li>
+<li><strong>Key custody.</strong> Mobile uses the hardware secure enclave; browser uses the best available keystore. Keys never leave either.</li>
+</ul>
+<h2 id="7-failure-edge-ux-never-surprising-never-fund-losing">7. Failure &amp; edge UX (never surprising, never fund-losing)</h2>
+<ul>
+<li><strong>Offline during a dispute</strong> → the delegated keeper handles the checkpoint; the user is notified after the fact.</li>
+<li><strong>Hub/LP runs dry</strong> → quotes widen or withdraw (out-of-protocol operator behavior, ADR-0015/§6); the user simply sees "no quote right now," never a stuck swap.</li>
+<li><strong>Counterparty vanishes mid-flow</strong> → HTLC timeout + unilateral exit refunds the user to a fresh note; shown as "swap reverted, funds returned."</li>
+<li><strong>Proof fails / cancelled</strong> → nothing was submitted; balance unchanged.</li>
+</ul>
+<h2 id="8-what-the-wallet-never-does">8. What the wallet never does</h2>
+<ul>
+<li>Never custodies funds with a third party; never lets a hub, keeper, or venue take value (liveness-only trust, unilateral exit).</li>
+<li>Never queries a public RPC for reads (feeds + local verify only).</li>
+<li>Never exposes the seed or lets the app move keys off the device.</li>
+<li>Never hides the one honest leak (boundary amounts) from the user.</li>
+</ul>
+<hr />
+<p>Cross-refs: client-tier items → <a href="./05-building-block-view.html">§5</a> T6.0–T6.7, T2.0/T2.1/T2.3; runtime flows → <a href="./06-runtime-view.html">§6</a>; transport &amp; privacy → <a href="./08-crosscutting-concepts.html">§8</a>; decisions → <a href="./09-architecture-decisions.html">§9</a> ADR-0004/0005/0006/0008/0011/0015/0016; cross-chain swap detail → <a href="./shielded-nitro-bridge-design.html">the construction</a>.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/wallet-ux.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

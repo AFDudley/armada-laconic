@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nitro Bridge + DSS — Code Audit — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="nitro-bridge-dss-code-audit">Nitro Bridge + DSS — Code Audit</h1>
+<p>audit · 2026-09-10 · read-only source review</p>
+<p><strong>Repos &amp; pins audited</strong></p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Repo</th>
+<th>Ref (SHA)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nitro bridge</td>
+<td><code>cerc-io/go-nitro</code> (fork of <code>statechannels/go-nitro</code>)</td>
+<td><code>435eb2b0…90c665</code> (<code>main</code> HEAD)</td>
+<td>This <strong>is</strong> our pinned <code>@435eb2b</code>; the bridge exists at the pin.</td>
+</tr>
+<tr>
+<td>DSS crypto library</td>
+<td><code>cerc-io/chain-signatures</code></td>
+<td><code>main</code>/<code>v0.1.0</code> <code>9016a7c4…</code>, <code>dev</code> <code>09e5ac97…</code></td>
+<td>GitHub 404; read via <code>git.vdb.to</code> mirror.</td>
+</tr>
+<tr>
+<td>DSS service</td>
+<td><code>cerc-io/laconicd</code></td>
+<td><code>roysc/nitro-integration</code> <code>d130608f…</code></td>
+<td>Local mirror <code>code/laconicd</code>; imports <code>chain-signatures v0.1.0</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="summary">Summary</h2>
+<p><strong>Verdict.</strong> The Nitro bridge is a <strong>working L1-anchored demo, not a trust-minimised bridge.</strong> Its happy path (mirror an L1 ledger channel onto an L2, pay off-chain, exit back to L1) is implemented and passes an anvil-backed end-to-end test. But the two properties that would make a cross-chain bridge "extremely secure" — a real L2 chain with its own adjudication (so a user can <strong>unilaterally exit</strong> on the L2 side) and a <strong>decentralised signer</strong> in place of a single operator key — are <strong>not built</strong>. Today one operator, holding <strong>one private key for both endpoints</strong>, custodies all real collateral on L1 and is the user's counterparty on both hops. The DSS that is meant to decentralise that key exists as separate, unaudited, not-yet-wired code.</p>
+<p><strong>How much is written — the bridge.</strong> The core is <code>bridge/bridge.go</code> (~503 LOC) plus three objectives: <code>bridgedfund</code> (~423), <code>bridgeddefund</code> (~263) and <code>mirrorbridgeddefund</code> (~463). Mirroring (clone the L1 state, swap allocations, recreate the ledger on L2 with <strong>no on-chain deposit</strong>), cooperative exit, and a ForceMove <strong>challenge/checkpoint</strong> exit are all implemented — <strong>but only on L1</strong>, against the real <code>NitroAdjudicator</code> and a generated <code>Bridge</code> contract binding. The L2 chain service <code>node/engine/chainservice/laconicd_chainservice.go</code> (~74 LOC) is a <strong>complete stub</strong>: <code>SendTransaction</code> is a no-op (<code>return nil, nil</code>), every feed/getter returns nil/zero, and <code>internal/node/bridge.go</code> still reads <code>// TODO: Implement laconicd chain service</code>. So L2 has <strong>no</strong> deposit, adjudicator, challenge, or withdrawal — L2 balances live only as co-signed off-chain states plus the bridge's single-node buntdb map. Rough completeness: mirroring ~85%, L1 exit ~60–70%, <strong>L2 on-chain enforcement ~0–5%</strong>. Tests: one unit test + a ~970-LOC happy-path e2e; <strong>no</strong> adversarial, offline-operator, or L2-on-chain coverage. <code>go.mod</code> has <strong>no DSS/threshold dependency</strong> — the bridge signs with a single ECDSA key everywhere.</p>
+<p><strong>How much is written — the DSS.</strong> Split across two repos. <code>chain-signatures</code> is a <strong>pure crypto library</strong> (~90% done, unit-tested, but every file banners <em>"XXX: Do not use in production until this code has been audited."</em>): <code>ethschnorr</code> (single-signer, Ethereum-verifiable Schnorr on secp256k1/keccak256) and <code>ethdss</code> (a <code>(t,n)</code> distributed Schnorr, Stinson–Strobl, from DEDIS kyber). The <strong>service</strong> — <code>laconicd/server/distsig</code> — drives a kyber <strong>Rabin/Pedersen DKG</strong> to produce the shared key and per-signature nonce, then combines <code>≥t</code> partial signatures into one group Schnorr signature (~70% at the logic level, unit-tested with a 4-of-7 group). Its <strong>production wiring is ~10%</strong>: the CometBFT ABCI++ vote-extension transport is stubbed (<code>ExtendVoteWithLaconic</code> returns an empty extension; <code>VerifyVoteExtensionWithLaconic</code> "just accept"s), the <code>Manager</code> is <strong>never instantiated in production</strong>, the Nitro consumer is commented out (<code>UseDistsig</code>, <code>distsigManager</code>), threshold config isn't in genesis, and the qualified-set filter is commented out. <strong>End-to-end, the DSS does not run.</strong></p>
+<p><strong>Bridge trust model (as coded).</strong> Single trusted operator. <code>bridge.go</code> builds both node stores from the one <code>configOpts.StateChannelPK</code> (comment: <em>"the same private key is being used for both nodes"</em>); <code>cmd/start-bridge</code> exposes exactly one state-channel key flag. Real custody is the L1 ledger channel's ERC20 in the <code>NitroAdjudicator</code>; L2 has no custody contract. A user <strong>cannot</strong> unilaterally exit with their true L2 balance: there is no L2 adjudicator, and the L1→L2 reflection (<code>MirrorBridgedDefund</code>) is <strong>only ever initiated by the bridge's own L1 node</strong> — the user's L2 node never holds the L1 <code>ConsensusChannel</code> needed to push an L2 state onto L1. The user can challenge the <em>L1</em> ledger, but that enforces the L1 state, which does not reflect L2 payments unless the (single-key) bridge acts. Liveness and L2 data-availability therefore rest on <strong>one honest, online operator</strong>, enforced by nothing in code (dropped-tx retry is bounded to 1). This is the grounded correction to the "extremely secure / unilateral exit" framing raised earlier in the design discussion: <strong>as written, it is an operator-trust bridge.</strong></p>
+<p><strong>How the DSS works.</strong> A kyber Rabin DKG (rounds: deal → certify → commit → finish) jointly creates a long-term distributed secret and a one-time nonce; each signer emits a partial <code>γᵢ = βᵢ − αᵢ·h(m)</code> signed with its own <code>ethschnorr</code> key; a collector verifies each partial against the public commitment polynomials (identifiable abort) and Lagrange-interpolates once <code>≥t</code> valid partials arrive, yielding one on-chain-verifiable Schnorr signature. Threshold <code>t = ceil(n·ratio)</code>, default <strong>4/7</strong>. Trust: <code>≥t</code> colluding signers can forge any group signature (standard); <code>&lt;t</code> cannot; but a minority of size <code>n−t+1</code> can <strong>stall liveness</strong> (no timeout/fallback), and there is <strong>no bonding or slashing</strong> of signers in either repo — so no economic security on the set. The secp256k1 suite is explicitly <strong>not constant-time</strong>.</p>
+<p><strong>Bottom line for Armada.</strong> This maps to our v2/net-new items <strong>T2.4</strong> (federation + threshold DKG signing = the DSS, bonded via <strong>T0.4</strong>) and <strong>T0.4/T0.5</strong> (registry/bond, fraud-proof verifier). Our registry already marks these v2 and unbuilt — consistent with the audit. A nitro-railgun cross-chain bridge is viable <strong>in principle</strong>, but reaching its security story requires four unbuilt pieces: a real L2 chain service (unilateral L2 exit + self-watchtower), replacement of the single operator key with the DSS signer set, bonding/slashing for economic security, and the security audit both codebases' own headers demand.</p>
+<hr />
+<h2 id="1-scope-provenance">1. Scope &amp; provenance</h2>
+<p>Read-only review of the source at the refs in the table above. Every claim below is anchored to a file (and, where quoted, a line) at those SHAs. <code>chain-signatures</code> and <code>laconicd</code> are also present in this repo under <code>code/</code> (the local mirror <code>code/laconicd</code> pins <code>roysc/nitro-integration @ d130608</code>).</p>
+<p>Confirmed: the go-nitro bridge package exists at our pin <code>@435eb2b</code> (it is <code>main</code> HEAD, commit <em>"Remove sending swap updates to client (#110)"</em>, 2024-10-30), so this is not a pre-bridge commit. The DSS is <strong>not</strong> part of go-nitro at any ref — it is <code>chain-signatures</code> (library) consumed by <code>laconicd</code> (service).</p>
+<h2 id="2-what-the-bridge-is-architecture">2. What the bridge is (architecture)</h2>
+<p>One operator process runs <strong>two</strong> Nitro nodes that share one state-channel key: an <strong>L1 node</strong> on a real EVM chain (<code>NitroAdjudicator</code> + a generated <code>Bridge</code> contract) and an <strong>L2 node</strong> on a stubbed "laconicd" chain.</p>
+<p>Flow (<code>bridge/bridge.go</code>, <code>node/node.go</code>):</p>
+<ol>
+<li>User <code>A</code> opens a <code>directfund</code> ledger channel with the bridge on <strong>L1</strong> — a real ERC20 deposit into the adjudicator (<code>node_test/bridge_test.go</code>).</li>
+<li>On L1 fund completion the bridge clones the L1 supported state, <strong>swaps <code>Allocations[0]&lt;-&gt;[1]</code></strong>, and calls <code>nodeL2.CreateBridgeChannel(...)</code> → <code>bridgedfund</code> recreates an equivalent ledger on <strong>L2 with no on-chain deposit</strong> (<code>node.go</code>: <em>"No chain interactions are involved while creating this channel"</em>).</li>
+<li>On L2 the mirrored ledger funds virtual/payment channels; payments move balances <strong>off-chain</strong> only.</li>
+<li>Exit: <code>APrime</code> runs <code>CloseBridgeChannel</code> (<code>bridgeddefund</code> → a final <code>IsFinal</code> L2 state); the bridge sees it complete and runs <code>nodeL1.MirrorBridgedDefund</code>, which in <code>mirrorbridgeddefund.CreateL1StateBasedOnL2</code> rebuilds the L1 outcome from the finalized L2 state (re-swap allocations, <code>TurnNum++</code>), finalizes the L1 channel <strong>cooperatively</strong> (<code>crank</code> → <code>NewMirrorWithdrawAllTransaction</code>) or <strong>via ForceMove</strong> (<code>crankWithChallenge</code> → <code>SignChallengeMessage</code>/<code>NewChallengeTransaction</code>/<code>NewCheckpointTransaction</code> → <code>NewMirrorTransferAllTransaction</code>), then withdraws on L1.</li>
+</ol>
+<p>Outcome equivalence between the two chains is maintained purely by the allocation-swap + <code>TurnNum</code> bump. <strong>All real custody and settlement is on L1; L2 is off-chain-only because its chain service is a stub.</strong></p>
+<p>Key types: <code>Bridge{ nodeL1/storeL1/chainServiceL1; nodeL2/storeL2/chainServiceL2/messageServiceL2; mirrorChannelMap }</code> and <code>MirrorChannelDetails{ L1ChannelId, IsCreated }</code> (<code>bridge/durablestore.go</code>, single-node buntdb, not replicated).</p>
+<h2 id="3-completeness-file-inventory-status-435eb2b">3. Completeness — file inventory &amp; status (<code>@435eb2b</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>LOC</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bridge/bridge.go</code></td>
+<td>~503</td>
+<td>Orchestrator; implemented (happy path).</td>
+</tr>
+<tr>
+<td><code>bridge/durablestore.go</code></td>
+<td>~115</td>
+<td>buntdb L1↔L2 map; implemented.</td>
+</tr>
+<tr>
+<td><code>bridge/policy_maker.go</code></td>
+<td>~35</td>
+<td>L1/L2 permissive policies; implemented.</td>
+</tr>
+<tr>
+<td><code>bridge/durablestore_test.go</code></td>
+<td>~50</td>
+<td><strong>Only</strong> bridge unit test (store round-trip).</td>
+</tr>
+<tr>
+<td><code>protocols/bridgedfund/…</code></td>
+<td>~423</td>
+<td>L2 fund (off-chain only); implemented.</td>
+</tr>
+<tr>
+<td><code>protocols/bridgeddefund/…</code></td>
+<td>~263</td>
+<td>L2 defund (off-chain only); implemented.</td>
+</tr>
+<tr>
+<td><code>protocols/mirrorbridgeddefund/…</code></td>
+<td>~463</td>
+<td>L1 exit (coop + challenge); implemented — <strong>L1 only</strong>.</td>
+</tr>
+<tr>
+<td><code>node/engine/chainservice/laconicd_chainservice.go</code></td>
+<td>~74</td>
+<td><strong>STUB</strong> — all no-ops.</td>
+</tr>
+<tr>
+<td><code>node/engine/chainservice/bridge/Bridge.go</code></td>
+<td>~83 KB</td>
+<td>Generated L1 <code>Bridge</code> contract binding (real, L1).</td>
+</tr>
+<tr>
+<td><code>internal/node/bridge.go</code></td>
+<td>~37</td>
+<td><code>InitializeL2Node</code>; carries the L2 TODO.</td>
+</tr>
+<tr>
+<td><code>cmd/start-bridge/main.go</code></td>
+<td>~230</td>
+<td>Daemon; single <code>StateChannelPK</code> for both nodes.</td>
+</tr>
+<tr>
+<td><code>node_test/bridge_test.go</code></td>
+<td>~970</td>
+<td>Anvil e2e, <strong>happy path</strong> (create→mirror→pay→exit).</td>
+</tr>
+<tr>
+<td><code>rpc/bridge-server.go</code>, <code>node_test/bridge_rpc_test.go</code></td>
+<td>—</td>
+<td>RPC surface + test.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Quoted incompleteness:</strong></p>
+<ul>
+<li><code>laconicd_chainservice.go</code>: <code>SendTransaction(...) { return nil, nil }</code>; <code>EventFeed() { return nil }</code>; <code>GetChainId() { return nil, nil }</code>; <code>GetLastConfirmedBlockNum() { return 0 }</code>; <code>GetBlockByNumber</code> returns an empty block. → L2 on-chain deposit/adjudication/challenge/withdraw <strong>0%</strong>.</li>
+<li><code>internal/node/bridge.go</code>: <code>// TODO: Implement laconicd chain service</code>.</li>
+<li><code>node/node.go</code> <code>CreateSwapChannel</code>: <code>// Since no contract present for swap channels yet</code>, <code>// TODO: Handle sad path for swap channels</code>.</li>
+<li><code>node/node.go</code> <code>handleError</code>: <code>// TODO instead of a panic, errors should be returned to the caller</code> then <code>panic(err)</code>.</li>
+</ul>
+<p>Rough %-complete: mirroring ~85%; funding/collateral (L1 real, L2 none) ~50%; exit/dispute (L1 real, L2 none) ~60%; L2 chain service ~5%; daemon ~90% (but drives an unfinished L2).</p>
+<h2 id="4-bridge-trust-model-as-coded">4. Bridge trust model (as coded)</h2>
+<ul>
+<li><strong>Custody:</strong> real ERC20 collateral sits in the L1 <code>NitroAdjudicator</code> for the <code>A↔B</code> ledger. <strong>L2 has no custody contract</strong> (stub chain). The operator is participant <code>B</code> on L1 <strong>and</strong> <code>BPrime</code> on L2 under <strong>one key</strong> (both stores built from <code>configOpts.StateChannelPK</code>; <code>GetNodeInfo</code> comment <em>"the same private key is being used for both nodes"</em>).</li>
+<li><strong>Signing:</strong> standard Nitro 2-of-2 co-signing per ledger; the L1 challenge is signed by the bridge's single L1 key (<code>NitroAdjudicator.SignChallengeMessage(..., *secretKey)</code>).</li>
+<li><strong>Malicious/offline operator:</strong> if the L2 peer is unreachable at mirror time the bridge simply defunds the L1 channel. The L2→L1 reflection is initiated <strong>only</strong> by the bridge (<code>processCompletedObjectivesFromL2 → nodeL1.MirrorBridgedDefund</code>). A <code>CounterChallenge</code> API exists for responding to a challenge.</li>
+<li><strong>User unilateral exit?</strong> <strong>Not established / not implemented</strong> for reflecting L2 balances. No L2 adjudicator exists; <code>mirrorbridgeddefund.NewObjective</code> needs the L1 <code>ConsensusChannel</code> that the user's L2 node does not hold. The user can challenge the <em>L1</em> ledger, but that enforces the L1 state, which omits L2-side payments unless the bridge acts. <strong>Exit correctness depends on the single-key bridge being live and honest.</strong></li>
+<li><strong>Liveness / DA:</strong> the only durable L2 record is off-chain co-signed states + the bridge's single-node buntdb map; no L2 chain persists state; dropped-tx retry is bounded to 1. The design <strong>assumes one honest, non-crashing operator</strong> on the L2 side — enforced by nothing in code.</li>
+</ul>
+<p><strong>DSS linkage:</strong> none. <code>go.mod@435eb2b</code> has no <code>chain-signatures</code>/threshold/MPC module; no bridge file imports a distributed signer. "consensus" in this repo means only Nitro's own on-chain <code>ConsensusApp</code> (ForceMove) and the 2-party <code>consensus_channel</code> — neither is a DSS.</p>
+<h2 id="5-the-dss-mechanism-and-non-integration">5. The DSS — mechanism and (non-)integration</h2>
+<p><strong>Layer 1 — <code>chain-signatures</code> (pure crypto, no I/O):</strong>
+- <code>ethschnorr</code> — single-signer Schnorr on secp256k1, <code>ChallengeHash = keccak256(pubkey‖msg‖rAddress)</code>, on-chain-verifiable via <code>SchnorrSECP256K1.sol</code> (contract not in repo).
+- <code>ethdss</code> (336 LOC, pkg <code>clientdss</code>) — <code>(t,n)</code> distributed Schnorr (Stinson–Strobl, from kyber <code>sign/dss</code>): <code>PartialSig</code> / <code>ProcessPartialSig</code> (verifies the sender's <code>ethschnorr</code> sig <strong>and</strong> checks the partial against the public polynomials) / <code>EnoughPartialSig</code> (<code>len ≥ T</code>) / <code>Signature</code> (<code>share.RecoverSecret</code> Lagrange over <code>T</code> shares).
+- <code>secp256k1</code> — kyber Group/Point/Scalar over btcec; header warns <strong>"NOT CONSTANT TIME!"</strong>.
+- Every file: <em>"XXX: Do not use in production until this code has been audited."</em></p>
+<p><strong>Layer 2 — <code>laconicd/server/distsig</code> (the service):</strong>
+- <code>manager.go</code> — <code>Manager</code> per validator; <code>initDKG</code> builds a kyber <strong>Rabin</strong> DKG (<code>dkg.NewDistKeyGenerator</code>, <code>t = ceil(len(members)·ThresholdRatio)</code>); <code>StartDKG/StartSignature/ProcessMessages/CompletedSignatures</code>. <strong>Never instantiated in production.</strong>
+- <code>keygen.go</code> — Rabin/Pedersen Joint-Feldman DKG state machine (deal→certify→commit→finish→done). Comments: prepareMessages <em>"during ExtendVote"</em>, processMessages <em>"during VerifyVoteExtension (TODO: verify)"</em>.
+- <code>signature.go</code> — wraps <code>clientdss</code>; <code>ProcessPartialSig</code> then final <code>Signature()</code> once <code>EnoughPartialSig()</code>.
+- <code>config.go</code> — <code>Enable=false</code> by default; <code>ThresholdRatio=4/7</code>; <code>// TODO: set this in genesis</code>.</p>
+<p><strong>Threshold model:</strong> <code>≥t</code> colluding signers <strong>can</strong> forge any group signature; <code>&lt;t</code> cannot; a minority of size <code>n−t+1</code> <strong>can stall</strong> signing (no timeout/fallback in <code>ethdss</code>). <strong>No bonding, no slashing</strong> of the signer set in either repo (<code>laconicd</code>'s <code>x/bond</code> is a name-registry deposit; <code>x/slashing</code> is generic validator downtime) — so <strong>no economic security</strong> on the signers. Membership = the pubkey set passed to <code>StartDKG</code>; join/leave = re-running the DKG (no proactive resharing).</p>
+<p><strong>Integration status:</strong> consumed by <code>laconicd</code> (<code>go.mod</code> imports <code>chain-signatures v0.1.0</code>; <code>distsig</code> imports <code>clientdss</code>/<code>ethschnorr</code>/<code>secp256k1</code>), <strong>not</strong> by go-nitro. The consensus transport is stubbed (<code>app/abci.go</code>: <code>ExtendVoteWithLaconic</code> returns an empty vote extension with <em>"TODO: Implement the full distsig logic here"</em>; <code>VerifyVoteExtensionWithLaconic</code> <em>"For now, just accept"</em>). The Nitro consumer is <strong>disabled/declared-only</strong>: <code>server/nitro/config.go</code> <code>UseDistsig</code> commented out; <code>x/nitro/keeper/keeper.go</code> <code>// distsigManager *distsig.Manager</code>; <code>server/nitro/server.go</code> roadmap <em>"initialize group delegate credentials, with distsig over ABCI … bind custodian contract."</em> The intended end state — the laconicd validator set threshold-signing as the bridge's custodian instead of one operator key — is <strong>not built</strong>.</p>
+<h2 id="6-gaps-risks-priority-order">6. Gaps &amp; risks (priority order)</h2>
+<ol>
+<li><strong>L2 has no on-chain enforcement</strong> (stub chain service). Without an L2 adjudicator there is no user-side unilateral exit and no self-watchtower on L2 — the single largest gap.</li>
+<li><strong>Single operator key for both hops.</strong> Full operator trust today; a compromised/absent operator is a fund-safety and liveness risk. The DSS is the intended fix but is unwired.</li>
+<li><strong>DSS not operational</strong> end-to-end (ABCI transport stubbed, Manager not instantiated, Nitro consumer commented out) and <strong>unaudited</strong> by its own declaration; secp256k1 not constant-time; qualified-set filter commented out.</li>
+<li><strong>No economic security</strong> on the signer set (no bond/slashing) — signer misbehaviour has no on-chain penalty.</li>
+<li><strong>Test coverage is happy-path only</strong> — no adversarial, offline-operator, or L2-on-chain tests; bridge node errors <code>panic</code> rather than return.</li>
+<li><strong>Liveness assumption:</strong> with a 4/7 default, any 4 of 7 signers offline halts signing; and the bridge's L2 DA is a single non-replicated buntdb.</li>
+</ol>
+<h2 id="7-relevance-to-armada-this-repo">7. Relevance to Armada (this repo)</h2>
+<ul>
+<li>The DSS/federation is exactly our <strong>T2.4</strong> ("federation + bond + threshold DKG signing — chain-signatures DSS; bond = T0.4"), and the bond/fraud-proof scaffolding is <strong>T0.4/T0.5</strong> — all marked <strong>v2</strong> and net-new in the §5 registry. The audit confirms they are unbuilt, so the registry is accurate.</li>
+<li>A <strong>nitro-railgun bridge to other chains</strong> would compose this bridge with work-package A's settlement rail. As-built it is a <strong>trusted single-operator, L1-anchored</strong> construction with a stub L2 — not the trust-minimised bridge the earlier discussion imagined. It becomes trust-minimised only with: (a) a real L2 chain service (unilateral L2 exit + self-run watchtower), (b) the DSS signer set replacing the single <code>StateChannelPK</code>, (c) bonding/slashing (T0.4/T2.4) for economic security, and (d) the audits both codebases require. None of (a)–(d) is in scope of v1 A/B/C/D.</li>
+<li>Recommendation: treat a cross-chain bridge as a <strong>separate v2 design axis</strong>, not an extension of the v1 rail, and do not describe it as "secure" beyond "single-operator demo" until at least (a) and (b) land.</li>
+</ul>
+<h2 id="8-citation-index">8. Citation index</h2>
+<ul>
+<li><strong>Bridge:</strong> <code>bridge/bridge.go</code>, <code>bridge/durablestore.go</code>, <code>protocols/{bridgedfund,bridgeddefund,mirrorbridgeddefund}/</code>, <code>node/engine/chainservice/laconicd_chainservice.go</code>, <code>node/engine/chainservice/bridge/Bridge.go</code>, <code>internal/node/bridge.go</code>, <code>node/node.go</code>, <code>cmd/start-bridge/main.go</code>, <code>node_test/bridge_test.go</code>, <code>go.mod</code> — all <code>@435eb2b0…90c665</code> (<code>cerc-io/go-nitro</code>, <code>main</code>).</li>
+<li><strong>DSS library:</strong> <code>ethdss/ethdss.go</code>, <code>ethschnorr/ethschnorr.go</code>, <code>secp256k1/suite.go</code>, <code>go.mod</code> — <code>chain-signatures</code> <code>dev@09e5ac97…</code> / <code>main@9016a7c4…</code> (<code>v0.1.0</code>).</li>
+<li><strong>DSS service:</strong> <code>server/distsig/{manager,keygen,signature,config,suite}.go</code>, <code>app/abci.go</code>, <code>server/nitro/{config,server}.go</code>, <code>x/nitro/keeper/keeper.go</code>, <code>go.mod</code> — <code>cerc-io/laconicd</code> <code>roysc/nitro-integration@d130608f…</code>.</li>
+<li>Full scout transcripts: <code>agent://BridgeScout</code>, <code>agent://DssScout</code>.</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/nitro-bridge-audit.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

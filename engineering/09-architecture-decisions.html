@@ -71,8 +71,8 @@
 </tr>
 <tr>
 <td><a href="#adr-0008">0008</a></td>
-<td>Transport = Waku pub/sub + libp2p-noise 1:1</td>
-<td>accepted</td>
+<td>Transport = Waku + libp2p-noise 1:1; optional Nym IP-privacy underlay</td>
+<td>accepted · amended 2026-09-10</td>
 </tr>
 <tr>
 <td><a href="#adr-0009">0009</a></td>
@@ -103,6 +103,16 @@
 <td><a href="#adr-0014">0014</a></td>
 <td>Pool + circuits are a clean-room reimplementation (license-clean)</td>
 <td>accepted</td>
+</tr>
+<tr>
+<td><a href="#adr-0015">0015</a></td>
+<td>Cross-chain shielded swap = nitro-railgun channels + fronting hubs</td>
+<td>accepted · post-v1</td>
+</tr>
+<tr>
+<td><a href="#adr-0016">0016</a></td>
+<td>nitro-railgun adjudicator + DSS custodian/delegate (EVM + Nitro only)</td>
+<td>accepted · post-v1</td>
 </tr>
 </tbody>
 </table>
@@ -150,10 +160,10 @@
 <p><strong>Consequences.</strong> A posted price has nothing to front-run, so v1 removes the entire ordering problem. ex_net becomes a special case — a DSS-federated venue that also proves fair ordering — layered on the same spine rather than a rewrite.</p>
 <p><strong>Alternatives.</strong> A CLOB/matcher in v1 was rejected: it is months of work requiring a DSS and sequencer, and it is not needed to clear.</p>
 <h2 id="adr-0008">ADR-0008</h2>
-<p><strong>Transport = Waku pub/sub + libp2p-noise 1:1</strong> · accepted · 2026-09-04</p>
+<p><strong>Transport = Waku pub/sub + libp2p-noise 1:1; optional Nym underlay</strong> · accepted · 2026-09-04 · amended 2026-09-10 (optional Nym underlay; unified across all services)</p>
 <p><strong>Context.</strong> The system needs both broadcast, for feed and quote discovery, and low-latency point-to-point exchange, for vouchers and quotes, running on servers, browsers, and phones.</p>
-<p><strong>Decision.</strong> Use <strong>Waku pub/sub</strong> for gossip and discovery, and <strong>libp2p-noise direct streams</strong> for the 1:1 hot loop (<strong>T2.3</strong>). Mobile production uses <strong>native gomobile</strong> modules — go-waku plus go-libp2p — with an interim WebView browser-stack (<strong>T6.5</strong>).</p>
-<p><strong>Consequences.</strong> This reuses the transport Railgun's broadcaster network already speaks. Noise provides encryption and peer-id authentication only — <strong>not IP privacy</strong>, since a mixnet underlay is a separate concern. Native mobile libp2p is unbuilt (§11).</p>
+<p><strong>Decision.</strong> Use <strong>Waku pub/sub</strong> for gossip and discovery, and <strong>libp2p-noise direct streams</strong> for the 1:1 hot loop (<strong>T2.3</strong>). This is <strong>one unified transport shared by every Armada service</strong> — watcher feeds, Nitro channels (including the cross-chain swap hubs and their DSS signing coordination), and the wallet — never a per-service bespoke transport. IP/metadata privacy is an <strong>optional Nym mixnet underlay</strong>: uniform, opt-in, off by default for latency and on for maximum privacy, sitting beneath the same transport everywhere. Mobile production uses <strong>native gomobile</strong> modules — go-waku plus go-libp2p — with an interim WebView browser-stack (<strong>T6.5</strong>).</p>
+<p><strong>Consequences.</strong> This reuses the transport Railgun's broadcaster network already speaks and unifies transport across all services, so no service (the swap hubs included) rolls its own. Noise provides encryption and peer-id authentication only — <strong>not IP privacy on its own</strong>; IP/metadata privacy is the <strong>optional Nym underlay</strong> (opt-in, uniform, latency cost), not a separate per-feature transport. Native mobile libp2p is unbuilt (§11).</p>
 <p><strong>Alternatives.</strong> gossipsub-only is worse for 1:1 latency. js-libp2p on React Native is not RN-compatible, which is why the native port exists.</p>
 <h2 id="adr-0009">ADR-0009</h2>
 <p><strong>State ingestion targets nimbus-eth1; retire plugeth</strong> · accepted · 2026-09-04</p>
@@ -201,6 +211,23 @@
 <p><strong>Decision.</strong> Reimplement the <strong>shielded-pool contracts</strong> (T0.0) and the <strong>JoinSplit circuits</strong> (T0.1) <strong>clean-room</strong> — independently authored, spec-compatible with the Railgun design the deep dive documents (A.1.1/A.1.2), using no Railgun-licensed source. Our engineers own this build. Everything else stands: reuse <code>go-nitro</code> (T0.2), <code>ts-nitro</code> (T6.2), and <code>engine</code>/<code>cookbook</code> as MIT reference; reuse the community Perpetual PoT Phase-1 and run our own Phase-2 <strong>over our own circuits</strong> (ADR-0003 otherwise unchanged); keep Groth16.</p>
 <p><strong>Consequences.</strong> T0.0 and T0.1 change status from <strong>reuse/redeploy → net-new (clean-room)</strong> — a real, audit-critical crypto-engineering workstream, though of a well-understood design that the deep dive de-risks by pinning the exact behavior/format to match. The "integration, not new cryptography" thesis (ADR-0012, §4) now holds for the <strong>settlement rail</strong> (T0.2 adjudicator + T0.3 deposit/payout + T6.x) but <strong>not</strong> for the pool/circuits. <strong>A.1 (the reuse inventory) doubles as the reference spec</strong> the clean-room implements. T0.6 (native commitment) is a change to our own circuits. Note format may match Railgun (to ease the T0.7 onboarding bridge) or diverge — our choice; our anonymity set is separate regardless.</p>
 <p><strong>Alternatives.</strong> Obtain a Railgun grant/relicense (unavailable — we go clean-room). Use Railgun's live deployed pool directly (rejected — no fee=0/own POI, no settlement hook; contradicts ADR-0002's rationale).</p>
+<h2 id="adr-0015">ADR-0015</h2>
+<p><strong>Cross-chain shielded swap = nitro-railgun channels + fronting hubs</strong> · accepted · 2026-09-10 · post-v1 capability</p>
+<p><strong>Context.</strong> Users hold shielded value in an Armada pool on each chain and want to swap or move value <strong>across</strong> chains privately and self-custodially (general cross-chain, independent of CCTP). A naive design — unshield on X, bridge, shield on Y — produces a <strong>public matched pair</strong> (equal/related amount, bounded timing) that correlates the two legs and collapses the anonymity set. The audited <code>go-nitro</code> "nitro bridge" is a single-operator, L1-anchored mirrored-channel construction with a <strong>stubbed L2 adjudicator</strong> and no DSS — neither private nor trust-minimized as written (<code>nitro-bridge-audit.md</code>).</p>
+<p><strong>Decision.</strong> Clear cross-chain swaps as <strong>Nitro state channels funded and settled from shielded notes, routed through a small set of bonded cross-chain hubs that <em>front</em> from standing inventory.</strong> Load-bearing choices:
+- <strong>The pool is the privacy anchor, not the channel.</strong> Value enters already shielded, on fresh rotating keys, over the unified transport (ADR-0008, optional Nym underlay). Per-swap settlement is <strong>off-chain</strong>, so there is no per-user on-chain event to correlate — no Lightning-style routing privacy (onion routing / PTLC) is needed.
+- <strong>Fronting is the core mechanism.</strong> A hub with inventory on both chains gives the user the destination asset instantly from standing inventory; the user's input joins the hub's inventory; the hub squares its net cross-chain position later. Fronting supplies immediacy, the hub's spread, and the temporal decoupling that severs the per-user cross-chain link.
+- <strong>Atomicity via an off-chain HTLC</strong> (not PTLC): it makes the fronted advance atomic — the hub is guaranteed its inbound leg the instant the user receives the outbound. The hashlock is off-chain and visible only to counterparties already on both legs, so it is not a privacy leak here.
+- <strong>Hub rebalancing, inventory sizing, and pricing are out of protocol</strong> — operator business logic, at most a reference open-source daemon, never a wallet concern.
+- <strong>Hub trust is liveness-only</strong>, via user unilateral exit (ADR-0004 force-close, realized by the new adjudicator in ADR-0016).</p>
+<p><strong>Consequences.</strong> A net-new capability, <strong>post-v1</strong> (a new work package). Requires an Armada pool on every participating chain and depends on ADR-0016. Full amount-privacy on a <em>contested</em> force-close needs T0.6 (deferred, ADR-0005). Detailed construction in <code>shielded-nitro-bridge-design.md</code>.</p>
+<p><strong>Alternatives.</strong> Single-operator mirrored-channel bridge (rejected — trusted, stubbed L2, no privacy; the audited <code>go-nitro</code> bridge). Direct self-serve cross-chain (rejected — public matched pair, correlatable). PTLC / adaptor-signature atomic swaps (deferred — research-grade, and unnecessary because the pool, not the channel, carries privacy).</p>
+<h2 id="adr-0016">ADR-0016</h2>
+<p><strong>nitro-railgun adjudicator + DSS custodian/delegate (EVM + Nitro only)</strong> · accepted · 2026-09-10 · post-v1 capability</p>
+<p><strong>Context.</strong> Cross-chain shielded swaps (ADR-0015) need on-chain enforcement of channel outcomes on <strong>every</strong> participating chain, and each hub must be a threshold-key (DSS) principal, not a single EOA. Two audited facts constrain the design: <code>go-nitro</code>'s ForceMove verifies state signatures by hard ECDSA <code>ecrecover</code> against fixed participant addresses — <strong>no pluggable verifier</strong>; and <code>chain-signatures</code> is a threshold <strong>Schnorr</strong> DSS. The laconic integration that would bind the DSS to Nitro is declared-but-unbuilt and CometBFT-coupled.</p>
+<p><strong>Decision.</strong> Build a <strong>nitro-railgun adjudicator</strong> on each Armada chain — ForceMove's dispute machine plus: (a) <strong>note-native custody</strong> (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) <strong>EIP-1271 contract-signature participants</strong> so a hub's stable <strong>custodian contract</strong> is the channel participant, with the custodian verifying its <strong>hot delegate ECDSA key</strong> internally and <strong>rotating it without changing the channel's <code>FixedPart</code></strong>; (c) <strong>unilateral exit → re-shield</strong> on both chains. The DSS is <strong>EVM + Nitro only, no laconicd</strong>: reuse only <code>chain-signatures</code>' threshold-Schnorr crypto + kyber DKG/signing <em>logic</em>, verified on-chain by the custodian (<code>SchnorrSECP256K1.sol</code>); do <strong>not</strong> use laconicd's CometBFT vote-extension transport — signing coordination rides the unified transport (ADR-0008). The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.</p>
+<p><strong>Consequences.</strong> Two small net-new contracts (the adjudicator delta and the custodian) on top of reused ForceMove, threshold-Schnorr, and the clean-room Railgun pool — the weight is <strong>audit, not code</strong>. Deploying the adjudicator per chain gives each HTLC leg real enforcement (fixing the audited L2-stub gap) and makes unilateral exit real, so hub trust stays liveness-only. Bonding/slashing (T0.4/T2.4) is the multi-entity economic layer (v2). Both DSS codebases are self-declared <strong>unaudited</strong>. Post-v1; depends on ADR-0015. Detail: <code>shielded-nitro-bridge-design.md</code>, <code>nitro-bridge-audit.md</code>.</p>
+<p><strong>Alternatives.</strong> Reuse the vanilla <code>NitroAdjudicator</code> + T0.3 (rejected — ECDSA-only, no custodian/DSS participant, cleartext outcomes). Finish the <code>go-nitro</code> L2 stub (rejected — not Railgun-aware, single-key, no enforcement). Have the adjudicator natively Schnorr-verify each state (rejected — heavier, and does not solve delegate rotation vs <code>FixedPart</code> immutability). Use laconicd's CometBFT distsig transport (rejected — EVM + Nitro only, no Cosmos dependency).</p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/09-architecture-decisions.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

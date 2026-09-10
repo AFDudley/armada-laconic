@@ -50,7 +50,7 @@ We run two transports, each chosen for what it does best (ADR-0008). **Waku pub/
 
 On mobile the same two transports are a **port, not a new protocol** (T6.5). An interim WebView browser stack carries the spine demo, followed by a production **native gomobile** module (go-waku plus go-libp2p-noise) sitting behind the same transport interface that the settlement client (T6.2) and watchtower (T6.3) bind to. The js-libp2p stack is not React-Native-compatible, which is why the native port is required rather than optional polish (§11 crux).
 
-**Scope boundary (recurring caveat):** noise provides encryption and peer-id auth **only — not IP privacy**; endpoints see each other's IPs. A mixnet underlay that hides IP is a separate, out-of-scope concern, not part of T2.3 or T6.5.
+**IP privacy — the optional Nym underlay.** Noise provides encryption and peer-id auth **only — not IP privacy**; endpoints otherwise see each other's IPs. IP/metadata privacy is an **optional Nym mixnet underlay** that any Armada service or user can run beneath T2.3/T6.5 — the *same* underlay everywhere, uniform and opt-in, off by default for latency and on for maximum privacy. It is not a bespoke per-feature transport.
 
 → detail in §5 T2.3, T6.5; deployment of relays/peers in §7.
 

@@ -61,7 +61,7 @@ Facets: **status** (`net-new` · `net-new (clean-room)` · `reuse` / `built/reus
 | T2.0 | Proof-carrying feeds — watcher-ts `getStorageAt → {value, proof}` GraphQL | reuse+config | v1 |
 | T2.1 | Nitro voucher metering — `payments.ts`; funded at note creation | reuse+config | v1 |
 | T2.2 | P2P peer substrate — `ts-nitro` / `@cerc-io/peer` (browser/mobile/server) | reuse | v1 |
-| T2.3 | Transport — Waku pub/sub + libp2p-noise 1:1; circuit-relay + STUN/TURN | reuse | v1 |
+| T2.3 | Transport — Waku pub/sub + libp2p-noise 1:1; circuit-relay + STUN/TURN; **optional Nym IP-privacy underlay** (opt-in) | reuse | v1 |
 | T2.4 | Federation + bond + threshold DKG signing — `chain-signatures` DSS (bond = T0.4) | partial | v2 |
 
 ### T3 · Ordering (v2)

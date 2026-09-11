@@ -40,6 +40,11 @@
 <td>T0.0–0.3, T0.7 · T1 · T2.0–2.3 · T4.0/4.1/4.3/4.4 · T5.0/5.1 · T6.0–6.7</td>
 </tr>
 <tr>
+<td><strong>v1.5</strong> — private cross-chain swap</td>
+<td>Private cross-chain swap over nitro-railgun channels + fronting hubs; a ~10–12-point increment on the finished v1 rail, ahead of the v2 research work</td>
+<td>ADR-0015/0016: nitro-railgun adjudicator + DSS custodian</td>
+</tr>
+<tr>
 <td><strong>v2</strong> — matcher, fair-ordering &amp; bonded federation</td>
 <td>Price <em>discovery</em> + market-making + provably-fair ordering + economic security</td>
 <td>T3.* · T4.2/4.5/4.6 · T0.4/0.5 · T2.4</td>
@@ -48,11 +53,6 @@
 <td><strong>optional</strong></td>
 <td>Amount-privacy-in-play; thin identity</td>
 <td>T0.6 fork-lite · T6.8</td>
-</tr>
-<tr>
-<td><strong>post-v1</strong> — cross-chain shielded swap</td>
-<td>Private cross-chain swap over nitro-railgun channels + fronting hubs</td>
-<td>ADR-0015/0016: nitro-railgun adjudicator + DSS custodian</td>
 </tr>
 </tbody>
 </table>
@@ -93,7 +93,7 @@
 <li><strong>T6.0 wallet base — partial/reuse</strong> (BIP-39/HD, secure enclave; §11 R5) · <strong>T6.1 WASM note-scanner + key bridge — net-new</strong> (audit surface) · <strong>T6.2 settlement client — net-new</strong> · <strong>T6.3 self-hosted watchtower — net-new</strong> · <strong>T6.4 address rotation — net-new (small)</strong> · <strong>T6.5 native mobile transport — net-new, the crux</strong> (go-nitro + go-waku gomobile; RN interim WebView) · <strong>T6.6 Groth16 mobile proving — reuse (constraint)</strong> · <strong>T6.7 Armada app + SDK — product</strong>. <code>wallet/ts-nitro validated; rest design</code></li>
 </ul>
 <h2 id="effort-linear-difficulty-points">Effort — linear difficulty points</h2>
-<p>A <strong>linear 1–10</strong> relative-difficulty estimate (1 = trivial config/reuse; 10 = massive, audit-critical, novel; a 10 is ~10× a 1). Weighted by net-new-ness + audit + novelty, <strong>not</strong> calendar time. The nitro-railgun adjudicator (post-v1) is included as an extra line.</p>
+<p>A <strong>linear 1–10</strong> relative-difficulty estimate (1 = trivial config/reuse; 10 = massive, audit-critical, novel; a 10 is ~10× a 1). Weighted by net-new-ness + audit + novelty, <strong>not</strong> calendar time. The nitro-railgun adjudicator (v1.5) is included as an extra line.</p>
 <table>
 <thead>
 <tr>
@@ -239,7 +239,7 @@
 <td style="text-align: right;"><strong>110</strong></td>
 </tr>
 <tr>
-<td>nitro-railgun adjudicator <em>(post-v1)</em></td>
+<td>nitro-railgun adjudicator <em>(v1.5)</em></td>
 <td>net-new, audit-critical</td>
 <td style="text-align: right;"><strong>6</strong></td>
 </tr>
@@ -251,6 +251,7 @@
 </tbody>
 </table>
 <p><strong>~35% concentrates in five items</strong> — pool (10) + circuits (9) + mobile transport (8) + nimbus ingestion (8) + adjudicator (6) = 41. The client tier (T6) is the biggest bucket (38, many moderate net-new pieces gated by the crux); the watcher substrate (T2) is cheapest (9, almost all reuse). The points weight <em>audit</em> heavily, and the two partials (T1.0 nimbus, T6.0 wallet) carry upstream-maturity schedule risk the raw points do not.</p>
+<p><strong>The v1.5 cross-chain-swap increment.</strong> Given Armada already deploys a pool per chain, the <em>marginal</em> engineering to add private cross-chain swaps on top of a finished v1 is small — the nitro-railgun adjudicator (6) + the HTLC swap app (~2) + DSS hub wiring (~3–4), ≈ <strong>10–12 points</strong> — versus v1's 110 and the research-grade v2 lift. It reuses the whole v1 rail and has <strong>no hard v2 dependency</strong> (no ordering, no matcher, no market-making, no bonded federation; hubs front from static inventory and can run a single-entity DSS). Three caveats keep it honest: (1) it is all spend-authorizing, so the real cost is <strong>audit, not code</strong>; (2) each additional chain re-incurs the <strong>anonymity-set cold-start</strong> (§11 R1), gating the privacy payoff per chain; (3) the <strong>DSS crypto is currently unaudited with stubbed production wiring</strong> — wiring and auditing it is real, but a subset of v2's federation work (key-security without bonding/slashing).</p>
 <h2 id="long-poles-ranked-11">Long poles (ranked, §11)</h2>
 <ol>
 <li><strong>Clean-room pool + circuits</strong> — T0.0/T0.1 (R9): the largest, audit-critical crypto-engineering build; a spec deviation is a soundness/fund-safety bug.</li>
@@ -267,8 +268,8 @@
 <li><strong>Clean-room build</strong>: pool (T0.0) + circuits/ceremony (T0.1) against the A.1 reference spec; freeze the spend-authorizing surface (T0.3) early.</li>
 <li><strong>Venue + Adapters</strong>: posted-price contract + quote/settle app + fee-split (T4.0/4.1/4.3) over the rail; ETH yield (T4.4) + USDC via the Aave adapter (T5.0/5.1).</li>
 <li><strong>Wallet</strong> (T6.*): WebView MVP, then native; note-scanner, settlement client, self-watchtower.</li>
+<li><strong>v1.5 — cross-chain shielded swap</strong>: the nitro-railgun adjudicator + DSS custodian, deployed per chain (ADR-0015/0016; <a href="./shielded-nitro-bridge-design.html">construction</a>, <a href="./nitro-bridge-audit.html">audit</a>) — a ~10–12-point increment ahead of the v2 research work.</li>
 <li><strong>v2</strong>: bonded federation + DKG (T2.4/T0.4/T0.5), ordering (T3), matcher + market-making (T4.2/4.5/4.6).</li>
-<li><strong>post-v1</strong>: the cross-chain shielded swap — nitro-railgun adjudicator + DSS custodian (ADR-0015/0016; <a href="./shielded-nitro-bridge-design.html">construction</a>, <a href="./nitro-bridge-audit.html">audit</a>).</li>
 </ol>
 <h2 id="pinned-commits-reference-code">Pinned commits &amp; reference code</h2>
 <p>go-nitro <code>435eb2b</code> · ts-nitro <code>884d616</code> · mobymask <code>2329198</code> · chain-signatures <code>9016a7c</code> · laconicd <code>d130608</code> (<code>roysc/nitro-integration</code>) · watcher-ts <code>18ca4e1</code> · ipld-eth-server <code>330bc3d</code> · laconic-wallet <code>bb5223a</code> · laconic-wallet-web <code>2a4a478</code> · nimbus-eth1 (<code>status-im</code>, upstream). Railgun <code>Railgun-Privacy/contract</code> + <code>circuits-v2</code> are the <strong>clean-room reference</strong> (unlicensed; pin a commit before build, ADR-0014). Full file/line citations: <a href="./A-nitro-on-railgun/A.1-reuse-inventory.html">A.1 reuse inventory</a> and the <a href="./nitro-bridge-audit.html">nitro-bridge + DSS audit</a>.</p>

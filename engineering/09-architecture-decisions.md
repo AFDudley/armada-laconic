@@ -22,8 +22,8 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 | [0012](#adr-0012) | Delivery model: reuse-oriented incremental delivery; scopes as WBS work packages | accepted |
 | [0013](#adr-0013) | Single team; scope spans the whole Armada product; Laconic is prior art | accepted |
 | [0014](#adr-0014) | Pool + circuits are a clean-room reimplementation (license-clean) | accepted |
-| [0015](#adr-0015) | Cross-chain shielded swap = nitro-railgun channels + fronting hubs | accepted · post-v1 |
-| [0016](#adr-0016) | nitro-railgun adjudicator + DSS custodian/delegate (EVM + Nitro only) | accepted · post-v1 |
+| [0015](#adr-0015) | Cross-chain shielded swap = nitro-railgun channels + fronting hubs | accepted · v1.5 |
+| [0016](#adr-0016) | nitro-railgun adjudicator + DSS custodian/delegate (EVM + Nitro only) | accepted · v1.5 |
 
 ---
 
@@ -192,7 +192,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Alternatives.** Obtain a Railgun grant/relicense (unavailable — we go clean-room). Use Railgun's live deployed pool directly (rejected — no fee=0/own POI, no settlement hook; contradicts ADR-0002's rationale).
 
 ## ADR-0015
-**Cross-chain shielded swap = nitro-railgun channels + fronting hubs** · accepted · 2026-09-10 · post-v1 capability
+**Cross-chain shielded swap = nitro-railgun channels + fronting hubs** · accepted · 2026-09-10 · v1.5 (after v1, before the v2 research work)
 
 **Context.** Users hold shielded value in an Armada pool on each chain and want to swap or move value **across** chains privately and self-custodially (general cross-chain, independent of CCTP). A naive design — unshield on X, bridge, shield on Y — produces a **public matched pair** (equal/related amount, bounded timing) that correlates the two legs and collapses the anonymity set. The audited `go-nitro` "nitro bridge" is a single-operator, L1-anchored mirrored-channel construction with a **stubbed L2 adjudicator** and no DSS — neither private nor trust-minimized as written (`nitro-bridge-audit.md`).
 
@@ -203,12 +203,12 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 - **Hub rebalancing, inventory sizing, and pricing are out of protocol** — operator business logic, at most a reference open-source daemon, never a wallet concern.
 - **Hub trust is liveness-only**, via user unilateral exit (ADR-0004 force-close, realized by the new adjudicator in ADR-0016).
 
-**Consequences.** A net-new capability, **post-v1** (a new work package). Requires an Armada pool on every participating chain and depends on ADR-0016. Full amount-privacy on a *contested* force-close needs T0.6 (deferred, ADR-0005). Detailed construction in `shielded-nitro-bridge-design.md`.
+**Consequences.** A net-new capability sequenced **v1.5** — after v1, before the v2 matcher/ordering/bonded-federation work; a small (~10–12-point) increment on the finished v1 rail with no hard v2 dependency. Requires an Armada pool on every participating chain and depends on ADR-0016. Full amount-privacy on a *contested* force-close needs T0.6 (deferred, ADR-0005). Detailed construction in `shielded-nitro-bridge-design.md`.
 
 **Alternatives.** Single-operator mirrored-channel bridge (rejected — trusted, stubbed L2, no privacy; the audited `go-nitro` bridge). Direct self-serve cross-chain (rejected — public matched pair, correlatable). PTLC / adaptor-signature atomic swaps (deferred — research-grade, and unnecessary because the pool, not the channel, carries privacy).
 
 ## ADR-0016
-**nitro-railgun adjudicator + DSS custodian/delegate (EVM + Nitro only)** · accepted · 2026-09-10 · post-v1 capability
+**nitro-railgun adjudicator + DSS custodian/delegate (EVM + Nitro only)** · accepted · 2026-09-10 · v1.5 capability
 
 **Context.** Cross-chain shielded swaps (ADR-0015) need on-chain enforcement of channel outcomes on **every** participating chain, and each hub must be a threshold-key (DSS) principal, not a single EOA. Two audited facts constrain the design: `go-nitro`'s ForceMove verifies state signatures by hard ECDSA `ecrecover` against fixed participant addresses — **no pluggable verifier**; and `chain-signatures` is a threshold **Schnorr** DSS. The laconic integration that would bind the DSS to Nitro is declared-but-unbuilt and CometBFT-coupled.
 

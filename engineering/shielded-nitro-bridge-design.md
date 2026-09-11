@@ -134,7 +134,7 @@ Honest nuances: the first swap includes a channel open — an on-chain unshield 
 ### Where this is narrower / not yet proven
 
 - **Scope:** it moves value between chains that *both* run an Armada shielded pool — private multichain value movement inside the Armada deployment, not a universal token↔chain bridge.
-- **Maturity:** a designed, post-v1 construction (ADR-0015/0016) with unbuilt, unaudited dependencies. The compared bridges are live — though for many, "battle-tested" means tested by the field's largest hacks (Ronin $624M, Wormhole $320M, BNB bridge $570M, Nomad $190M, Multichain collapse), almost all **custody / validator-set** failures this design structurally avoids.
+- **Maturity:** a designed, v1.5 construction (after v1, before the v2 research work; ADR-0015/0016) with unbuilt, unaudited dependencies. The compared bridges are live — though for many, "battle-tested" means tested by the field's largest hacks (Ronin $624M, Wormhole $320M, BNB bridge $570M, Nomad $190M, Multichain collapse), almost all **custody / validator-set** failures this design structurally avoids.
 - **Residual leak:** the amortized channel-open/close amount is public (Design A), and a *contested* force-close reveals a swap's size (closable with T0.6, §3d). Transparent bridges leak the amount on *every* transfer, always.
 
 **Bottom line.** Privacy: a different class — popular bridges deanonymize; this keeps sender, receiver, amount, and the cross-chain link private. Security: stronger than the trusted-validator bridges responsible for the field's largest losses (non-custodial, unilateral exit, threshold key). Performance: on par with fast bonder bridges, cheaper per-swap at volume, traded against amortized channel-setup + on-device proving and optional Nym latency.

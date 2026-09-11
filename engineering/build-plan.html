@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Build Plan — status, effort & sequencing — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../engineering/build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="build-plan-status-effort-sequencing">Build Plan — status, effort &amp; sequencing</h1>
+<p>status companion · 2026-09-10 · reconciled to §5 registry, §9 ADRs, §11 risks</p>
+<p>The <a href="./05-building-block-view.html">Building Block View (§5)</a> is the structure and the <a href="./09-architecture-decisions.html">ADRs (§9)</a> are the decisions; this page is the <strong>status, effort, and sequencing</strong> view over the same <code>T#.#</code> items. Every status/release facet matches the §5 registry, and every long pole matches the §11 risk register. This supersedes the earlier root <code>build-plan.html</code>, which predated the clean-room decision (<a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>) and the matcher/ordering→v2 re-scoping (<a href="./09-architecture-decisions.html#adr-0007">ADR-0007</a>/<a href="./09-architecture-decisions.html#adr-0011">0011</a>).</p>
+<h2 id="version-scope">Version scope</h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Scope</th>
+<th>Tiers / items</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>v1</strong> — the private rail</td>
+<td>Private, mobile-first USDC rails: shielded pool + settlement + posted-price venue + yield, on a phone</td>
+<td>T0.0–0.3, T0.7 · T1 · T2.0–2.3 · T4.0/4.1/4.3/4.4 · T5.0/5.1 · T6.0–6.7</td>
+</tr>
+<tr>
+<td><strong>v2</strong> — matcher, fair-ordering &amp; bonded federation</td>
+<td>Price <em>discovery</em> + market-making + provably-fair ordering + economic security</td>
+<td>T3.* · T4.2/4.5/4.6 · T0.4/0.5 · T2.4</td>
+</tr>
+<tr>
+<td><strong>optional</strong></td>
+<td>Amount-privacy-in-play; thin identity</td>
+<td>T0.6 fork-lite · T6.8</td>
+</tr>
+<tr>
+<td><strong>post-v1</strong> — cross-chain shielded swap</td>
+<td>Private cross-chain swap over nitro-railgun channels + fronting hubs</td>
+<td>ADR-0015/0016: nitro-railgun adjudicator + DSS custodian</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why the split de-risks v1</strong> (ADR-0007/0011): a posted-price, take-it-or-leave-it venue has nothing to front-run, so v1 needs <strong>neither commit-reveal ordering nor epoch set-agreement</strong> — the two highest-risk, research-grade items move to v2 with the matcher. v1 fills exchange from a <strong>static pre-funded inventory</strong> (no market-making). The one genuinely novel-crypto item on the v1 path is the <strong>clean-room pool + circuits</strong> (ADR-0014); everything else is integration plus small contracts. (The earlier doc's "v3 — Design B" — hiding amounts from the venue via shielded ForceMove — is the excluded fork-full of ADR-0005; the lighter T0.6 fork-lite is the <em>optional</em> row above.)</p>
+<h2 id="status-by-tier">Status by tier</h2>
+<p>Facets: <strong>status</strong> (built · reuse · net-new · clean-room · partial) · <strong>confidence</strong> (<code>validated</code> = code read/grounded this cycle · <code>design</code> = specified). The <strong>A deep dive</strong> (<a href="./A-nitro-on-railgun/A.1-reuse-inventory.html">A.1</a>) and the <strong>nitro-bridge/DSS audit</strong> (<a href="./nitro-bridge-audit.html">audit</a>) code-read the settlement rail (go-nitro/ts-nitro) and the DSS crypto; the clean-room pool/circuits are <code>design</code>-level against a pinned reference spec.</p>
+<h3 id="t0-ethereum-anchor">T0 · Ethereum anchor</h3>
+<ul>
+<li><strong>T0.0 shielded pool — clean-room net-new</strong> (ADR-0014). <em>Not</em> "built": Railgun's contracts are <code>UNLICENSED</code>, so we reimplement spec-compatibly. <strong>The single largest, audit-critical build.</strong> <code>design</code></li>
+<li><strong>T0.1 circuits + trusted setup — clean-room net-new</strong> (ADR-0014): our own JoinSplit circuits + a Phase-2 MPC over the community Phase-1 (never re-run). Audit-critical; ceremony is a process risk (§11 R6). <code>design</code></li>
+<li><strong>T0.2 Nitro adjudicator — reuse</strong> go-nitro <code>@435eb2b</code> (ForceMove / MultiAssetHolder), live on Ethereum. <code>validated</code></li>
+<li><strong>T0.3 deposit/payout contract — net-new</strong> — the notes-in / notes-out boundary; <strong>never an "adapter"</strong> (ADR-0010). Spend-authorizing (§11 R5). <code>design</code></li>
+<li><strong>T0.7 anonymity-set strategy — process</strong> — bootstrap the crowd + the Railgun onboarding import bridge (§11 R1). <code>design</code></li>
+</ul>
+<h3 id="t1-ingestion-the-v1-long-pole-11-r3">T1 · Ingestion — <strong>the v1 long pole (§11 R3)</strong></h3>
+<ul>
+<li><strong>T1.0 nimbus-eth1 state-diff emitter → IPLD — net-new</strong>; the stateless/witness + Aristo path is upstream-in-progress. The one genuinely unbuilt v1-spine tier; a stale feed is a <strong>safety</strong> problem for the watchtower, not just latency. <code>design</code></li>
+<li><strong>T1.1 IPLD proof-carrying diffs — partial</strong> — reuse cerc-io <code>ipld-eth-*</code> codecs/backfill. <code>design</code></li>
+<li><strong>T1.2 watcher ingest config — net-new</strong> — index T0.0 commitments/nullifiers + T0.2/T0.3 events; exposes a head cursor T6.3 gates on. <code>design</code></li>
+</ul>
+<h3 id="t2-watcher-substrate-mostly-reuse-cheapest-tier">T2 · Watcher substrate — mostly reuse (cheapest tier)</h3>
+<ul>
+<li><strong>T2.0 proof-carrying feeds — reuse+config</strong> (watcher-ts <code>getStorageAt → {value, proof}</code>). <strong>T2.1 metering — reuse+config</strong> (go-nitro vouchers via <code>payments.ts</code>). <strong>T2.2 peer substrate — reuse</strong> (ts-nitro / <code>@cerc-io/peer</code>). <strong>T2.3 transport — reuse</strong> (Waku pub/sub + libp2p-noise; <strong>optional Nym underlay</strong>, ADR-0008). <code>T2.1/T2.2 validated; feeds/transport design</code></li>
+<li><strong>T2.4 federation + bond + threshold DKG — v2</strong>: chain-signatures Schnorr lib built + unit-tested; DKG ceremony/resharing, bonding, and signing-path wiring are net-new. v1 runs an <strong>unbonded/trusted</strong> federation.</li>
+</ul>
+<h3 id="t4-execution-venue">T4 · Execution / venue</h3>
+<ul>
+<li><strong>T4.0 posted-price contract — net-new (small)</strong> — single <code>priceSetter</code> → governance (§11 R8, ADR-0007). <strong>T4.1 quote/settle ForceMove app — net-new</strong> — HashLockedSwap-grade; the <strong>multi-asset ETH-in/USDC-out app</strong> is the go-nitro maturity gap (§11 R2). <strong>T4.3 fee-split — net-new (small)</strong>. <strong>T4.4 ETH/wstETH yield — config</strong> (held as a non-rebasing note). <code>go-nitro channels validated</code></li>
+<li><strong>v2:</strong> venue solver / market-making (T4.2), LP-buffered USDC-yield rail (T4.5), ex_net matcher + LP vault (T4.6) — ADR-0011.</li>
+</ul>
+<h3 id="t5-adapters">T5 · Adapters</h3>
+<ul>
+<li><strong>T5.0 Adapters — CCTP (built) · Aave-v4 yield · Swaps</strong> — Aave/Swaps build-or-reuse Railgun's Cookbook/RelayAdapt recipe (license gate). <strong>USDC yield is in v1</strong> via the Aave-v4 adapter; the v1 <em>mechanism</em> is open (direct adapter recipe over the public Design-A boundary vs the v2 LP-buffered rail T4.5). <strong>T5.1 routing interface — interface</strong> (how the venue routes to/from the Adapters). <code>design</code></li>
+</ul>
+<h3 id="t6-client-apps-mobile-transport-is-the-crux-11-r4">T6 · Client / apps — <strong>mobile transport is the crux (§11 R4)</strong></h3>
+<ul>
+<li><strong>Reality check:</strong> the wallet is bare-bones (laconic-wallet fork) and the swap/mobymask demos are fragments, not products — a starting point, not a front-end.</li>
+<li><strong>T6.0 wallet base — partial/reuse</strong> (BIP-39/HD, secure enclave; §11 R5) · <strong>T6.1 WASM note-scanner + key bridge — net-new</strong> (audit surface) · <strong>T6.2 settlement client — net-new</strong> · <strong>T6.3 self-hosted watchtower — net-new</strong> · <strong>T6.4 address rotation — net-new (small)</strong> · <strong>T6.5 native mobile transport — net-new, the crux</strong> (go-nitro + go-waku gomobile; RN interim WebView) · <strong>T6.6 Groth16 mobile proving — reuse (constraint)</strong> · <strong>T6.7 Armada app + SDK — product</strong>. <code>wallet/ts-nitro validated; rest design</code></li>
+</ul>
+<h2 id="effort-linear-difficulty-points">Effort — linear difficulty points</h2>
+<p>A <strong>linear 1–10</strong> relative-difficulty estimate (1 = trivial config/reuse; 10 = massive, audit-critical, novel; a 10 is ~10× a 1). Weighted by net-new-ness + audit + novelty, <strong>not</strong> calendar time. The nitro-railgun adjudicator (post-v1) is included as an extra line.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th style="text-align: right;">Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T0.0 shielded pool</td>
+<td>clean-room</td>
+<td style="text-align: right;"><strong>10</strong></td>
+</tr>
+<tr>
+<td>T0.1 circuits + trusted setup</td>
+<td>clean-room</td>
+<td style="text-align: right;"><strong>9</strong></td>
+</tr>
+<tr>
+<td>T0.2 Nitro adjudicator</td>
+<td>reuse</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>T0.3 deposit/payout contract</td>
+<td>net-new</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr>
+<td>T0.7 anon-set strategy + import bridge</td>
+<td>process</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>T1.0 nimbus state-diff emitter</td>
+<td>net-new (long pole)</td>
+<td style="text-align: right;"><strong>8</strong></td>
+</tr>
+<tr>
+<td>T1.1 IPLD proof-carrying diffs</td>
+<td>partial</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td>T1.2 watcher ingest config</td>
+<td>net-new</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>T2.0 proof-carrying feeds</td>
+<td>reuse+config</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>T2.1 voucher metering</td>
+<td>reuse+config</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>T2.2 P2P peer substrate</td>
+<td>reuse</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>T2.3 transport (+ optional Nym)</td>
+<td>reuse</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>T4.0 posted-price contract</td>
+<td>net-new</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>T4.1 quote/settle app</td>
+<td>net-new</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td>T4.3 fee-split</td>
+<td>net-new</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>T4.4 ETH/wstETH yield</td>
+<td>config</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>T5.0 Adapters (CCTP · Aave · Swaps)</td>
+<td>reuse/net-new</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr>
+<td>T5.1 routing interface</td>
+<td>interface</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>T6.0 wallet base</td>
+<td>partial/reuse</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td>T6.1 WASM note-scanner</td>
+<td>net-new</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr>
+<td>T6.2 settlement client</td>
+<td>net-new</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr>
+<td>T6.3 self-hosted watchtower</td>
+<td>net-new</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr>
+<td>T6.4 address rotation</td>
+<td>net-new</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>T6.5 native mobile transport</td>
+<td>net-new (crux)</td>
+<td style="text-align: right;"><strong>8</strong></td>
+</tr>
+<tr>
+<td>T6.6 Groth16 mobile proving</td>
+<td>reuse (constraint)</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr>
+<td>T6.7 Armada app + SDK</td>
+<td>product</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td><strong>v1 subtotal</strong></td>
+<td></td>
+<td style="text-align: right;"><strong>110</strong></td>
+</tr>
+<tr>
+<td>nitro-railgun adjudicator <em>(post-v1)</em></td>
+<td>net-new, audit-critical</td>
+<td style="text-align: right;"><strong>6</strong></td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td></td>
+<td style="text-align: right;"><strong>116</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>~35% concentrates in five items</strong> — pool (10) + circuits (9) + mobile transport (8) + nimbus ingestion (8) + adjudicator (6) = 41. The client tier (T6) is the biggest bucket (38, many moderate net-new pieces gated by the crux); the watcher substrate (T2) is cheapest (9, almost all reuse). The points weight <em>audit</em> heavily, and the two partials (T1.0 nimbus, T6.0 wallet) carry upstream-maturity schedule risk the raw points do not.</p>
+<h2 id="long-poles-ranked-11">Long poles (ranked, §11)</h2>
+<ol>
+<li><strong>Clean-room pool + circuits</strong> — T0.0/T0.1 (R9): the largest, audit-critical crypto-engineering build; a spec deviation is a soundness/fund-safety bug.</li>
+<li><strong>Mobile transport</strong> — T6.5 (R4): RN-native gomobile; WebView interim, native is a Phase-3 gate.</li>
+<li><strong>T1 nimbus ingestion</strong> — T1.0 (R3): upstream-dependent; staleness breaks watchtower safety.</li>
+<li><strong>Audit surface</strong> — T0.3 / T0.0 / T0.1 / T6.1 / T6.0 (R5): external audit gates mainnet.</li>
+<li><strong>go-nitro maturity</strong> — the multi-asset ForceMove app + dispute wiring driven end-to-end (R2).</li>
+<li><strong>Ceremony logistics</strong> — T0.1 (R6): ≥5 independent contributors, published transcript + beacon.</li>
+</ol>
+<h2 id="sequenced-backlog">Sequenced backlog</h2>
+<ol>
+<li><strong>Walking skeleton</strong> (§4): shield → deposit → trivial ForceMove settle → payout → scan on a laconic fixturenet — retires integration risk before any tier deepens.</li>
+<li><strong>Spike the long poles</strong>: nimbus emitter (T1.0), the native mobile module (T6.5), the multi-asset settlement app (go-nitro, R2).</li>
+<li><strong>Clean-room build</strong>: pool (T0.0) + circuits/ceremony (T0.1) against the A.1 reference spec; freeze the spend-authorizing surface (T0.3) early.</li>
+<li><strong>Venue + Adapters</strong>: posted-price contract + quote/settle app + fee-split (T4.0/4.1/4.3) over the rail; ETH yield (T4.4) + USDC via the Aave adapter (T5.0/5.1).</li>
+<li><strong>Wallet</strong> (T6.*): WebView MVP, then native; note-scanner, settlement client, self-watchtower.</li>
+<li><strong>v2</strong>: bonded federation + DKG (T2.4/T0.4/T0.5), ordering (T3), matcher + market-making (T4.2/4.5/4.6).</li>
+<li><strong>post-v1</strong>: the cross-chain shielded swap — nitro-railgun adjudicator + DSS custodian (ADR-0015/0016; <a href="./shielded-nitro-bridge-design.html">construction</a>, <a href="./nitro-bridge-audit.html">audit</a>).</li>
+</ol>
+<h2 id="pinned-commits-reference-code">Pinned commits &amp; reference code</h2>
+<p>go-nitro <code>435eb2b</code> · ts-nitro <code>884d616</code> · mobymask <code>2329198</code> · chain-signatures <code>9016a7c</code> · laconicd <code>d130608</code> (<code>roysc/nitro-integration</code>) · watcher-ts <code>18ca4e1</code> · ipld-eth-server <code>330bc3d</code> · laconic-wallet <code>bb5223a</code> · laconic-wallet-web <code>2a4a478</code> · nimbus-eth1 (<code>status-im</code>, upstream). Railgun <code>Railgun-Privacy/contract</code> + <code>circuits-v2</code> are the <strong>clean-room reference</strong> (unlicensed; pin a commit before build, ADR-0014). Full file/line citations: <a href="./A-nitro-on-railgun/A.1-reuse-inventory.html">A.1 reuse inventory</a> and the <a href="./nitro-bridge-audit.html">nitro-bridge + DSS audit</a>.</p>
+<hr />
+<p>Cross-refs: registry/status → <a href="./05-building-block-view.html">§5</a>; decisions → <a href="./09-architecture-decisions.html">§9</a>; risks/long-poles → <a href="./11-risks-and-technical-debt.html">§11</a>; solution strategy → <a href="./04-solution-strategy.html">§4</a>; cross-chain swap → <a href="./shielded-nitro-bridge-design.html">the construction</a>.</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/build-plan.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

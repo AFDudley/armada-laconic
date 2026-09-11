@@ -29,7 +29,7 @@ cd "$ROOT"
 NAV_LINKS=(
   "index.html|Overview"
   "architecture.html|Architecture"
-  "build-plan.html|Build plan"
+  "engineering/build-plan.html|Build plan"
   "execution-platform.html|Execution platform"
   "yield-clearing.html|Yield &amp; clearing"
   "mobile-privacy.html|Mobile privacy"

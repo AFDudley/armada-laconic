@@ -3,22 +3,21 @@
 arc42 §7 · 2026-09-04
 
 This view describes where the §5 building blocks physically run, and on what
-hardware. The headline topology fact is that the system is **not
-client-server**: a watcher party is a **bonded peer federation** (T2.2) whose
-overwhelming majority is browser tabs and phones talking peer-to-peer. Only a
-handful of server-side emitters (T1) and a **circuit-relay + STUN/TURN**
-bootstrap (T2.3) exist as fixed transport infrastructure. The wallet, including
-its watchtower (T6.3), is **phone-deployable by construction**. Transport runs
-on Waku pub/sub + libp2p-noise per ADR-0008, and the state source is
-nimbus-eth1 per ADR-0009.
+hardware. The topology runs peer-to-peer rather than client-server: a watcher
+party is a bonded peer federation (T2.2) whose overwhelming majority is browser
+tabs and phones talking peer-to-peer. Only a handful of server-side emitters
+(T1) and a circuit-relay + STUN/TURN bootstrap (T2.3) exist as fixed transport
+infrastructure. The wallet, including its watchtower (T6.3), is phone-deployable
+by construction. Transport runs on Waku pub/sub + libp2p-noise per ADR-0008, and
+the state source is nimbus-eth1 per ADR-0009.
 
 ## Infrastructure nodes — what runs where
 
 ### Ethereum L1 (on-chain)
-The settlement substrate. The **T0** contracts are deployed here, and this is the
-one node no participant hosts: the clean-room, Railgun-spec-compatible shielded **pool** (T0.0),
-the **Nitro adjudicator** (T0.2), the **deposit/payout contract** (T0.3), and, at
-v2, the **registry + bond** (T0.4). Everything else is a client or observer of
+The settlement substrate. The T0 contracts are deployed here, and this is the
+one node no participant hosts: the net-new, Railgun-spec-compatible shielded pool (T0.0),
+the Nitro adjudicator (T0.2), the deposit/payout contract (T0.3), and, at
+v2, the registry + bond (T0.4). Everything else is a client or observer of
 these contracts. Fixturenet, testnet, and mainnet differ only in *which* L1 this
 set is deployed to (see Environments). → §5 T0.
 
@@ -42,7 +41,7 @@ a second-class client of a server. Each peer serves proof-carrying
 over that ingested state. Because responses are proof-carrying and
 identical-bytes, a consumer trusts the math rather than the peer.
 
-**Fixed transport infra is deliberately minimal (ADR-0008, T2.3):**
+**Fixed transport infra is minimal (ADR-0008, T2.3):**
 - **Waku pub/sub** — feed discovery, gossip, async note-streams; the transport
   Railgun's broadcaster network already speaks. No privileged Waku node is ours
   to run; peers subscribe by content-topic.

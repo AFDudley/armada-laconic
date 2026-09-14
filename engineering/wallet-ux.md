@@ -64,9 +64,9 @@ The user never performs an on-chain cross-chain crossing, so nothing links the t
 - **Nym privacy mode (opt-in).** A toggle for the **optional Nym mixnet underlay** (ADR-0008): off by default for lowest latency; on to hide IP/metadata for maximum privacy. Uniform across every service the wallet uses, not a per-feature setting.
 - **Address rotation / per-venue keys (T6.4).** Receive addresses rotate, and venue interactions use per-venue loyalty keys, so activity doesn't cluster under one identity.
 - **Submit-on-behalf.** On-chain submissions can be relayed by a keeper so no EOA links the user to *writing* (write-side unlinkability), complementing the read-side privacy of §3.1.
-- **What stays public:** exactly the shield/unshield **boundary amounts** (Design A, ADR-0005) — surfaced honestly in the UI as "this amount is visible on-chain," never hidden from the user.
+- **What stays public:** exactly the shield/unshield **boundary amounts** (Design A, ADR-0005) — surfaced in the UI as "this amount is visible on-chain," never hidden from the user.
 
-## 6. Browser vs mobile — the honest differences
+## 6. Browser vs mobile — the differences
 
 - **Background execution.** A browser tab and a WebView can be suspended, which is why the watchtower's keeper-delegation matters most on mobile, and why the **native** module (T6.5) exists — it keeps a first-class libp2p peer alive for the challenge window. Until native ships, the WebView build leans on delegated keepers for liveness.
 - **Proving cost.** Phones are slower at Groth16; the mobile UX shows proof progress and pre-proves opportunistically (T6.6).
@@ -84,7 +84,7 @@ The user never performs an on-chain cross-chain crossing, so nothing links the t
 - Never custodies funds with a third party; never lets a hub, keeper, or venue take value (liveness-only trust, unilateral exit).
 - Never queries a public RPC for reads (feeds + local verify only).
 - Never exposes the seed or lets the app move keys off the device.
-- Never hides the one honest leak (boundary amounts) from the user.
+- Never hides the one leak (boundary amounts) from the user.
 
 ---
 

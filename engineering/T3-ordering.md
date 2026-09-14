@@ -43,7 +43,7 @@ The party therefore **cannot content-front-run**, because it only saw hashes, an
 
 ## T3.1 Epoch set-agreement / DA
 
-**What it is.** This is the agreement layer under the sequencer: the federation must (a) agree on **which** commitments are in an epoch and (b) publish that revealed epoch so anyone can verify the clear. It is the **rollup-flavored set-agreement** — leader-proposes + threshold-attest + receipt-backed censorship fraud proofs — but deliberately **not BFT consensus**. The party only needs to fix a *set* and an *order*, a sequencing-and-attestation task rather than replicated global execution; that is a far weaker and cheaper primitive than BFT, and it is what lets the network live on phones (architecture T3 note). It is the **highest-risk, research-adjacent** item in the plan (build-plan T3).
+**What it is.** This is the agreement layer under the sequencer: the federation must (a) agree on **which** commitments are in an epoch and (b) publish that revealed epoch so anyone can verify the clear. It is the **rollup-flavored set-agreement** — leader-proposes + threshold-attest + receipt-backed censorship fraud proofs — but not BFT consensus. The party only needs to fix a *set* and an *order*, a sequencing-and-attestation task rather than replicated global execution; that is a far weaker and cheaper primitive than BFT, and it is what lets the network live on phones (architecture T3 note). It is the **highest-risk, research-adjacent** item in the plan (build-plan T3).
 
 **Set-agreement.** A leader proposes the sealed commit set for the epoch, and the federation **threshold-attests** it (T3.2). A member that observes its own accepted commit **excluded** from the attested set holds an inclusion receipt (T3.2) that contradicts the sealed set — a **censorship fraud proof** slashable on L1 (the T0.5 verifier against the T0.4 bond). Safety is favored over liveness: a stalled or sub-threshold party **halts**, and users force-close to their last signed state (non-custody, architecture T3).
 
@@ -52,7 +52,7 @@ The party therefore **cannot content-front-run**, because it only saw hashes, an
 **Reuse vs build.** Net-new; both the leader/attest/fraud-proof protocol and the DA publish path are new. It reuses the threshold-signing primitive (T3.2 / T2.4) for the attestations, but the sequencing protocol around it is new.
 
 **Key tasks.**
-- Leader election / rotation for epoch proposal (deliberately non-BFT).
+- Leader election / rotation for epoch proposal (non-BFT).
 - The sealed-set proposal + **threshold-attest** exchange (signed via T3.2).
 - Exclusion detection: match member inclusion receipts against the attested set; assemble the **censorship fraud proof** for T0.5.
 - **DA publish** path for the revealed epoch over T2 feeds; retrievability + an independent re-clear check.
@@ -68,7 +68,7 @@ The party therefore **cannot content-front-run**, because it only saw hashes, an
 
 **Why it works on-chain.** Because it is **Ethereum-flavoured Schnorr**, an L1 contract can verify the party's *aggregate* signature directly, so a sequencing cert or a censored-commit inclusion receipt becomes a slashable fraud proof against the bond with no re-execution needed (architecture DSS §). The threshold direction is **safety-first**: `t`-of-`n` tolerates `t−1` malicious for safety and `n−t` offline for liveness. We pick **t high** (e.g. **4-of-7**) so that forging an attestation needs a large coalition, and liveness failure degrades to **halt, not loss** because settlement is non-custodial. A BFT-style small quorum (e.g. 3-of-11) would be *wrong*, since it would let any 3 forge (architecture DSS §).
 
-**Signing only — no encrypted mempool.** The threshold key is used for **signing only**. We deliberately do **not** run a threshold-encrypted mempool: with the sequencer and the key-holders being the same federation, encryption gives no real fairness, because a colluding threshold can decrypt-then-order. Fair ordering comes from commit-reveal (T3.0), not encryption (architecture T2 note).
+**Signing only — no encrypted mempool.** The threshold key is used for **signing only**. We do not run a threshold-encrypted mempool: with the sequencer and the key-holders being the same federation, encryption gives no real fairness, because a colluding threshold can decrypt-then-order. Fair ordering comes from commit-reveal (T3.0), not encryption (architecture T2 note).
 
 **Reuse vs build.** The **signing primitive is built** — `ethschnorr` / `ethdss` in `chain-signatures` — and the **DKG / reshare / signing wiring is T2.4** (federation + bond + threshold DKG). What is net-new *here* is the **attestation protocol**: which objects get signed (sequencing cert, inclusion receipt, liquidity-proof snapshot), their wire encoding, and the receipt-emission points inside the T3.0/T3.1 flow. The **L1 verifier is T0.5** and the **bond it slashes is T0.4** — both referenced, not built here.
 

@@ -94,7 +94,7 @@
 <p><strong>Yield with no Aave, no LP, no boundary tx</strong> — a shielded wstETH note <strong>earns staking yield just by being held</strong>. The T4.2/T4.5 LP/aggregation/saturation machinery is <strong>not needed</strong> for base ETH yield; the venue is needed only to <strong>swap that yield to USDC</strong> privately (the T4.1 quote/settle path).</p>
 </li>
 <li>
-<p><strong>Reuse vs build:</strong> config — the T0.0 clean-room pool (Railgun-spec-compatible) already holds multi-asset notes (wstETH), so this is note-config integration with no new contract.</p>
+<p><strong>Reuse vs build:</strong> config — the T0.0 net-new pool (Railgun-spec-compatible) already holds multi-asset notes (wstETH), so this is note-config integration with no new contract.</p>
 </li>
 <li><strong>Interface consumed:</strong> the T0.0 asset allow-list must include the pair (e.g. wstETH/USDC); the swap-to-USDC route runs through T4.1, filled from the venue's <strong>static inventory</strong> in v1 (the T4.2 solver is v2).</li>
 <li><strong>Optional higher yield:</strong> Aave <strong>E-Mode looping</strong> (supply wstETH, borrow WETH, re-supply) via T5.1 → T5.0 — opt-in, with liquidation and LST risk accepted as standard DeFi risk.</li>

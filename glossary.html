@@ -18,10 +18,11 @@
   <a href="glossary.html" class="active">Glossary</a>
   <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
   <a href="builder-codes.html">Builder codes</a>
+  <a href="engineering/README.html">Engineering</a>
 </nav>
 
 <h1 id="glossary">Glossary</h1>
-<p>Terms span three worlds — <strong>Vulcanize / Laconic / cerc-io</strong> (the substrate), <strong>Nitro</strong> (state channels), and <strong>Railgun / Armada</strong> (the shielded pool) — plus this project's own design vocabulary. Several words collide with one another or with existing Ethereum and Railgun terminology, so the collisions are resolved first and enforced by <a href="./engineering/09-architecture-decisions.md#adr-0010">ADR-0010</a>; item ids (<code>T#.#</code>) point at the <a href="./engineering/05-building-block-view.md">§5 building-block registry</a>.</p>
+<p>Terms span three worlds — <strong>Vulcanize / Laconic / cerc-io</strong> (the substrate), <strong>Nitro</strong> (state channels), and <strong>Railgun / Armada</strong> (the shielded pool) — plus this project's own design vocabulary. Several words collide with one another or with existing Ethereum and Railgun terminology, so the collisions are resolved first and enforced by <a href="./engineering/09-architecture-decisions.html#adr-0010">ADR-0010</a>; item ids (<code>T#.#</code>) point at the <a href="./engineering/05-building-block-view.html">§5 building-block registry</a>.</p>
 <p>This file is the single canonical source of record. It is rendered to <a href="./glossary.html"><code>glossary.html</code></a> by <code>tools/render.sh</code>.</p>
 <h2 id="1-word-collision-resolutions-adr-0010">1. Word-collision resolutions (ADR-0010)</h2>
 <p>The choices below are fixed, and the documentation is kept grep-clean of the banned terms.</p>
@@ -113,7 +114,7 @@
 <li><strong>"Validator" — two senses.</strong> <em>Validator</em> (ex_net) — a bonded federation member that matches/prices/authorizes settlement; ≈ today's <strong>watcher-party member</strong>. <em>Validator</em> (Cosmos / laconicd) — a PoA consensus validator on the laconicd chain, unrelated to the exchange venue.</li>
 <li><strong>"Proof" — distinct artifacts.</strong> <em>Liquidity proof</em> — signed attestation that assets are available to trade for a bounded time (ex_net). <em>Inclusion receipt</em> — threshold-signed proof an order-commit was included in an epoch (censorship becomes slashable). <em>Sequencing certificate</em> — threshold-signed proof of an epoch's fixed order. <em>Fraud proof</em> — on-chain evidence of misbehavior, slashable against a bond. <em>ZK proof / zk-SNARK</em> — Railgun's Groth16/BN254 proof of a valid shielded transaction.</li>
 <li><strong>"Pool" — two senses.</strong> <em>Shielded pool</em> — Railgun's privacy pool (one shared anonymity set), Armada's core. <em>LP pool / vault</em> — market-making capital in the execution platform, unrelated to the shielded pool.</li>
-<li><strong>"Layer" vs "Tier".</strong> <em>Tier (T0–T6)</em> — <em>this project's</em> stack rungs, in the software-architecture (n-tier) sense (see §5). <em>Layer 1 / Layer 2 (Ethereum)</em> — blockchains; we write "Ethereum L1" only where we mean the chain. <em>Execution / settlement / DA layers</em> — modular-blockchain vocabulary, deliberately <em>not</em> used to name our tiers.</li>
+<li><strong>"Layer" vs "Tier".</strong> <em>Tier (T0–T6)</em> — <em>this project's</em> stack rungs, in the software-architecture (n-tier) sense (see §5). <em>Layer 1 / Layer 2 (Ethereum)</em> — blockchains; we write "Ethereum L1" only where we mean the chain. <em>Execution / settlement / DA layers</em> — modular-blockchain vocabulary, not used to name our tiers.</li>
 </ul>
 <h2 id="2-laconic-vulcanize-cerc-io-projects-components">2. Laconic / Vulcanize / cerc-io projects &amp; components</h2>
 <p>Hosting: <strong>GitHub</strong> <code>cerc-io</code> where a mirror exists, otherwise the Laconic <strong>Gitea</strong> <code>git.vdb.to</code>. Orgs: <strong>Vulcanize</strong> (company, 2017–), <strong>Laconic</strong> (network/company), <strong>cerc-io</strong> (code org).</p>
@@ -261,8 +262,8 @@
 </ul>
 <h2 id="cross-references">Cross-references</h2>
 <ul>
-<li>The collision policy is fixed by <strong><a href="./engineering/09-architecture-decisions.md#adr-0010">ADR-0010</a></strong>; cross-cutting concepts that reuse these terms are described once in <strong>→ §8</strong> and point at their <code>T#.#</code> realizations.</li>
-<li>Item ids (<code>T#.#</code>) resolve in the <strong><a href="./engineering/05-building-block-view.md">§5 building-block registry</a></strong>.</li>
+<li>The collision policy is fixed by <strong><a href="./engineering/09-architecture-decisions.html#adr-0010">ADR-0010</a></strong>; cross-cutting concepts that reuse these terms are described once in <strong>→ §8</strong> and point at their <code>T#.#</code> realizations.</li>
+<li>Item ids (<code>T#.#</code>) resolve in the <strong><a href="./engineering/05-building-block-view.html">§5 building-block registry</a></strong>.</li>
 <li>Companion to the <a href="./index.html">Overview</a>, <a href="./architecture.html">Architecture</a>, <a href="./build-plan.html">Build plan</a>, and <a href="./execution-platform.html">Execution platform</a>. Internal Google Docs require Laconic/Vulcanize access.</li>
 </ul>
 

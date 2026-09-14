@@ -35,7 +35,7 @@
  T1  INGESTION           nimbus-eth1 state-diff → IPLD → watcher ingest      B        v1
  T0  ETHEREUM anchor     pool · circuits · adjudicator · deposit/payout      A        v1  (econ-security v2)
 </code></pre>
-<p>Read this as a layered building-block view: the tiers are horizontal layers, and the subsystems (A/B/C/D) are vertical slices that cross them — the standard shape of a layered architecture with feature slices. The <code>owner</code> column is each tier's primary subsystem; <strong>T6 is deliberately shared</strong> (A owns the settlement client and watchtower, B the note-scanner, D the host, transport, proving, and app). Vertical position is on-chain-to-client proximity and <code>release</code> marks v1/v2 phasing; neither is a strict call-dependency order — for example the ordering tier (T3) is v2-only, and some v2 items (T0.4/T0.5 economic-security, T2.4 federation) light up later inside otherwise-v1 tiers.</p>
+<p>Read this as a layered building-block view: the tiers are horizontal layers, and the subsystems (A/B/C/D) are vertical slices that cross them — the standard shape of a layered architecture with feature slices. The <code>owner</code> column is each tier's primary subsystem; <strong>T6 is shared</strong> (A owns the settlement client and watchtower, B the note-scanner, D the host, transport, proving, and app). Vertical position is on-chain-to-client proximity and <code>release</code> marks v1/v2 phasing; neither is a strict call-dependency order — for example the ordering tier (T3) is v2-only, and some v2 items (T0.4/T0.5 economic-security, T2.4 federation) light up later inside otherwise-v1 tiers.</p>
 <p><img src="./tiers.svg" alt="Armada tiers and subsystems: T0–T6 horizontal building-block layers crossed by A/B/C/D subsystem slices, coloured by owner with v1/v2 phasing" style="width:100%;height:auto;border:1px solid #223047;border-radius:10px;margin:16px 0"/></p>
 
 <table>
@@ -93,7 +93,7 @@
 </tbody>
 </table>
 <h2 id="item-registry-the-single-model">Item registry (the single model)</h2>
-<p>Facets: <strong>status</strong> (<code>net-new</code> · <code>net-new (clean-room)</code> · <code>reuse</code> / <code>built/reuse</code> · <code>partial</code>) · <strong>release</strong> (<code>v1</code> ship first · <code>v2</code> later · <code>opt</code>).</p>
+<p>Facets: <strong>status</strong> (<code>net-new</code> · <code>reuse</code> / <code>built/reuse</code> · <code>partial</code>) · <strong>release</strong> (<code>v1</code> ship first · <code>v2</code> later · <code>opt</code>).</p>
 <h3 id="t0-ethereum-anchor">T0 · Ethereum anchor</h3>
 <table>
 <thead>
@@ -107,14 +107,14 @@
 <tbody>
 <tr>
 <td>T0.0</td>
-<td>Shielded pool — clean-room reimplement (spec-compatible with Railgun); POI policy; fee=0 (ADR-0014)</td>
-<td>net-new (clean-room)</td>
+<td>Shielded pool — our own implementation of the Railgun design (spec-compatible); POI policy; fee=0 (ADR-0014)</td>
+<td>net-new</td>
 <td>v1</td>
 </tr>
 <tr>
 <td>T0.1</td>
-<td>Circuits + trusted setup — clean-room JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N) (ADR-0014)</td>
-<td>net-new (clean-room)</td>
+<td>Circuits + trusted setup — our own JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N) (ADR-0014)</td>
+<td>net-new</td>
 <td>v1</td>
 </tr>
 <tr>
@@ -328,7 +328,7 @@
 <tbody>
 <tr>
 <td>T5.0</td>
-<td>Adapters — CCTP (built) · Aave-v4 yield · Swaps; build or reuse Railgun Cookbook recipe (license gate)</td>
+<td>Adapters — CCTP (built) · Aave-v4 yield · Swaps; build or reuse Railgun Cookbook recipe</td>
 <td>reuse/net-new</td>
 <td>v1</td>
 </tr>

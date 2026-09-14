@@ -18,7 +18,7 @@ This section gives the static decomposition of the system. **Level 1** is the se
  T0  ETHEREUM anchor     pool · circuits · adjudicator · deposit/payout      A        v1  (econ-security v2)
 ```
 
-Read this as a layered building-block view: the tiers are horizontal layers, and the subsystems (A/B/C/D) are vertical slices that cross them — the standard shape of a layered architecture with feature slices. The `owner` column is each tier's primary subsystem; **T6 is deliberately shared** (A owns the settlement client and watchtower, B the note-scanner, D the host, transport, proving, and app). Vertical position is on-chain-to-client proximity and `release` marks v1/v2 phasing; neither is a strict call-dependency order — for example the ordering tier (T3) is v2-only, and some v2 items (T0.4/T0.5 economic-security, T2.4 federation) light up later inside otherwise-v1 tiers.
+Read this as a layered building-block view: the tiers are horizontal layers, and the subsystems (A/B/C/D) are vertical slices that cross them — the standard shape of a layered architecture with feature slices. The `owner` column is each tier's primary subsystem; **T6 is shared** (A owns the settlement client and watchtower, B the note-scanner, D the host, transport, proving, and app). Vertical position is on-chain-to-client proximity and `release` marks v1/v2 phasing; neither is a strict call-dependency order — for example the ordering tier (T3) is v2-only, and some v2 items (T0.4/T0.5 economic-security, T2.4 federation) light up later inside otherwise-v1 tiers.
 
 <p><img src="./tiers.svg" alt="Armada tiers and subsystems: T0–T6 horizontal building-block layers crossed by A/B/C/D subsystem slices, coloured by owner with v1/v2 phasing" style="width:100%;height:auto;border:1px solid #223047;border-radius:10px;margin:16px 0"/></p>
 
@@ -34,13 +34,13 @@ Read this as a layered building-block view: the tiers are horizontal layers, and
 
 ## Item registry (the single model)
 
-Facets: **status** (`net-new` · `net-new (clean-room)` · `reuse` / `built/reuse` · `partial`) · **release** (`v1` ship first · `v2` later · `opt`).
+Facets: **status** (`net-new` · `reuse` / `built/reuse` · `partial`) · **release** (`v1` ship first · `v2` later · `opt`).
 
 ### T0 · Ethereum anchor
 | id | item | status | release |
 |---|---|---|---|
-| T0.0 | Shielded pool — clean-room reimplement (spec-compatible with Railgun); POI policy; fee=0 (ADR-0014) | net-new (clean-room) | v1 |
-| T0.1 | Circuits + trusted setup — clean-room JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N) (ADR-0014) | net-new (clean-room) | v1 |
+| T0.0 | Shielded pool — our own implementation of the Railgun design (spec-compatible); POI policy; fee=0 (ADR-0014) | net-new | v1 |
+| T0.1 | Circuits + trusted setup — our own JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N) (ADR-0014) | net-new | v1 |
 | T0.2 | Nitro adjudicator — `go-nitro` NitroAdjudicator / ForceMove / MultiAssetHolder | built/reuse | v1 |
 | T0.3 | Deposit/payout contract — the Nitro↔Railgun boundary (notes in / notes out) | net-new | v1 |
 | T0.4 | Registry + bond contract — venue/party bonding | net-new | v2 |
@@ -85,7 +85,7 @@ Facets: **status** (`net-new` · `net-new (clean-room)` · `reuse` / `built/reus
 ### T5 · Adapters
 | id | item | status | release |
 |---|---|---|---|
-| T5.0 | Adapters — CCTP (built) · Aave-v4 yield · Swaps; build or reuse Railgun Cookbook recipe (license gate) | reuse/net-new | v1 |
+| T5.0 | Adapters — CCTP (built) · Aave-v4 yield · Swaps; build or reuse Railgun Cookbook recipe | reuse/net-new | v1 |
 | T5.1 | Routing interface — how the T4 venue routes to/from the adapters | interface | v1 |
 
 ### T6 · Client / apps

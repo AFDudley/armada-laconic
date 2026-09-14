@@ -1,6 +1,6 @@
 # Glossary
 
-Terms span three worlds — **Vulcanize / Laconic / cerc-io** (the substrate), **Nitro** (state channels), and **Railgun / Armada** (the shielded pool) — plus this project's own design vocabulary. Several words collide with one another or with existing Ethereum and Railgun terminology, so the collisions are resolved first and enforced by [ADR-0010](./engineering/09-architecture-decisions.md#adr-0010); item ids (`T#.#`) point at the [§5 building-block registry](./engineering/05-building-block-view.md).
+Terms span three worlds — **Vulcanize / Laconic / cerc-io** (the substrate), **Nitro** (state channels), and **Railgun / Armada** (the shielded pool) — plus this project's own design vocabulary. Several words collide with one another or with existing Ethereum and Railgun terminology, so the collisions are resolved first and enforced by [ADR-0010](./engineering/09-architecture-decisions.html#adr-0010); item ids (`T#.#`) point at the [§5 building-block registry](./engineering/05-building-block-view.html).
 
 This file is the single canonical source of record. It is rendered to [`glossary.html`](./glossary.html) by `tools/render.sh`.
 
@@ -34,7 +34,7 @@ These words also carry more than one meaning; the ADR-0010 table above governs, 
 - **"Validator" — two senses.** *Validator* (ex_net) — a bonded federation member that matches/prices/authorizes settlement; ≈ today's **watcher-party member**. *Validator* (Cosmos / laconicd) — a PoA consensus validator on the laconicd chain, unrelated to the exchange venue.
 - **"Proof" — distinct artifacts.** *Liquidity proof* — signed attestation that assets are available to trade for a bounded time (ex_net). *Inclusion receipt* — threshold-signed proof an order-commit was included in an epoch (censorship becomes slashable). *Sequencing certificate* — threshold-signed proof of an epoch's fixed order. *Fraud proof* — on-chain evidence of misbehavior, slashable against a bond. *ZK proof / zk-SNARK* — Railgun's Groth16/BN254 proof of a valid shielded transaction.
 - **"Pool" — two senses.** *Shielded pool* — Railgun's privacy pool (one shared anonymity set), Armada's core. *LP pool / vault* — market-making capital in the execution platform, unrelated to the shielded pool.
-- **"Layer" vs "Tier".** *Tier (T0–T6)* — *this project's* stack rungs, in the software-architecture (n-tier) sense (see §5). *Layer 1 / Layer 2 (Ethereum)* — blockchains; we write "Ethereum L1" only where we mean the chain. *Execution / settlement / DA layers* — modular-blockchain vocabulary, deliberately *not* used to name our tiers.
+- **"Layer" vs "Tier".** *Tier (T0–T6)* — *this project's* stack rungs, in the software-architecture (n-tier) sense (see §5). *Layer 1 / Layer 2 (Ethereum)* — blockchains; we write "Ethereum L1" only where we mean the chain. *Execution / settlement / DA layers* — modular-blockchain vocabulary, not used to name our tiers.
 
 ## 2. Laconic / Vulcanize / cerc-io projects & components
 
@@ -126,6 +126,6 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 
 ## Cross-references
 
-- The collision policy is fixed by **[ADR-0010](./engineering/09-architecture-decisions.md#adr-0010)**; cross-cutting concepts that reuse these terms are described once in **→ §8** and point at their `T#.#` realizations.
-- Item ids (`T#.#`) resolve in the **[§5 building-block registry](./engineering/05-building-block-view.md)**.
+- The collision policy is fixed by **[ADR-0010](./engineering/09-architecture-decisions.html#adr-0010)**; cross-cutting concepts that reuse these terms are described once in **→ §8** and point at their `T#.#` realizations.
+- Item ids (`T#.#`) resolve in the **[§5 building-block registry](./engineering/05-building-block-view.html)**.
 - Companion to the [Overview](./index.html), [Architecture](./architecture.html), [Build plan](./build-plan.html), and [Execution platform](./execution-platform.html). Internal Google Docs require Laconic/Vulcanize access.

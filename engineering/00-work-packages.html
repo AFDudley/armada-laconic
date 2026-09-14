@@ -61,7 +61,7 @@
 </tr>
 </tbody>
 </table>
-<p>Note the deliberate split of the T6 client tier: <strong>A</strong> owns the settlement client (T6.2) and watchtower (T6.3), <strong>B</strong> owns the note-scanner (T6.1), and <strong>D</strong> owns the host, transport, proving, and app shell — because each of those pieces is a client edge of a different scope, hosted by D.</p>
+<p>Note the split of the T6 client tier: <strong>A</strong> owns the settlement client (T6.2) and watchtower (T6.3), <strong>B</strong> owns the note-scanner (T6.1), and <strong>D</strong> owns the host, transport, proving, and app shell — because each of those pieces is a client edge of a different scope, hosted by D.</p>
 <h2 id="interface-contracts-icds">Interface contracts (ICDs)</h2>
 <p>Each work package binds to its siblings only through these; the interface <em>is</em> the boundary.</p>
 <ul>
@@ -83,7 +83,7 @@
 <ul>
 <li><strong>A:</strong> native amount-privacy (T0.6, opt, ADR-0005); cross-pool membership proofs (T0.7, opt, ADR-0006).</li>
 <li><strong>B:</strong> federation bonding + threshold DKG (T2.4, v2); the T1 nimbus long pole (ADR-0009).</li>
-<li><strong>C:</strong> <strong>USDC yield is the priority and in scope</strong> via the Aave-v4 adapter (ADR-0013); the open decision is the <strong>v1 mechanism</strong> — direct adapter recipe (public Design-A boundary) vs the private <strong>LP-buffered rail</strong> (T4.5, which needs v2 market-making, ADR-0011) — and may amend ADR-0011. <strong>Adapter source + license</strong> (build vs reuse Railgun's Cookbook Aave/Swaps recipes) is an open gate. ETH/wstETH yield (T4.4) is the trivial path; market-making stays v2 (ADR-0011).</li>
+<li><strong>C:</strong> <strong>USDC yield is the priority and in scope</strong> via the Aave-v4 adapter (ADR-0013); the open decision is the <strong>v1 mechanism</strong> — direct adapter recipe (public Design-A boundary) vs the private <strong>LP-buffered rail</strong> (T4.5, which needs v2 market-making, ADR-0011) — and may amend ADR-0011. <strong>Adapter source</strong> (build vs reuse Railgun's Cookbook Aave/Swaps recipes) is an open decision. ETH/wstETH yield (T4.4) is the trivial path; market-making stays v2 (ADR-0011).</li>
 <li><strong>D:</strong> mobile transport crux (T6.5, ADR-0008); optional identity (T6.8).</li>
 </ul>
 <h2 id="relationship-to-the-arc42-docs">Relationship to the arc42 docs</h2>

@@ -24,20 +24,19 @@
 <h1 id="7-deployment-view">7. Deployment View</h1>
 <p>arc42 §7 · 2026-09-04</p>
 <p>This view describes where the §5 building blocks physically run, and on what
-hardware. The headline topology fact is that the system is <strong>not
-client-server</strong>: a watcher party is a <strong>bonded peer federation</strong> (T2.2) whose
-overwhelming majority is browser tabs and phones talking peer-to-peer. Only a
-handful of server-side emitters (T1) and a <strong>circuit-relay + STUN/TURN</strong>
-bootstrap (T2.3) exist as fixed transport infrastructure. The wallet, including
-its watchtower (T6.3), is <strong>phone-deployable by construction</strong>. Transport runs
-on Waku pub/sub + libp2p-noise per ADR-0008, and the state source is
-nimbus-eth1 per ADR-0009.</p>
+hardware. The topology runs peer-to-peer rather than client-server: a watcher
+party is a bonded peer federation (T2.2) whose overwhelming majority is browser
+tabs and phones talking peer-to-peer. Only a handful of server-side emitters
+(T1) and a circuit-relay + STUN/TURN bootstrap (T2.3) exist as fixed transport
+infrastructure. The wallet, including its watchtower (T6.3), is phone-deployable
+by construction. Transport runs on Waku pub/sub + libp2p-noise per ADR-0008, and
+the state source is nimbus-eth1 per ADR-0009.</p>
 <h2 id="infrastructure-nodes-what-runs-where">Infrastructure nodes — what runs where</h2>
 <h3 id="ethereum-l1-on-chain">Ethereum L1 (on-chain)</h3>
-<p>The settlement substrate. The <strong>T0</strong> contracts are deployed here, and this is the
-one node no participant hosts: the clean-room, Railgun-spec-compatible shielded <strong>pool</strong> (T0.0),
-the <strong>Nitro adjudicator</strong> (T0.2), the <strong>deposit/payout contract</strong> (T0.3), and, at
-v2, the <strong>registry + bond</strong> (T0.4). Everything else is a client or observer of
+<p>The settlement substrate. The T0 contracts are deployed here, and this is the
+one node no participant hosts: the net-new, Railgun-spec-compatible shielded pool (T0.0),
+the Nitro adjudicator (T0.2), the deposit/payout contract (T0.3), and, at
+v2, the registry + bond (T0.4). Everything else is a client or observer of
 these contracts. Fixturenet, testnet, and mainnet differ only in <em>which</em> L1 this
 set is deployed to (see Environments). → §5 T0.</p>
 <h3 id="state-diff-emitter-node-nimbus-eth1-ipld-t1-server-side">State-diff emitter node — nimbus-eth1 → IPLD (T1, server-side)</h3>
@@ -58,7 +57,7 @@ a second-class client of a server. Each peer serves proof-carrying
 <code>getStorageAt → {value, proof}</code> feeds (T2.0) metered by Nitro vouchers (T2.1)
 over that ingested state. Because responses are proof-carrying and
 identical-bytes, a consumer trusts the math rather than the peer.</p>
-<p><strong>Fixed transport infra is deliberately minimal (ADR-0008, T2.3):</strong>
+<p><strong>Fixed transport infra is minimal (ADR-0008, T2.3):</strong>
 - <strong>Waku pub/sub</strong> — feed discovery, gossip, async note-streams; the transport
   Railgun's broadcaster network already speaks. No privileged Waku node is ours
   to run; peers subscribe by content-topic.

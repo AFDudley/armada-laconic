@@ -9,9 +9,9 @@ work package A · reuse-oriented spec · **2026-09-05**
 
 ## A.0.1 Goal
 
-Deliver the **settlement substrate** of Armada: the Railgun-based rail on which payments, yield (C), and exchange (C) all clear, following the motto *notes in, normal Nitro, notes out*. A shielded Railgun note is unshielded into a net-new **deposit/payout contract** that escrows the value into a `go-nitro` state channel. Parties settle off-chain via ForceMove, and the channel outcome is re-shielded into fresh notes. A also delivers the base shielded-payments capability, a native Railgun transfer, together with the client that drives settlement and a self-watchtower.
+Deliver the settlement substrate of Armada: the Railgun-based rail on which payments, yield (C), and exchange (C) all clear, following the motto *notes in, normal Nitro, notes out*. A shielded Railgun note is unshielded into a net-new deposit/payout contract that escrows the value into a `go-nitro` state channel. Parties settle off-chain via ForceMove, and the channel outcome is re-shielded into fresh notes. A also delivers the base shielded-payments capability, a native Railgun transfer, together with the client that drives settlement and a self-watchtower.
 
-Per [ADR-0012](../09-architecture-decisions.md#adr-0012), the settlement rail is **integration, not new cryptography**. The adjudicator is reused as-is (T0.2); the net-new settlement code is the deposit/payout contract (T0.3), the T6.3 auto-watchtower loop, and a multi-asset ForceMove settlement app. One caveat applies ([ADR-0014](../09-architecture-decisions.md#adr-0014)): the pool (T0.0) and the JoinSplit circuits (T0.1) are not reuse. Our engineers clean-room reimplement them, spec-compatible with the Railgun design the deep dive pins (A.1.1/A.1.2), using no Railgun-licensed source. That is a real, **audit-critical** crypto-engineering workstream, though of a well-understood and de-risked design, so the "not new cryptography" thesis holds for the rail but not for the pool and circuits.
+Per [ADR-0012](../09-architecture-decisions.md#adr-0012), the settlement rail is integration work over existing cryptography. The adjudicator is reused as-is (T0.2); the net-new settlement code is the deposit/payout contract (T0.3), the T6.3 auto-watchtower loop, and a multi-asset ForceMove settlement app. The pool (T0.0) and the JoinSplit circuits (T0.1) are not reuse: we author our own implementation of the Railgun design ([ADR-0014](../09-architecture-decisions.md#adr-0014)), spec-compatible with the behavior and format the deep dive pins (A.1.1/A.1.2). That is an **audit-critical** crypto-engineering workstream over a well-understood design, so the integration thesis holds for the rail while the pool and circuits are our own build.
 
 ## A.0.2 The construction, concretely
 
@@ -34,9 +34,9 @@ Deposit-in is a Railgun `transact()` whose `unshieldPreimage.npk` is the T0.3 ad
 
 | Doc | Item(s) | Contents |
 |---|---|---|
-| [A.1](./A.1-reuse-inventory.md) | all | The deep dive: reuse inventory with pinned file/line citations (Railgun, go-nitro/ts-nitro, mobymask), corrections, net-new deltas, licensing |
-| [A.2](./A.2-pool-deployment.md) | T0.0 | Clean-room reimplement the pool (spec-compatible with Railgun, [ADR-0014](../09-architecture-decisions.md#adr-0014)); fee=0; POI policy; token allow-list; vkey registration |
-| [A.3](./A.3-trusted-setup.md) | T0.1 | Clean-room JoinSplit circuits ([ADR-0014](../09-architecture-decisions.md#adr-0014)); Phase-1 reuse + own Phase-2; circuit-set reconciliation (91 vs 54); artifacts |
+| [A.1](./A.1-reuse-inventory.md) | all | The deep dive: reuse inventory with pinned file/line citations (Railgun, go-nitro/ts-nitro, mobymask), corrections, net-new deltas, risks |
+| [A.2](./A.2-pool-deployment.md) | T0.0 | Our own pool implementation (spec-compatible with Railgun, [ADR-0014](../09-architecture-decisions.md#adr-0014)); fee=0; POI policy; token allow-list; vkey registration |
+| [A.3](./A.3-trusted-setup.md) | T0.1 | Our own JoinSplit circuits ([ADR-0014](../09-architecture-decisions.md#adr-0014)); Phase-1 reuse + own Phase-2; circuit-set reconciliation (91 generated vs registered subset); artifacts |
 | [A.4](./A.4-adjudicator-integration.md) | T0.2 | go-nitro adjudicator reuse; the ForceMove app choice; maturity gaps |
 | [A.5](./A.5-deposit-payout-contract.md) | T0.3 | The net-new contract: deposit-in, payout-out, outcome encoding, app registry |
 | [A.6](./A.6-settlement-client-watchtower.md) | T6.2, T6.3 | ts-nitro client + submit-on-behalf keeper; the net-new auto-watchtower loop |
@@ -60,11 +60,10 @@ Use a trivial single-asset ForceMove app (HashLockedSwap-grade) as a stand-in fo
 
 ## A.0.5 Open gates (must resolve before / during A)
 
-1. **Licensing — resolved via clean-room** ([ADR-0014](../09-architecture-decisions.md#adr-0014)). Railgun's `circuits-v2` carries an explicit *"No License is provided for any party under any circumstances"* file, and the pool contracts are SPDX `UNLICENSED` (A.1.10), so redeploying them was never executable. The resolution is that our engineers clean-room reimplement the pool (T0.0) and the JoinSplit circuits (T0.1), independently authored, spec-compatible with the Railgun design (A.1.1/A.1.2), using no Railgun-licensed source. This unblocks A.2 and A.3, which build our own contracts and circuits, and converts T0.0/T0.1 from reuse to audit-critical net-new. (`go-nitro` and `ts-nitro` are separately-licensed OSS and unaffected; `engine` and `cookbook` remain MIT reference.)
-2. **Circuit-set count.** The source generates 91 `(nInputs,nOutputs)` combos; the widely-cited "~54" is a registered subset. T0.1/T0.0 must reconcile which subset to ceremony and register (A.3).
-3. **POI is not on-chain.** POI is an alongside partner system, not a pool setting. T0.3 gated-entry is client-side and settlement-side policy, and the POI node stack is a separate dependency (A.7).
-4. **Multi-asset ForceMove app is net-new.** `MultiAssetHolder` supports multiple assets, but no shipped ForceMove app does ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).
-5. **Watchtower liveness.** T6.3 auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).
+1. **Circuit-set count.** The source generates 91 `(nInputs,nOutputs)` combos; the widely-cited "~54" is a registered subset. T0.1/T0.0 must reconcile which subset to ceremony and register (A.3).
+2. **POI is not on-chain.** POI is an alongside partner system, not a pool setting. T0.3 gated-entry is client-side and settlement-side policy, and the POI node stack is a separate dependency (A.7).
+3. **Multi-asset ForceMove app is net-new.** `MultiAssetHolder` supports multiple assets, but no shipped ForceMove app does ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).
+4. **Watchtower liveness.** T6.3 auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).
 
 ## A.0.6 Provenance
 

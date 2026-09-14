@@ -32,9 +32,9 @@ Armada × Laconic quality
    └─ On-chain enforceability v2 attestations are slashable fraud proofs on L1                (T2.4/T0.4/T0.5)
 ```
 
-The priorities are clear. **Read-time anonymity** is the do-first, load-bearing property: if
+The priorities are clear. Read-time anonymity is the do-first property: if
 reads fingerprint the user, the anonymity set collapses to one and every other protection is
-moot (T2.0/T6.1 ★). **Watchtower correctness** is the highest-priority *safety* surface (T6.3).
+moot (T2.0/T6.1 ★). Watchtower correctness is the highest-priority *safety* surface (T6.3).
 Both dominate the test budget.
 
 ## Quality scenarios
@@ -85,7 +85,7 @@ and the request nets a metering voucher. → **T6.5 / T2.2** (ADR-0008).
 Design-A boundary on exit.
 *Response:* value is **aggregated over a window or dribbled** in and out incrementally, balancing
 two clocks — window size against LP build-up — so that no single boundary crossing stands out.
-This is deliberately **not** Tornado-style denomination buckets, since in-pool amounts are
+This is not Tornado-style denomination buckets, since in-pool amounts are
 already SNARK-opaque.
 *Measure:* a whale exit split by the aggregation/dribble policy shows no lone large boundary
 crossing above the configured threshold, and effective-k stays above target. → **T0.7 / T4.5**

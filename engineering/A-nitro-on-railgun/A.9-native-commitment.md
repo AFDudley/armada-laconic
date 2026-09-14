@@ -20,7 +20,7 @@ upgrade (T0.6), closes that last leak. It makes channel allocations reference
 *hidden-amount commitments* rather than cleartext `uint256`, so a force-close
 reveals no amount.
 
-This is a circuit change, and it sits deliberately off the v1 critical path.
+This is a circuit change, and it sits off the v1 critical path.
 The decision of record (ADR-0005) is to ship Design A first, defer fork-lite to
 Phase-4, and exclude fork-full (shielded ForceMove, research-grade) unless
 separately greenlit. This document specifies T0.6 as a scoped, optional upgrade
@@ -55,7 +55,7 @@ note/commitment cryptography that binds them — see A.1 for pinned citations.
 
 | Reused piece | Source (A.1 ref) | Role in T0.6 |
 |---|---|---|
-| JoinSplit circuit — note/commitment/nullifier format, `sumIn===sumOut`, range `<2^120` | A.1.2 (`circuits-v2` `src/library/joinsplit.circom` L11–118, **reference — pin before build**) | Our **clean-room** JoinSplit format (spec-compatible with A.1.2, [ADR-0014](../09-architecture-decisions.md#adr-0014)) is what T0.6 **extends**; the sum-check is the invariant the hidden-amount variant must preserve. |
+| JoinSplit circuit — note/commitment/nullifier format, `sumIn===sumOut`, range `<2^120` | A.1.2 (`circuits-v2` `src/library/joinsplit.circom` L11–118, **reference — pin before build**) | Our own JoinSplit format (spec-compatible with A.1.2) is what T0.6 extends; the sum-check is the invariant the hidden-amount variant must preserve. |
 | Nullifier derivation `Poseidon(nullifyingKey, leafIndex)` | A.1.2 (`nullifier-check.circom` L11–13) | Unchanged; hidden-amount notes still nullify identically. |
 | Circuit-combo generator (**91** combos) + ceremony driver | A.1.2 (`lib/circuitConfigs.js`; `scripts/prepare_ceremony` L23–79) | The **Phase-2 machinery re-run** for the changed circuit set (→ A.3). |
 | Groth16 verifier registry `verificationKeys[nIn][nOut]`, `setVerificationKey` | A.1.1 (`Verifier.sol` L27, L36–45) | New/updated vkeys registered post-ceremony (→ A.2/A.3). |
@@ -153,7 +153,7 @@ de-risks that decision.
 - **Mobile proving budget (T6.6).** Heavier circuits may exceed the D-owned
   mobile prover's practical bound; quantify witness and proving-time growth in
   the PoC before greenlight.
-- **Licensing (Phase-0) — resolved via clean-room ([ADR-0014](../09-architecture-decisions.md#adr-0014)).** T0.6 edits our own clean-room circuits and re-runs Phase-2 over them. The `UNLICENSED` blocker that once applied to Railgun's `circuits-v2` is removed, because T0.0/T0.1 are themselves clean-room ([A.2](./A.2-pool-deployment.md), [A.3](./A.3-trusted-setup.md)). Fork-lite's gate is now cost and audit (A.9.1, A.9.7), not licensing.
+- **Gate is cost and audit.** T0.6 edits our own circuits and re-runs Phase-2 over them (T0.0/T0.1 are our own implementation, [A.2](./A.2-pool-deployment.md), [A.3](./A.3-trusted-setup.md)). Fork-lite's gate is cost and audit (A.9.1, A.9.7).
 - **Unpinned Railgun commit.** Pin `circuits-v2`/`contract` before build (A.1.10).
 - **Native-ETH is separable.** Do not let the WETH-wrap/native-ETH item ride on
   the T0.6 greenlight; scope it independently (A.9.4).

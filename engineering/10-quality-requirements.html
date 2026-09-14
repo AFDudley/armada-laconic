@@ -49,9 +49,9 @@ view over the §5 registry; it invents no new items.</p>
    ├─ Local verifiability    every feed response carries a storage proof the client checks    (T2.0)
    └─ On-chain enforceability v2 attestations are slashable fraud proofs on L1                (T2.4/T0.4/T0.5)
 </code></pre>
-<p>The priorities are clear. <strong>Read-time anonymity</strong> is the do-first, load-bearing property: if
+<p>The priorities are clear. Read-time anonymity is the do-first property: if
 reads fingerprint the user, the anonymity set collapses to one and every other protection is
-moot (T2.0/T6.1 ★). <strong>Watchtower correctness</strong> is the highest-priority <em>safety</em> surface (T6.3).
+moot (T2.0/T6.1 ★). Watchtower correctness is the highest-priority <em>safety</em> surface (T6.3).
 Both dominate the test budget.</p>
 <h2 id="quality-scenarios">Quality scenarios</h2>
 <p>Each scenario states a stimulus (its source and trigger), the required response, and the
@@ -94,7 +94,7 @@ and the request nets a metering voucher. → <strong>T6.5 / T2.2</strong> (ADR-0
 Design-A boundary on exit.
 <em>Response:</em> value is <strong>aggregated over a window or dribbled</strong> in and out incrementally, balancing
 two clocks — window size against LP build-up — so that no single boundary crossing stands out.
-This is deliberately <strong>not</strong> Tornado-style denomination buckets, since in-pool amounts are
+This is not Tornado-style denomination buckets, since in-pool amounts are
 already SNARK-opaque.
 <em>Measure:</em> a whale exit split by the aggregation/dribble policy shows no lone large boundary
 crossing above the configured threshold, and effective-k stays above target. → <strong>T0.7 / T4.5</strong>

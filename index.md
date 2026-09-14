@@ -1,0 +1,101 @@
+# Armada × Laconic
+
+<p class="lede">Armada is a shielded pool for private USDC. Laconic builds the pieces that make it usable: a private settlement rail on Nitro state channels, the mobile-first services that run the pool on phones and browsers, and additional yield on top. Armada builds the shielded core; Laconic builds around it.</p>
+
+<p style="margin-top:14px">
+  <span class="tag">for: Armada team</span>
+  <span class="tag">non-custodial</span>
+  <span class="tag">pool untouched</span>
+  <span class="tag">Ethereum L1-anchored</span>
+</p>
+
+<div class="note">
+Armada is asset-privacy infrastructure for USDC: a shielded pool built on Railgun ZK circuits, a set of governance-added adapters for cross-chain transfer, yield, and swaps, and an apps and SDK tier, funded by integrator revenue share. This site covers the parts Laconic contributes: the settlement rail beneath the adapters, the substrate the pool reads from privately, and new sources of yield. The <a href="laconic_ethereum_privacy_via_armada.html">thesis</a> explains why Laconic fits this role, and the <a href="glossary.html">glossary</a> maps terms across Laconic, Nitro, and Railgun.
+</div>
+
+## Settlement over Nitro
+
+Every value-moving action in Armada settles through Nitro state channels. Value enters a channel already shielded, moves off-chain, and leaves as fresh shielded notes: notes in, normal Nitro, notes out. Because the movement happens off-chain, there is no per-transaction event on the pool to link against, so the pool's privacy carries through to everything built on top.
+
+The same rail does three jobs:
+
+- **Clears the exchange.** A posted-price venue quotes both sides and settles the fill in-channel. Swaps and yield are applications that clear through it.
+- **Moves value across chains.** Cross-chain swaps run as channels routed through bonded hubs that front the destination side from inventory; CCTP is the underlying liquidity rail. Settlement stays off-chain, so the two legs are not linkable.
+- **Brings existing balances in.** A holder can move a Railgun or pool note into Armada and start earning yield in a single step, without exposing the amount as it crosses.
+
+<p class="small">The <a href="engineering/A-nitro-on-railgun/A.0-overview.html">nitro-on-railgun</a> deep dive and the <a href="engineering/shielded-nitro-bridge-design.html">cross-chain-swap construction</a> cover the settlement rail end to end.</p>
+
+## What Laconic delivers
+
+<div class="cards">
+  <div class="card">
+    <h3>Mobile-first support services</h3>
+    <p class="big">The substrate that runs Armada on phones and browsers with almost no fixed infrastructure.</p>
+    <ul>
+      <li><strong>Private sync.</strong> Proof-carrying note feeds that protect the anonymity set at read time. A wallet that reads notes over ordinary RPC leaks the set; Laconic serves them privately.</li>
+      <li><strong>Metering.</strong> Pay-per-request billing over Nitro vouchers.</li>
+      <li><strong>Wallet.</strong> The Laconic React Native wallet and its swap and MobyMask fragments are the starting point for the Armada-branded app.</li>
+      <li><strong>Client and relay.</strong> Key management, signing, an in-browser Nitro node, and a libp2p relay.</li>
+      <li><strong>Operations.</strong> Bonded service-provider federations run it, paid through Armada's integrator revenue share.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>More yield</h3>
+    <p class="big">Extra yield on shielded balances, alongside the private exchange cleared over Nitro.</p>
+    <ul>
+      <li><strong>ETH.</strong> A shielded wstETH note carries intrinsic staking yield, with no lending or LP position required.</li>
+      <li><strong>USDC.</strong> A batched, non-custodial Aave rail, plus the spread and clearing fees from the exchange.</li>
+      <li>The v1 engine is a posted price with clearing (<a href="yield-clearing.html">Yield &amp; clearing</a>); the <a href="execution-platform.html">ex_net matcher</a> adds price discovery in v2.</li>
+    </ul>
+  </div>
+</div>
+
+## How it plugs into Armada
+
+The settlement rail sits beneath the adapters. Swaps and yield clear through it, while the shielded pool underneath stays immutable and non-custodial. In v1 the venue posts a price and clears over Nitro; in v2 the ex_net matcher adds price discovery.
+
+<pre class="diagram">
+   ARMADA APPS / SDK       wallet · integrator apps · treasury and payment tools        (Armada)
+   ─────────────────────────────────────────────────────────────────────────────────────
+   ADAPTERS                [ Swaps ]      [ Aave-v4 yield ]      [ CCTP ]      [ future ]
+                                \              |              /
+   ──────────────────────────────\ ───────────┼─────────── / ────────────────────────────
+   SETTLEMENT (Nitro)         posted-price venue · clearing · cross-chain swaps · migration
+                              notes in  →  Nitro state channels  →  notes out              (Laconic)
+   ─────────────────────────────────────────────────────────────────────────────────────
+   WATCHER SUBSTRATE          private sync · proof-carrying feeds · metering · relay        (Laconic)
+   ─────────────────────────────────────────────────────────────────────────────────────
+   SHIELDED POOL              Railgun ZK circuits · one anonymity set                       (Armada)
+</pre>
+
+<p class="small">See <a href="architecture.html">Architecture</a> for the full tier stack (T0 Ethereum anchor through T6 client), <a href="build-plan.html">Build plan</a> for what exists versus what we build, and <a href="execution-platform.html">Execution platform</a> for the matcher.</p>
+
+## The tier map
+
+<p class="legend">
+  <span class="chip ok">built</span> reusable today ·
+  <span class="chip part">partial</span> exists, needs work or integration ·
+  <span class="chip new">net-new</span> must build
+</p>
+
+| Tier | What it does | Status |
+|---|---|---|
+| **T6 · Client / apps** | Laconic wallet and demo fragments become the Armada-branded app; in-browser Nitro node; Armada SDK wiring | partial |
+| **T5 · Adapters** | swaps and yield adapters on the settlement rail; CCTP cross-chain transfer | net-new (CCTP built) |
+| **T4 · Execution** | v1 posted-price venue and clearing; v2 ex_net matcher and LP vault | v1 small · v2 later |
+| **T3 · Ordering** | commit-reveal, beacon, epoch set-agreement, DA, watchtower; needed only with the matcher | v2 |
+| **T2 · Watcher substrate** | federation and bond, threshold signing, metering, relay, private-sync serving | partial |
+| **T1 · Ingestion** | nimbus-eth1 state-diff emitter to IPLD; private watcher over pool and adjudicator events | partial |
+| **T0 · Ethereum anchor** | Railgun pool and Nitro adjudicator; registry and bond; certificate verifier; the deposit/payout boundary between Nitro and the pool | net-new contracts |
+
+<p class="small">v1 is mostly integration of shipped infrastructure, a small posted-price contract, and the settlement boundary; the heavier T3 ordering and T4 matcher move to v2. Full split on the <a href="build-plan.html#versions">Build plan</a>.</p>
+
+## Scope
+
+The settlement rail is a shared dependency for every adapter that clears through it, so it carries its own audit boundary rather than being audited once per adapter. It works at the settlement tier and never changes Armada's core contracts or takes custody. Coverage on this site is uneven: the execution venue has been worked out in detail, while several surrounding pieces are still at the design stage. The <a href="build-plan.html">Build plan</a> marks per-component confidence.
+
+## Engineering documentation
+
+The full architecture is documented under <a href="engineering/README.html">Engineering</a>, organized as <a href="https://arc42.org">arc42</a>. The <a href="engineering/05-building-block-view.html">building-block view</a> holds the tier stack and the item registry, with a detail page for each tier (<a href="engineering/T0-ethereum-anchor.html">T0</a> through <a href="engineering/T6-client-apps.html">T6</a>). The <a href="engineering/09-architecture-decisions.html">architecture decisions</a> record each choice and its alternatives, the <a href="engineering/build-plan.html">build plan</a> tracks status and effort, and the <a href="engineering/A-nitro-on-railgun/A.0-overview.html">nitro-on-railgun</a> deep dive covers the settlement construction.
+
+Further design notes cover the <a href="engineering/wallet-ux.html">wallet</a> for browser and mobile, the <a href="engineering/shielded-nitro-bridge-design.html">shielded cross-chain-swap construction</a>, and the <a href="engineering/nitro-bridge-audit.html">settlement-code review</a>.

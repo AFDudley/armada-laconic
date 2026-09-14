@@ -48,6 +48,7 @@ NAV_LINKS=(
   "glossary.html|Glossary"
   "laconic_ethereum_privacy_via_armada.html|Thesis"
   "builder-codes.html|Builder codes"
+  "engineering/README.html|Engineering"
 )
 
 NAV=""

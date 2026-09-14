@@ -80,7 +80,7 @@ The trivial yield shape. **wstETH** (and weETH) are **non-rebasing** LSTs: the b
 - **Non-rebasing ⇒ a clean shielded note** — the note's value tracks by price, not by a changing balance, so the rebasing gotcha that afflicts aUSDC/aWETH disappears.
 - **Yield with no Aave, no LP, no boundary tx** — a shielded wstETH note **earns staking yield just by being held**. The T4.2/T4.5 LP/aggregation/saturation machinery is **not needed** for base ETH yield; the venue is needed only to **swap that yield to USDC** privately (the T4.1 quote/settle path).
 
-- **Reuse vs build:** config — the T0.0 clean-room pool (Railgun-spec-compatible) already holds multi-asset notes (wstETH), so this is note-config integration with no new contract.
+- **Reuse vs build:** config — the T0.0 net-new pool (Railgun-spec-compatible) already holds multi-asset notes (wstETH), so this is note-config integration with no new contract.
 - **Interface consumed:** the T0.0 asset allow-list must include the pair (e.g. wstETH/USDC); the swap-to-USDC route runs through T4.1, filled from the venue's **static inventory** in v1 (the T4.2 solver is v2).
 - **Optional higher yield:** Aave **E-Mode looping** (supply wstETH, borrow WETH, re-supply) via T5.1 → T5.0 — opt-in, with liquidation and LST risk accepted as standard DeFi risk.
 

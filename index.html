@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Armada × Laconic — private yield + mobile-first support services</title>
+<title>Armada × Laconic — private settlement, mobile support, and yield</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -21,93 +21,135 @@
   <a href="engineering/README.html">Engineering</a>
 </nav>
 
-<h1>Armada × Laconic</h1>
-<p class="lede">Laconic delivers two things for Armada's shielded pool: the <strong>mobile-first private support services</strong> that surround it, and <strong>more yield</strong> on top. Armada builds the crypto core; Laconic provides the substrate around it and the yield.</p>
+<h1 id="armada-laconic">Armada × Laconic</h1>
+<p class="lede">Armada is a shielded pool for private USDC. Laconic builds the pieces that make it usable: a private settlement rail on Nitro state channels, the mobile-first services that run the pool on phones and browsers, and additional yield on top. Armada builds the shielded core; Laconic builds around it.</p>
+
 <p style="margin-top:14px">
   <span class="tag">for: Armada team</span>
   <span class="tag">non-custodial</span>
   <span class="tag">pool untouched</span>
   <span class="tag">Ethereum L1-anchored</span>
-  <span class="tag">status: scope + code-fit map</span>
 </p>
 
 <div class="note">
-Armada is pluggable asset-privacy infrastructure for USDC: a shielded pool (Railgun ZK circuits, immutable), governance-added <em>adapters</em> (CCTP, Aave&nbsp;v4 yield, swaps), and an apps/SDK tier, funded by integrator revenue-share. This site details how Laconic slots <em>into that model</em> — as the private, mobile-first substrate the pool depends on, and as new yield sources on top. Companion docs: <a href="laconic_ethereum_privacy_via_armada.html">the thesis</a> (why Laconic is the substrate), the <a href="ex_net_whitepaper.pdf">ex_net whitepaper</a> (the 2017 design ancestor), and the <a href="glossary.html">glossary</a> (terms &amp; word-collisions across Laconic / Nitro / Railgun).
+Armada is asset-privacy infrastructure for USDC: a shielded pool built on Railgun ZK circuits, a set of governance-added adapters for cross-chain transfer, yield, and swaps, and an apps and SDK tier, funded by integrator revenue share. This site covers the parts Laconic contributes: the settlement rail beneath the adapters, the substrate the pool reads from privately, and new sources of yield. The <a href="laconic_ethereum_privacy_via_armada.html">thesis</a> explains why Laconic fits this role, and the <a href="glossary.html">glossary</a> maps terms across Laconic, Nitro, and Railgun.
 </div>
 
-<h2>What Laconic delivers</h2>
+<h2 id="settlement-over-nitro">Settlement over Nitro</h2>
+<p>Every value-moving action in Armada settles through Nitro state channels. Value enters a channel already shielded, moves off-chain, and leaves as fresh shielded notes: notes in, normal Nitro, notes out. Because the movement happens off-chain, there is no per-transaction event on the pool to link against, so the pool's privacy carries through to everything built on top.</p>
+<p>The same rail does three jobs:</p>
+<ul>
+<li><strong>Clears the exchange.</strong> A posted-price venue quotes both sides and settles the fill in-channel. Swaps and yield are applications that clear through it.</li>
+<li><strong>Moves value across chains.</strong> Cross-chain swaps run as channels routed through bonded hubs that front the destination side from inventory; CCTP is the underlying liquidity rail. Settlement stays off-chain, so the two legs are not linkable.</li>
+<li><strong>Brings existing balances in.</strong> A holder can move a Railgun or pool note into Armada and start earning yield in a single step, without exposing the amount as it crosses.</li>
+</ul>
+<p class="small">The <a href="engineering/A-nitro-on-railgun/A.0-overview.html">nitro-on-railgun</a> deep dive and the <a href="engineering/shielded-nitro-bridge-design.html">cross-chain-swap construction</a> cover the settlement rail end to end.</p>
+
+<h2 id="what-laconic-delivers">What Laconic delivers</h2>
 <div class="cards">
   <div class="card">
-    <h3>1 · Mobile-first support services</h3>
-    <p class="big">The private, <strong>mobile-first</strong> substrate that runs Armada on phones and browsers with almost no fixed infrastructure.</p>
+    <h3>Mobile-first support services</h3>
+    <p class="big">The substrate that runs Armada on phones and browsers with almost no fixed infrastructure.</p>
     <ul>
-      <li><strong>Private sync</strong> — proof-carrying note streams that protect the anonymity set <em>at read-time</em> (Armada's core fragility: it dies at read-time over normal RPC).</li>
-      <li><strong>Metering</strong> — pay-per-request Nitro vouchers.</li>
-      <li><strong>Front-end</strong> — the Laconic wallet is a bare-bones React Native app, and MobyMask / swap are demo fragments — the right starting point, which we build up into the Armada-branded app.</li>
-      <li><strong>Client + relay</strong> — keys + Cosmos/EIP-155 signing + in-browser Nitro node + libp2p relay.</li>
-      <li><strong>Deploy / ops</strong> — bonded service-provider federations run it; monetized via Armada's integrator revenue-share.</li>
+      <li><strong>Private sync.</strong> Proof-carrying note feeds that protect the anonymity set at read time. A wallet that reads notes over ordinary RPC leaks the set; Laconic serves them privately.</li>
+      <li><strong>Metering.</strong> Pay-per-request billing over Nitro vouchers.</li>
+      <li><strong>Wallet.</strong> The Laconic React Native wallet and its swap and MobyMask fragments are the starting point for the Armada-branded app.</li>
+      <li><strong>Client and relay.</strong> Key management, signing, an in-browser Nitro node, and a libp2p relay.</li>
+      <li><strong>Operations.</strong> Bonded service-provider federations run it, paid through Armada's integrator revenue share.</li>
     </ul>
   </div>
   <div class="card">
-    <h3>2 · More yield</h3>
-    <p class="big">Yield plus a simple private exchange, cleared non-custodially over Nitro — a posted price in v1, market-making later.</p>
+    <h3>More yield</h3>
+    <p class="big">Extra yield on shielded balances, alongside the private exchange cleared over Nitro.</p>
     <ul>
-      <li><strong>ETH yield</strong> — a shielded <strong>wstETH note</strong>: intrinsic, non-rebasing staking yield; no Aave or LP needed.</li>
-      <li><strong>USDC yield</strong> — an <strong>LP-buffered</strong>, batched Aave rail (non-custodial), plus posted-price spread + clearing fees.</li>
-      <li>Engine now: <strong>posted price + clearing</strong> (<a href="yield-clearing.html">Yield &amp; clearing</a>); the <a href="execution-platform.html">ex_net matcher</a> is the v2 price-discovery upgrade.</li>
+      <li><strong>ETH.</strong> A shielded wstETH note carries intrinsic staking yield, with no lending or LP position required.</li>
+      <li><strong>USDC.</strong> A batched, non-custodial Aave rail, plus the spread and clearing fees from the exchange.</li>
+      <li>The v1 engine is a posted price with clearing (<a href="yield-clearing.html">Yield &amp; clearing</a>); the <a href="execution-platform.html">ex_net matcher</a> adds price discovery in v2.</li>
     </ul>
   </div>
 </div>
 
-<h2>How it plugs into Armada</h2>
-<p>
-ex_net is <strong>not</strong> a sibling adapter — the venue is a private execution/settlement layer <strong>beneath</strong> the Adapters tier: in <strong>v1</strong> a posted-price venue + clearing over Nitro, upgradable to the <strong>v2</strong> ex_net matcher for price discovery. Armada's <em>Swaps</em> and <em>yield</em> adapters are <strong>applications</strong> on it; the shielded pool stays immutable and untouched; everything is non-custodial.
-</p>
+<h2 id="how-it-plugs-into-armada">How it plugs into Armada</h2>
+<p>The settlement rail sits beneath the adapters. Swaps and yield clear through it, while the shielded pool underneath stays immutable and non-custodial. In v1 the venue posts a price and clears over Nitro; in v2 the ex_net matcher adds price discovery.</p>
 <pre class="diagram">
-   ARMADA APPS / SDK            front-end · integrator apps · treasury/payment tools     (Armada)
-   ─────────────────────────────────────────────────────────────────────────────────
-   ADAPTERS                     [ Swaps ]   [ Aave-v4 yield ]   [ CCTP ]   [ future ]
-                                     \            /                 |
-                                      \          /   applications   |
-   ─────────────────────────────────── \ ────── / ─────────────────┼───────────────
-   EXECUTION / SETTLEMENT LAYER    ►  posted-price venue + clearing  +  watcher substrate  ◄  (Laconic)
-                                        (v1: post price · clear/settle · private sync · yield   —   matcher = v2)
-   ─────────────────────────────────────────────────────────────────────────────────
-   SHIELDED POOL                 Railgun ZK circuits · immutable · one anonymity set    (Armada — untouched)
+   ARMADA APPS / SDK       wallet · integrator apps · treasury and payment tools        (Armada)
+   ─────────────────────────────────────────────────────────────────────────────────────
+   ADAPTERS                [ Swaps ]      [ Aave-v4 yield ]      [ CCTP ]      [ future ]
+                                \              |              /
+   ──────────────────────────────\ ───────────┼─────────── / ────────────────────────────
+   SETTLEMENT (Nitro)         posted-price venue · clearing · cross-chain swaps · migration
+                              notes in  →  Nitro state channels  →  notes out              (Laconic)
+   ─────────────────────────────────────────────────────────────────────────────────────
+   WATCHER SUBSTRATE          private sync · proof-carrying feeds · metering · relay        (Laconic)
+   ─────────────────────────────────────────────────────────────────────────────────────
+   SHIELDED POOL              Railgun ZK circuits · one anonymity set                       (Armada)
 </pre>
-<p class="small">See <a href="architecture.html">Architecture</a> for the full tier stack (T0 Ethereum anchor → T6 client), <a href="build-plan.html">Build plan</a> for what exists vs. what we build, and <a href="execution-platform.html">Execution platform</a> for the matcher itself.</p>
 
-<h2>The tier map</h2>
+<p class="small">See <a href="architecture.html">Architecture</a> for the full tier stack (T0 Ethereum anchor through T6 client), <a href="build-plan.html">Build plan</a> for what exists versus what we build, and <a href="execution-platform.html">Execution platform</a> for the matcher.</p>
+
+<h2 id="the-tier-map">The tier map</h2>
 <p class="legend">
   <span class="chip ok">built</span> reusable today ·
-  <span class="chip part">partial</span> exists, needs work/integration ·
+  <span class="chip part">partial</span> exists, needs work or integration ·
   <span class="chip new">net-new</span> must build
 </p>
+
 <table>
-<tr><th>Tier</th><th>What it does</th><th>Status</th></tr>
-<tr><td><strong>T6 · Client / apps</strong></td><td>bare-bones Laconic wallet + demo fragments → Armada-branded app; in-browser Nitro node; Armada SDK wiring</td><td class="part">partial</td></tr>
-<tr><td><strong>T5 · Adapters</strong> (Armada)</td><td>Swaps &amp; yield adapters on the platform; CCTP</td><td class="new">net-new (CCTP built)</td></tr>
-<tr><td><strong>T4 · Execution</strong> (venue)</td><td>v1 posted-price venue + clearing; <em>v2:</em> ex_net matcher · LP vault</td><td class="part">v1 small · v2 later</td></tr>
-<tr><td><strong>T3 · Ordering</strong> (v2)</td><td>commit-reveal + beacon · epoch set-agreement · DA · watchtower — only needed with the matcher</td><td class="new">v2</td></tr>
-<tr><td><strong>T2 · Watcher-party substrate</strong></td><td>federation + bond · threshold DKG signing · metering · relay · private-sync serving</td><td class="part">partial</td></tr>
-<tr><td><strong>T1 · Ingestion</strong></td><td>nimbus-eth1 state-diff emitter → IPLD → private watcher over pool + adjudicator events</td><td class="part">partial</td></tr>
-<tr><td><strong>T0 · Ethereum anchor</strong></td><td>Railgun pool + Nitro adjudicator (built) · registry/bond · cert verifier · deposit/payout contract (Nitro↔Railgun boundary)</td><td class="new">net-new contracts</td></tr>
+<thead>
+<tr>
+<th>Tier</th>
+<th>What it does</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>T6 · Client / apps</strong></td>
+<td>Laconic wallet and demo fragments become the Armada-branded app; in-browser Nitro node; Armada SDK wiring</td>
+<td>partial</td>
+</tr>
+<tr>
+<td><strong>T5 · Adapters</strong></td>
+<td>swaps and yield adapters on the settlement rail; CCTP cross-chain transfer</td>
+<td>net-new (CCTP built)</td>
+</tr>
+<tr>
+<td><strong>T4 · Execution</strong></td>
+<td>v1 posted-price venue and clearing; v2 ex_net matcher and LP vault</td>
+<td>v1 small · v2 later</td>
+</tr>
+<tr>
+<td><strong>T3 · Ordering</strong></td>
+<td>commit-reveal, beacon, epoch set-agreement, DA, watchtower; needed only with the matcher</td>
+<td>v2</td>
+</tr>
+<tr>
+<td><strong>T2 · Watcher substrate</strong></td>
+<td>federation and bond, threshold signing, metering, relay, private-sync serving</td>
+<td>partial</td>
+</tr>
+<tr>
+<td><strong>T1 · Ingestion</strong></td>
+<td>nimbus-eth1 state-diff emitter to IPLD; private watcher over pool and adjudicator events</td>
+<td>partial</td>
+</tr>
+<tr>
+<td><strong>T0 · Ethereum anchor</strong></td>
+<td>Railgun pool and Nitro adjudicator; registry and bond; certificate verifier; the deposit/payout boundary between Nitro and the pool</td>
+<td>net-new contracts</td>
+</tr>
+</tbody>
 </table>
-<p class="small">Bottom line: <strong>v1</strong> is mostly integration of shipped infra + a small posted-price contract + the Design&nbsp;A boundary — the heavy <strong>T3 ordering + T4 matcher move to v2</strong>. Full split on the <a href="build-plan.html#versions">Build plan</a>.</p>
+<p class="small">v1 is mostly integration of shipped infrastructure, a small posted-price contract, and the settlement boundary; the heavier T3 ordering and T4 matcher move to v2. Full split on the <a href="build-plan.html#versions">Build plan</a>.</p>
 
-<h2>Honest scope notes</h2>
-<ul>
-  <li><strong>Shared substrate ⇒ its own audit boundary.</strong> Putting ex_net <em>under</em> multiple adapters makes it a shared dependency — a larger surface than one independently-deployed adapter, and it needs its own audit. Worth stating plainly against Armada's "each adapter independently deployed &amp; audited" discipline.</li>
-  <li><strong>Pool stays immutable.</strong> ex_net operates at the adapter/execution tier; nothing here alters Armada's core contracts or takes custody.</li>
-  <li><strong>Depth is uneven.</strong> Only the execution platform (ex_net → matcher) has been validated in depth so far; the rest is design-level / net-new. The <a href="build-plan.html">Build plan</a> marks per-component confidence.</li>
-</ul>
-
-<h2>Engineering documentation</h2>
-<p>The full engineering architecture — organized as <a href="https://arc42.org">arc42</a> — lives under <a href="engineering/README.html"><strong>Engineering</strong></a>. Start with the <a href="engineering/README.html">overview</a>, then the <a href="engineering/05-building-block-view.html">§5 building-block view</a> and its tier specs (<a href="engineering/T0-ethereum-anchor.html">T0</a>–<a href="engineering/T6-client-apps.html">T6</a>), the <a href="engineering/09-architecture-decisions.html">architecture decisions (ADRs)</a>, the <a href="engineering/build-plan.html">build plan (status &amp; effort)</a>, and the <a href="engineering/A-nitro-on-railgun/A.0-overview.html">nitro-on-railgun</a> deep dive. These pages are generated from the Markdown in <code>engineering/</code> by <code>tools/render-engineering.sh</code>.</p>
-<p><strong>Design notes &amp; audits:</strong> the <a href="engineering/wallet-ux.html">wallet UX (browser &amp; mobile)</a>, the <a href="engineering/shielded-nitro-bridge-design.html">shielded cross-chain-swap construction</a> (nitro-railgun channels + fronting hubs), and the <a href="engineering/nitro-bridge-audit.html">nitro-bridge + DSS code audit</a>.</p>
+<h2 id="scope">Scope</h2>
+<p>The settlement rail is a shared dependency for every adapter that clears through it, so it carries its own audit boundary rather than being audited once per adapter. It works at the settlement tier and never changes Armada's core contracts or takes custody. Coverage on this site is uneven: the execution venue has been worked out in detail, while several surrounding pieces are still at the design stage. The <a href="build-plan.html">Build plan</a> marks per-component confidence.</p>
+<h2 id="engineering-documentation">Engineering documentation</h2>
+<p>The full architecture is documented under <a href="engineering/README.html">Engineering</a>, organized as <a href="https://arc42.org">arc42</a>. The <a href="engineering/05-building-block-view.html">building-block view</a> holds the tier stack and the item registry, with a detail page for each tier (<a href="engineering/T0-ethereum-anchor.html">T0</a> through <a href="engineering/T6-client-apps.html">T6</a>). The <a href="engineering/09-architecture-decisions.html">architecture decisions</a> record each choice and its alternatives, the <a href="engineering/build-plan.html">build plan</a> tracks status and effort, and the <a href="engineering/A-nitro-on-railgun/A.0-overview.html">nitro-on-railgun</a> deep dive covers the settlement construction.</p>
+<p>Further design notes cover the <a href="engineering/wallet-ux.html">wallet</a> for browser and mobile, the <a href="engineering/shielded-nitro-bridge-design.html">shielded cross-chain-swap construction</a>, and the <a href="engineering/nitro-bridge-audit.html">settlement-code review</a>.</p>
 
 <hr/>
-<p class="small">Generated for the Armada dev team. Non-custodial; Armada's shielded pool is immutable and untouched. Internal Google Docs require Laconic/Vulcanize access.</p>
+<p class="small">Generated from <code>index.md</code> by <code>tools/render.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
 
 </main>
 </body>

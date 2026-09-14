@@ -8,7 +8,7 @@ work package A · reuse-oriented spec · **2026-09-05**
 
 ## A.8.1 Goal
 
-Be the integration and verification hub for work package A: one place that (a) consolidates every interface A publishes to its siblings B, C, and D and every interface A consumes from them, and (b) defines the executable proof that *notes-in, normal Nitro, notes-out* holds end-to-end and survives an adversary. The construction A verifies here is the one A.0.2 draws and A.1.4 pins. This doc names the wire it exposes and the harness that keeps it honest, and it defers every internal to the owning A.x spec.
+Be the integration and verification hub for work package A: one place that (a) consolidates every interface A publishes to its siblings B, C, and D and every interface A consumes from them, and (b) defines the executable proof that *notes-in, normal Nitro, notes-out* holds end-to-end and survives an adversary. The construction A verifies here is the one A.0.2 draws and A.1.4 pins. This doc names the wire it exposes and the standing harness that regresses it, and it defers every internal to the owning A.x spec.
 
 Per [ADR-0012](../09-architecture-decisions.md#adr-0012), A binds to B, C, and D only through the interfaces in A.8.5; the interface is the boundary. The A.8.6 walking skeleton is the programme's first integration target and thereafter the standing regression harness against which every A item is deepened.
 
@@ -16,7 +16,7 @@ Per [ADR-0012](../09-architecture-decisions.md#adr-0012), A binds to B, C, and D
 
 - **In scope:** the consolidated contract/event/API surface A publishes; the freshness contract A depends on from B; the fixturenet acceptance slice and adversarial cases; the roll-up acceptance matrix.
 - **Out of scope (owned elsewhere):** the deposit/payout ABI internals (see A.5), pool config (see A.2), ceremony artifacts (see A.3), adjudicator and app choice (see A.4), client and watchtower loop (see A.6), POI and anon-set (see A.7). This doc cites them; it never re-specifies them.
-- **Phase-0 assumption.** The licensing gate ([A.1.10](./A.1-reuse-inventory.md), [A.0.5](./A.0-overview.md) gate 1) is resolved via clean-room ([ADR-0014](../09-architecture-decisions.md#adr-0014)). The pool (T0.0, see A.2) and circuits (T0.1, see A.3) are clean-room reimplemented, so the skeleton runs against our clean-room pool with no Railgun grant or relicense needed. The ICD shapes below are stable regardless.
+- **Phase-0 assumption.** The pool (T0.0, see A.2) and circuits (T0.1, see A.3) are our own implementation, so the skeleton runs against our own pool. The ICD shapes below are stable regardless.
 
 ## A.8.3 Reuse inventory (cite A.1)
 
@@ -24,8 +24,8 @@ The exposed surface is mostly reused ABI, published under A's control:
 
 | Exposed piece | Reused from (A.1 §, pinned commit) | Net-new? |
 |---|---|---|
-| Pool `shield`/`transact`/`Shield`/`Transact`/`Nullified` events | [A.1.1](./A.1-reuse-inventory.md) `RailgunLogic.sol` L57–77 (Railgun ref @HEAD — **pin before build**) | **net-new (clean-room, spec-compatible; A.2)** |
-| Circuit `wasm`/`zkey` artifacts (91 combos) | [A.1.2](./A.1-reuse-inventory.md) `circuits-v2` reference (→ A.3) | **net-new (clean-room circuits; A.3)** |
+| Pool `shield`/`transact`/`Shield`/`Transact`/`Nullified` events | [A.1.1](./A.1-reuse-inventory.md) `RailgunLogic.sol` L57–77 (Railgun ref @HEAD — **pin before build**) | **net-new (own implementation; A.2)** |
+| Circuit `wasm`/`zkey` artifacts (91 combos) | [A.1.2](./A.1-reuse-inventory.md) `circuits-v2` reference (→ A.3) | **net-new (own circuits; A.3)** |
 | Adjudicator `challenge`/`checkpoint`/`conclude`, `MultiAssetHolder.deposit`, `concludeAndTransferAllAssets`, exit-format `Outcome` | [A.1.3](./A.1-reuse-inventory.md) go-nitro **@435eb2b** | reused as-is |
 | `ChallengeRegistered`/`Checkpointed`/`ChallengeCleared` events | go-nitro `ForceMove.sol` L39–119 (NitroScout) | reused |
 | Voucher `{ChannelId, Amount, Signature}` + `Hash()` | [A.1.3](./A.1-reuse-inventory.md) `payments/vouchers.go` L23–52 | reused |
@@ -77,7 +77,7 @@ The set of `appDefinition` addresses T0.3 accepts for a funded channel is define
 - Circuit `wasm` and `zkey` artifacts number one pair per registered `(nIn,nOut)` combo, out of the 91 generated (A.1.8 §3; the registered subset is reconciled in A.3). They are published from T0.1's ceremony (see A.3) and consumed by D's mobile prover (T6.6) and any prover B runs. The matching on-chain `verificationKeys[nIn][nOut]` registration is A.2's job.
 
 **(g) POI allow-list policy and root (see A.7).**
-POI is not a pool setting; it is an alongside partner system ([A.1.7](./A.1-reuse-inventory.md), [A.0.5](./A.0-overview.md) gate 3). A exposes the allow-list root (chosen list-provider datasets and standby period) and the gate policy. T0.3 gated-entry enforces a valid POI proof in the settlement path before a deposit is accepted. The POI node stack is a separate dependency, not redeployable from the four scoped repos. Consumers treat the root as opaque policy input. Detail: A.7.
+POI is not a pool setting; it is an alongside partner system ([A.1.7](./A.1-reuse-inventory.md), [A.0.5](./A.0-overview.md) gate 2). A exposes the allow-list root (chosen list-provider datasets and standby period) and the gate policy. T0.3 gated-entry enforces a valid POI proof in the settlement path before a deposit is accepted. The POI node stack is a separate dependency, not redeployable from the four scoped repos. Consumers treat the root as opaque policy input. Detail: A.7.
 
 ### A.8.5.2 What A consumes (from B; hosted by D)
 
@@ -101,7 +101,7 @@ shield → transact()/unshield-in → T0.3.deposit → MultiAssetHolder.deposit
       → T0.3 receives → shield()/payout → scan
 ```
 
-**Preconditions (Phase-0 gate, A.8.2):** clean-room pool deployed with `changeFee(0,0,0)` and vkeys registered for the chosen combo subset (A.2/A.3); adjudicator deployed (A.4); T0.3 deployed and its app registry seeded with the trivial app (A.5); two funded client identities (A.6).
+**Preconditions (Phase-0 gate, A.8.2):** our own pool deployed with `changeFee(0,0,0)` and vkeys registered for the chosen combo subset (A.2/A.3); adjudicator deployed (A.4); T0.3 deployed and its app registry seeded with the trivial app (A.5); two funded client identities (A.6).
 
 | # | Step | Emits / asserts | Exercises (A.x) |
 |---|---|---|---|
@@ -121,7 +121,7 @@ Each A item passes its own acceptance in its A.x; the harness asserts they compo
 
 | Item | Acceptance criterion (verified by) | Spec |
 |---|---|---|
-| **T0.0** pool | Clean-room pool with `changeFee(0,0,0)`; a shield+unshield round-trips; `snarkSafetyVector` reproduced so `transact` does not revert | A.2 |
+| **T0.0** pool | Own pool implementation with `changeFee(0,0,0)`; a shield+unshield round-trips; `snarkSafetyVector` reproduced so `transact` does not revert | A.2 |
 | **T0.1** setup | Phase-2 zkey per registered combo; a JoinSplit proof verifies against the registered vkey; artifacts published (A.8.5.1(f)) | A.3 |
 | **T0.2** adjudicator | go-nitro @435eb2b deployed unmodified; deposit→conclude→transfer path lands funds at an external destination | A.4 |
 | **T0.3** deposit/payout | Deposit-in escrows the exact unshielded amount into `channelId`; payout-out re-shields the full outcome; `Deposit`/`Payout` emitted; rejects unregistered `appDefinition` and invalid POI | A.5 |
@@ -137,14 +137,14 @@ Each A item passes its own acceptance in its A.x; the harness asserts they compo
 | **Replayed nullifier rejected** | Attempt a second deposit-in reusing an already-consumed nullifier (`consumedNullifier` seen in a prior `Deposit`) | Pool `Nullified` set rejects the re-spend in-circuit; the crossing never produces a second `Deposit`; T0.3 credits nothing | A.2 (nullifier set, `Commitments.sol`), A.5 |
 | **Unresponsive-counterparty exit** | Counterparty goes silent mid-channel | Party `challenge`s with the latest supported state, waits out `finalizesAt` with no valid counter, then `concludeAndTransferAllAssets` → `Payout` re-shields its rightful outcome; funds are never stranded | A.4 (challenge/conclude), A.6, A.5 |
 
-These are the go-nitro maturity long-poles (ADR-0004, [A.0.5](./A.0-overview.md) gates 4–5) made executable: dispute wiring and watchtower response are net-new (A.1.9 §3, §6), so the suite is the proof they actually work, not just the happy path.
+These are the go-nitro maturity long-poles (ADR-0004, [A.0.5](./A.0-overview.md) gates 3–4) made executable: dispute wiring and watchtower response are net-new (A.1.9 §3, §6), so the suite is the proof they actually work, not just the happy path.
 
 ## A.8.7 Risks / open
 
-- **Watchtower liveness vs freshness (gate 5).** The stale-force-close defence is only as good as B's freshness signal and T6.3's always-on node; a stale feed or a dead node during a `finalizesAt` window is a fund-loss path. A.8.5.2 makes the gate mandatory; residual risk owned in A.6.
+- **Watchtower liveness vs freshness (gate 4).** The stale-force-close defence is only as good as B's freshness signal and T6.3's always-on node; a stale feed or a dead node during a `finalizesAt` window is a fund-loss path. A.8.5.2 makes the gate mandatory; residual risk owned in A.6.
 - **App-registry trust surface.** A validates `appDefinition` membership and exit-format validity, not game semantics; a buggy registered app (C's T4.1) can still produce a valid-but-wrong outcome. The boundary stays clean (A.4/A.5); correctness of the game is C's acceptance, not A's.
 - **No multi-asset ForceMove app in the skeleton.** The harness settles single-asset via the trivial app. ETH-in/USDC-out atomicity (net-new, A.1.9 §2) needs its own acceptance once C's app lands; the skeleton does not prove multi-asset settlement (A.1.8 §2).
-- **Licensing (Phase-0) — resolved via clean-room ([ADR-0014](../09-architecture-decisions.md#adr-0014)).** The harness runs against our clean-room pool and circuits ([A.1.10](./A.1-reuse-inventory.md)/[A.0.5](./A.0-overview.md) gate 1, A.2/A.3), with no Railgun grant needed. Residual: those clean-room builds must ship before steps 1–2 and 6 run.
+- **Build readiness (Phase-0).** The harness runs against our own pool and circuits (A.2/A.3). Those builds must ship before steps 1–2 and 6 run.
 - **Railgun commit unpinned.** All pool/circuit citations resolve at `master`/`main` HEAD; the manifest MUST pin a Railgun SHA before the skeleton is treated as reproducible (A.0.6, A.1.10).
 
 See also — owning specs: [A.2](./A.2-pool-deployment.md) · [A.3](./A.3-trusted-setup.md) · [A.4](./A.4-adjudicator-integration.md) · [A.5](./A.5-deposit-payout-contract.md) · [A.6](./A.6-settlement-client-watchtower.md) · [A.7](./A.7-anonymity-set.md) · [A.9](./A.9-native-commitment.md). Reuse citations: [A.1](./A.1-reuse-inventory.md).

@@ -1,27 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Architecture — Armada × Laconic tier stack</title>
-<link rel="stylesheet" href="style.css" />
-</head>
-<body>
-<main>
-<nav class="nav">
-  <a href="index.html">Overview</a>
-  <a href="architecture.html" class="active">Architecture</a>
-  <a href="build-plan.html">Build plan</a>
-  <a href="execution-platform.html">Execution platform</a>
-  <a href="yield-clearing.html">Yield &amp; clearing</a>
-  <a href="mobile-privacy.html">Mobile privacy</a>
-  <a href="glossary.html">Glossary</a>
-  <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
-  <a href="builder-codes.html">Builder codes</a>
-  <a href="engineering/README.html">Engineering</a>
-</nav>
+# Architecture — the tier stack
 
-<h1 id="architecture-the-tier-stack">Architecture — the tier stack</h1>
 <p class="lede">Armada settles private execution on a Nitro rail. The motion is the same everywhere: notes in → normal Nitro → notes out. Value leaves the Railgun shielded pool, moves through ordinary Nitro state channels off-chain, and returns as shielded notes. That rail carries a mobile-first, non-custodial, front-running-resistant venue, delivered through bonded Laconic <em>watcher parties</em> beneath Armada's Adapters tier. Seven tiers, each mapped to existing code where it exists.</p>
 
 <p style="margin-top:14px">
@@ -35,7 +13,8 @@
 Tiers are named in the software-architecture sense (an n-tier stack), not the "Layer&nbsp;1 / Layer&nbsp;2" of blockchains. Every claim maps to code on the <a href="build-plan.html">Build plan</a>, with pinned commits and status. This page is the structure; the build plan is the status and backlog. Code links use GitHub where a mirror exists, otherwise the canonical Laconic Gitea (<code>git.vdb.to</code>).
 </div>
 
-<h2 id="contents">Contents</h2>
+## Contents
+
 <div class="toc">
   <a href="#shape">The shape of the network (mobile-first)</a>
   <a href="#settlement">The settlement rail — notes in, normal Nitro, notes out</a>
@@ -51,8 +30,10 @@ Tiers are named in the software-architecture sense (an n-tier stack), not the "L
   <a href="#refs">References</a>
 </div>
 
-<h2 id="shape">The shape of the network — mobile-first</h2>
-<p>Every service is delivered through watcher parties, so most of the network is browser wallets and mobile apps talking peer-to-peer. The only fixed infrastructure is (a) a handful of <strong>STUN/TURN</strong> servers for NAT traversal and (b) a small number of <strong>nimbus-eth1</strong> state-diff emitters that feed L1 state into the parties. Everything else (sync, metering, matching, settlement, threshold attestation) is run by the bonded service-provider federations and the clients.</p>
+## The shape of the network — mobile-first {#shape}
+
+Every service is delivered through watcher parties, so most of the network is browser wallets and mobile apps talking peer-to-peer. The only fixed infrastructure is (a) a handful of **STUN/TURN** servers for NAT traversal and (b) a small number of **nimbus-eth1** state-diff emitters that feed L1 state into the parties. Everything else (sync, metering, matching, settlement, threshold attestation) is run by the bonded service-provider federations and the clients.
+
 <pre class="diagram">
         browser wallet / mobile app                 browser wallet / mobile app
     ( Laconic wallet (Android/iOS/web)  +  in-browser Nitro node  +  libp2p relay )     T6
@@ -83,11 +64,16 @@ Tiers are named in the software-architecture sense (an n-tier stack), not the "L
 Clients hold their own keys and funds (channels are L1-collateralized); a watcher party never takes custody and can be exited unilaterally. The two boxes of fixed infra stay small: STUN/TURN carry no trust, and the nimbus-eth1 emitters only publish verifiable state.
 </p>
 
-<h2 id="settlement">The settlement rail — notes in, normal Nitro, notes out</h2>
-<p>Every adapter resolves to one motion. Value leaves the Railgun shielded pool as notes, moves through ordinary go-nitro state channels off-chain, and returns to shielded notes at the end. Nitro does the settling; the shielded pool holds custody at the boundary, and the pool contract is never touched.</p>
-<p>A cross-chain swap is that shape stretched across two chains. A shielded A→B swap prices and matches inside a Nitro channel, and the two legs settle against mirrored channels through the <code>Bridge</code> construction<sup><a href="#r-bridge">[10]</a></sup>, so neither side leaves the trader's custody until the co-signed outcome is final. The construction is documented end to end in the <a href="engineering/A-nitro-on-railgun/A.0-overview.html">nitro-on-railgun overview</a> and the <a href="engineering/shielded-nitro-bridge-design.html">shielded cross-chain-swap design</a>.</p>
-<h2 id="t0">T0 · Ethereum anchor — settlement &amp; shielded custody</h2>
-<p>Settlement is non-custodial Nitro state channels on Ethereum L1. Funds are locked in the <code>NitroAdjudicator</code> / <code>MultiAssetHolder</code> and allocated off-chain by co-signed state; a channel closes cooperatively at internet speed, or unilaterally via the <code>ForceMove</code> dispute game (<code>challenge</code>, <code>checkpoint</code>, <code>conclude</code>)<sup><a href="#r-forcemove">[5]</a></sup>. This is the escape hatch that makes the venue safe: if a party misbehaves, the user force-closes to their last co-signed state, and no settlement receipt means the force-close returns the pre-fill deposit. The adjudicator only ever honors user-signed states, so a byzantine federation can stall you but cannot fabricate balances or move unsigned funds.</p>
+## The settlement rail — notes in, normal Nitro, notes out {#settlement}
+
+Every adapter resolves to one motion. Value leaves the Railgun shielded pool as notes, moves through ordinary go-nitro state channels off-chain, and returns to shielded notes at the end. Nitro does the settling; the shielded pool holds custody at the boundary, and the pool contract is never touched.
+
+A cross-chain swap is that shape stretched across two chains. A shielded A→B swap prices and matches inside a Nitro channel, and the two legs settle against mirrored channels through the `Bridge` construction<sup><a href="#r-bridge">[10]</a></sup>, so neither side leaves the trader's custody until the co-signed outcome is final. The construction is documented end to end in the [nitro-on-railgun overview](engineering/A-nitro-on-railgun/A.0-overview.html) and the [shielded cross-chain-swap design](engineering/shielded-nitro-bridge-design.html).
+
+## T0 · Ethereum anchor — settlement & shielded custody {#t0}
+
+Settlement is non-custodial Nitro state channels on Ethereum L1. Funds are locked in the `NitroAdjudicator` / `MultiAssetHolder` and allocated off-chain by co-signed state; a channel closes cooperatively at internet speed, or unilaterally via the `ForceMove` dispute game (`challenge`, `checkpoint`, `conclude`)<sup><a href="#r-forcemove">[5]</a></sup>. This is the escape hatch that makes the venue safe: if a party misbehaves, the user force-closes to their last co-signed state, and no settlement receipt means the force-close returns the pre-fill deposit. The adjudicator only ever honors user-signed states, so a byzantine federation can stall you but cannot fabricate balances or move unsigned funds.
+
 <pre>contract HashLockedSwap is IForceMoveApp {
     struct AppData { bytes32 h; bytes preImage; }   // reveal preimage of h to unlock
     ...
@@ -95,12 +81,18 @@ Clients hold their own keys and funds (channels are L1-collateralized); a watche
 
 <p class="src">source: <a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/packages/nitro-protocol/contracts/examples/HashLockedSwap.sol#L11-L33">go-nitro · HashLockedSwap.sol#L11–L33</a></p>
 
-<p>Cross-chain and L1↔L2 movement reuses the <code>Bridge</code> mirrored-channel construction<sup><a href="#r-bridge">[10]</a></sup>. <strong>Built here:</strong> the Railgun shielded pool (Armada's, immutable) and the full Nitro adjudicator / ForceMove / MultiAssetHolder<sup><a href="#r-forcemove">[5]</a></sup>, live on Ethereum. <strong>Net-new here:</strong> a venue/party registry and bond contract, an on-chain sequencing-cert and fraud-proof verifier, and the Nitro↔Railgun boundary adapter (see <a href="#privacy">Privacy</a>). Full status on the <a href="build-plan.html#t0">Build plan</a>.</p>
-<h2 id="t1">T1 · Ingestion (nimbus-eth1 → watchers)</h2>
-<p>L1 state reaches the watcher parties through a <code>nimbus-eth1</code><sup><a href="#r-nimbus">[16]</a></sup> state-diff emitter, whose stateless/witness and Aristo primitives<sup><a href="#r-nimbusstateless">[17]</a></sup> emit full, proof-carrying Ethereum state diffs (intermediate and leaf MPT trie nodes) from a bounded working set, indexed and served by the IPLD services, <code>ipld-eth-server</code><sup><a href="#r-ipldserver">[18]</a></sup> and <code>ipld-eth-state-snapshot</code><sup><a href="#r-snapshot">[19]</a></sup>.</p>
-<p>This is what makes private sync possible. A watcher party ingests the Railgun shielded-pool commitments and nullifiers and the Nitro adjudicator events through the nimbus-eth1 emitter, then serves proof-carrying, identical-for-everyone note streams metered by Nitro. Clients scan those streams <strong>locally</strong>, so no RPC provider ever fingerprints a user against the pool, the single property Armada's anonymity set depends on. A few emitters serve the whole network; the phones and browsers do the rest. The generic <code>watcher-ts</code> framework<sup><a href="#r-watcherts">[2]</a></sup> exists; the emitter module and the Railgun/adjudicator-specific watcher config are the build work.</p>
-<h2 id="t2">T2 · Watcher-party substrate</h2>
-<p>A <strong>watcher party</strong> is a bonded federation of service providers that collectively serves one data need. Here it is also the execution venue: it delivers Armada's private support services and clears the associated payments over Nitro.</p>
+Cross-chain and L1↔L2 movement reuses the `Bridge` mirrored-channel construction<sup><a href="#r-bridge">[10]</a></sup>. **Built here:** the Railgun shielded pool (Armada's, immutable) and the full Nitro adjudicator / ForceMove / MultiAssetHolder<sup><a href="#r-forcemove">[5]</a></sup>, live on Ethereum. **Net-new here:** a venue/party registry and bond contract, an on-chain sequencing-cert and fraud-proof verifier, and the Nitro↔Railgun boundary adapter (see [Privacy](#privacy)). Full status on the [Build plan](build-plan.html#t0).
+
+## T1 · Ingestion (nimbus-eth1 → watchers) {#t1}
+
+L1 state reaches the watcher parties through a `nimbus-eth1`<sup><a href="#r-nimbus">[16]</a></sup> state-diff emitter, whose stateless/witness and Aristo primitives<sup><a href="#r-nimbusstateless">[17]</a></sup> emit full, proof-carrying Ethereum state diffs (intermediate and leaf MPT trie nodes) from a bounded working set, indexed and served by the IPLD services, `ipld-eth-server`<sup><a href="#r-ipldserver">[18]</a></sup> and `ipld-eth-state-snapshot`<sup><a href="#r-snapshot">[19]</a></sup>.
+
+This is what makes private sync possible. A watcher party ingests the Railgun shielded-pool commitments and nullifiers and the Nitro adjudicator events through the nimbus-eth1 emitter, then serves proof-carrying, identical-for-everyone note streams metered by Nitro. Clients scan those streams **locally**, so no RPC provider ever fingerprints a user against the pool, the single property Armada's anonymity set depends on. A few emitters serve the whole network; the phones and browsers do the rest. The generic `watcher-ts` framework<sup><a href="#r-watcherts">[2]</a></sup> exists; the emitter module and the Railgun/adjudicator-specific watcher config are the build work.
+
+## T2 · Watcher-party substrate {#t2}
+
+A **watcher party** is a bonded federation of service providers that collectively serves one data need. Here it is also the execution venue: it delivers Armada's private support services and clears the associated payments over Nitro.
+
 <table>
 <tr><th>Service</th><th>Delivered by the watcher party as…</th></tr>
 <tr><td>Private shielded-pool sync</td><td>a shared cache serving proof-carrying, everyone-gets-the-same-bytes note streams (clients scan locally &amp; privately)</td></tr>
@@ -114,56 +106,83 @@ Clients hold their own keys and funds (channels are L1-collateralized); a watche
 Why "party," not "chain": the federation only needs to (a) agree on <em>which</em> commitments are in an epoch and (b) fix an order, a sequencing-and-attestation task rather than replicated global execution. That is a far weaker (and cheaper) primitive than BFT consensus, and it is what lets the network live on phones.
 </div>
 
-<h3 id="the-federation-signature-threshold-schnorr-dss">The federation signature — threshold Schnorr (DSS)</h3>
-<p>The party signs everything it attests to with a <strong>threshold Schnorr signature</strong>. The <code>chain-signatures</code> library provides Ethereum-compatible Schnorr (<code>ethschnorr.Sign</code> / <code>Verify</code>)<sup><a href="#r-ethschnorr">[12]</a></sup> and the Distributed Schnorr Signature protocol (Stinson &amp; Strobl <em>(t, n)</em>) in <code>ethdss</code><sup><a href="#r-ethdss">[13]</a></sup>, built on a <code>kyber</code> DKG. Two properties matter:</p>
-<ul>
-<li><strong>On-chain verifiable.</strong> Because it is Ethereum-flavoured Schnorr, an L1 contract can verify a party's aggregate signature, so a sequencing cert or a censored-commit receipt becomes a slashable fraud proof against the bond (T0).</li>
-<li><strong>Threshold direction is safety-first.</strong> <em>t</em>-of-<em>n</em> tolerates <em>t−1</em> malicious for safety and <em>n−t</em> offline for liveness. We pick <em>t</em> high (e.g. 4-of-7) so forging an attestation needs a large coalition; a liveness failure degrades to halt, not loss, because settlement is non-custodial. A BFT-style small quorum like 3-of-11 would be wrong, since it would let any 3 forge.</li>
-</ul>
+### The federation signature — threshold Schnorr (DSS)
+
+The party signs everything it attests to with a **threshold Schnorr signature**. The `chain-signatures` library provides Ethereum-compatible Schnorr (`ethschnorr.Sign` / `Verify`)<sup><a href="#r-ethschnorr">[12]</a></sup> and the Distributed Schnorr Signature protocol (Stinson &amp; Strobl <em>(t, n)</em>) in `ethdss`<sup><a href="#r-ethdss">[13]</a></sup>, built on a `kyber` DKG. Two properties matter:
+
+- **On-chain verifiable.** Because it is Ethereum-flavoured Schnorr, an L1 contract can verify a party's aggregate signature, so a sequencing cert or a censored-commit receipt becomes a slashable fraud proof against the bond (T0).
+- **Threshold direction is safety-first.** *t*-of-*n* tolerates *t−1* malicious for safety and *n−t* offline for liveness. We pick *t* high (e.g. 4-of-7) so forging an attestation needs a large coalition; a liveness failure degrades to halt, not loss, because settlement is non-custodial. A BFT-style small quorum like 3-of-11 would be wrong, since it would let any 3 forge.
+
 <div class="note">
 The threshold key is used for <strong>signing only</strong>. We do not run a threshold-encrypted mempool: with the sequencer and key-holder being the same federation, encryption gives no real fairness (a colluding threshold can decrypt-then-order). Fair ordering is achieved with commit-reveal instead (T3).
 </div>
 
-<h2 id="t3">T3 · Ordering &amp; fault model</h2>
-<h3 id="fair-ordering-commit-reveal">Fair ordering = commit-reveal</h3>
-<p>Orders are hidden from the venue during ordering with <strong>commit-reveal</strong> rather than client-side ZK: a phone generating a SNARK per order costs seconds, a reveal round-trip is tens of milliseconds, and the user is already interactive through settlement. The flow: <code>commit = H(order ‖ salt)</code> → the party seals the epoch and emits threshold-signed inclusion receipts (so censorship is slashable) → a post-seal randomness beacon fixes positions → the user reveals → the matcher runs over revealed orders in the fixed order. The party cannot content-front-run (it only saw hashes) or position-manipulate (the beacon is post-seal). ZK order submission stays an opt-in for offline submitters or server-side provers.</p>
-<h3 id="latency-receipts">Latency &amp; receipts</h3>
-<p>A cooperative fill is <strong>3 RTT + Δ</strong> (commit, reveal, settle), with Δ ≈ the party's co-located sealing window (single-digit ms). Settlement is one round trip whose two legs are both mandatory: the user signs first, and the venue returns a bond-enforced settlement receipt. There is no fire-and-forget; every fill terminates in either a co-signed receipt or a slashable proof of its absence.</p>
-<h3 id="griefing-is-a-non-issue-here">Griefing is a non-issue here</h3>
-<p>Because the venue is the one providing asks, a user who withholds a reveal harms no third party: the ask is a standing quote available to all, so a non-revealed commit blocks no other user's liquidity. The only theoretical residual is a sub-second free option on a stale quote, worth roughly nothing as long as the reveal timeout ≤ the quote-repricing interval (a knob the venue controls). Anti-griefing collapses to a nominal anti-spam commit fee.</p>
-<h3 id="failure-halt-not-loss">Failure = halt, not loss</h3>
-<p>If the party stalls or drops below its liveness threshold, users force-close to their last signed state and are made whole; a <strong>watchtower</strong> guarantees the latest state even for an offline user. Non-custody means a dead party freezes trading, never funds.</p>
+## T3 · Ordering & fault model {#t3}
+
+### Fair ordering = commit-reveal
+
+Orders are hidden from the venue during ordering with **commit-reveal** rather than client-side ZK: a phone generating a SNARK per order costs seconds, a reveal round-trip is tens of milliseconds, and the user is already interactive through settlement. The flow: `commit = H(order ‖ salt)` → the party seals the epoch and emits threshold-signed inclusion receipts (so censorship is slashable) → a post-seal randomness beacon fixes positions → the user reveals → the matcher runs over revealed orders in the fixed order. The party cannot content-front-run (it only saw hashes) or position-manipulate (the beacon is post-seal). ZK order submission stays an opt-in for offline submitters or server-side provers.
+
+### Latency & receipts
+
+A cooperative fill is **3 RTT + Δ** (commit, reveal, settle), with Δ ≈ the party's co-located sealing window (single-digit ms). Settlement is one round trip whose two legs are both mandatory: the user signs first, and the venue returns a bond-enforced settlement receipt. There is no fire-and-forget; every fill terminates in either a co-signed receipt or a slashable proof of its absence.
+
+### Griefing is a non-issue here
+
+Because the venue is the one providing asks, a user who withholds a reveal harms no third party: the ask is a standing quote available to all, so a non-revealed commit blocks no other user's liquidity. The only theoretical residual is a sub-second free option on a stale quote, worth roughly nothing as long as the reveal timeout ≤ the quote-repricing interval (a knob the venue controls). Anti-griefing collapses to a nominal anti-spam commit fee.
+
+### Failure = halt, not loss
+
+If the party stalls or drops below its liveness threshold, users force-close to their last signed state and are made whole; a **watchtower** guarantees the latest state even for an offline user. Non-custody means a dead party freezes trading, never funds.
+
 <p class="small">In Ethereum terms this tier is a decentralized sequencer + DA + fraud-proof ordering over state-channel settlement, not a rollup: there is no shared L2 state root, and balances are enforced by the channel adjudicator. See the <a href="build-plan.html#t3">Build plan</a>; this is the highest-design-risk, mostly net-new tier.</p>
 
-<h2 id="t4">T4 · Execution / settlement platform (ex_net)</h2>
-<p>This is the platform that Armada's adapters run on. The matcher is a frequent-batch-auction, curve-order, filler-filtered CLOB/RFQ hybrid that prices, matches, and settles privately into Nitro channels. Its own page, <a href="execution-platform.html">Execution platform</a>, covers it in depth: the ex_net lineage, the 2019–2020 <code>matcher</code> PoC, capital efficiency vs. AMMs, and how Swaps and yield become applications on top. Settlement reuses go-nitro's multi-asset swap protocol<sup><a href="#r-swap">[6]</a></sup> and <code>SwapChannel</code><sup><a href="#r-swapchan">[7]</a></sup>; the net-new pieces are the LP/market-maker vault, receipt-or-slash wiring, and multi-asset outcomes.</p>
+## T4 · Execution / settlement platform (ex_net) {#t4}
+
+This is the platform that Armada's adapters run on. The matcher is a frequent-batch-auction, curve-order, filler-filtered CLOB/RFQ hybrid that prices, matches, and settles privately into Nitro channels. Its own page, [Execution platform](execution-platform.html), covers it in depth: the ex_net lineage, the 2019–2020 `matcher` PoC, capital efficiency vs. AMMs, and how Swaps and yield become applications on top. Settlement reuses go-nitro's multi-asset swap protocol<sup><a href="#r-swap">[6]</a></sup> and `SwapChannel`<sup><a href="#r-swapchan">[7]</a></sup>; the net-new pieces are the LP/market-maker vault, receipt-or-slash wiring, and multi-asset outcomes.
+
 <div class="note"><strong>v1 vs v2.</strong> This matcher is a <strong>v2</strong> feature (price discovery and market-making). Armada's <strong>v1</strong> execution uses a posted price: a single <code>priceSetter</code> (one L1 wallet → governance) publishes bid/ask on both sides, take-it-or-leave-it, cleared over Nitro. Nothing is left to front-run, so v1 needs no matcher and no fair-ordering (T3). See <a href="yield-clearing.html">Yield &amp; clearing</a>.</div>
 
-<h2 id="t5">T5 · Adapters (Armada's tier)</h2>
-<p>Armada's Swaps and Aave-v4 yield adapters are applications on the venue, not peers to it. In <strong>v1</strong>, Swaps clear at the posted price, and the value-moving adapter is a Railgun RelayAdapt recipe (atomic unshield → call → reshield), with no custodial vault and no DSS. For yield, ETH is a shielded wstETH note (intrinsic and non-rebasing, so no Aave or LP is needed) and USDC is an LP-buffered Aave rail; see <a href="yield-clearing.html">Yield &amp; clearing</a>. CCTP (cross-chain USDC) is Armada's, already built. Nothing here touches the immutable pool.</p>
+## T5 · Adapters (Armada's tier) {#t5}
+
+Armada's Swaps and Aave-v4 yield adapters are applications on the venue, not peers to it. In **v1**, Swaps clear at the posted price, and the value-moving adapter is a Railgun RelayAdapt recipe (atomic unshield → call → reshield), with no custodial vault and no DSS. For yield, ETH is a shielded wstETH note (intrinsic and non-rebasing, so no Aave or LP is needed) and USDC is an LP-buffered Aave rail; see [Yield & clearing](yield-clearing.html). CCTP (cross-chain USDC) is Armada's, already built. Nothing here touches the immutable pool.
+
 <div class="note">
 <strong>Audit boundary.</strong> Positioning ex_net under multiple adapters makes it a shared dependency with its own audit surface, a larger ask than one independently-deployed adapter, and a deviation from Armada's "each adapter independently deployed &amp; audited" discipline.
 </div>
 
-<h3 id="the-cctp-adapter-cross-chain-usdc-onoff-ramp">The CCTP adapter — cross-chain USDC on/off-ramp</h3>
-<p>"Privacy on Ethereum" describes where the shielded pool lives, not where the money is. Circle mints native USDC on around a dozen chains, so most users' USDC is not already on mainnet. The <strong>CCTP adapter</strong> is the cross-chain rail that fills and drains the pool, an adoption and liquidity adapter rather than a privacy primitive. CCTP is Circle's burn-and-mint protocol: burn on the source chain, mint native USDC on the destination against a Circle attestation, non-custodial, 1:1, with no slippage and no wrapped-asset or bridge-hack risk. It matters because a shielded pool's privacy scales with its crowd size, so deposits must be sourceable from wherever USDC actually sits, and private balances must be able to exit to other chains.</p>
-<p>As an adapter it chains two operations into one user action, without touching the immutable pool. Inbound (mint-and-shield): burn on the source chain → attestation → mint on Ethereum, with a CCTP v2 hook depositing the minted USDC straight into the Railgun pool at a fresh, unlinkable destination. Outbound (unshield-and-burn): unshield → burn on Ethereum → mint on the destination chain.</p>
+### The CCTP adapter — cross-chain USDC on/off-ramp
+
+"Privacy on Ethereum" describes where the shielded pool lives, not where the money is. Circle mints native USDC on around a dozen chains, so most users' USDC is not already on mainnet. The **CCTP adapter** is the cross-chain rail that fills and drains the pool, an adoption and liquidity adapter rather than a privacy primitive. CCTP is Circle's burn-and-mint protocol: burn on the source chain, mint native USDC on the destination against a Circle attestation, non-custodial, 1:1, with no slippage and no wrapped-asset or bridge-hack risk. It matters because a shielded pool's privacy scales with its crowd size, so deposits must be sourceable from wherever USDC actually sits, and private balances must be able to exit to other chains.
+
+As an adapter it chains two operations into one user action, without touching the immutable pool. Inbound (mint-and-shield): burn on the source chain → attestation → mint on Ethereum, with a CCTP v2 hook depositing the minted USDC straight into the Railgun pool at a fresh, unlinkable destination. Outbound (unshield-and-burn): unshield → burn on Ethereum → mint on the destination chain.
+
 <div class="note">
 <strong>CCTP is transport, not privacy.</strong> The burn shows sender and amount on the source chain and the mint shows recipient and amount on the destination; if the same public addresses appear on both ends the cross-chain link is trivial. Privacy comes entirely from binding the mint <em>into the shield</em> (or sourcing the burn from it). Residual leaks: amount and timing correlation across the hop (mitigate by atomic batched aggregation and staying shielded; a large lone crossing stands out on its own), and the mint transaction's origin. That last point is why the destination mint should be submitted by the broadcaster/keeper (§ Layer 2 of <a href="mobile-privacy.html">Mobile privacy</a>) over the Nym/Waku private transport, not from the user's own address. Native USDC is freezable by Circle and CCTP depends on Circle's attestation service, a centralization and censorship consideration orthogonal to the adapter mechanics.
 </div>
 
-<h2 id="t6">T6 · Client / apps (mobile-first)</h2>
-<p>The client is the <strong>Laconic wallet</strong>, a React Native app on Android and iOS<sup><a href="#r-lacwallet">[21]</a></sup> with a browser build<sup><a href="#r-lacwalletweb">[22]</a></sup>. It custodies keys and signs both Cosmos and EIP-155 requests over WalletConnect, and pairs with an in-browser or mobile Nitro node<sup><a href="#r-tsnitro">[4]</a></sup> for payments and a libp2p relay. The wallet is bare-bones today, and <code>MobyMask</code><sup><a href="#r-mobymask">[3]</a></sup> and the swap demos are demo fragments rather than user-facing products; they demonstrate the mobile-first shape (app-specific signing, in-browser Nitro, and a p2p relay to a keeper) rather than a finished app. T6 is a real build: grow the wallet into the Armada-branded front-end, wire the Armada SDK, and add wallet updates (return pubkey on <code>cosmos_signAmino</code>, Nitro and commit-reveal integration, Railgun boundary UX).</p>
-<h2 id="identity">Identity — an optional match filter</h2>
-<p>Identity is an optional, well-defined attribute a party can attach to itself and optionally require of counterparties, evaluated by the same matcher as any other filter (pair, size, price, allow/block lists). It is not a separate layer. The default is identity-blind, and a party opts in only when a counterparty or a jurisdiction requires it. What follows is how such an attribute is sourced and proved; all of it is optional.</p>
-<h3 id="ex_net-identity-proofs">ex_net identity proofs</h3>
-<p>ex_net<sup><a href="#r-exnet">[1]</a></sup> defines the primitive: a user links an external key to their trading identity by signing a message with the external private key that embeds their venue public key. In its forward-looking form the user can prove a match (e.g. passport ↔ liveness) and record only the proof, never the underlying data. Identity is an optional, user-initiated, selectively-disclosed proof beside the shielded default; the venue stays identity-blind unless a counterparty or jurisdiction requires a proof. The shipped precedent is laconicd's onboarding module, whose on-chain <code>Participant</code> record carries <code>role</code> and <code>kyc_id</code><sup><a href="#r-onboard">[14]</a></sup>.</p>
-<h3 id="the-laconic-matchmaker">The Laconic Matchmaker</h3>
-<p>The Laconic Matchmaking Services proposal<sup><a href="#r-match">[15]</a></sup> supplies the compliance-gating half: a privacy-preserving matchmaking service that pairs technically-qualified operators with capital backers "in a way that's compliant with international broker-dealer laws and respects their users' privacy," implemented as encrypted computation that matches number ranges and finds intersections of number intervals. In exchange terms, the matcher can verify that two parties satisfy each other's constraints (jurisdiction, accreditation, size band, KYC status) without either party, or the venue, learning the other's identity or exact values. The underlying FHE or encrypted-computation is an implementation detail; the design depends only on the two abstractions above.</p>
+## T6 · Client / apps (mobile-first) {#t6}
+
+The client is the **Laconic wallet**, a React Native app on Android and iOS<sup><a href="#r-lacwallet">[21]</a></sup> with a browser build<sup><a href="#r-lacwalletweb">[22]</a></sup>. It custodies keys and signs both Cosmos and EIP-155 requests over WalletConnect, and pairs with an in-browser or mobile Nitro node<sup><a href="#r-tsnitro">[4]</a></sup> for payments and a libp2p relay. The wallet is bare-bones today, and `MobyMask`<sup><a href="#r-mobymask">[3]</a></sup> and the swap demos are demo fragments rather than user-facing products; they demonstrate the mobile-first shape (app-specific signing, in-browser Nitro, and a p2p relay to a keeper) rather than a finished app. T6 is a real build: grow the wallet into the Armada-branded front-end, wire the Armada SDK, and add wallet updates (return pubkey on `cosmos_signAmino`, Nitro and commit-reveal integration, Railgun boundary UX).
+
+## Identity — an optional match filter {#identity}
+
+Identity is an optional, well-defined attribute a party can attach to itself and optionally require of counterparties, evaluated by the same matcher as any other filter (pair, size, price, allow/block lists). It is not a separate layer. The default is identity-blind, and a party opts in only when a counterparty or a jurisdiction requires it. What follows is how such an attribute is sourced and proved; all of it is optional.
+
+### ex_net identity proofs
+
+ex_net<sup><a href="#r-exnet">[1]</a></sup> defines the primitive: a user links an external key to their trading identity by signing a message with the external private key that embeds their venue public key. In its forward-looking form the user can prove a match (e.g. passport ↔ liveness) and record only the proof, never the underlying data. Identity is an optional, user-initiated, selectively-disclosed proof beside the shielded default; the venue stays identity-blind unless a counterparty or jurisdiction requires a proof. The shipped precedent is laconicd's onboarding module, whose on-chain `Participant` record carries `role` and `kyc_id`<sup><a href="#r-onboard">[14]</a></sup>.
+
+### The Laconic Matchmaker
+
+The Laconic Matchmaking Services proposal<sup><a href="#r-match">[15]</a></sup> supplies the compliance-gating half: a privacy-preserving matchmaking service that pairs technically-qualified operators with capital backers "in a way that's compliant with international broker-dealer laws and respects their users' privacy," implemented as encrypted computation that matches number ranges and finds intersections of number intervals. In exchange terms, the matcher can verify that two parties satisfy each other's constraints (jurisdiction, accreditation, size band, KYC status) without either party, or the venue, learning the other's identity or exact values. The underlying FHE or encrypted-computation is an implementation detail; the design depends only on the two abstractions above.
+
 <p class="small"><strong>Off-the-shelf path, Self (zk-passport), optional future work (not built).</strong> The selective-disclosure identity above has a credible off-the-shelf option in <a href="https://github.com/selfxyz/self">Self</a> (zk-passport, formerly OpenPassport): the user proves attributes (nationality, age, OFAC-clear, personhood) on-device from a passport or EU-ID chip via the standalone Self app, and Armada verifies the returned attestation off-chain, anchored to an Ethereum address (a nullifier gives uniqueness; the shielded Railgun identity stays unlinked). Proof-of-funds stays native, a shielded note-balance proof. It is optional and deferred: none of it is required for the shielded default, and none of it is implemented.</p>
 
-<h2 id="privacy">Cross-cutting · Privacy boundary (Design A)</h2>
-<p>Privacy is delivered by funding and settling channels through a Railgun-style shielded pool via an adapter<sup><a href="#r-railgun">[20]</a></sup>, the same adapter pattern Armada already uses, with a Nitro adapter added. The venue's visibility begins at the shield boundary and never reaches behind it: it sees the shielded-side order terms it must match and an ephemeral channel identity, but not who you are, where the funds came from, your on-chain history, or whether two trades were the same person. The venue is a blind, non-custodial matcher.</p>
+## Cross-cutting · Privacy boundary (Design A) {#privacy}
+
+Privacy is delivered by funding and settling channels through a Railgun-style shielded pool via an adapter<sup><a href="#r-railgun">[20]</a></sup>, the same adapter pattern Armada already uses, with a Nitro adapter added. The venue's visibility begins at the shield boundary and never reaches behind it: it sees the shielded-side order terms it must match and an ephemeral channel identity, but not who you are, where the funds came from, your on-chain history, or whether two trades were the same person. The venue is a blind, non-custodial matcher.
+
 <p class="small">
 Caveats: identity privacy is only as strong as the Railgun anonymity set and is subject to amount and timing correlation (mitigate by atomic batched aggregation and a fresh per-channel identity; amounts themselves are hidden inside the shield, so the leak is only at the transparent boundary). The one thing still visible to the venue is the trade's amounts and terms. Hiding those too is <strong>Design B</strong> (ZK matching plus a "shielded ForceMove" dispute over hidden state), out of scope for v1.
 </p>
@@ -174,7 +193,8 @@ Caveats: identity privacy is only as strong as the Railgun anonymity set and is 
 
 <hr/>
 
-<h2 id="refs">References</h2>
+## References {#refs}
+
 <ol class="refs">
 <li id="r-exnet"><strong>ex_net whitepaper</strong>, Vulcanize (© 2017). <a href="./ex_net_whitepaper.pdf">ex_net_whitepaper.pdf</a> (in this repo).</li>
 <li id="r-watcherts"><strong>watcher-ts</strong>. <a href="https://github.com/cerc-io/watcher-ts/blob/18ca4e1a08328770af8e10f15f2128a459c9c704/README.md">github.com/cerc-io/watcher-ts</a> @ <code>18ca4e1</code>.</li>
@@ -200,10 +220,3 @@ Caveats: identity privacy is only as strong as the Railgun anonymity set and is 
 </ol>
 
 <p class="small" style="margin-top:26px">Code links pinned to commits: go-nitro <code>435eb2b</code>, chain-signatures <code>9016a7c</code>, laconicd <code>d130608</code> (<code>roysc/nitro-integration</code>). Internal Google Docs require Laconic/Vulcanize access.</p>
-
-<hr/>
-<p class="small">Generated from <code>architecture.md</code> by <code>tools/render.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
-
-</main>
-</body>
-</html>

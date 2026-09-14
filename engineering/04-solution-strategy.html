@@ -28,7 +28,7 @@ which they ship. Every claim grounds in the §5 registry (for item ids) and the 
 (for rationale); the supporting detail lives in the <code>T#.#</code> tier docs, and the risk
 detail lives in §11.</p>
 <h2 id="41-core-strategy-nitro-on-railgun">4.1 Core strategy — <em>nitro-on-railgun</em></h2>
-<p>The load-bearing idea is one sentence (ADR-0004):</p>
+<p>The core idea is one sentence (ADR-0004):</p>
 <blockquote>
 <p><strong>notes in → normal Nitro → notes out.</strong></p>
 </blockquote>
@@ -40,16 +40,16 @@ Railgun privacy analysis stay fully isolated; they meet only at the allocation�
 settlement games over shielded value <strong>with no new cryptography</strong> and without
 governance-gated RelayAdapt recipes. RelayAdapt is Railgun's own module, used only in
 the T4.2 hedge leg and never for settlement.</p>
-<p><strong>This is integration, not <em>new</em> cryptography — with one caveat (ADR-0014).</strong> The thesis
+<p><strong>This is integration, not <em>new</em> cryptography, with one caveat (ADR-0014).</strong> The thesis
 holds fully for the <strong>settlement rail</strong> (T0.2 adjudicator + T0.3 deposit/payout + T6.x),
-which is pure reuse and integration. It does <strong>not</strong> hold for the shielded <strong>pool (T0.0)
-and JoinSplit circuits (T0.1)</strong>: because Railgun's contracts/circuits are unlicensed
-(A.1.10), those are <strong>clean-room net-new</strong> — independently authored, spec-compatible with
-the Railgun design, and therefore audit-critical crypto-engineering (of a well-understood,
-de-risked design, not novel cryptography). The hard cryptographic assets break down as:</p>
+which is pure reuse and integration. It does not hold for the shielded <strong>pool (T0.0)
+and JoinSplit circuits (T0.1)</strong>: those are our own pool and circuits, our own
+implementation of the Railgun design, spec-compatible, and therefore audit-critical
+crypto-engineering (of a well-understood, de-risked design, not novel cryptography). The
+hard cryptographic assets break down as:</p>
 <ul>
-<li><strong>T0.0 / T0.1</strong> — the shielded pool and its JoinSplit circuits, <strong>clean-room
-  reimplemented</strong> (spec-compatible with Railgun, fee=0, our POI policy; ADR-0014), plus our
+<li><strong>T0.0 / T0.1</strong> — the shielded pool and its JoinSplit circuits, our own implementation
+  of the Railgun design (spec-compatible, fee=0, our POI policy; ADR-0014), plus our
   own Phase-2 ceremony. Net-new and audit-critical, but a reimplementation of a known
   design, not novel cryptography. Amounts are hidden in-circuit; the SNARK enforces
   value-conservation + range, so <em>$50 and $5M are equally opaque</em> — no Tornado-style
@@ -57,7 +57,7 @@ de-risked design, not novel cryptography). The hard cryptographic assets break d
 <li><strong>T0.2</strong> — vanilla <code>go-nitro</code> <code>NitroAdjudicator</code> / <code>ForceMove</code> / <code>MultiAssetHolder</code>,
   deployed and configured, not forked.</li>
 </ul>
-<p>Against that, the <strong>net-new v1 surface</strong> is enumerable — the clean-room pool/circuits plus
+<p>Against that, the <strong>net-new v1 surface</strong> is enumerable — the pool/circuits plus
 a thin integration layer:</p>
 <table>
 <thead>
@@ -68,7 +68,7 @@ a thin integration layer:</p>
 </thead>
 <tbody>
 <tr>
-<td>Clean-room shielded pool + JoinSplit circuits (spec-compatible with Railgun; audit-critical)</td>
+<td>Shielded pool + JoinSplit circuits (our own implementation of the Railgun design; audit-critical)</td>
 <td><strong>T0.0, T0.1</strong></td>
 </tr>
 <tr>
@@ -96,8 +96,8 @@ a thin integration layer:</p>
 <p>The only <em>novel</em> cryptography optional anywhere in the plan is <strong>T0.6</strong> (native
 channelized commitment, "fork-lite"). It is deferred off the spine (ADR-0005) and, if
 greenlit, re-runs the Phase-2 ceremony over our own circuits (ADR-0003). v1 needs <strong>no
-novel cryptography and zero new consensus/ordering</strong> (ADR-0007) — the clean-room
-pool/circuits (T0.0/T0.1) reimplement a known design rather than invent one — and because
+novel cryptography and zero new consensus/ordering</strong> (ADR-0007) — the pool/circuits
+(T0.0/T0.1) reimplement a known design rather than invent one — and because
 a posted price has nothing to front-run, the fair-ordering stack (T3) does not exist in v1.</p>
 <h2 id="42-how-the-top-quality-goals-are-met">4.2 How the top quality goals are met</h2>
 <p>Each §10 quality goal maps to a concrete approach realized by named items:</p>
@@ -138,12 +138,12 @@ opt-in T0.6 upgrade, which sits outside the v1 spine.</p>
 <h2 id="43-delivery-increments">4.3 Delivery increments</h2>
 <p>Increments are the <strong>release</strong> facet of the §5 registry, read as a shipping order:</p>
 <ul>
-<li><strong>v1 — Armada support (the spine).</strong> Clean-room pool + circuits + own Phase-2 (T0.0/T0.1), Nitro
+<li><strong>v1 — Armada support (the spine).</strong> Our own pool + circuits + own Phase-2 (T0.0/T0.1), Nitro
   adjudicator (T0.2), <strong>deposit/payout boundary (T0.3)</strong>, ingestion (T1.0–T1.2),
   watcher feeds + metering + transport (T2.0–T2.3), <strong>RFQ posted-price venue filled from a
   static inventory (T4.0, T4.1, T4.3) + ETH/wstETH yield (T4.4)</strong>, Armada adapters +
   routing (T5.0/T5.1), full wallet (T6.0–T6.7), anonymity-set bootstrap + Railgun import
-  bridge (T0.7 / ADR-0006). This is the clean-room pool/circuits (audit-critical, of a
+  bridge (T0.7 / ADR-0006). This is our own pool/circuits (audit-critical, of a
   known design; ADR-0014) plus integration + one small boundary contract + thin app code
   — no market-making, no new consensus, no novel ZK research (ADR-0011).</li>
 <li><strong>v2 — market-making + ex_net matcher (price discovery + fair ordering).</strong> The venue
@@ -182,7 +182,7 @@ against it).</p>
                                                 └─► T6 (wallet) ─► walking skeleton
 </code></pre>
 <ul>
-<li><strong>Do-first:</strong> T0.0 + T0.1 (the clean-room pool and circuits + Phase-2 keys) and T0.2 feed <strong>T0.3</strong>, the
+<li><strong>Do-first:</strong> T0.0 + T0.1 (our own pool and circuits + Phase-2 keys) and T0.2 feed <strong>T0.3</strong>, the
   boundary contract every other tier binds to. Nothing above T0 can integrate until
   T0.3's address, ABI, events, and lifecycle exist.</li>
 <li><strong>Then fan out in parallel</strong> once T0.3 is real: the <strong>T1 → T2</strong> feed path (ingest

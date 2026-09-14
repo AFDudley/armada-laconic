@@ -5,13 +5,13 @@ work package A · reuse-oriented spec · **2026-09-05**
 
 This is the grounded inventory of what already exists for work package A, with pinned file and line citations, what each piece gives us, which A-item it serves, and the net-new deltas. Per [ADR-0012](../09-architecture-decisions.md#adr-0012), specs cite these rather than re-documenting them. **Provenance:** go-nitro `@435eb2b`, ts-nitro `@884d616`, and mobymask `@2329198` are pinned. The Railgun repos were read at `master`/`main` HEAD (2026-09-05) and must be pinned to a commit before build (A.2/A.3/A.5).
 
-**Clean-room reframe ([ADR-0014](../09-architecture-decisions.md#adr-0014)).** Railgun's on-chain pool and `circuits-v2` are unlicensed, so T0.0 and T0.1 are not reuse. Our engineers clean-room reimplement them, spec-compatible with the Railgun design pinned here. A.1.1 (pool) and A.1.2 (circuits) are therefore the *reference spec* the clean-room implements, not reuse as deployed OSS; this whole inventory doubles as that reference spec. `go-nitro` and `ts-nitro` (A.1.3/A.1.5), along with Railgun's MIT `engine` and `cookbook`, remain genuine OSS reuse, unaffected.
+**Reference-spec role ([ADR-0014](../09-architecture-decisions.md#adr-0014)).** Railgun's on-chain pool and `circuits-v2` are not reused as deployed OSS; T0.0 and T0.1 are our own implementation of the Railgun design. A.1.1 (pool) and A.1.2 (circuits) are therefore the *reference spec* our own contracts and circuits match; this whole inventory doubles as that reference spec. `go-nitro` and `ts-nitro` (A.1.3/A.1.5), along with Railgun's `engine` and `cookbook`, remain genuine OSS reuse.
 
 ---
 
-## A.1.1 Shielded pool (T0.0) — clean-room reference spec
+## A.1.1 Shielded pool (T0.0) — reference spec
 
-This is the reference spec T0.0 clean-room reimplements: a spec-compatible shielded pool, independently authored under no Railgun license ([ADR-0014](../09-architecture-decisions.md#adr-0014)). The citations below pin the exact behavior and format our contracts must match; they are not reused-as-deployed OSS. The pool is an upgradeable proxy over `RailgunSmartWallet`, which is `RailgunLogic`, which is `{Commitments, TokenBlocklist, Verifier}`. There are only two public mutating entrypoints, and there is no separate deposit or withdraw: deposit and withdraw *are* shield and unshield-via-transact.
+This is the reference spec T0.0 implements: a spec-compatible shielded pool that we author ourselves ([ADR-0014](../09-architecture-decisions.md#adr-0014)). The citations below pin the exact behavior and format our contracts must match; they are not reused-as-deployed OSS. The pool is an upgradeable proxy over `RailgunSmartWallet`, which is `RailgunLogic`, which is `{Commitments, TokenBlocklist, Verifier}`. There are only two public mutating entrypoints, and there is no separate deposit or withdraw: deposit and withdraw *are* shield and unshield-via-transact.
 
 | Piece | Citation (`Railgun-Privacy/contract` @HEAD) | Gives us / A-item |
 |---|---|---|
@@ -27,9 +27,9 @@ This is the reference spec T0.0 clean-room reimplements: a spec-compatible shiel
 
 POI is not in these contracts; it is an alongside partner system (A.1.7). The pool-side levers are `changeFee(0,0,0)` and vkey registration; everything else is client-side or settlement-side policy.
 
-## A.1.2 JoinSplit circuits & trusted setup (T0.1) — clean-room reference spec
+## A.1.2 JoinSplit circuits & trusted setup (T0.1) — reference spec
 
-This is the reference spec T0.1's circuits are authored clean-room against: independently written, spec-compatible with the JoinSplit behavior below, under no `circuits-v2` license ([ADR-0014](../09-architecture-decisions.md#adr-0014)). The citations pin the note, commitment, and nullifier format and the public-signal arity our own circuits must reproduce. They are the design we match, not source we reuse.
+This is the reference spec T0.1's circuits are authored against: our own circuits, spec-compatible with the JoinSplit behavior below ([ADR-0014](../09-architecture-decisions.md#adr-0014)). The citations pin the note, commitment, and nullifier format and the public-signal arity our own circuits must reproduce. They are the design we match, not source we reuse.
 
 | Piece | Citation (`circuits-v2` @HEAD) | Gives us |
 |---|---|---|
@@ -105,12 +105,12 @@ T0.3 is a public-side ERC20 counterparty. It touches the pool and the adjudicato
 6. **In-browser dispute API** — ts-nitro exposes only fund/defund/pay, so the challenge/checkpoint surface is net-new. (A.6)
 7. **(opt) native-ETH / native-commitment** — the pool is ERC20/721 only, so this needs a WETH wrap or T0.6. (A.9)
 
-## A.1.10 Licensing & risks
+## A.1.10 Risks
 
-- **Licensing — resolved via clean-room ([ADR-0014](../09-architecture-decisions.md#adr-0014)).** `circuits-v2` `License.md` states *"No License is provided for any party under any circumstances"*, and the pool contracts are SPDX `UNLICENSED`. Redeploying them was never executable, so T0.0 (pool) and T0.1 (circuits) are clean-room reimplemented by our engineers, spec-compatible with the design pinned in A.1.1/A.1.2, using no Railgun-licensed source. This turns the single largest risk from an open blocker into a resolved gate and reclassifies T0.0/T0.1 as audit-critical net-new. `Railgun-Community/engine` and `cookbook` remain MIT reference; `go-nitro` and `ts-nitro` are unaffected OSS reuse.
+- **Own pool and circuits are audit-critical net-new.** T0.0 (pool) and T0.1 (circuits) are our own implementation of the Railgun design ([ADR-0014](../09-architecture-decisions.md#adr-0014)), spec-compatible with the behavior and format pinned in A.1.1/A.1.2. We own upgrades, audit, fee policy, and POI policy for them (ADR-0002); the residual load is that the build is audit-critical, not config-only.
 - **Unpinned Railgun commit** — pin before build.
 - **91-vs-54 circuit ambiguity** — the registered subset must be decided, which drives the ceremony count.
-- **`snarkSafetyVector`/`checkSafetyVectors`** magic constants must be reproduced verbatim in our clean-room implementation, matching the reference `RailgunLogic.sol` L111–127, or `transact` reverts.
+- **`snarkSafetyVector`/`checkSafetyVectors`** magic constants must be reproduced verbatim in our own implementation, matching the reference `RailgunLogic.sol` L111–127, or `transact` reverts.
 - **POI is a separate partner stack**, not redeployable from these repos.
 - **ERC1155 unsupported** by the pool (bounds T0.6).
 

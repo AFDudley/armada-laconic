@@ -27,13 +27,13 @@
 <strong>Owns:</strong> the <strong>A-level ICD</strong> (what A exposes to B/C/D, what A consumes) and the <strong>standing acceptance harness</strong> (walking skeleton + adversarial suite). Rolls up the per-item acceptance of T0.0/T0.1/T0.2/<strong>T0.3</strong>/T0.7/T6.2/T6.3.</p>
 <hr />
 <h2 id="a81-goal">A.8.1 Goal</h2>
-<p>Be the integration and verification hub for work package A: one place that (a) consolidates every interface A publishes to its siblings B, C, and D and every interface A consumes from them, and (b) defines the executable proof that <em>notes-in, normal Nitro, notes-out</em> holds end-to-end and survives an adversary. The construction A verifies here is the one A.0.2 draws and A.1.4 pins. This doc names the wire it exposes and the harness that keeps it honest, and it defers every internal to the owning A.x spec.</p>
+<p>Be the integration and verification hub for work package A: one place that (a) consolidates every interface A publishes to its siblings B, C, and D and every interface A consumes from them, and (b) defines the executable proof that <em>notes-in, normal Nitro, notes-out</em> holds end-to-end and survives an adversary. The construction A verifies here is the one A.0.2 draws and A.1.4 pins. This doc names the wire it exposes and the standing harness that regresses it, and it defers every internal to the owning A.x spec.</p>
 <p>Per <a href="../09-architecture-decisions.html#adr-0012">ADR-0012</a>, A binds to B, C, and D only through the interfaces in A.8.5; the interface is the boundary. The A.8.6 walking skeleton is the programme's first integration target and thereafter the standing regression harness against which every A item is deepened.</p>
 <h2 id="a82-boundary">A.8.2 Boundary</h2>
 <ul>
 <li><strong>In scope:</strong> the consolidated contract/event/API surface A publishes; the freshness contract A depends on from B; the fixturenet acceptance slice and adversarial cases; the roll-up acceptance matrix.</li>
 <li><strong>Out of scope (owned elsewhere):</strong> the deposit/payout ABI internals (see A.5), pool config (see A.2), ceremony artifacts (see A.3), adjudicator and app choice (see A.4), client and watchtower loop (see A.6), POI and anon-set (see A.7). This doc cites them; it never re-specifies them.</li>
-<li><strong>Phase-0 assumption.</strong> The licensing gate (<a href="./A.1-reuse-inventory.html">A.1.10</a>, <a href="./A.0-overview.html">A.0.5</a> gate 1) is resolved via clean-room (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>). The pool (T0.0, see A.2) and circuits (T0.1, see A.3) are clean-room reimplemented, so the skeleton runs against our clean-room pool with no Railgun grant or relicense needed. The ICD shapes below are stable regardless.</li>
+<li><strong>Phase-0 assumption.</strong> The pool (T0.0, see A.2) and circuits (T0.1, see A.3) are our own implementation, so the skeleton runs against our own pool. The ICD shapes below are stable regardless.</li>
 </ul>
 <h2 id="a83-reuse-inventory-cite-a1">A.8.3 Reuse inventory (cite A.1)</h2>
 <p>The exposed surface is mostly reused ABI, published under A's control:</p>
@@ -49,12 +49,12 @@
 <tr>
 <td>Pool <code>shield</code>/<code>transact</code>/<code>Shield</code>/<code>Transact</code>/<code>Nullified</code> events</td>
 <td><a href="./A.1-reuse-inventory.html">A.1.1</a> <code>RailgunLogic.sol</code> L57–77 (Railgun ref @HEAD — <strong>pin before build</strong>)</td>
-<td><strong>net-new (clean-room, spec-compatible; A.2)</strong></td>
+<td><strong>net-new (own implementation; A.2)</strong></td>
 </tr>
 <tr>
 <td>Circuit <code>wasm</code>/<code>zkey</code> artifacts (91 combos)</td>
 <td><a href="./A.1-reuse-inventory.html">A.1.2</a> <code>circuits-v2</code> reference (→ A.3)</td>
-<td><strong>net-new (clean-room circuits; A.3)</strong></td>
+<td><strong>net-new (own circuits; A.3)</strong></td>
 </tr>
 <tr>
 <td>Adjudicator <code>challenge</code>/<code>checkpoint</code>/<code>conclude</code>, <code>MultiAssetHolder.deposit</code>, <code>concludeAndTransferAllAssets</code>, exit-format <code>Outcome</code></td>
@@ -116,7 +116,7 @@ The set of <code>appDefinition</code> addresses T0.3 accepts for a funded channe
 - Events <code>Shield</code>, <code>Transact</code>, <code>Nullified</code> (and <code>Action</code>/<code>Unshield</code>) at <code>RailgunLogic.sol</code> L57–77 (<a href="./A.1-reuse-inventory.html">A.1.1</a>) are the commitment-insert and nullifier-spend feed that B indexes (T1.2) and that the note-scanner rebuilds the tree from (T6.1). Tree params: <code>TREE_DEPTH=16</code>, <code>rootHistory</code> (<code>Commitments.sol</code> L28–55).
 - Circuit <code>wasm</code> and <code>zkey</code> artifacts number one pair per registered <code>(nIn,nOut)</code> combo, out of the 91 generated (A.1.8 §3; the registered subset is reconciled in A.3). They are published from T0.1's ceremony (see A.3) and consumed by D's mobile prover (T6.6) and any prover B runs. The matching on-chain <code>verificationKeys[nIn][nOut]</code> registration is A.2's job.</p>
 <p><strong>(g) POI allow-list policy and root (see A.7).</strong>
-POI is not a pool setting; it is an alongside partner system (<a href="./A.1-reuse-inventory.html">A.1.7</a>, <a href="./A.0-overview.html">A.0.5</a> gate 3). A exposes the allow-list root (chosen list-provider datasets and standby period) and the gate policy. T0.3 gated-entry enforces a valid POI proof in the settlement path before a deposit is accepted. The POI node stack is a separate dependency, not redeployable from the four scoped repos. Consumers treat the root as opaque policy input. Detail: A.7.</p>
+POI is not a pool setting; it is an alongside partner system (<a href="./A.1-reuse-inventory.html">A.1.7</a>, <a href="./A.0-overview.html">A.0.5</a> gate 2). A exposes the allow-list root (chosen list-provider datasets and standby period) and the gate policy. T0.3 gated-entry enforces a valid POI proof in the settlement path before a deposit is accepted. The POI node stack is a separate dependency, not redeployable from the four scoped repos. Consumers treat the root as opaque policy input. Detail: A.7.</p>
 <h3 id="a852-what-a-consumes-from-b-hosted-by-d">A.8.5.2 What A consumes (from B; hosted by D)</h3>
 <p>A depends on exactly one sibling interface at runtime, plus D as host:</p>
 <ul>
@@ -132,7 +132,7 @@ POI is not a pool setting; it is an alongside partner system (<a href="./A.1-reu
       → trivial ForceMove settle (off-chain) → concludeAndTransferAllAssets
       → T0.3 receives → shield()/payout → scan
 </code></pre>
-<p><strong>Preconditions (Phase-0 gate, A.8.2):</strong> clean-room pool deployed with <code>changeFee(0,0,0)</code> and vkeys registered for the chosen combo subset (A.2/A.3); adjudicator deployed (A.4); T0.3 deployed and its app registry seeded with the trivial app (A.5); two funded client identities (A.6).</p>
+<p><strong>Preconditions (Phase-0 gate, A.8.2):</strong> our own pool deployed with <code>changeFee(0,0,0)</code> and vkeys registered for the chosen combo subset (A.2/A.3); adjudicator deployed (A.4); T0.3 deployed and its app registry seeded with the trivial app (A.5); two funded client identities (A.6).</p>
 <table>
 <thead>
 <tr>
@@ -201,7 +201,7 @@ POI is not a pool setting; it is an alongside partner system (<a href="./A.1-reu
 <tbody>
 <tr>
 <td><strong>T0.0</strong> pool</td>
-<td>Clean-room pool with <code>changeFee(0,0,0)</code>; a shield+unshield round-trips; <code>snarkSafetyVector</code> reproduced so <code>transact</code> does not revert</td>
+<td>Own pool implementation with <code>changeFee(0,0,0)</code>; a shield+unshield round-trips; <code>snarkSafetyVector</code> reproduced so <code>transact</code> does not revert</td>
 <td>A.2</td>
 </tr>
 <tr>
@@ -267,13 +267,13 @@ POI is not a pool setting; it is an alongside partner system (<a href="./A.1-reu
 </tr>
 </tbody>
 </table>
-<p>These are the go-nitro maturity long-poles (ADR-0004, <a href="./A.0-overview.html">A.0.5</a> gates 4–5) made executable: dispute wiring and watchtower response are net-new (A.1.9 §3, §6), so the suite is the proof they actually work, not just the happy path.</p>
+<p>These are the go-nitro maturity long-poles (ADR-0004, <a href="./A.0-overview.html">A.0.5</a> gates 3–4) made executable: dispute wiring and watchtower response are net-new (A.1.9 §3, §6), so the suite is the proof they actually work, not just the happy path.</p>
 <h2 id="a87-risks-open">A.8.7 Risks / open</h2>
 <ul>
-<li><strong>Watchtower liveness vs freshness (gate 5).</strong> The stale-force-close defence is only as good as B's freshness signal and T6.3's always-on node; a stale feed or a dead node during a <code>finalizesAt</code> window is a fund-loss path. A.8.5.2 makes the gate mandatory; residual risk owned in A.6.</li>
+<li><strong>Watchtower liveness vs freshness (gate 4).</strong> The stale-force-close defence is only as good as B's freshness signal and T6.3's always-on node; a stale feed or a dead node during a <code>finalizesAt</code> window is a fund-loss path. A.8.5.2 makes the gate mandatory; residual risk owned in A.6.</li>
 <li><strong>App-registry trust surface.</strong> A validates <code>appDefinition</code> membership and exit-format validity, not game semantics; a buggy registered app (C's T4.1) can still produce a valid-but-wrong outcome. The boundary stays clean (A.4/A.5); correctness of the game is C's acceptance, not A's.</li>
 <li><strong>No multi-asset ForceMove app in the skeleton.</strong> The harness settles single-asset via the trivial app. ETH-in/USDC-out atomicity (net-new, A.1.9 §2) needs its own acceptance once C's app lands; the skeleton does not prove multi-asset settlement (A.1.8 §2).</li>
-<li><strong>Licensing (Phase-0) — resolved via clean-room (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>).</strong> The harness runs against our clean-room pool and circuits (<a href="./A.1-reuse-inventory.html">A.1.10</a>/<a href="./A.0-overview.html">A.0.5</a> gate 1, A.2/A.3), with no Railgun grant needed. Residual: those clean-room builds must ship before steps 1–2 and 6 run.</li>
+<li><strong>Build readiness (Phase-0).</strong> The harness runs against our own pool and circuits (A.2/A.3). Those builds must ship before steps 1–2 and 6 run.</li>
 <li><strong>Railgun commit unpinned.</strong> All pool/circuit citations resolve at <code>master</code>/<code>main</code> HEAD; the manifest MUST pin a Railgun SHA before the skeleton is treated as reproducible (A.0.6, A.1.10).</li>
 </ul>
 <p>See also — owning specs: <a href="./A.2-pool-deployment.html">A.2</a> · <a href="./A.3-trusted-setup.html">A.3</a> · <a href="./A.4-adjudicator-integration.html">A.4</a> · <a href="./A.5-deposit-payout-contract.html">A.5</a> · <a href="./A.6-settlement-client-watchtower.html">A.6</a> · <a href="./A.7-anonymity-set.html">A.7</a> · <a href="./A.9-native-commitment.html">A.9</a>. Reuse citations: <a href="./A.1-reuse-inventory.html">A.1</a>.</p>

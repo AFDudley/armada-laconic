@@ -35,18 +35,19 @@ sidechain.
 - <em>Consequence:</em> Gas cost and L1 confirmation latency bound every deposit/payout and
   force-close, and watchers read L1 state directly rather than a trusted RPC of record.
 - <em>Governs:</em> §5 T0.</p>
-<p><strong>TC-2 — Shielded-pool design is Railgun-spec-compatible, clean-room implemented.</strong>
-Because Railgun's contracts/circuits are unlicensed (A.1.10), we <strong>clean-room reimplement</strong>
-the shielded-pool contracts and JoinSplit circuits — spec-compatible with the Railgun
-design, using no Railgun-licensed source (T0.0/T0.1) — and never edit or touch Railgun's
-live pool (ADR-0014, amending ADR-0002).
+<p><strong>TC-2 — Shielded-pool design is our own implementation of the Railgun design.</strong>
+We author our own shielded-pool contracts and JoinSplit circuits, matching the Railgun
+design (note/commitment/nullifier format spec-compatible; T0.0/T0.1), and never edit or
+touch Railgun's live pool (ADR-0014, amending ADR-0002). We run our own pool for fee=0,
+our POI policy, the reserved settlement/deposit-payout hook, and upgrade &amp; audit control
+(ADR-0002).
 - <em>Consequence:</em> Shielded-pool cryptography follows a known, de-risked design rather than
   novel research, but authoring and auditing it is our responsibility. Note format and
   nullifier semantics stay Railgun-compatible, and value from Railgun enters only via the
-  unshield→shield bridge hop (T0.7). The licensing blocker is resolved by going clean-room.
+  unshield→shield bridge hop (T0.7).
 - <em>Governs:</em> ADR-0002, ADR-0014 · §5 T0.0, T0.1, T0.7.</p>
 <p><strong>TC-3 — Groth16 over BN254 proving.</strong> v1 keeps Groth16: Phase-1 reuses the community
-Perpetual Powers of Tau, and Phase-2 is our own 1-of-N MPC over our own clean-room circuits (T0.1).
+Perpetual Powers of Tau, and Phase-2 is our own 1-of-N MPC over our own circuits (T0.1).
 - <em>Consequence:</em> Each circuit requires a per-circuit trusted setup, so any circuit change
   such as fork-lite (T0.6) re-runs Phase-2 and a fresh audit. In return, on-chain
   verification and mobile prover performance stay Groth16-cheap.
@@ -80,10 +81,10 @@ it move them unilaterally; custody is contract-enforced (T0).
 - <em>Consequence:</em> Watchers, the venue solver (T4.2), and Adapters (T5) operate only on
   user-signed channel state or transparent-boundary hops, never on discretionary custody.
 - <em>Governs:</em> §5 T0 · quality scenarios in →§10.</p>
-<p><strong>OC-2 — Railgun's deployed protocol is untouched; we clean-room reimplement.</strong> We stand up our own pool by <strong>clean-room reimplementing</strong> the Railgun-spec design under our control (T0.0/T0.1, fee=0, our POI; no Railgun-licensed source) and never fork, patch, or govern Railgun's <em>deployed</em> protocol or live pool (<a href="./09-architecture-decisions.html#adr-0002">ADR-0002</a>, <a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>).
+<p><strong>OC-2 — Railgun's deployed protocol is untouched; we run our own pool.</strong> We stand up our own pool and circuits (our own implementation of the Railgun design, T0.0/T0.1) for fee=0, our POI policy, the reserved settlement/deposit-payout hook, and upgrade &amp; audit control, and never fork, patch, or govern Railgun's <em>deployed</em> protocol or live pool (<a href="./09-architecture-decisions.html#adr-0002">ADR-0002</a>, <a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>).
 - <em>Consequence:</em> Blast radius splits cleanly — pool and audit changes never route through the product work above T0.0. This reinforces TC-2.
 - <em>Governs:</em> ADR-0002, ADR-0014 · §5 T0.0, T0.1.</p>
-<p><strong>OC-3 — One team; a reuse boundary, not an org split.</strong> A single engineering team builds the whole Armada product; the boundary is <strong>reuse vs net-new</strong>, not Armada-vs-Laconic (<a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a>). Reuse Laconic prior art (nitro, watchers, wallet, chain-signatures, ingestion) and Railgun's MIT <code>engine</code>/<code>cookbook</code> as reference; <strong>clean-room the shielded pool + circuits</strong> (Railgun-spec-compatible, ADR-0014); build only the remaining deltas. The adapters (T5.0 — CCTP built, Aave-v4 yield, Swaps) are in scope, owned by work package C.
+<p><strong>OC-3 — One team; a reuse boundary, not an org split.</strong> A single engineering team builds the whole Armada product; the boundary is <strong>reuse vs net-new</strong>, not Armada-vs-Laconic (<a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a>). Reuse Laconic prior art (nitro, watchers, wallet, chain-signatures, ingestion) and Railgun's <code>engine</code>/<code>cookbook</code> as reference; <strong>build our own shielded pool + circuits</strong> (matching the Railgun design, ADR-0014); build only the remaining deltas. The adapters (T5.0 — CCTP built, Aave-v4 yield, Swaps) are in scope, owned by work package C.
 - <em>Consequence:</em> Interfaces between work packages — the T0.3 deposit/payout ICD and the T5.1 routing interface — are specified before parallel work begins (→ §0, §3, §4). "Adapters" (capital-A) means the T5 tier (ADR-0010).
 - <em>Governs:</em> ADR-0013 · §0 · §5 T5.</p>
 <p><strong>OC-4 — Internal source docs require Laconic/Vulcanize access.</strong> The deep design Google

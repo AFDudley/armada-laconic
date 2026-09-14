@@ -101,9 +101,9 @@
 <li><strong>Nym privacy mode (opt-in).</strong> A toggle for the <strong>optional Nym mixnet underlay</strong> (ADR-0008): off by default for lowest latency; on to hide IP/metadata for maximum privacy. Uniform across every service the wallet uses, not a per-feature setting.</li>
 <li><strong>Address rotation / per-venue keys (T6.4).</strong> Receive addresses rotate, and venue interactions use per-venue loyalty keys, so activity doesn't cluster under one identity.</li>
 <li><strong>Submit-on-behalf.</strong> On-chain submissions can be relayed by a keeper so no EOA links the user to <em>writing</em> (write-side unlinkability), complementing the read-side privacy of §3.1.</li>
-<li><strong>What stays public:</strong> exactly the shield/unshield <strong>boundary amounts</strong> (Design A, ADR-0005) — surfaced honestly in the UI as "this amount is visible on-chain," never hidden from the user.</li>
+<li><strong>What stays public:</strong> exactly the shield/unshield <strong>boundary amounts</strong> (Design A, ADR-0005) — surfaced in the UI as "this amount is visible on-chain," never hidden from the user.</li>
 </ul>
-<h2 id="6-browser-vs-mobile-the-honest-differences">6. Browser vs mobile — the honest differences</h2>
+<h2 id="6-browser-vs-mobile-the-differences">6. Browser vs mobile — the differences</h2>
 <ul>
 <li><strong>Background execution.</strong> A browser tab and a WebView can be suspended, which is why the watchtower's keeper-delegation matters most on mobile, and why the <strong>native</strong> module (T6.5) exists — it keeps a first-class libp2p peer alive for the challenge window. Until native ships, the WebView build leans on delegated keepers for liveness.</li>
 <li><strong>Proving cost.</strong> Phones are slower at Groth16; the mobile UX shows proof progress and pre-proves opportunistically (T6.6).</li>
@@ -121,7 +121,7 @@
 <li>Never custodies funds with a third party; never lets a hub, keeper, or venue take value (liveness-only trust, unilateral exit).</li>
 <li>Never queries a public RPC for reads (feeds + local verify only).</li>
 <li>Never exposes the seed or lets the app move keys off the device.</li>
-<li>Never hides the one honest leak (boundary amounts) from the user.</li>
+<li>Never hides the one leak (boundary amounts) from the user.</li>
 </ul>
 <hr />
 <p>Cross-refs: client-tier items → <a href="./05-building-block-view.html">§5</a> T6.0–T6.7, T2.0/T2.1/T2.3; runtime flows → <a href="./06-runtime-view.html">§6</a>; transport &amp; privacy → <a href="./08-crosscutting-concepts.html">§8</a>; decisions → <a href="./09-architecture-decisions.html">§9</a> ADR-0004/0005/0006/0008/0011/0015/0016; cross-chain swap detail → <a href="./shielded-nitro-bridge-design.html">the construction</a>.</p>

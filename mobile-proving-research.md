@@ -1,6 +1,6 @@
 # Mobile ZK proving — research note
 
-Supporting research for [`mobile-privacy.html`](./mobile-privacy.html) crux #2 ("Mobile Railgun prover"). Compiled 2026-09-02 from two source-verified research passes plus the mopro benchmark page. Distinguishes **fact** from **[inference]**. This is a research record, not a site page.
+Supporting research for the mobile Railgun prover question in [`mobile-privacy.html`](./mobile-privacy.html). Compiled 2026-09-02 from source-verified research plus the mopro benchmark page. Distinguishes **fact** from **[inference]**.
 
 ## Question
 
@@ -41,7 +41,7 @@ Android (Samsung S23 Ultra, 2023) is the same order; proof-gen is ~13–15× fas
 |---|---|---|---|---|
 | **mopro** | native Circom/Halo2/Noir prover for iOS/Android/RN; ~8–20× vs snarkjs | yes (standard Groth16 verifier) | active lib | EF / PSE, 0xPARC |
 | **rapidsnark / ProveKit** | native ARM Groth16; ProveKit adds WHIR→gnark **Groth16 recursive wrapper** for on-chain; targets large-circuit memory | yes | prod (World App) / ProveKit pre-audit | World Foundation |
-| **ICICLE + Metal / IMP1** | mobile-GPU MSM/NTT/Sumcheck on Apple Silicon (v3.6, Mar 2025) | yes (accelerates under Groth16) | lib (commercial license for prod) | Ingonyama |
+| **ICICLE + Metal / IMP1** | mobile-GPU MSM/NTT/Sumcheck on Apple Silicon (v3.6, Mar 2025) | yes (accelerates under Groth16) | lib (commercial tier for prod) | Ingonyama |
 | **Collaborative / MPC proving (coSNARK)** | offloads proving off-device without revealing the witness; output is standard Groth16/PLONK | yes | Renegade mainnet (L2); TACEO testnet | Renegade, TACEO |
 | **Folding (Nova/HyperNova, Sonobe)** | incremental proving fits Merkle note-scan; compresses to Groth16 EVM verifier (~600–750k gas) | yes | **experimental, unaudited** | PSE + 0xPARC |
 
@@ -69,7 +69,7 @@ Keep Railgun and its L1 Groth16 verifier. Adopt **mopro + rapidsnark** for on-de
 - Railgun's specific bottleneck (large note-scan + Merkle in Groth16) is at the upper edge of on-device provers today; folding or server-assist is the direct mitigation but least mature / adds a non-collusion assumption.
 - Sonobe folding and much WHIR/Spartan mobile-prover work is experimental/unaudited (2026).
 - Renegade has the right offload model but is a dark-pool DEX on L2, not a general pool; Aztec is L1-settled as a rollup, not per-tx L1 verification.
-- ICICLE GPU backends default to an R&D license; production needs a commercial license.
+- ICICLE GPU backends default to an R&D tier; production use is gated by Ingonyama's commercial terms.
 
 ## Citations
 

@@ -2,7 +2,7 @@
 
 status companion · 2026-09-10 · reconciled to §5 registry, §9 ADRs, §11 risks
 
-The [Building Block View (§5)](./05-building-block-view.md) is the structure and the [ADRs (§9)](./09-architecture-decisions.md) are the decisions; this page is the **status, effort, and sequencing** view over the same `T#.#` items. Every status/release facet matches the §5 registry, and every long pole matches the §11 risk register. This supersedes the earlier root `build-plan.html`, which predated the clean-room decision ([ADR-0014](./09-architecture-decisions.md#adr-0014)) and the matcher/ordering→v2 re-scoping ([ADR-0007](./09-architecture-decisions.md#adr-0007)/[0011](./09-architecture-decisions.md#adr-0011)).
+The [Building Block View (§5)](./05-building-block-view.md) is the structure and the [ADRs (§9)](./09-architecture-decisions.md) are the decisions; this page is the **status, effort, and sequencing** view over the same `T#.#` items. Every status/release facet matches the §5 registry, and every long pole matches the §11 risk register. This supersedes the earlier root `build-plan.html`, which predated the own-pool decision ([ADR-0014](./09-architecture-decisions.md#adr-0014)) and the matcher/ordering→v2 re-scoping ([ADR-0007](./09-architecture-decisions.md#adr-0007)/[0011](./09-architecture-decisions.md#adr-0011)).
 
 ## Version scope
 
@@ -13,15 +13,15 @@ The [Building Block View (§5)](./05-building-block-view.md) is the structure an
 | **v2** — matcher, fair-ordering & bonded federation | Price *discovery* + market-making + provably-fair ordering + economic security | T3.\* · T4.2/4.5/4.6 · T0.4/0.5 · T2.4 |
 | **optional** | Amount-privacy-in-play; thin identity | T0.6 fork-lite · T6.8 |
 
-**Why the split de-risks v1** (ADR-0007/0011): a posted-price, take-it-or-leave-it venue has nothing to front-run, so v1 needs **neither commit-reveal ordering nor epoch set-agreement** — the two highest-risk, research-grade items move to v2 with the matcher. v1 fills exchange from a **static pre-funded inventory** (no market-making). The one genuinely novel-crypto item on the v1 path is the **clean-room pool + circuits** (ADR-0014); everything else is integration plus small contracts. (The earlier doc's "v3 — Design B" — hiding amounts from the venue via shielded ForceMove — is the excluded fork-full of ADR-0005; the lighter T0.6 fork-lite is the *optional* row above.)
+**Why the split de-risks v1** (ADR-0007/0011): a posted-price, take-it-or-leave-it venue has nothing to front-run, so v1 needs neither commit-reveal ordering nor epoch set-agreement. Those two highest-risk, research-grade items move to v2 with the matcher. v1 fills exchange from a static pre-funded inventory, with no market-making. The one genuinely novel-crypto item on the v1 path is the **own pool + circuits** (ADR-0014); everything else is integration plus small contracts. (The earlier doc's "v3 — Design B", hiding amounts from the venue via shielded ForceMove, is the excluded fork-full of ADR-0005; the lighter T0.6 fork-lite is the *optional* row above.)
 
 ## Status by tier
 
-Facets: **status** (built · reuse · net-new · clean-room · partial) · **confidence** (`validated` = code read/grounded this cycle · `design` = specified). The **A deep dive** ([A.1](./A-nitro-on-railgun/A.1-reuse-inventory.md)) and the **nitro-bridge/DSS audit** ([audit](./nitro-bridge-audit.md)) code-read the settlement rail (go-nitro/ts-nitro) and the DSS crypto; the clean-room pool/circuits are `design`-level against a pinned reference spec.
+Facets: **status** (built · reuse · net-new · partial) · **confidence** (`validated` = code read/grounded this cycle · `design` = specified). The **A deep dive** ([A.1](./A-nitro-on-railgun/A.1-reuse-inventory.md)) and the **nitro-bridge/DSS audit** ([audit](./nitro-bridge-audit.md)) code-read the settlement rail (go-nitro/ts-nitro) and the DSS crypto; the own pool/circuits are `design`-level against a pinned reference spec.
 
 ### T0 · Ethereum anchor
-- **T0.0 shielded pool — clean-room net-new** (ADR-0014). *Not* "built": Railgun's contracts are `UNLICENSED`, so we reimplement spec-compatibly. **The single largest, audit-critical build.** `design`
-- **T0.1 circuits + trusted setup — clean-room net-new** (ADR-0014): our own JoinSplit circuits + a Phase-2 MPC over the community Phase-1 (never re-run). Audit-critical; ceremony is a process risk (§11 R6). `design`
+- **T0.0 shielded pool — net-new** (ADR-0014): our own implementation of the Railgun design, matching its note/commitment/nullifier format and `snarkSafetyVector`. The single largest, audit-critical build. `design`
+- **T0.1 circuits + trusted setup — net-new** (ADR-0014): our own JoinSplit circuits + a Phase-2 MPC over the community Phase-1 (never re-run). Audit-critical; ceremony is a process risk (§11 R6). `design`
 - **T0.2 Nitro adjudicator — reuse** go-nitro `@435eb2b` (ForceMove / MultiAssetHolder), live on Ethereum. `validated`
 - **T0.3 deposit/payout contract — net-new** — the notes-in / notes-out boundary; **never an "adapter"** (ADR-0010). Spend-authorizing (§11 R5). `design`
 - **T0.7 anonymity-set strategy — process** — bootstrap the crowd + the Railgun onboarding import bridge (§11 R1). `design`
@@ -40,7 +40,7 @@ Facets: **status** (built · reuse · net-new · clean-room · partial) · **con
 - **v2:** venue solver / market-making (T4.2), LP-buffered USDC-yield rail (T4.5), ex_net matcher + LP vault (T4.6) — ADR-0011.
 
 ### T5 · Adapters
-- **T5.0 Adapters — CCTP (built) · Aave-v4 yield · Swaps** — Aave/Swaps build-or-reuse Railgun's Cookbook/RelayAdapt recipe (license gate). **USDC yield is in v1** via the Aave-v4 adapter; the v1 *mechanism* is open (direct adapter recipe over the public Design-A boundary vs the v2 LP-buffered rail T4.5). **T5.1 routing interface — interface** (how the venue routes to/from the Adapters). `design`
+- **T5.0 Adapters — CCTP (built) · Aave-v4 yield · Swaps** — Aave/Swaps build or adapt a Cookbook/RelayAdapt-style recipe. **USDC yield is in v1** via the Aave-v4 adapter; the v1 *mechanism* is open (direct adapter recipe over the public Design-A boundary vs the v2 LP-buffered rail T4.5). **T5.1 routing interface — interface** (how the venue routes to/from the Adapters). `design`
 
 ### T6 · Client / apps — **mobile transport is the crux (§11 R4)**
 - **Reality check:** the wallet is bare-bones (laconic-wallet fork) and the swap/mobymask demos are fragments, not products — a starting point, not a front-end.
@@ -52,8 +52,8 @@ A **linear 1–10** relative-difficulty estimate (1 = trivial config/reuse; 10 =
 
 | Item | Status | Pts |
 |---|---|---:|
-| T0.0 shielded pool | clean-room | **10** |
-| T0.1 circuits + trusted setup | clean-room | **9** |
+| T0.0 shielded pool | net-new | **10** |
+| T0.1 circuits + trusted setup | net-new | **9** |
 | T0.2 Nitro adjudicator | reuse | 2 |
 | T0.3 deposit/payout contract | net-new | 5 |
 | T0.7 anon-set strategy + import bridge | process | 3 |
@@ -84,11 +84,11 @@ A **linear 1–10** relative-difficulty estimate (1 = trivial config/reuse; 10 =
 
 **~35% concentrates in five items** — pool (10) + circuits (9) + mobile transport (8) + nimbus ingestion (8) + adjudicator (6) = 41. The client tier (T6) is the biggest bucket (38, many moderate net-new pieces gated by the crux); the watcher substrate (T2) is cheapest (9, almost all reuse). The points weight *audit* heavily, and the two partials (T1.0 nimbus, T6.0 wallet) carry upstream-maturity schedule risk the raw points do not.
 
-**The v1.5 cross-chain-swap increment.** Given Armada already deploys a pool per chain, the *marginal* engineering to add private cross-chain swaps on top of a finished v1 is small — the nitro-railgun adjudicator (6) + the HTLC swap app (~2) + DSS hub wiring (~3–4), ≈ **10–12 points** — versus v1's 110 and the research-grade v2 lift. It reuses the whole v1 rail and has **no hard v2 dependency** (no ordering, no matcher, no market-making, no bonded federation; hubs front from static inventory and can run a single-entity DSS). Three caveats keep it honest: (1) it is all spend-authorizing, so the real cost is **audit, not code**; (2) each additional chain re-incurs the **anonymity-set cold-start** (§11 R1), gating the privacy payoff per chain; (3) the **DSS crypto is currently unaudited with stubbed production wiring** — wiring and auditing it is real, but a subset of v2's federation work (key-security without bonding/slashing).
+**The v1.5 cross-chain-swap increment.** Given Armada already deploys a pool per chain, the *marginal* engineering to add private cross-chain swaps on top of a finished v1 is small: the nitro-railgun adjudicator (6) + the HTLC swap app (~2) + DSS hub wiring (~3–4), ≈ **10–12 points**, versus v1's 110 and the research-grade v2 lift. It reuses the whole v1 rail and has no hard v2 dependency (no ordering, no matcher, no market-making, no bonded federation; hubs front from static inventory and can run a single-entity DSS). Three caveats bound it: (1) it is all spend-authorizing, so the real cost is audit rather than code; (2) each additional chain re-incurs the anonymity-set cold-start (§11 R1), gating the privacy payoff per chain; (3) the DSS crypto is currently unaudited with stubbed production wiring — wiring and auditing it is real, but a subset of v2's federation work (key-security without bonding/slashing).
 
 ## Long poles (ranked, §11)
 
-1. **Clean-room pool + circuits** — T0.0/T0.1 (R9): the largest, audit-critical crypto-engineering build; a spec deviation is a soundness/fund-safety bug.
+1. **Own pool + circuits** — T0.0/T0.1 (R9): the largest, audit-critical crypto-engineering build; a spec deviation is a soundness/fund-safety bug.
 2. **Mobile transport** — T6.5 (R4): RN-native gomobile; WebView interim, native is a Phase-3 gate.
 3. **T1 nimbus ingestion** — T1.0 (R3): upstream-dependent; staleness breaks watchtower safety.
 4. **Audit surface** — T0.3 / T0.0 / T0.1 / T6.1 / T6.0 (R5): external audit gates mainnet.
@@ -99,7 +99,7 @@ A **linear 1–10** relative-difficulty estimate (1 = trivial config/reuse; 10 =
 
 1. **Walking skeleton** (§4): shield → deposit → trivial ForceMove settle → payout → scan on a laconic fixturenet — retires integration risk before any tier deepens.
 2. **Spike the long poles**: nimbus emitter (T1.0), the native mobile module (T6.5), the multi-asset settlement app (go-nitro, R2).
-3. **Clean-room build**: pool (T0.0) + circuits/ceremony (T0.1) against the A.1 reference spec; freeze the spend-authorizing surface (T0.3) early.
+3. **Own-pool build**: pool (T0.0) + circuits/ceremony (T0.1) against the A.1 reference spec; freeze the spend-authorizing surface (T0.3) early.
 4. **Venue + Adapters**: posted-price contract + quote/settle app + fee-split (T4.0/4.1/4.3) over the rail; ETH yield (T4.4) + USDC via the Aave adapter (T5.0/5.1).
 5. **Wallet** (T6.\*): WebView MVP, then native; note-scanner, settlement client, self-watchtower.
 6. **v1.5 — cross-chain shielded swap**: the nitro-railgun adjudicator + DSS custodian, deployed per chain (ADR-0015/0016; [construction](./shielded-nitro-bridge-design.md), [audit](./nitro-bridge-audit.md)) — a ~10–12-point increment ahead of the v2 research work.
@@ -107,7 +107,7 @@ A **linear 1–10** relative-difficulty estimate (1 = trivial config/reuse; 10 =
 
 ## Pinned commits & reference code
 
-go-nitro `435eb2b` · ts-nitro `884d616` · mobymask `2329198` · chain-signatures `9016a7c` · laconicd `d130608` (`roysc/nitro-integration`) · watcher-ts `18ca4e1` · ipld-eth-server `330bc3d` · laconic-wallet `bb5223a` · laconic-wallet-web `2a4a478` · nimbus-eth1 (`status-im`, upstream). Railgun `Railgun-Privacy/contract` + `circuits-v2` are the **clean-room reference** (unlicensed; pin a commit before build, ADR-0014). Full file/line citations: [A.1 reuse inventory](./A-nitro-on-railgun/A.1-reuse-inventory.md) and the [nitro-bridge + DSS audit](./nitro-bridge-audit.md).
+go-nitro `435eb2b` · ts-nitro `884d616` · mobymask `2329198` · chain-signatures `9016a7c` · laconicd `d130608` (`roysc/nitro-integration`) · watcher-ts `18ca4e1` · ipld-eth-server `330bc3d` · laconic-wallet `bb5223a` · laconic-wallet-web `2a4a478` · nimbus-eth1 (`status-im`, upstream). Railgun `Railgun-Privacy/contract` + `circuits-v2` are the **design reference** (pin a commit before build, ADR-0014). Full file/line citations: [A.1 reuse inventory](./A-nitro-on-railgun/A.1-reuse-inventory.md) and the [nitro-bridge + DSS audit](./nitro-bridge-audit.md).
 
 ---
 

@@ -38,7 +38,7 @@ the <code>ExitFormat.Allocation.amount</code> fields that finalize a channel are
 upgrade (T0.6), closes that last leak. It makes channel allocations reference
 <em>hidden-amount commitments</em> rather than cleartext <code>uint256</code>, so a force-close
 reveals no amount.</p>
-<p>This is a circuit change, and it sits deliberately off the v1 critical path.
+<p>This is a circuit change, and it sits off the v1 critical path.
 The decision of record (ADR-0005) is to ship Design A first, defer fork-lite to
 Phase-4, and exclude fork-full (shielded ForceMove, research-grade) unless
 separately greenlit. This document specifies T0.6 as a scoped, optional upgrade
@@ -107,7 +107,7 @@ note/commitment cryptography that binds them — see A.1 for pinned citations.</
 <tr>
 <td>JoinSplit circuit — note/commitment/nullifier format, <code>sumIn===sumOut</code>, range <code>&lt;2^120</code></td>
 <td>A.1.2 (<code>circuits-v2</code> <code>src/library/joinsplit.circom</code> L11–118, <strong>reference — pin before build</strong>)</td>
-<td>Our <strong>clean-room</strong> JoinSplit format (spec-compatible with A.1.2, <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>) is what T0.6 <strong>extends</strong>; the sum-check is the invariant the hidden-amount variant must preserve.</td>
+<td>Our own JoinSplit format (spec-compatible with A.1.2) is what T0.6 extends; the sum-check is the invariant the hidden-amount variant must preserve.</td>
 </tr>
 <tr>
 <td>Nullifier derivation <code>Poseidon(nullifyingKey, leafIndex)</code></td>
@@ -226,7 +226,7 @@ de-risks that decision.</p>
 <li><strong>Mobile proving budget (T6.6).</strong> Heavier circuits may exceed the D-owned
   mobile prover's practical bound; quantify witness and proving-time growth in
   the PoC before greenlight.</li>
-<li><strong>Licensing (Phase-0) — resolved via clean-room (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>).</strong> T0.6 edits our own clean-room circuits and re-runs Phase-2 over them. The <code>UNLICENSED</code> blocker that once applied to Railgun's <code>circuits-v2</code> is removed, because T0.0/T0.1 are themselves clean-room (<a href="./A.2-pool-deployment.html">A.2</a>, <a href="./A.3-trusted-setup.html">A.3</a>). Fork-lite's gate is now cost and audit (A.9.1, A.9.7), not licensing.</li>
+<li><strong>Gate is cost and audit.</strong> T0.6 edits our own circuits and re-runs Phase-2 over them (T0.0/T0.1 are our own implementation, <a href="./A.2-pool-deployment.html">A.2</a>, <a href="./A.3-trusted-setup.html">A.3</a>). Fork-lite's gate is cost and audit (A.9.1, A.9.7).</li>
 <li><strong>Unpinned Railgun commit.</strong> Pin <code>circuits-v2</code>/<code>contract</code> before build (A.1.10).</li>
 <li><strong>Native-ETH is separable.</strong> Do not let the WETH-wrap/native-ETH item ride on
   the T0.6 greenlight; scope it independently (A.9.4).</li>

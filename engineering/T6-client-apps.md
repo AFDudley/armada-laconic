@@ -5,7 +5,7 @@
 **Release:** v1 (T6.0–T6.7) · opt (T6.8)
 **Depends on / Blocks:** depends on T0.0 (circuit `wasm`/`zkey`, pool commitment/nullifier ABI, POI root), T0.3 (deposit/payout + channel lifecycle + app registry + vouchers), T2 (proof-carrying feeds + metering; T6.3 gates on T2 feed freshness). Blocks end-user delivery — nothing downstream.
 
-The Client tier is the wallet and everything a real user runs on their own device. It shields, trades, settles, and **scans their own notes** end-to-end, and it does so without keys ever leaving the OS secure enclave. It is a fork of `laconic-wallet` / `laconic-wallet-web`, a React-Native app with a browser build that already ships production-grade custody (T6.0), extended with a WASM note-scanner (T6.1), a settlement client that drives T0.3 (T6.2), a phone-resident watchtower (T6.3), key-derivation policy for unlinkability (T6.4), the mobile transport crux (T6.5), Groth16 proving (T6.6), and the Armada-branded product build-up plus SDK wiring (T6.7). The wallet is a **watcher-party (P2P) client**, not a client of a server: it talks peer-to-peer to bonded watcher parties (T2) for feeds and metering and to counterparties/hubs for channel play, and it never surrenders custody — a watcher party is exited unilaterally by force-close. The load-bearing constraint is that **mobile is unbuilt**, so this doc states one concrete interim→production path, not a menu.
+The Client tier is the wallet and everything a real user runs on their own device. It shields, trades, settles, and **scans their own notes** end-to-end, and it does so without keys ever leaving the OS secure enclave. It is a fork of `laconic-wallet` / `laconic-wallet-web`, a React-Native app with a browser build that already ships production-grade custody (T6.0), extended with a WASM note-scanner (T6.1), a settlement client that drives T0.3 (T6.2), a phone-resident watchtower (T6.3), key-derivation policy for unlinkability (T6.4), the mobile transport crux (T6.5), Groth16 proving (T6.6), and the Armada-branded product build-up plus SDK wiring (T6.7). The wallet is a watcher-party (P2P) client, not a client of a server: it talks peer-to-peer to bonded watcher parties (T2) for feeds and metering and to counterparties/hubs for channel play, and it never surrenders custody — a watcher party is exited unilaterally by force-close. The main constraint is that mobile is unbuilt, so this doc states one concrete interim→production path.
 
 **What we build vs. reuse** (only three pieces are genuinely new logic; the transport is a *port*, not new protocol):
 
@@ -89,7 +89,7 @@ Both are Client-tier key-derivation policy over T6.0's existing HD tree — no n
 
 ## T6.5 Mobile transport
 
-Transport is the tier crux, the load-bearing unbuilt piece. It carries two traffic classes, per ADR-0008 (both, per need — not one or the other):
+Transport is the tier crux, the unbuilt piece. It carries two traffic classes, per ADR-0008 (both, per need):
 
 - **Waku pub/sub** for gossip, discovery, async, and interop with Railgun's broadcaster network ([`waku-broadcaster-client`](https://github.com/Railgun-Community/waku-broadcaster-client)): recipient-unlinkable, and mandatory for the gasless origin-privacy submit path.
 - **libp2p-noise direct streams** for the Nitro settlement hot loop — cooperative fills need tens-of-ms round trips that Waku's multi-hop store-and-forward cannot meet. This is the same `/nitro/msg/1.0.0` noise transport go-nitro's p2p message service (`node/engine/messageservice/p2p-message-service/service.go`) uses.
@@ -116,7 +116,7 @@ The **binding limit is memory, not speed**: a Railgun-scale transaction circuit 
 
 ## T6.7 Armada-branded app + SDK wiring
 
-The shipped starting point is honest: the Laconic wallet is **bare-bones**, and MobyMask / the swap flows are **demo fragments, not products** — the right foundation, not a finished front-end. T6.7 is the product build-up on top of T6.0: grow the bare-bones wallet into the **Armada-branded app** and **wire the Armada SDK** so integrator apps, treasury / payment tools, and the front-end all sit on the same client stack.
+The shipped starting point is modest: the Laconic wallet is bare-bones, and MobyMask and the swap flows are demo fragments rather than finished products — the right foundation to build the front-end on. T6.7 is the product build-up on top of T6.0: grow the bare-bones wallet into the **Armada-branded app** and **wire the Armada SDK** so integrator apps, treasury / payment tools, and the front-end all sit on the same client stack.
 
 Concretely this is net-new "build up," not new protocol. First brand + productize the RN shell and browser build (UI, WalletConnect, orchestration in Hermes), then expose the T6.1–T6.6 capabilities — local scan, T6.2 settlement, T6.5 transport, T6.6 proving — as a coherent **Armada SDK surface** that integrator apps call without re-solving privacy. Armada is pluggable asset-privacy infrastructure for USDC (shielded pool + governance-added adapters + apps/SDK tier); T6.7 is that apps/SDK tier, funded by integrator revenue-share. It routes to the T4 venue and, through T5, to Armada's adapters (Swaps, Aave-v4 yield, CCTP), so an app built on the SDK gets shield → trade → settle → scan for free.
 

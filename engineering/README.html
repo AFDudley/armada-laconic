@@ -22,10 +22,8 @@
 </nav>
 
 <h1 id="armada-laconic-engineering-documentation">Armada × Laconic — Engineering Documentation</h1>
-<p>This folder is the engineering architecture documentation for the Laconic work that surrounds Armada's shielded pool. The system it describes is a non-custodial, privately-settled exchange and settlement substrate built largely by composing existing, battle-tested parts — vanilla <code>go-nitro</code> state channels, the cerc-io watcher stack, and a mobile wallet — around a <strong>clean-room, Railgun-spec-compatible shielded pool</strong> (<a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>: Railgun's own contracts/circuits are unlicensed, so we reimplement them independently). Its load-bearing construction is <strong>nitro-on-railgun</strong> — <em>notes in, normal Nitro, notes out</em> — and the recurring theme throughout these documents is that the hard problem here is integration, not new cryptography, with one caveat: the pool and its circuits are net-new, audit-critical crypto-engineering of a known design, while the settlement rail is pure integration.</p>
-<p>The documentation is organized according to <strong><a href="https://arc42.org">arc42</a></strong> (Starke and Hruschka), a fixed twelve-section template for architecture description. We adopted it deliberately, as recorded in <a href="./09-architecture-decisions.html#adr-0001">ADR-0001</a>, after an earlier single planning document collapsed under its own weight: it was trying to be a system decomposition, a work breakdown, a decision log, and a schedule all at once, and it had to be re-cut every time one of those roles pulled against another. arc42 separates those concerns into sections that each do one job, which is what keeps this set stable as the design evolves.</p>
-<p>Three ideas make the structure hold together. <strong>One model, many views:</strong> the item registry in <a href="./05-building-block-view.html">§5 Building Block View</a> is the single source of truth — every buildable item has one <code>T#.#</code> id carrying its tier, status, and release facets, so tiers and delivery groupings are views over one registry rather than competing hierarchies. <strong>Immutable decisions:</strong> every significant choice is an append-only ADR in <a href="./09-architecture-decisions.html">§9</a>; a decided ADR is superseded, never edited, so the reasoning stays legible. <strong>A work breakdown over a fixed baseline:</strong> because the requirements are given and most components already exist, delivery is organized as a WBS of interface-bounded work packages (<a href="./00-work-packages.html">§0 Work Packages</a>) built incrementally against the frozen ADR baseline (<a href="./09-architecture-decisions.html#adr-0012">ADR-0012</a>).</p>
-<p>If you are new to the system, read it in this order: <a href="./01-introduction-and-goals.html">§1 Introduction &amp; Goals</a> for what is being built and why; <a href="./00-work-packages.html">§0 Work Packages</a> for how the scope is split for delivery; <a href="./04-solution-strategy.html">§4 Solution Strategy</a> for the approach and increments; then the <a href="./05-building-block-view.html">§5 registry</a> for the whole item map. From there, follow any <code>T#.#</code> id into its tier document. When a document states a choice rather than a mechanism, it cites the governing <code>ADR-####</code>; follow that link for the context and the alternatives weighed.</p>
+<p>This folder is the engineering architecture documentation for the Laconic work that surrounds Armada's shielded pool. The system it describes is a non-custodial, privately-settled exchange and settlement substrate built largely by composing existing, battle-tested parts — vanilla <code>go-nitro</code> state channels, the cerc-io watcher stack, and a mobile wallet — around our own implementation of the Railgun design (<a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>). Its core construction is <strong>nitro-on-railgun</strong> — <em>notes in, normal Nitro, notes out</em> — and the recurring theme throughout these documents is that the hard problem here is integration, not new cryptography: the pool and its circuits are net-new, audit-critical crypto-engineering of a known design, while the settlement rail is pure integration.</p>
+<p>The documentation is organized according to <strong><a href="https://arc42.org">arc42</a></strong> (Starke and Hruschka), a fixed twelve-section template for architecture description. We adopted it, as recorded in <a href="./09-architecture-decisions.html#adr-0001">ADR-0001</a>, after an earlier single planning document collapsed under its own weight: it was trying to be a system decomposition, a work breakdown, a decision log, and a schedule all at once, and it had to be re-cut every time one of those roles pulled against another. arc42 separates those concerns into sections that each do one job, which is what keeps this set stable as the design evolves.</p>
 <h2 id="sections">Sections</h2>
 <table>
 <thead>
@@ -54,7 +52,7 @@
 <tr>
 <td>3</td>
 <td><a href="./03-context-and-scope.html">Context &amp; Scope</a></td>
-<td>Armada-builds vs Laconic-builds boundary; external systems</td>
+<td>reuse vs net-new boundary (<a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a>); external systems</td>
 </tr>
 <tr>
 <td>4</td>
@@ -84,7 +82,7 @@
 <tr>
 <td>9</td>
 <td><a href="./09-architecture-decisions.html">Architecture Decisions</a></td>
-<td>ADRs 0001–0014</td>
+<td>ADRs 0001–0016</td>
 </tr>
 <tr>
 <td>10</td>

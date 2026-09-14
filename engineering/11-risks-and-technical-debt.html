@@ -75,10 +75,10 @@ measures the odds it bites before we mitigate.</p>
 </tr>
 <tr>
 <td>R5</td>
-<td><strong>Audit surface</strong> — anything <strong>spend-authorizing</strong> is audit-critical before mainnet: the T0.3 deposit/payout contract (the notes-in/notes-out boundary), the clean-room T0.0 pool + T0.1 circuits (see R9), and the T6.1 WebView↔RN key bridge / T6.0 enclave custody.</td>
+<td><strong>Audit surface</strong> — anything <strong>spend-authorizing</strong> is audit-critical before mainnet: the T0.3 deposit/payout contract (the notes-in/notes-out boundary), the net-new T0.0 pool + T0.1 circuits (see R9), and the T6.1 WebView↔RN key bridge / T6.0 enclave custody.</td>
 <td>Critical (a leak here = drained funds or leaked keys)</td>
 <td>Low if audited, catastrophic if skipped</td>
-<td>Freeze spend-authorizing surface early; audit the clean-room pool/circuits for spec-compatibility and soundness (R9); narrow, audited bridge with raw key material never crossing into the WebView; <strong>external audit gates mainnet</strong>, not the demo.</td>
+<td>Freeze spend-authorizing surface early; audit the net-new pool/circuits for spec-compatibility and soundness (R9); narrow, audited bridge with raw key material never crossing into the WebView; <strong>external audit gates mainnet</strong>, not the demo.</td>
 <td>T0.0 / T0.1 / T0.3 / T0.6 / T6.0 / T6.1 · ADR-0014</td>
 </tr>
 <tr>
@@ -107,16 +107,16 @@ measures the odds it bites before we mitigate.</p>
 </tr>
 <tr>
 <td>R9</td>
-<td><strong>Clean-room pool + circuits (net-new crypto-engineering)</strong> — Railgun's <code>contract</code> / <code>circuits-v2</code> are unlicensed (A.1.10), so T0.0/T0.1 are <strong>clean-room reimplemented</strong> (ADR-0014): independently authored, spec-compatible shielded-pool contracts + JoinSplit circuits + our own Phase-2. This is real, audit-critical crypto-engineering — a subtle spec deviation (note/commitment format, nullifier semantics, <code>snarkSafetyVector</code>, verifier wiring) is a soundness or fund-safety bug.</td>
+<td><strong>Own pool + circuits (net-new crypto-engineering)</strong> — T0.0/T0.1 are our own implementation of the Railgun design (ADR-0014): independently authored, spec-compatible shielded-pool contracts + JoinSplit circuits + our own Phase-2. This is real, audit-critical crypto-engineering — a subtle spec deviation (note/commitment format, nullifier semantics, <code>snarkSafetyVector</code>, verifier wiring) is a soundness or fund-safety bug.</td>
 <td>High (a soundness/format bug = unprovable spend or value creation)</td>
 <td>Medium — a well-understood, de-risked design (A.1 pins exact behavior/format), but net-new code</td>
-<td>Treat A.1 as the reference spec and behavioral oracle; author our own conformance suite (spec-compatibility + fee=0/POI); freeze the circuit subset early; <strong>external crypto audit gates mainnet</strong>. Licensing itself is <strong>resolved</strong> by going clean-room — no longer an open gate.</td>
+<td>Treat A.1 as the reference spec and behavioral oracle; author our own conformance suite (spec-compatibility + fee=0/POI); freeze the circuit subset early; <strong>external crypto audit gates mainnet</strong>.</td>
 <td>T0.0 / T0.1 · ADR-0014</td>
 </tr>
 </tbody>
 </table>
 <h2 id="technical-debt-known-shortcuts">Technical debt / known shortcuts</h2>
-<p>Each of the following is accepted deliberately for v1: a scoped, reversible interim
+<p>Each of the following is accepted for v1: a scoped, reversible interim
 rather than an unbounded liability. We list them here so they stay tracked rather than
 forgotten.</p>
 <ul>

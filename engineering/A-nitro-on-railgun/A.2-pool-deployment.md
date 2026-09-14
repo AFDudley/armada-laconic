@@ -2,20 +2,20 @@
 
 work package A · reuse-oriented spec · **2026-09-05**
 **Parent:** [`A.0`](A.0-overview.md)
-**Owns:** T0.0 — clean-room reimplement the shielded pool (spec-compatible with Railgun) and deploy it under our control
+**Owns:** T0.0 — author our own shielded pool (spec-compatible with Railgun) and deploy it under our control
 
 ---
 
 ## A.2.1 Goal
 
-Stand up our own shielded pool, the settlement substrate every other A item binds to. It is **clean-room reimplemented**, spec-compatible with Railgun's design ([ADR-0002](../09-architecture-decisions.md#adr-0002), [ADR-0014](../09-architecture-decisions.md#adr-0014)), and owned by us rather than rented from Railgun's live deployment. T0.0 delivers a running pool on the laconic fixturenet configured with fee = 0, a token allow-list that admits USDC, a preserved SNARK-safety configuration, and a Groth16 verifier registry populated with our own verification keys from the T0.1 ceremony (see [A.3](A.3-trusted-setup.md)). The end-state proof is a shield then transact-unshield roundtrip that verifies against our registered vkeys (A.2.6).
+Stand up our own shielded pool, the settlement substrate every other A item binds to. It is our own implementation, spec-compatible with Railgun's design ([ADR-0002](../09-architecture-decisions.md#adr-0002), [ADR-0014](../09-architecture-decisions.md#adr-0014)), and owned by us rather than rented from Railgun's live deployment. T0.0 delivers a running pool on the laconic fixturenet configured with fee = 0, a token allow-list that admits USDC, a preserved SNARK-safety configuration, and a Groth16 verifier registry populated with our own verification keys from the T0.1 ceremony (see [A.3](A.3-trusted-setup.md)). The end-state proof is a shield then transact-unshield roundtrip that verifies against our registered vkeys (A.2.6).
 
-The pool is clean-room reimplemented ([ADR-0014](../09-architecture-decisions.md#adr-0014)), not reused as-deployed OSS. T0.0 authors spec-compatible protocol contracts, matching A.1.1 and using no Railgun-licensed source, along with the deploy and governance around them. This is an **audit-critical** crypto-engineering artifact, not config-only. The net-new artifacts are the pool contract stack itself, the governance transactions for fee and vkeys, and ownership of the upgradeable-proxy admin (A.2.4). The ICD in A.2.5 describes what the pool exposes downstream: addresses, event ABI, shield/unshield entrypoints, and the reserved deposit/payout hook.
+The pool is our own implementation of the Railgun design ([ADR-0014](../09-architecture-decisions.md#adr-0014)), not reused as-deployed OSS. T0.0 authors spec-compatible protocol contracts, matching A.1.1, along with the deploy and governance around them. This is an **audit-critical** crypto-engineering artifact, not config-only. The net-new artifacts are the pool contract stack itself, the governance transactions for fee and vkeys, and ownership of the upgradeable-proxy admin (A.2.4). The ICD in A.2.5 describes what the pool exposes downstream: addresses, event ABI, shield/unshield entrypoints, and the reserved deposit/payout hook.
 
 ## A.2.2 Boundary
 
 **In scope (T0.0):**
-- Clean-room author and deploy the upgradeable proxy to `RailgunSmartWallet` (is `RailgunLogic` is `{Commitments, TokenBlocklist, Verifier}`), spec-compatible with the stack cited in A.1.1.
+- Author and deploy the upgradeable proxy to `RailgunSmartWallet` (is `RailgunLogic` is `{Commitments, TokenBlocklist, Verifier}`), spec-compatible with the stack cited in A.1.1.
 - Own the proxy admin / owner keys (A.2.4).
 - Governance config: `changeFee(0,0,0)`; leave USDC off `TokenBlocklist`; preserve `snarkSafetyVector` / `checkSafetyVectors` magic constants.
 - Register one verification key per chosen `(nIn,nOut)` circuit combo via `Verifier.setVerificationKey`, consuming T0.1 ceremony output (see A.3).
@@ -27,11 +27,9 @@ The pool is clean-room reimplemented ([ADR-0014](../09-architecture-decisions.md
 - POI is not a pool setting. POI is an alongside partner stack; its "config" is a client- or POI-node-side choice of list providers and standby, and gated entry is enforced in the settlement path (see [A.7](A.7-anonymity-set.md)). T0.0 sets no on-chain POI switch (A.1.7).
 - Consumers that index and scan pool events belong to B (T1.2) and T6.1; T0.0 only publishes the event ABI (A.2.5).
 
-**Phase-0 (licensing gate, resolved via clean-room, [ADR-0014](../09-architecture-decisions.md#adr-0014)).** Per A.1.10 and [A.0 gate 1](A.0-overview.md#a05-open-gates-must-resolve-before--during-a): Railgun's on-chain contracts are SPDX `UNLICENSED`, and `circuits-v2` carries an explicit "*No License is provided… under any circumstances*" file, so redeploying them was never executable. The resolution is that T0.0 clean-room reimplements the pool spec-compatible with A.1.1, and T0.1 reimplements the circuits (A.3), so no grant or relicense is needed. (`Railgun-Community/engine` and `cookbook` are MIT reference, but they are not the on-chain pieces T0.0 implements.)
-
 ## A.2.3 Reuse inventory (cite A.1 + pinned commit)
 
-Everything below is the **reference spec** T0.0 clean-room reimplements, spec-compatible with `Railgun-Privacy/contract`, not reused-as-deployed OSS ([ADR-0014](../09-architecture-decisions.md#adr-0014)); cite [A.1.1](A.1-reuse-inventory.md#a11-shielded-pool-t00--clean-room-reference-spec) for pinned file/line citations. The Railgun reference is UNPINNED, read at `master`/`main` HEAD 2026-09-05, so T0.0 MUST pin the reference commit before build (A.1.10, A.0.6).
+Everything below is the **reference spec** T0.0 implements, spec-compatible with `Railgun-Privacy/contract`, not reused-as-deployed OSS ([ADR-0014](../09-architecture-decisions.md#adr-0014)); cite [A.1.1](A.1-reuse-inventory.md#a11-shielded-pool-t00-reference-spec) for pinned file/line citations. The Railgun reference is UNPINNED, read at `master`/`main` HEAD 2026-09-05, so T0.0 MUST pin the reference commit before build (A.1.10, A.0.6).
 
 | Spec-referenced piece | A.1.1 citation | Role in T0.0 |
 |---|---|---|
@@ -50,13 +48,13 @@ RelayAdapt and Cookbook (Railgun's own recipe layer) are not part of T0.0; Armad
 
 ## A.2.4 Net-new delta (what T0.0 actually authors)
 
-Per [ADR-0014](../09-architecture-decisions.md#adr-0014) (and [A.1.9 item 4](A.1-reuse-inventory.md#a19-net-new-deltas-what-a-actually-builds)), T0.0's net-new surface is now the **clean-room pool contracts** together with their deployment and governance, an audit-critical build, not config-only:
+Per [ADR-0014](../09-architecture-decisions.md#adr-0014) (and [A.1.9 item 4](A.1-reuse-inventory.md#a19-net-new-deltas-what-a-actually-builds)), T0.0's net-new surface is the **pool contracts** together with their deployment and governance, an audit-critical build, not config-only:
 
-1. **Clean-room author and own the pool contract stack.** Independently implement the proxy to `RailgunSmartWallet` / `RailgunLogic` / `{Commitments, TokenBlocklist, Verifier}` stack, spec-compatible with A.1.1 (no Railgun-licensed source, [ADR-0014](../09-architecture-decisions.md#adr-0014)); deploy it under keys we control; and hold upgrade and owner authority. This is the whole point of ADR-0002: own upgrades, audit, fee, and POI policy. This contract set is the **audit-critical** net-new artifact of T0.0, and downstream items assume the proxy address is stable and admin-owned.
+1. **Author and own the pool contract stack.** Implement the proxy to `RailgunSmartWallet` / `RailgunLogic` / `{Commitments, TokenBlocklist, Verifier}` stack, spec-compatible with A.1.1 ([ADR-0014](../09-architecture-decisions.md#adr-0014)); deploy it under keys we control; and hold upgrade and owner authority. This is the whole point of ADR-0002: own upgrades, audit, fee, and POI policy. This contract set is the **audit-critical** net-new artifact of T0.0, and downstream items assume the proxy address is stable and admin-owned.
 2. **`changeFee(0,0,0)` governance action.** Call `changeFee(shieldFee, unshieldFee, nftFee)` with `(0,0,0)` (`RailgunLogic.sol` L146–161) so shield, unshield, and NFT fees are zero; Armada earns from venue spread and watcher metering, not a pool skim (ADR-0002). This is an owner-gated transaction, part of the deploy runbook.
 3. **Vkey registration.** For each chosen `(nIn,nOut)` combo (the subset reconciled in A.3, with 91 generated, not 54; A.1.8), call `Verifier.setVerificationKey(nIn, nOut, vkey)` with the Phase-2 output of our ceremony (see A.3). Until this is done, `transact`/`shield` proofs have no key to verify against.
 4. **Token allow-list posture.** Deploy `TokenBlocklist` empty of USDC (and of any asset A/C settles) so shield admits it; unshield is always allowed regardless of blocklist (`TokenBlocklist.sol` L33–73).
-5. **Reproduce SNARK-safety config.** Carry `snarkSafetyVector` and the `checkSafetyVectors` magic constants (matching the reference `RailgunLogic.sol` L111–127) verbatim into our clean-room implementation; a mismatch makes every `transact` revert. This is a must-match delta, noted explicitly because a clean-room build that regenerates or drops these constants breaks the pool.
+5. **Reproduce SNARK-safety config.** Carry `snarkSafetyVector` and the `checkSafetyVectors` magic constants (matching the reference `RailgunLogic.sol` L111–127) verbatim into our implementation; a mismatch makes every `transact` revert. This is a must-match delta, noted because a build that regenerates or drops these constants breaks the pool.
 
 **What T0.0 does not author:** no fee-taking logic, and no on-chain POI switch. POI is client- or POI-node-side policy (A.1.7; see A.7), and gated entry lives in the settlement path (T0.3, A.5). Asserting an on-chain POI config here would be wrong.
 
@@ -97,11 +95,11 @@ The Merkle root each event advances lives in `Commitments` (`rootHistory`, `TREE
 
 ## A.2.7 Risks / open
 
-- **Licensing (Phase-0), resolved via clean-room ([ADR-0014](../09-architecture-decisions.md#adr-0014)).** T0.0 clean-room reimplements the pool, and T0.1 the circuits, spec-compatible with A.1.1/A.1.2; no Railgun grant or relicense is required, so this no longer blocks build. The residual work is that the clean-room implementation is audit-critical (A.2.4).
+- **Own pool build is audit-critical.** T0.0 authors the pool ([ADR-0014](../09-architecture-decisions.md#adr-0014)), spec-compatible with A.1.1; the residual work is that this build is audit-critical (A.2.4), not that any grant is outstanding.
 - **Unpinned Railgun commit.** Contracts and circuits were read at HEAD, with no SHA pinned. Pin a Railgun commit before build (A.0.6); the pinned SHA drives which `snarkSafetyVector` constants and struct layouts T0.0 carries. (go-nitro @435eb2b, ts-nitro @884d616, mobymask @2329198 are already pinned; Railgun is the outstanding one.)
 - **Combo-subset dependency on A.3.** T0.0 can only register the vkeys A.3 reconciles (91 generated vs the cited ~54 registered subset; A.1.8). Registering the wrong subset means some `(nIn,nOut)` `transact`/`shield` shapes have no key and revert. Sequence T0.0 vkey registration after A.3 fixes the subset.
-- **Safety-vector regression.** A clean-room build that regenerates rather than reproduces `snarkSafetyVector`/`checkSafetyVectors` (matching the reference `RailgunLogic.sol` L111–127) silently breaks `transact`. Treat these as pinned constants, and cover them in A.2.6 step 1.
+- **Safety-vector regression.** A build that regenerates rather than reproduces `snarkSafetyVector`/`checkSafetyVectors` (matching the reference `RailgunLogic.sol` L111–127) silently breaks `transact`. Treat these as pinned constants, and cover them in A.2.6 step 1.
 - **Proxy-admin key custody.** Owning the upgrade admin (A.2.4) concentrates upgrade, fee, and vkey authority; key management and governance for the admin is an operational risk to flag to the settlement client and watcher operators (A.6), out of T0.0 code scope.
 - **POI mis-modeling.** Repeated because it is a common error: there is no on-chain POI setter to reimplement; POI is a separate partner stack and a settlement-side policy (A.1.7; see A.7). Do not add a pool config for it.
 
-See also: Ceremony that feeds A.2.4 vkey registration: [A.3](A.3-trusted-setup.md). Contract that binds A.2.5(c): [A.5](A.5-deposit-payout-contract.md). Deep-dive citations: [A.1.1](A.1-reuse-inventory.md#a11-shielded-pool-t00--clean-room-reference-spec), [A.1.10](A.1-reuse-inventory.md#a110-licensing--risks).
+See also: Ceremony that feeds A.2.4 vkey registration: [A.3](A.3-trusted-setup.md). Contract that binds A.2.5(c): [A.5](A.5-deposit-payout-contract.md). Deep-dive citations: [A.1.1](A.1-reuse-inventory.md#a11-shielded-pool-t00-reference-spec), [A.1.10](A.1-reuse-inventory.md#a110-risks).

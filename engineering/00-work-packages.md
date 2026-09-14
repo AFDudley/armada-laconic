@@ -13,7 +13,7 @@ This is the **work breakdown**: the deliverable-oriented decomposition of the pr
 | **C · yield & exchange** | Let users **earn yield (USDC first) and swap privately**, cleared over A's rail; owns the venue **and the adapters**. | T4.0, T4.1, T4.3, T4.4; T4.2 *(v2)*, T4.5 *(v2)*, T3.\* *(v2)*, T4.6 *(v2)*; **T5.0 adapters (CCTP built · Aave-v4 yield · Swaps), T5.1 routing** | A (settlement), B (feeds); Aave · Circle-CCTP (external protocols) |
 | **D · client** | The **wallet/app** that hosts A/B/C on a phone with almost no fixed infra. | T6.0, T6.4, T6.5, T6.6, T6.7, T6.8 *(opt)* | A, B, C (their client edges) |
 
-Note the deliberate split of the T6 client tier: **A** owns the settlement client (T6.2) and watchtower (T6.3), **B** owns the note-scanner (T6.1), and **D** owns the host, transport, proving, and app shell — because each of those pieces is a client edge of a different scope, hosted by D.
+Note the split of the T6 client tier: **A** owns the settlement client (T6.2) and watchtower (T6.3), **B** owns the note-scanner (T6.1), and **D** owns the host, transport, proving, and app shell — because each of those pieces is a client edge of a different scope, hosted by D.
 
 ## Interface contracts (ICDs)
 
@@ -39,7 +39,7 @@ Kept with their owner so they no longer contaminate the core scope:
 
 - **A:** native amount-privacy (T0.6, opt, ADR-0005); cross-pool membership proofs (T0.7, opt, ADR-0006).
 - **B:** federation bonding + threshold DKG (T2.4, v2); the T1 nimbus long pole (ADR-0009).
-- **C:** **USDC yield is the priority and in scope** via the Aave-v4 adapter (ADR-0013); the open decision is the **v1 mechanism** — direct adapter recipe (public Design-A boundary) vs the private **LP-buffered rail** (T4.5, which needs v2 market-making, ADR-0011) — and may amend ADR-0011. **Adapter source + license** (build vs reuse Railgun's Cookbook Aave/Swaps recipes) is an open gate. ETH/wstETH yield (T4.4) is the trivial path; market-making stays v2 (ADR-0011).
+- **C:** **USDC yield is the priority and in scope** via the Aave-v4 adapter (ADR-0013); the open decision is the **v1 mechanism** — direct adapter recipe (public Design-A boundary) vs the private **LP-buffered rail** (T4.5, which needs v2 market-making, ADR-0011) — and may amend ADR-0011. **Adapter source** (build vs reuse Railgun's Cookbook Aave/Swaps recipes) is an open decision. ETH/wstETH yield (T4.4) is the trivial path; market-making stays v2 (ADR-0011).
 - **D:** mobile transport crux (T6.5, ADR-0008); optional identity (T6.8).
 
 ## Relationship to the arc42 docs

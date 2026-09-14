@@ -9,7 +9,7 @@ work package A · reuse-oriented spec · **2026-09-05**
 
 ## A.0.1 Goal
 
-Deliver the settlement substrate of Armada: the Railgun-based rail on which payments, yield, and exchange all clear, following the motto *notes in, normal Nitro, notes out*. A shielded Railgun note is unshielded into a net-new deposit/payout contract that escrows the value into a `go-nitro` state channel. Parties settle off-chain via ForceMove, and the channel outcome is re-shielded into fresh notes. A also delivers the base shielded-payments capability, a native Railgun transfer, together with the client that drives settlement and a self-watchtower.
+Deliver the settlement substrate of Armada: the Railgun-based rail on which payments, yield, and exchange all clear, following the motto *notes in, normal Nitro, notes out*. A shielded Railgun note is unshielded into a net-new deposit/payout contract that escrows the value into a `go-nitro` state channel. Parties settle off-chain via ForceMove, and the channel outcome is re-shielded into fresh notes. A also delivers three supporting pieces: the base shielded-payments primitive (a native Railgun transfer), the client that drives settlement, and a self-watchtower.
 
 Per [ADR-0012](../09-architecture-decisions.md#adr-0012), the settlement rail is integration work over existing cryptography. The adjudicator is reused as-is (T0.2); the net-new settlement code is the deposit/payout contract (T0.3), the T6.3 auto-watchtower loop, and a multi-asset ForceMove settlement app. The pool (T0.0) and the JoinSplit circuits (T0.1) are not reuse: we author our own implementation of the Railgun design ([ADR-0014](../09-architecture-decisions.md#adr-0014)), spec-compatible with the behavior and format the deep dive pins (A.1.1/A.1.2). That pool-and-circuits work is **audit-critical** crypto-engineering over a well-understood design. The integration thesis therefore holds for the settlement rail, but not for the pool and circuits, which we build ourselves.
 
@@ -28,7 +28,7 @@ The deep dive (A.1) pins the exact binding surface:
    RailgunSmartWallet.shield([ShieldRequest...])
 ```
 
-Deposit-in is a Railgun `transact()` whose `unshieldPreimage.npk` is the T0.3 address, so `transferTokenOut` lands the ERC20 in T0.3, which calls `MultiAssetHolder.deposit`. Payout-out is the channel's `concludeAndTransferAllAssets` routing the outcome to T0.3, an external destination, which `shield()`s fresh notes to each beneficiary. **T0.3 never touches pool or adjudicator internals**; it is a public-side ERC20 counterparty of unshield and shield and of channel deposit and conclude. Full citations: [A.1](./A.1-reuse-inventory.md).
+On deposit, a Railgun `transact()` sets `unshieldPreimage.npk` to the T0.3 address; `transferTokenOut` then lands the ERC20 in T0.3, which forwards it to `MultiAssetHolder.deposit`. On payout, the channel's `concludeAndTransferAllAssets` routes the outcome to T0.3 as an external destination, and T0.3 `shield()`s fresh notes to each beneficiary. **T0.3 never touches pool or adjudicator internals**: it is a public-side ERC20 counterparty — to the pool across unshield and shield, and to the channel across deposit and conclude. Full citations: [A.1](./A.1-reuse-inventory.md).
 
 ## A.0.3 Document map
 

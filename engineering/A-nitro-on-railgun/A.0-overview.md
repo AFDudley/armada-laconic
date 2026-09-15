@@ -58,12 +58,12 @@ shield → transact()/unshield-in → MultiAssetHolder.deposit → trivial Force
 
 Use a trivial single-asset ForceMove app (HashLockedSwap-grade) as a stand-in for C's real quote/settle app. This proves *notes in, Nitro, notes out* before deepening any item. Detail: [A.8](./A.8-interfaces-acceptance.md).
 
-## A.0.5 Open gates (must resolve before / during A)
+## A.0.5 Open items (resolve before or during A)
 
-1. **Circuit-set count.** The source generates 91 `(nInputs,nOutputs)` combos; the widely-cited "~54" is a registered subset. T0.1/T0.0 must reconcile which subset to ceremony and register (A.3).
-2. **POI is not on-chain.** POI is an alongside partner system, not a pool setting. T0.3 gated-entry is client-side and settlement-side policy, and the POI node stack is a separate dependency (A.7).
-3. **Multi-asset ForceMove app is net-new.** `MultiAssetHolder` supports multiple assets, but no shipped ForceMove app does ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).
-4. **Watchtower liveness.** T6.3 auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).
+1. **Register a circuit subset.** The source generates 91 `(nInputs,nOutputs)` combos; the widely-cited "~54" is a registered subset. Decide which subset to ceremony and register (T0.1/T0.0; A.3).
+2. **Settle the POI policy.** POI is an alongside partner system, not a pool setting: set the list-provider and standby policy and stand up the separate POI node. Gated-entry is settlement-side, enforced by T0.3 (A.7).
+3. **Build the multi-asset settlement app.** `MultiAssetHolder` supports multiple assets, but no shipped ForceMove app settles ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).
+4. **Build the auto-watchtower.** T6.3's auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).
 
 ## A.0.6 Provenance
 

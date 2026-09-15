@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Two-party shielded swap — walkthrough — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../engineering/build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="two-party-shielded-swap-walkthrough">Two-party shielded swap — walkthrough</h1>
+<p>standalone walkthrough · 2026-09-15</p>
+<h2 id="what-this-shows">What this shows</h2>
+<p>Armada is a shielded pool for private USDC and ETH. Value is held as encrypted <strong>notes</strong>, and every transfer is a zero-knowledge proof that hides sender, recipient, and amount. Payments and swaps settle off-chain over <strong>Nitro state channels</strong> instead of on-chain, so the pool exposes no per-transaction event to link against, and no party ever takes custody of another's funds.</p>
+<p>This document walks one scenario end to end: <strong>Alice swaps shielded USDC for shielded ETH with a Provider who holds shielded ETH</strong>, on a single chain, non-custodially. It is self-contained — the building blocks are defined inline, and the status table at the end separates what already exists from what is net-new.</p>
+<p>The flow follows one motto: <strong>notes in → normal Nitro → notes out.</strong> Both parties unshield notes into a shared settlement channel, they settle off-chain, and the outcome is re-shielded into fresh notes.</p>
+<h2 id="the-building-blocks-in-play">The building blocks in play</h2>
+<p>Each is a <code>T#.#</code> item in the building-block registry:</p>
+<ul>
+<li><strong>Shielded pool (T0.0)</strong> — holds value as notes. <code>shield</code> mints a note, <code>unshield</code> releases the underlying ERC-20, and <code>transact</code> proves a private transfer. Alice's USDC and the Provider's ETH live here as notes.</li>
+<li><strong>Deposit/payout contract (T0.3)</strong> — the boundary between the pool and Nitro. It unshields a note into a channel (deposit) and re-shields a channel outcome into fresh notes (payout).</li>
+<li><strong>Nitro adjudicator (T0.2)</strong> — the reused <code>go-nitro</code> <code>NitroAdjudicator</code> (ForceMove + MultiAssetHolder). It escrows the channel's funds, finalizes outcomes, and enforces disputes.</li>
+<li><strong>Quote/settle app (T4.1)</strong> — the ForceMove application the two parties co-sign to express the swapped outcome. For a two-asset trade it is the multi-asset ETH-in / USDC-out settlement app.</li>
+<li><strong>Wallet (T6)</strong> — Alice's and the Provider's client software. It proves on device, drives the channel, scans for new notes, and runs a watchtower.</li>
+</ul>
+<h2 id="the-sequence">The sequence</h2>
+<pre><code class="language-mermaid">sequenceDiagram
+  participant A as Alice
+  participant V as Provider
+  participant P as Pool (T0.0)
+  participant D as Deposit/Payout (T0.3)
+  participant N as Nitro Adjudicator (T0.2)
+
+  Note over A,V: Alice has shielded USDC · Provider has shielded ETH
+  A--&gt;&gt;V: quote (off-chain, posted price)
+
+  A-&gt;&gt;D: unshield USDC note
+  D-&gt;&gt;N: escrow USDC into shared channel
+  V-&gt;&gt;D: unshield ETH note
+  D-&gt;&gt;N: escrow ETH into shared channel
+
+  A--&gt;&gt;V: co-sign swapped outcome off-chain (Alice→ETH, Provider→USDC)
+
+  A-&gt;&gt;D: settle (final co-signed state)
+  D-&gt;&gt;N: conclude + transfer all assets
+  N--&gt;&gt;D: ETH and USDC released to T0.3
+  D-&gt;&gt;P: shield ETH note → Alice
+  D-&gt;&gt;P: shield USDC note → Provider
+
+  Note over A,V: Alice has shielded ETH · Provider has shielded USDC
+  Note over A,N: either side can independently force-close at the last co-signed state and re-shield — funds never trapped
+</code></pre>
+<ol>
+<li><strong>Quote (off-chain).</strong> Alice's wallet requests a price and the Provider answers. The quote is a take-it-or-leave-it posted price (T4.0); nothing has touched the chain yet.</li>
+<li><strong>Both fund one shared channel.</strong> Alice unshields her USDC note through T0.3, which escrows the USDC into a <code>go-nitro</code> channel on the adjudicator. The Provider does the same with an ETH note into the <strong>same</strong> channel. Each unshield is one public boundary amount (see below); the notes themselves stay unlinked.</li>
+<li><strong>Co-sign the swap off-chain.</strong> The two parties advance the quote/settle app (T4.1) to a single co-signed final state whose outcome flips the allocations: Alice's balance becomes ETH, the Provider's becomes USDC. This is an ordinary Nitro state exchange — no proof, no chain event.</li>
+<li><strong>Conclude atomically.</strong> Either party submits the final state to T0.3, which calls the adjudicator's <code>concludeAndTransferAllAssets</code>. One transaction pays both legs out of the one escrow, so the swap either completes for both sides or for neither.</li>
+<li><strong>Re-shield.</strong> T0.3 receives the ERC-20 for each leg as an external destination and shields fresh notes: an ETH note to Alice, a USDC note to the Provider.</li>
+<li><strong>Scan.</strong> Each wallet's on-device note-scanner (T6.1) finds its new note over the proof-carrying feed and trial-decrypts locally. No public RPC query leaves the device.</li>
+</ol>
+<h2 id="what-is-public-what-is-private">What is public, what is private</h2>
+<ul>
+<li><strong>Private throughout:</strong> who Alice and the Provider are, the notes they hold, and the swap itself (an off-chain co-signed state).</li>
+<li><strong>Public exactly at the boundary:</strong> the amount at each unshield-in, and the shielded outputs at payout. This is Design A (<a href="./09-architecture-decisions.html#adr-0005">ADR-0005</a>); the allocation flip that performs the swap never reaches the chain.</li>
+</ul>
+<h2 id="either-side-can-exit-independently">Either side can exit independently</h2>
+<p>Neither party depends on the other's cooperation to get its funds back.</p>
+<ul>
+<li>If a counterparty stalls before settle, the other force-closes on the adjudicator at the <strong>latest co-signed state</strong> (<code>challenge</code>, wait the window, <code>conclude</code>), and T0.3 re-shields its correct balance.</li>
+<li>If a counterparty force-closes a <strong>stale</strong> state to try to steal, the other party's <strong>self-watchtower (T6.3)</strong> answers with the higher-turn co-signed state inside the challenge window.</li>
+</ul>
+<p>Funds are never trapped and never held in a counterparty's custody; the worst a bad actor can do is stall trading. The dispute path is detailed in the runtime view (§6.3).</p>
+<h2 id="status-whats-done-whats-net-new">Status — what's done, what's net-new</h2>
+<p>Legend (from the <a href="./build-plan.html">build plan</a>):</p>
+<ul>
+<li><strong>Status:</strong> <code>reuse</code> = used as-is · <code>reuse+config</code> = wired with configuration · <code>net-new</code> = must build · <code>partial</code> = exists, needs work</li>
+<li><strong>Confidence:</strong> <code>validated</code> = code read/grounded this cycle · <code>design</code> = specified against a reference</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Role in this swap</th>
+<th>Status</th>
+<th>Confidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nitro adjudicator — ForceMove / MultiAssetHolder (T0.2)</td>
+<td>escrows both legs; <code>conclude + transfer</code>; dispute enforcement</td>
+<td>reuse — go-nitro <code>@435eb2b</code></td>
+<td>validated</td>
+</tr>
+<tr>
+<td>Channel machinery — virtualfund, payments/vouchers, ExitFormat</td>
+<td>off-chain state and voucher exchange; outcome wire format</td>
+<td>reuse — go-nitro <code>@435eb2b</code></td>
+<td>validated</td>
+</tr>
+<tr>
+<td>Metering vouchers (T2.1)</td>
+<td>per-read payment for feed access</td>
+<td>reuse+config</td>
+<td>validated</td>
+</tr>
+<tr>
+<td>Proof-carrying feeds (T2.0)</td>
+<td>the read path each wallet scans for new notes</td>
+<td>reuse+config</td>
+<td>design</td>
+</tr>
+<tr>
+<td>Transport (T2.3) — Waku + libp2p-noise</td>
+<td>delivers off-chain states and vouchers</td>
+<td>reuse</td>
+<td>design</td>
+</tr>
+<tr>
+<td>On-device Groth16 proving (T6.6)</td>
+<td>generates the shield / unshield / transact proofs</td>
+<td>reuse (constraint)</td>
+<td>design</td>
+</tr>
+<tr>
+<td>Shielded pool — shield / unshield / transact (T0.0)</td>
+<td>holds the notes and mints the swapped ones</td>
+<td>net-new — our own implementation of the Railgun design (<a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>)</td>
+<td>design</td>
+</tr>
+<tr>
+<td>JoinSplit circuits + ceremony (T0.1)</td>
+<td>the zero-knowledge behind every note operation</td>
+<td>net-new (ADR-0014)</td>
+<td>design</td>
+</tr>
+<tr>
+<td>Deposit/payout contract (T0.3)</td>
+<td>unshield-in → escrow; conclude → shield-out</td>
+<td>net-new</td>
+<td>design</td>
+</tr>
+<tr>
+<td>Multi-asset outcome helper (T0.3)</td>
+<td>builds the atomic ETH-out + USDC-out outcome</td>
+<td>net-new</td>
+<td>design</td>
+</tr>
+<tr>
+<td>Quote/settle ForceMove app (T4.1)</td>
+<td>the swapped-outcome state both parties co-sign; the multi-asset ETH-in/USDC-out case is the go-nitro maturity gap (§11 R2)</td>
+<td>net-new — walking skeleton uses a trivial single-asset stand-in</td>
+<td>design</td>
+</tr>
+<tr>
+<td>Posted-price contract (T4.0)</td>
+<td>the signed bid/ask the quote reads</td>
+<td>net-new (small)</td>
+<td>design</td>
+</tr>
+<tr>
+<td>Settlement client (T6.2)</td>
+<td>drives fund → co-sign → settle from the wallet</td>
+<td>net-new</td>
+<td>design</td>
+</tr>
+<tr>
+<td>Self-watchtower (T6.3)</td>
+<td>independent force-close / higher-turn checkpoint</td>
+<td>net-new</td>
+<td>design</td>
+</tr>
+<tr>
+<td>WASM note-scanner (T6.1)</td>
+<td>finds the swapped notes on-device</td>
+<td>net-new</td>
+<td>design</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Reading the table.</strong> Everything reused — the adjudicator, the channel machinery, transport, proving, and metering — is validated or config-level today. Everything net-new — the pool, the circuits, T0.3, the multi-asset swap app, and the wallet's client, watchtower, and scanner — is design-level. The full path is proven end-to-end only once the <strong>walking skeleton</strong> runs: a thin <code>shield → deposit → trivial settle → payout → scan</code> slice on a laconic fixturenet that retires integration risk before any item deepens (§4, <a href="./build-plan.html">build plan</a>).</p>
+<h2 id="where-this-fits">Where this fits</h2>
+<ul>
+<li><strong>Same rail, venue-inventory variant</strong> (the Provider's side pre-funded as static venue inventory rather than a per-swap deposit): runtime view <a href="./06-runtime-view.html">§6.2</a>.</li>
+<li><strong>Base spine</strong> (bring value in, settle, exit — no swap): <a href="./06-runtime-view.html">§6.1</a>. <strong>Dispute / force-close</strong> path: <a href="./06-runtime-view.html">§6.3</a>.</li>
+<li><strong>Contract-level detail</strong> for the boundary: <a href="./A-nitro-on-railgun/A.5-deposit-payout-contract.html">A.5 deposit/payout contract</a>.</li>
+<li><strong>Decisions:</strong> <a href="./09-architecture-decisions.html#adr-0004">ADR-0004</a> (settle via nitro-on-railgun), <a href="./09-architecture-decisions.html#adr-0005">ADR-0005</a> (Design A amount privacy), <a href="./09-architecture-decisions.html#adr-0007">ADR-0007</a> (posted-price venue). <strong>Status &amp; effort:</strong> <a href="./build-plan.html">build plan</a>.</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/13-shielded-swap-walkthrough.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+</body>
+</html>

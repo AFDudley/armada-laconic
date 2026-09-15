@@ -107,12 +107,12 @@
   T0.0        T0.3                         T0.2                T0.2/T0.3
 </code></pre>
 <p>Use a trivial single-asset ForceMove app (HashLockedSwap-grade) as a stand-in for C's real quote/settle app. This proves <em>notes in, Nitro, notes out</em> before deepening any item. Detail: <a href="./A.8-interfaces-acceptance.html">A.8</a>.</p>
-<h2 id="a05-open-gates-must-resolve-before-during-a">A.0.5 Open gates (must resolve before / during A)</h2>
+<h2 id="a05-open-items-resolve-before-or-during-a">A.0.5 Open items (resolve before or during A)</h2>
 <ol>
-<li><strong>Circuit-set count.</strong> The source generates 91 <code>(nInputs,nOutputs)</code> combos; the widely-cited "~54" is a registered subset. T0.1/T0.0 must reconcile which subset to ceremony and register (A.3).</li>
-<li><strong>POI is not on-chain.</strong> POI is an alongside partner system, not a pool setting. T0.3 gated-entry is client-side and settlement-side policy, and the POI node stack is a separate dependency (A.7).</li>
-<li><strong>Multi-asset ForceMove app is net-new.</strong> <code>MultiAssetHolder</code> supports multiple assets, but no shipped ForceMove app does ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).</li>
-<li><strong>Watchtower liveness.</strong> T6.3 auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).</li>
+<li><strong>Register a circuit subset.</strong> The source generates 91 <code>(nInputs,nOutputs)</code> combos; the widely-cited "~54" is a registered subset. Decide which subset to ceremony and register (T0.1/T0.0; A.3).</li>
+<li><strong>Settle the POI policy.</strong> POI is an alongside partner system, not a pool setting: set the list-provider and standby policy and stand up the separate POI node. Gated-entry is settlement-side, enforced by T0.3 (A.7).</li>
+<li><strong>Build the multi-asset settlement app.</strong> <code>MultiAssetHolder</code> supports multiple assets, but no shipped ForceMove app settles ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).</li>
+<li><strong>Build the auto-watchtower.</strong> T6.3's auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).</li>
 </ol>
 <h2 id="a06-provenance">A.0.6 Provenance</h2>
 <p>Pinned commits for the deep dive: go-nitro @435eb2b, ts-nitro @884d616, mobymask @2329198. Railgun repos were read at <code>master</code>/<code>main</code> HEAD (2026-09-05). <strong>No SHA was pinned; A.2/A.3/A.5 must pin a Railgun commit before build.</strong> Full citations: <a href="./A.1-reuse-inventory.html">A.1</a>.</p>

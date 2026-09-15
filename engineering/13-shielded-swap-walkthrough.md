@@ -71,32 +71,52 @@ Neither party depends on the other's cooperation to get its funds back.
 
 Funds are never trapped and never held in a counterparty's custody; the worst a bad actor can do is stall trading. The dispute path is detailed in the runtime view (§6.3).
 
-## Status — what's done, what's net-new
+## Build status and difficulty
 
-Legend (from the [build plan](./build-plan.md)):
+Each component carries two facets: its **status** — reused today or net-new — and its **difficulty** on the build plan's linear 1–10 scale, where 1 is trivial configuration or reuse and 10 is a large, audit-critical, novel build. The scores come from the [build plan](./build-plan.md) effort table, which weights net-new work, audit exposure, and novelty rather than calendar time.
 
-- **Status:** `reuse` = used as-is · `reuse+config` = wired with configuration · `net-new` = must build · `partial` = exists, needs work
-- **Confidence:** `validated` = code read/grounded this cycle · `design` = specified against a reference
+A third facet, **scope**, keeps the difficulty honest. Almost everything this swap touches is **shared v1 substrate** — the shielded pool, its circuits, the Nitro settlement rail, and the wallet — which every Armada scenario needs and which is built once. Only a small part is **specific to this swap**.
 
-| Item | Role in this swap | Status | Confidence |
-|---|---|---|---|
-| Nitro adjudicator — ForceMove / MultiAssetHolder (T0.2) | escrows both legs; `conclude + transfer`; dispute enforcement | reuse — go-nitro `@435eb2b` | validated |
-| Channel machinery — virtualfund, payments/vouchers, ExitFormat | off-chain state and voucher exchange; outcome wire format | reuse — go-nitro `@435eb2b` | validated |
-| Metering vouchers (T2.1) | per-read payment for feed access | reuse+config | validated |
-| Proof-carrying feeds (T2.0) | the read path each wallet scans for new notes | reuse+config | design |
-| Transport (T2.3) — Waku + libp2p-noise | delivers off-chain states and vouchers | reuse | design |
-| On-device Groth16 proving (T6.6) | generates the shield / unshield / transact proofs | reuse (constraint) | design |
-| Shielded pool — shield / unshield / transact (T0.0) | holds the notes and mints the swapped ones | net-new — our own implementation of the Railgun design ([ADR-0014](./09-architecture-decisions.md#adr-0014)) | design |
-| JoinSplit circuits + ceremony (T0.1) | the zero-knowledge behind every note operation | net-new (ADR-0014) | design |
-| Deposit/payout contract (T0.3) | unshield-in → escrow; conclude → shield-out | net-new | design |
-| Multi-asset outcome helper (T0.3) | builds the atomic ETH-out + USDC-out outcome | net-new | design |
-| Quote/settle ForceMove app (T4.1) | the swapped-outcome state both parties co-sign; the multi-asset ETH-in/USDC-out case is the go-nitro maturity gap (§11 R2) | net-new — walking skeleton uses a trivial single-asset stand-in | design |
-| Posted-price contract (T4.0) | the signed bid/ask the quote reads | net-new (small) | design |
-| Settlement client (T6.2) | drives fund → co-sign → settle from the wallet | net-new | design |
-| Self-watchtower (T6.3) | independent force-close / higher-turn checkpoint | net-new | design |
-| WASM note-scanner (T6.1) | finds the swapped notes on-device | net-new | design |
+| Item | Status | Pts | Scope |
+|---|---|---:|---|
+| Shielded pool — shield / unshield / transact (T0.0) | net-new (ADR-0014) | 10 | shared |
+| JoinSplit circuits + ceremony (T0.1) | net-new (ADR-0014) | 9 | shared |
+| Deposit/payout contract (T0.3) | net-new | 5 | shared |
+| On-device Groth16 proving (T6.6) | reuse (constraint) | 5 | shared |
+| Settlement client (T6.2) | net-new | 5 | shared |
+| Self-watchtower (T6.3) | net-new | 5 | shared |
+| WASM note-scanner (T6.1) | net-new | 5 | shared |
+| Transport — Waku + libp2p-noise (T2.3) | reuse | 3 | shared |
+| Nitro adjudicator — ForceMove / MultiAssetHolder (T0.2) | reuse | 2 | shared |
+| Proof-carrying feeds (T2.0) | reuse+config | 2 | shared |
+| Metering vouchers (T2.1) | reuse+config | 2 | shared |
+| ↳ Channel machinery — virtualfund, payments, ExitFormat | reuse | incl. → T0.2 | shared |
+| Quote/settle ForceMove app (T4.1) | net-new | 4 | swap |
+| Posted-price contract (T4.0) | net-new (small) | 3 | swap |
+| ↳ Multi-asset outcome helper | net-new | incl. → T0.3 | swap |
 
-**Reading the table.** Everything reused — the adjudicator, the channel machinery, transport, proving, and metering — is validated or config-level today. Everything net-new — the pool, the circuits, T0.3, the multi-asset swap app, and the wallet's client, watchtower, and scanner — is design-level. The full path is proven end-to-end only once the **walking skeleton** runs: a thin `shield → deposit → trivial settle → payout → scan` slice on a laconic fixturenet that retires integration risk before any item deepens (§4, [build plan](./build-plan.md)).
+| Bucket | Pts |
+|---|---:|
+| Shared v1 substrate | 53 |
+| Swap-specific (T4.0 + T4.1) | 7 |
+| **Total (standalone rows)** | **60** |
+
+**Key.**
+- **Status** — `reuse` used as-is · `reuse+config` wired with configuration · `net-new` must build.
+- **Pts** — linear 1–10 difficulty from the build plan (1 = trivial config/reuse, 10 = large / audit-critical / novel).
+- **Scope** — `shared` = v1 substrate every scenario needs · `swap` = specific to this swap.
+- **incl.** — folded into the parent item's points, not added to the total.
+
+The many small net-new rows are mostly this foundation, not swap cost. The swap rides about **53 points of shared substrate for a ~7-point swap-specific delta**: the posted-price contract (3) and the quote/settle app (4), with the multi-asset outcome shaping folded into the deposit/payout contract. The quote/settle app carries the real swap-specific risk. No shipped ForceMove app settles a two-asset ETH-in/USDC-out outcome atomically, so it is the go-nitro maturity gap the build plan tracks (§11 R2). The walking skeleton stands in a trivial single-asset app until it lands.
+
+Within the 53, about **14 points are the base Nitro settlement rail**: the adjudicator (T0.2), the deposit/payout boundary (T0.3), the settlement client (T6.2), and voucher metering (T2.1). The remaining **~39 are the shielded-pool side**, dominated by the pool (10) and its circuits (9). Those two are the audit-critical core of the whole programme (§11), which is why they carry the highest scores. Everything reused — the adjudicator, feeds, metering, transport, and proving — sits at 2 to 5. The pool and circuits are our own implementation of the Railgun design ([ADR-0014](./09-architecture-decisions.md#adr-0014)), which is what makes them net-new rather than a redeploy.
+
+Two boundaries keep the 53 from being read as more than it is:
+
+- **It is a slice of v1, not all of it.** The v1 build totals 110 points; the 53 counts only the items on this swap's path. State ingestion (T1), the anonymity-set strategy (T0.7), the Adapters (T5), the fee-split, and several wallet items belong to v1 but sit off this path.
+- **It is the base Nitro rail, not the cross-chain one.** This swap is same-chain, so it uses the reused go-nitro adjudicator (T0.2, 2 points). The v1.5 nitro-railgun cross-chain adjudicator ([ADR-0015/0016](./09-architecture-decisions.md#adr-0015), +6 points) is a different scenario and is not counted here.
+
+The full path is proven end to end only once the **walking skeleton** runs: a thin `shield → deposit → trivial settle → payout → scan` slice on a laconic fixturenet that retires integration risk before any item deepens (§4, [build plan](./build-plan.md)).
 
 ## Where this fits
 

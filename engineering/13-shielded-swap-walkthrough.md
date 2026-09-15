@@ -20,7 +20,7 @@ Each is a `T#.#` item in the building-block registry:
 - **Quote/settle app (T4.1)** — the ForceMove application the two parties co-sign to express the swapped outcome. For a two-asset trade it is the multi-asset ETH-in / USDC-out settlement app.
 - **Wallet (T6)** — Alice's and the Provider's client software. It proves on device, drives the channel, scans for new notes, and runs a watchtower.
 
-## The sequence
+## The sequence — happy path
 
 ```mermaid
 sequenceDiagram
@@ -70,6 +70,50 @@ Neither party depends on the other's cooperation to get its funds back.
 - If a counterparty force-closes a **stale** state to try to steal, the other party's **self-watchtower (T6.3)** answers with the higher-turn co-signed state inside the challenge window.
 
 Funds are never trapped and never held in a counterparty's custody; the worst a bad actor can do is stall trading. The dispute path is detailed in the runtime view (§6.3).
+
+## Full sequence — happy and unhappy paths
+
+The full picture adds the two unhappy branches to the same flow. Everything through the deposits and the off-chain co-sign is shared; the paths diverge at **settle**. The honest party's **watchtower (T6.3)** appears only in the theft branch. The generic dispute machinery is the runtime view's force-close scenario ([§6.3](./06-runtime-view.md)).
+
+```mermaid
+sequenceDiagram
+  participant A as Alice
+  participant V as Provider
+  participant P as Pool (T0.0)
+  participant D as Deposit/Payout (T0.3)
+  participant N as Nitro Adjudicator (T0.2)
+  participant WT as Watchtower (T6.3)
+
+  Note over A,V: Alice has shielded USDC · Provider has shielded ETH
+  A-->>V: quote (off-chain, posted price)
+
+  A->>D: unshield USDC note
+  D->>N: escrow USDC into shared channel
+  V->>D: unshield ETH note
+  D->>N: escrow ETH into shared channel
+  A-->>V: co-sign swapped outcome off-chain (Alice→ETH, Provider→USDC)
+
+  alt happy path — both settle
+    A->>D: settle (final co-signed state)
+    D->>N: conclude + transfer all assets
+    N-->>D: ETH and USDC released to T0.3
+    D->>P: shield ETH note → Alice
+    D->>P: shield USDC note → Provider
+    Note over A,V: Alice has shielded ETH · Provider has shielded USDC
+  else no settle — timeout / abort
+    A->>N: challenge(latest state), wait window, conclude
+    N-->>D: each leg released to T0.3 (pre-fill outcome)
+    D->>P: re-shield each party's own deposit
+    Note over A,V: guaranteed refund — no swap, funds returned as fresh notes
+  else stale-state force-close — theft attempt
+    V->>N: forceMove(stale state) — challenge window opens
+    N-->>WT: Challenge event over feed
+    WT->>N: checkpoint(higher-turn co-signed state)
+    N->>D: finalize on correct latest state
+    D->>P: shield correct outcome → honest party
+    Note over A,V: attempt defeated — correct outcome settles
+  end
+```
 
 ## Build status and difficulty
 

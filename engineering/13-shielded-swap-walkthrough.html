@@ -36,7 +36,7 @@
 <li><strong>Quote/settle app (T4.1)</strong> — the ForceMove application the two parties co-sign to express the swapped outcome. For a two-asset trade it is the multi-asset ETH-in / USDC-out settlement app.</li>
 <li><strong>Wallet (T6)</strong> — Alice's and the Provider's client software. It proves on device, drives the channel, scans for new notes, and runs a watchtower.</li>
 </ul>
-<h2 id="the-sequence">The sequence</h2>
+<h2 id="the-sequence-happy-path">The sequence — happy path</h2>
 <pre><code class="language-mermaid">sequenceDiagram
   participant A as Alice
   participant V as Provider
@@ -83,6 +83,46 @@
 <li>If a counterparty force-closes a <strong>stale</strong> state to try to steal, the other party's <strong>self-watchtower (T6.3)</strong> answers with the higher-turn co-signed state inside the challenge window.</li>
 </ul>
 <p>Funds are never trapped and never held in a counterparty's custody; the worst a bad actor can do is stall trading. The dispute path is detailed in the runtime view (§6.3).</p>
+<h2 id="full-sequence-happy-and-unhappy-paths">Full sequence — happy and unhappy paths</h2>
+<p>The full picture adds the two unhappy branches to the same flow. Everything through the deposits and the off-chain co-sign is shared; the paths diverge at <strong>settle</strong>. The honest party's <strong>watchtower (T6.3)</strong> appears only in the theft branch. The generic dispute machinery is the runtime view's force-close scenario (<a href="./06-runtime-view.html">§6.3</a>).</p>
+<pre><code class="language-mermaid">sequenceDiagram
+  participant A as Alice
+  participant V as Provider
+  participant P as Pool (T0.0)
+  participant D as Deposit/Payout (T0.3)
+  participant N as Nitro Adjudicator (T0.2)
+  participant WT as Watchtower (T6.3)
+
+  Note over A,V: Alice has shielded USDC · Provider has shielded ETH
+  A--&gt;&gt;V: quote (off-chain, posted price)
+
+  A-&gt;&gt;D: unshield USDC note
+  D-&gt;&gt;N: escrow USDC into shared channel
+  V-&gt;&gt;D: unshield ETH note
+  D-&gt;&gt;N: escrow ETH into shared channel
+  A--&gt;&gt;V: co-sign swapped outcome off-chain (Alice→ETH, Provider→USDC)
+
+  alt happy path — both settle
+    A-&gt;&gt;D: settle (final co-signed state)
+    D-&gt;&gt;N: conclude + transfer all assets
+    N--&gt;&gt;D: ETH and USDC released to T0.3
+    D-&gt;&gt;P: shield ETH note → Alice
+    D-&gt;&gt;P: shield USDC note → Provider
+    Note over A,V: Alice has shielded ETH · Provider has shielded USDC
+  else no settle — timeout / abort
+    A-&gt;&gt;N: challenge(latest state), wait window, conclude
+    N--&gt;&gt;D: each leg released to T0.3 (pre-fill outcome)
+    D-&gt;&gt;P: re-shield each party's own deposit
+    Note over A,V: guaranteed refund — no swap, funds returned as fresh notes
+  else stale-state force-close — theft attempt
+    V-&gt;&gt;N: forceMove(stale state) — challenge window opens
+    N--&gt;&gt;WT: Challenge event over feed
+    WT-&gt;&gt;N: checkpoint(higher-turn co-signed state)
+    N-&gt;&gt;D: finalize on correct latest state
+    D-&gt;&gt;P: shield correct outcome → honest party
+    Note over A,V: attempt defeated — correct outcome settles
+  end
+</code></pre>
 <h2 id="build-status-and-difficulty">Build status and difficulty</h2>
 <p>Each component carries two facets: its <strong>status</strong> — reused today or net-new — and its <strong>difficulty</strong> on the build plan's linear 1–10 scale, where 1 is trivial configuration or reuse and 10 is a large, audit-critical, novel build. The scores come from the <a href="./build-plan.html">build plan</a> effort table, which weights net-new work, audit exposure, and novelty rather than calendar time.</p>
 <p>A third facet, <strong>scope</strong>, keeps the difficulty honest. Almost everything this swap touches is <strong>shared v1 substrate</strong> — the shielded pool, its circuits, the Nitro settlement rail, and the wallet — which every Armada scenario needs and which is built once. Only a small part is <strong>specific to this swap</strong>.</p>

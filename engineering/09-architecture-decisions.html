@@ -233,5 +233,17 @@
 <p class="small">Generated from <code>engineering/09-architecture-decisions.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
 
 </main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+for (const code of document.querySelectorAll("code.language-mermaid")) {
+  const div = document.createElement("div");
+  div.className = "mermaid";
+  div.textContent = code.textContent;
+  (code.closest("pre") || code).replaceWith(div);
+}
+mermaid.initialize({ startOnLoad: false, theme: "dark" });
+mermaid.run();
+</script>
+
 </body>
 </html>

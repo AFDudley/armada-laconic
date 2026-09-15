@@ -113,7 +113,7 @@ sequenceDiagram
     D->>P: shield correct outcome → honest party
     Note over A,V: attempt defeated — correct outcome settles
   end
-  Note over A,N: every path ends in funds recovered — non-custodial, liveness-only trust; never trapped
+  Note over A,N: funds recovered on every path · never trapped · non-custodial, liveness-only trust
 ```
 
 ## Build status and difficulty

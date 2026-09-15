@@ -101,11 +101,17 @@ A third facet, **scope**, keeps the difficulty honest. Almost everything this sw
 | Swap-specific (T4.0 + T4.1) | 7 |
 | **Total (standalone rows)** | **60** |
 
-**Key.**
-- **Status** — `reuse` used as-is · `reuse+config` wired with configuration · `net-new` must build.
-- **Pts** — linear 1–10 difficulty from the build plan (1 = trivial config/reuse, 10 = large / audit-critical / novel).
-- **Scope** — `shared` = v1 substrate every scenario needs · `swap` = specific to this swap.
-- **incl.** — folded into the parent item's points, not added to the total.
+**Key**
+
+| Facet | Value | Meaning |
+|---|---|---|
+| **Status** | `reuse` | used as-is |
+| | `reuse+config` | wired with configuration |
+| | `net-new` | must build |
+| **Scope** | `shared` | v1 substrate every scenario needs |
+| | `swap` | specific to this swap |
+| **Pts** | `1–10` | linear difficulty (1 = trivial config/reuse, 10 = large / audit-critical / novel) |
+| **incl.** | — | folded into the parent's points; not added to the total |
 
 The many small net-new rows are mostly this foundation, not swap cost. The swap rides about **53 points of shared substrate for a ~7-point swap-specific delta**: the posted-price contract (3) and the quote/settle app (4), with the multi-asset outcome shaping folded into the deposit/payout contract. The quote/settle app carries the real swap-specific risk. No shipped ForceMove app settles a two-asset ETH-in/USDC-out outcome atomically, so it is the go-nitro maturity gap the build plan tracks (§11 R2). The walking skeleton stands in a trivial single-asset app until it lands.
 

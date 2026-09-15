@@ -210,11 +210,53 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Key.</strong>
-- <strong>Status</strong> — <code>reuse</code> used as-is · <code>reuse+config</code> wired with configuration · <code>net-new</code> must build.
-- <strong>Pts</strong> — linear 1–10 difficulty from the build plan (1 = trivial config/reuse, 10 = large / audit-critical / novel).
-- <strong>Scope</strong> — <code>shared</code> = v1 substrate every scenario needs · <code>swap</code> = specific to this swap.
-- <strong>incl.</strong> — folded into the parent item's points, not added to the total.</p>
+<p><strong>Key</strong></p>
+<table>
+<thead>
+<tr>
+<th>Facet</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Status</strong></td>
+<td><code>reuse</code></td>
+<td>used as-is</td>
+</tr>
+<tr>
+<td></td>
+<td><code>reuse+config</code></td>
+<td>wired with configuration</td>
+</tr>
+<tr>
+<td></td>
+<td><code>net-new</code></td>
+<td>must build</td>
+</tr>
+<tr>
+<td><strong>Scope</strong></td>
+<td><code>shared</code></td>
+<td>v1 substrate every scenario needs</td>
+</tr>
+<tr>
+<td></td>
+<td><code>swap</code></td>
+<td>specific to this swap</td>
+</tr>
+<tr>
+<td><strong>Pts</strong></td>
+<td><code>1–10</code></td>
+<td>linear difficulty (1 = trivial config/reuse, 10 = large / audit-critical / novel)</td>
+</tr>
+<tr>
+<td><strong>incl.</strong></td>
+<td>—</td>
+<td>folded into the parent's points; not added to the total</td>
+</tr>
+</tbody>
+</table>
 <p>The many small net-new rows are mostly this foundation, not swap cost. The swap rides about <strong>53 points of shared substrate for a ~7-point swap-specific delta</strong>: the posted-price contract (3) and the quote/settle app (4), with the multi-asset outcome shaping folded into the deposit/payout contract. The quote/settle app carries the real swap-specific risk. No shipped ForceMove app settles a two-asset ETH-in/USDC-out outcome atomically, so it is the go-nitro maturity gap the build plan tracks (§11 R2). The walking skeleton stands in a trivial single-asset app until it lands.</p>
 <p>Within the 53, about <strong>14 points are the base Nitro settlement rail</strong>: the adjudicator (T0.2), the deposit/payout boundary (T0.3), the settlement client (T6.2), and voucher metering (T2.1). The remaining <strong>~39 are the shielded-pool side</strong>, dominated by the pool (10) and its circuits (9). Those two are the audit-critical core of the whole programme (§11), which is why they carry the highest scores. Everything reused — the adjudicator, feeds, metering, transport, and proving — sits at 2 to 5. The pool and circuits are our own implementation of the Railgun design (<a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>), which is what makes them net-new rather than a redeploy.</p>
 <p>Two boundaries keep the 53 from being read as more than it is:</p>

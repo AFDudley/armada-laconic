@@ -124,6 +124,12 @@
   end
   Note over A,N: funds recovered on every path · never trapped · non-custodial, liveness-only trust
 </code></pre>
+<p><strong>What stays private on a forced exit — and what doesn't.</strong></p>
+<ul>
+<li><strong>Same as the happy path (hidden):</strong> the payout is a <strong>fresh note</strong>, recipient-unlinkable; the depositor's identity and source note stay hidden (in-circuit ownership, only a nullifier); and the submitting EOA stays hidden, since the dispute txs (<code>challenge</code>/<code>checkpoint</code>/<code>conclude</code>) are keeper-relayed (T6.3/T6.5).</li>
+<li><strong>New on a forced close (public):</strong> the outcome <strong>amount</strong> — a <em>contested</em> conclusion reveals the swap's size on-chain (Design A) — plus the <code>channelId</code>, the fact of the dispute, and its timing.</li>
+</ul>
+<p>The happy path settles off-chain and leaks none of this; the amount is the residual <a href="./A-nitro-on-railgun/A.9-native-commitment.html">T0.6 fork-lite</a> (hidden-amount outcomes) closes (<a href="./09-architecture-decisions.html#adr-0005">ADR-0005</a>).</p>
 <h2 id="build-status-and-difficulty">Build status and difficulty</h2>
 <p>Each component carries two facets: its <strong>status</strong> — reused today or net-new — and its <strong>difficulty</strong> on the build plan's linear 1–10 scale, where 1 is trivial configuration or reuse and 10 is a large, audit-critical, novel build. The scores come from the <a href="./build-plan.html">build plan</a> effort table, which weights net-new work, audit exposure, and novelty rather than calendar time.</p>
 <p>A third facet, <strong>scope</strong>, keeps the difficulty honest. Almost everything this swap touches is <strong>shared v1 substrate</strong> — the shielded pool, its circuits, the Nitro settlement rail, and the wallet — which every Armada scenario needs and which is built once. Only a small part is <strong>specific to this swap</strong>.</p>

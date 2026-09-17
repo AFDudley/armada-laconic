@@ -116,6 +116,13 @@ sequenceDiagram
   Note over A,N: funds recovered on every path · never trapped · non-custodial, liveness-only trust
 ```
 
+**What stays private on a forced exit — and what doesn't.**
+
+- **Same as the happy path (hidden):** the payout is a **fresh note**, recipient-unlinkable; the depositor's identity and source note stay hidden (in-circuit ownership, only a nullifier); and the submitting EOA stays hidden, since the dispute txs (`challenge`/`checkpoint`/`conclude`) are keeper-relayed (T6.3/T6.5).
+- **New on a forced close (public):** the outcome **amount** — a *contested* conclusion reveals the swap's size on-chain (Design A) — plus the `channelId`, the fact of the dispute, and its timing.
+
+The happy path settles off-chain and leaks none of this; the amount is the residual [T0.6 fork-lite](./A-nitro-on-railgun/A.9-native-commitment.md) (hidden-amount outcomes) closes ([ADR-0005](./09-architecture-decisions.md#adr-0005)).
+
 ## Build status and difficulty
 
 Each component carries two facets: its **status** — reused today or net-new — and its **difficulty** on the build plan's linear 1–10 scale, where 1 is trivial configuration or reuse and 10 is a large, audit-critical, novel build. The scores come from the [build plan](./build-plan.md) effort table, which weights net-new work, audit exposure, and novelty rather than calendar time.

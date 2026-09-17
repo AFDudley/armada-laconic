@@ -90,6 +90,13 @@ sequenceDiagram
 4. **Higher-turn response.** T6.3 signs and submits the user's **higher-turn co-signed state** — drawn from T6.2's driven channel state — through the T0.3 `respond`/`checkpoint` path within the window, relayed gaslessly via the keeper/broadcaster (T6.5). Correctness — never miss a valid challenge, never submit a superseded state — is owned jointly with T0.2/T0.3.
 5. **Correct finalize → payout.** The adjudicator finalizes on the correct latest state, and the T0.3 payout endpoint shields that outcome into fresh notes for the honest user. Non-custody holds: a dead or malicious counterparty can freeze trading but never the funds.
 
+**Privacy on a forced close.** A dispute settles on-chain, so it exposes more than a cooperative off-chain settle — but only the amount, never identity.
+
+- **Still hidden (as on the happy path):** who owns the payout note (a fresh commitment); the depositor's identity and source note (in-circuit ownership, only a nullifier); and the submitting EOA, since `challenge`/`checkpoint`/`conclude` are keeper-relayed (T6.5).
+- **Now public:** the outcome **amount** — a *contested* close reveals the settled size on-chain (Design A) — plus the `channelId`, the fact of a dispute, and its timing. Deposit and payout are tied by `channelId`, but between hidden endpoints, not people.
+
+The amount is the only new leak, and T0.6 (fork-lite, hidden-amount outcomes) closes it; a happy off-chain settle reveals none of this ([ADR-0005](./09-architecture-decisions.md#adr-0005)).
+
 → watchtower deployment §5 T6.3; freshness gate §5 T2.0; go-nitro dispute-wiring long pole §11.
 
 ## 6.4 Private metered read

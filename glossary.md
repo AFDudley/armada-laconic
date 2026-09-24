@@ -69,7 +69,7 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **Virtual channel** (`virtualfund`) — a channel routed through a hub without a new on-chain deposit (go-nitro **T0.2**).
 - **Voucher** — a signed pay-per-request micropayment over a (virtual) channel; the metering primitive (metering **T2**, fee-split **T4.3**).
 - **Force-close** — unilateral exit to your last co-signed state (safety escape hatch: failure = halt, not loss).
-- **HashLockedSwap** — an `IForceMoveApp` example: reveal a preimage to unlock (HTLC-style).
+- **HashLockedSwap / hash-locked swap** — go-nitro's example `IForceMoveApp`: revealing a preimage swaps the two parties' amounts. It has no time lock; a stalled swap is resolved by the channel's challenge window. Our docs use this term, not "HTLC", for the Nitro construction.
 - **SwapChannel** — go-nitro's channel type for the swap protocol.
 - **Bridge.sol** — mirrored L1↔L2 channel construction (cross-chain movement).
 - **Watchtower** — see §1 (**T6.3**): a watcher (read) + a bonded responder (write) to a stale-state ForceMove challenge.

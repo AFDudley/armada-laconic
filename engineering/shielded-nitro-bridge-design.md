@@ -30,7 +30,7 @@ Three independent surfaces, each with its own mechanism; do not conflate them:
 | Counterparty graph | multi-hop virtual channels through hubs; fresh rotating endpoint keys | at routing |
 | Cross-chain link | user's swap settles **off-chain**, fronted from hub inventory — the user never performs the on-chain crossing | the hub does, on its own account |
 
-Consequence: per-swap activity is an **off-chain** channel-state update, so there is no per-user on-chain event to correlate. The user never performs the cross-chain crossing; the hub fronts the destination from standing inventory and squares its own books later. The hub's rebalancing is its own on-chain activity over already-anonymized inputs, unlinkable to any specific user's (off-chain) swap — it is **out of protocol** (§6) and not user-privacy-critical. The HTLC hashlock is off-chain, seen only by counterparties deliberately on both legs, so it is not a meaningful leak.
+Consequence: per-swap activity is an **off-chain** channel-state update, so there is no per-user on-chain event to correlate. The user never performs the cross-chain crossing; the hub fronts the destination from standing inventory and squares its own books later. The hub's rebalancing is its own on-chain activity over already-anonymized inputs, unlinkable to any specific user's (off-chain) swap — it is **out of protocol** (§6) and not user-privacy-critical. The hash lock of the hash-locked swap is off-chain, seen only by counterparties deliberately on both legs, so it is not a meaningful leak.
 
 ## 3. The nitro-railgun adjudicator (net-new core)
 
@@ -45,7 +45,7 @@ Distinct from **both** (i) the go-nitro L2 adjudicator — a stub, and merely a 
 
 This is exactly the "group delegate credentials + bind custodian contract" the laconic nitro integration *declared but never built*. It also dissolves the key-rotation-vs-channel-immutability tension: the channel names the stable custodian, and rotation happens inside it.
 
-**(c) Unilateral exit → re-shield, on every chain.** Any party can force-close at the latest supported state (challenge/checkpoint/conclude) and have its allocation **shielded back to its Railgun address**. Because the adjudicator exists on *both* chains, each leg has real enforcement — this is what makes the HTLC genuinely trustless-atomic and reduces hub trust to liveness. This is precisely the gap the L2 stub left open; we fill it by **building the adjudicator, not finishing the stub**.
+**(c) Unilateral exit → re-shield, on every chain.** Any party can force-close at the latest supported state (challenge/checkpoint/conclude) and have its allocation **shielded back to its Railgun address**. Because the adjudicator exists on *both* chains, each leg has real enforcement — this is what makes the hash-locked swap genuinely trustless-atomic and reduces hub trust to liveness. This is precisely the gap the L2 stub left open; we fill it by **building the adjudicator, not finishing the stub**.
 
 **(d) Amount privacy on exit — phased.** v1: outcomes are cleartext on a forced conclusion (Design A; a *contested* swap leaks its size on-chain). v2: outcome allocations carry **hidden-amount commitments** (T0.6 "fork-lite") so even a forced exit reveals no amount — requires the circuit change + a fresh ceremony (A.3/A.9); deferred.
 
@@ -57,14 +57,14 @@ Fronting is the core mechanism. A hub with inventory on both chains gives the us
 
 1. **Fund (chain X).** User unshields a note into the nitro-railgun adjudicator on X, opening a ledger channel to a hub under a fresh key, over the shared Armada transport (Nym underlay optional). Amortized — one channel backs many swaps.
 2. **Route + quote.** A virtual channel reaches the maker (or hub inventory) through the hub graph; a price is quoted (same-asset moves are ~1:1 minus the fronting spread).
-3. **Fronted swap (off-chain, atomic).** The hub **fronts** the destination side to the user from its standing Y-inventory in one round-trip, bound by an HTLC so the advance is atomic: the hub is guaranteed the user's X-side the instant the user receives Y. No value crosses chains here — only the hub's inventory shifts. Settlement stays off-chain, no per-swap chain event.
+3. **Fronted swap (off-chain, atomic).** The hub **fronts** the destination side to the user from its standing Y-inventory in one round-trip, bound by a hash-locked swap so the advance is atomic: the hub is guaranteed the user's X-side the instant the user receives Y. No value crosses chains here — only the hub's inventory shifts. Settlement stays off-chain, no per-swap chain event.
 4. **Receive (chain Y).** The user holds Y immediately as a channel allocation and can withdraw it as a fresh shielded note on Y whenever it wants (shield-out via the Y adjudicator).
 
 ## 5. Unhappy path — why the adjudicator must be on every chain
 
-- **Timeout / abort.** Standard HTLC timeouts. If the Y-leg never completes, the user reclaims the X-leg at the latest supported state and re-shields — a guaranteed refund.
+- **Timeout / abort.** Nitro's hash-locked swap has no time lock. If the Y-leg never completes, the user challenges with the latest supported state; when the challenge window expires, it reclaims the X-leg and re-shields — a guaranteed refund.
 - **Hub offline / malicious.** User force-exits via challenge/checkpoint on the chain where its collateral sits, settling to a note. The hub can stall progress; it cannot take funds.
-- **Enforcement location.** Because the nitro-railgun adjudicator is on *both* chains, each leg is enforceable on its own chain — the HTLC is not "atomic only where an adjudicator happens to exist" (the audited bridge's fatal gap, where L2 had none and exit depended on a live, honest operator).
+- **Enforcement location.** Because the nitro-railgun adjudicator is on *both* chains, each leg is enforceable on its own chain — the hash-locked swap is not "atomic only where an adjudicator happens to exist" (the audited bridge's fatal gap, where L2 had none and exit depended on a live, honest operator).
 - **Watchtower.** Each party runs — or delegates to a keeper — a self-hosted watchtower (T6.3) to checkpoint a stale close inside the challenge window. Self-run; no operator to trust.
 
 ## 6. Hub economics & rebalancing — out of protocol
@@ -72,7 +72,7 @@ Fronting is the core mechanism. A hub with inventory on both chains gives the us
 Rebalancing, inventory sizing, and pricing are **operator business logic — not protocol, and never a wallet concern.** The protocol neither specifies nor requires them; it only has to *not prevent* a hub from managing its own inventory. A hub squares the net cross-chain imbalance that fronting creates however it likes — the same public primitives, CCTP, a CEX, OTC — on its own schedule and at its own risk. We may ship a **reference hub daemon** as open-source convenience, but it sits outside the protocol boundary.
 
 Two facts worth stating even though they're out of protocol, because they bound viability:
-- Fronting makes the hub's risk **capital / inventory / price + reconciliation latency**, not custody of user funds (HTLC atomicity + unilateral exit cover custody). Inventory is the hard liquidity ceiling: run dry and the hub widens or withdraws quotes (the ADR-0011 static-inventory / T4.5 "saturation → dribble / become-LP" behavior).
+- Fronting makes the hub's risk **capital / inventory / price + reconciliation latency**, not custody of user funds (hash-locked-swap atomicity + unilateral exit cover custody). Inventory is the hard liquidity ceiling: run dry and the hub widens or withdraws quotes (the ADR-0011 static-inventory / T4.5 "saturation → dribble / become-LP" behavior).
 - Bonding/slashing (T0.4/T2.4) gives the multi-entity DSS economic teeth; single-entity hubs get key-security only.
 
 ## 7. Trust summary
@@ -81,7 +81,7 @@ Two facts worth stating even though they're out of protocol, because they bound 
 |---|---|---|---|
 | Hub | liveness (routing / quotes) | custody of funds | unilateral exit + adjudicator on both chains |
 | DSS committee | producing the group signature | unilateral theft — needs `t`-of-`n`; no single key | threshold Schnorr + custodian; bond/slash if multi-entity |
-| Maker | honoring its quote in-channel | custody | HTLC atomicity + exit |
+| Maker | honoring its quote in-channel | custody | hash-locked-swap atomicity + exit |
 | Pool / circuits | correctness | — | audit |
 
 ## 8. Reuse vs net-new (grounded)
@@ -127,7 +127,7 @@ Mechanically this **is** a fast-liquidity bridge (it fronts), so it sits in the 
 | CCTP (raw) | ~13–19 min finality + mint | low | Circle |
 | Message bridges | minutes | gas + fee | validator set |
 | Fast liquidity (Across/Hop/Stargate) | secs–mins (bonder fronts) | gas both sides + ~0.05–0.3% LP fee | bonder fronting |
-| **This system** | **sub-second–seconds steady-state** (off-chain HTLC after channel open) | **~0 on-chain gas per swap** + hub spread | **yes** |
+| **This system** | **sub-second–seconds steady-state** (off-chain hash-locked swap after channel open) | **~0 on-chain gas per swap** + hub spread | **yes** |
 
 Nuances: the first swap includes a channel open — an on-chain unshield + an on-device Groth16 proof (seconds, more on a phone, T6.6) + a confirmation — amortized over many off-chain swaps. The optional Nym underlay adds mixnet latency (off by default). Capital model matches every fast bridge (hub needs destination inventory; run-dry widens quotes), plus a Lightning-style channel-liquidity lock while a channel is open.
 

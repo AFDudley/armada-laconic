@@ -43,7 +43,7 @@ Cleared over Nitro at a **posted price** with nothing to front-run (T4, ADR-0007
 ### 3.5 Cross-chain swap (the fronted, instant experience)
 This is the surface the `shielded-nitro-bridge-design.md` construction powers (ADR-0015/0016). The user picks **source chain + asset** and **destination chain + asset**, sees an instant quote, and taps **Swap**. From the user's side it feels like an instant swap; underneath:
 - the wallet funds a channel to a hub from a shielded note (amortized — reused across swaps),
-- the hub **fronts** the destination asset from standing inventory, bound by an HTLC so the advance is atomic,
+- the hub **fronts** the destination asset from standing inventory, bound by a hash-locked swap so the advance is atomic,
 - the user receives the destination asset **immediately** as a fresh shielded note on the destination chain.
 
 The user never performs an on-chain cross-chain crossing, so nothing links the two sides. Latency is one round-trip, not a bridge-settlement wait. If the user opts into the **Nym privacy mode** (below), the same swap runs with IP/metadata hidden at a small latency cost.
@@ -76,7 +76,7 @@ The user never performs an on-chain cross-chain crossing, so nothing links the t
 
 - **Offline during a dispute** → the delegated keeper handles the checkpoint; the user is notified after the fact.
 - **Hub/LP runs dry** → quotes widen or withdraw (out-of-protocol operator behavior, ADR-0015/§6); the user simply sees "no quote right now," never a stuck swap.
-- **Counterparty vanishes mid-flow** → HTLC timeout + unilateral exit refunds the user to a fresh note; shown as "swap reverted, funds returned."
+- **Counterparty vanishes mid-flow** → a challenge at the latest co-signed state, then unilateral exit when the challenge window expires, refunds the user to a fresh note; shown as "swap reverted, funds returned."
 - **Proof fails / cancelled** → nothing was submitted; balance unchanged.
 
 ## 8. What the wallet never does

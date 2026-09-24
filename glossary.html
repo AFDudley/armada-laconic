@@ -205,7 +205,7 @@
 <li><strong>Virtual channel</strong> (<code>virtualfund</code>) — a channel routed through a hub without a new on-chain deposit (go-nitro <strong>T0.2</strong>).</li>
 <li><strong>Voucher</strong> — a signed pay-per-request micropayment over a (virtual) channel; the metering primitive (metering <strong>T2</strong>, fee-split <strong>T4.3</strong>).</li>
 <li><strong>Force-close</strong> — unilateral exit to your last co-signed state (safety escape hatch: failure = halt, not loss).</li>
-<li><strong>HashLockedSwap</strong> — an <code>IForceMoveApp</code> example: reveal a preimage to unlock (HTLC-style).</li>
+<li><strong>HashLockedSwap / hash-locked swap</strong> — go-nitro's example <code>IForceMoveApp</code>: revealing a preimage swaps the two parties' amounts. It has no time lock; a stalled swap is resolved by the channel's challenge window. Our docs use this term, not "HTLC", for the Nitro construction.</li>
 <li><strong>SwapChannel</strong> — go-nitro's channel type for the swap protocol.</li>
 <li><strong>Bridge.sol</strong> — mirrored L1↔L2 channel construction (cross-chain movement).</li>
 <li><strong>Watchtower</strong> — see §1 (<strong>T6.3</strong>): a watcher (read) + a bonded responder (write) to a stale-state ForceMove challenge.</li>

@@ -78,7 +78,7 @@ sequenceDiagram
   C->>N: forceMove(stale state) → challenge window opens
   N-->>F: Challenge event
   F-->>WT: Challenge over feed (freshness-gated)
-  WT->>WT: check feed fresh; find higher-turn co-signed state
+  WT->>WT: check feed fresh, find higher-turn co-signed state
   WT->>D: respond/checkpoint(higher-turn state) in window
   D->>N: finalize on correct latest state
   D->>D: PAYOUT fresh notes to honest user

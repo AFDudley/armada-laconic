@@ -148,7 +148,7 @@ for (const code of document.querySelectorAll("code.language-mermaid")) {
   div.textContent = code.textContent;
   (code.closest("pre") || code).replaceWith(div);
 }
-mermaid.initialize({ startOnLoad: false, theme: "dark" });
+mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
 mermaid.run();
 </script>
 

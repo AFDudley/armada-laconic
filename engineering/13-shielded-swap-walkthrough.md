@@ -29,6 +29,7 @@ sequenceDiagram
   participant P as Pool (T0.0)
   participant D as Deposit/Payout (T0.3)
   participant N as Nitro Adjudicator (T0.2)
+  links N: {"nitro-on-railgun overview (A.0)": "https://afdudley.github.io/armada-laconic/engineering/A-nitro-on-railgun/A.0-overview.html", "Cross-chain swap construction": "https://afdudley.github.io/armada-laconic/engineering/shielded-nitro-bridge-design.html"}
 
   Note over A,V: Alice has shielded USDC · Provider has shielded ETH
   A-->>V: quote (off-chain, posted price)
@@ -83,6 +84,7 @@ sequenceDiagram
   participant D as Deposit/Payout (T0.3)
   participant N as Nitro Adjudicator (T0.2)
   participant WT as Watchtower (T6.3)
+  links N: {"nitro-on-railgun overview (A.0)": "https://afdudley.github.io/armada-laconic/engineering/A-nitro-on-railgun/A.0-overview.html", "Cross-chain swap construction": "https://afdudley.github.io/armada-laconic/engineering/shielded-nitro-bridge-design.html"}
 
   Note over A,V: Alice has shielded USDC · Provider has shielded ETH
   A-->>V: quote (off-chain, posted price)

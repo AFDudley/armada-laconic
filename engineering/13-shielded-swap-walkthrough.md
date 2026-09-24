@@ -180,6 +180,7 @@ The full path is proven end to end only once the **walking skeleton** runs: a th
 
 ## Where this fits
 
+- **Hub channels and games** (one channel to a hub, many games over it, first games Aave USDC and WETH↔wstETH): [14](./14-shielded-games-over-nitro.md).
 - **Same rail, venue-inventory variant** (the Provider's side pre-funded as static venue inventory rather than a per-swap deposit): runtime view [§6.2](./06-runtime-view.md).
 - **Base spine** (bring value in, settle, exit — no swap): [§6.1](./06-runtime-view.md). **Dispute / force-close** path: [§6.3](./06-runtime-view.md).
 - **Contract-level detail** for the boundary: [A.5 deposit/payout contract](./A-nitro-on-railgun/A.5-deposit-payout-contract.md).

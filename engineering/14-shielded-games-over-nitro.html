@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shielded games over Nitro — structure — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../engineering/build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="shielded-games-over-nitro-structure">Shielded games over Nitro — structure</h1>
+<p>standalone walkthrough · 2026-09-24</p>
+<h2 id="what-this-shows">What this shows</h2>
+<p>Armada holds value as shielded <strong>notes</strong> in its pool: sender, recipient, and amount are hidden in-circuit. This page shows how a user takes part of a note, opens a <strong>Nitro state channel to a hub</strong>, and plays <strong>games</strong> against the hub or other users, with every game enforceable on Ethereum and every exit landing back in the pool at unused addresses.</p>
+<p>A <strong>game</strong> is a ForceMove application: a contract published on Ethereum that defines which state transitions are valid and how a finished game splits its stakes. Players exchange signed states off-chain. Ethereum sees a game only if a player refuses to follow its rules.</p>
+<p>The structure in four steps:</p>
+<ol>
+<li><strong>Shield.</strong> A user shields any asset into Armada as normal and receives a note.</li>
+<li><strong>Open a channel to a hub.</strong> Using a fresh address and a relayer, the user takes a split of that note and opens a Nitro channel to a <strong>hub</strong>. The hub is a liquidity provider whose identity is private. It can deny service but cannot steal: every balance is enforceable on-chain without its cooperation.</li>
+<li><strong>Play games.</strong> The user plays any published game with the hub, or with other users routed through the hub. A player who breaks a game's rules loses on Ethereum under that game's rules. Games that end cooperatively net back into the hub channel off-chain, and funds are shielded into Armada at otherwise unused addresses when the user exits.</li>
+<li><strong>First games:</strong> Aave USDC lending and borrowing, and swapping shielded WETH for wstETH.</li>
+</ol>
+<h2 id="the-happy-path">The happy path</h2>
+<pre><code class="language-mermaid">sequenceDiagram
+  participant U as User
+  participant R as Relayer
+  participant P as Pool (T0.0)
+  participant D as Deposit/Payout (T0.3)
+  participant N as Nitro Adjudicator (T0.2)
+  participant H as Hub (LP)
+  links N: {&quot;nitro-on-railgun overview (A.0)&quot;: &quot;https://afdudley.github.io/armada-laconic/engineering/A-nitro-on-railgun/A.0-overview.html&quot;, &quot;Cross-chain swap construction&quot;: &quot;https://afdudley.github.io/armada-laconic/engineering/shielded-nitro-bridge-design.html&quot;}
+
+  Note over U,P: 1 · User shields an asset as normal and holds a note
+  U-&gt;&gt;R: signed unshield of a split of the note (fresh address)
+  R-&gt;&gt;P: transact · spend note · change back to a new user note · split → T0.3
+  P-&gt;&gt;D: split amount as ERC-20
+  D-&gt;&gt;N: escrow into the User–Hub channel
+  Note over U,H: 2 · channel open · split amount public · owner unlinkable
+
+  loop 3 · each game, off-chain
+    U--&gt;&gt;H: open a game from a published game contract
+    U--&gt;&gt;H: exchange co-signed game states
+    U--&gt;&gt;H: game ends · outcome nets into the User–Hub channel
+  end
+
+  U-&gt;&gt;R: cooperative close (final co-signed channel state)
+  R-&gt;&gt;D: settle
+  D-&gt;&gt;N: conclude + transfer all assets
+  N--&gt;&gt;D: user balance released to T0.3
+  D-&gt;&gt;P: shield to fresh, unused addresses
+  Note over U,P: exit · user holds fresh notes · no link to the funding note
+</code></pre>
+<ol>
+<li><strong>Shield.</strong> An ordinary Armada shield. The user holds a note.</li>
+<li><strong>Fund the hub channel.</strong> The user signs an unshield of part of the note and hands it to a relayer, which submits it from its own address and is paid from the shielded balance. The pool spends the note, returns the change to a new user note, and sends the split as ERC-20 to the deposit/payout contract (T0.3), which escrows it into the User–Hub channel on the Nitro adjudicator. The split amount is public; the owner is not.</li>
+<li><strong>Play.</strong> Each game runs off-chain against a game contract published on Ethereum. The counterparty is the hub or another user routed through the hub over a virtual channel. When a game ends cooperatively, its outcome nets into the hub channel with no chain event, so many games cost one channel open.</li>
+<li><strong>Exit.</strong> A cooperative close settles the hub channel, and T0.3 shields the user's balance into fresh, unused addresses.</li>
+</ol>
+<h2 id="when-a-player-breaks-the-rules">When a player breaks the rules</h2>
+<p>A game is enforced on Ethereum by the same adjudicator that holds the channel. The honest player puts the latest co-signed game state on-chain. If the other player does not answer with a valid later state before the challenge window closes, the game finalizes under its own rules. A player who stalls or cheats therefore loses by those rules, and the loss is bounded by that game's stakes.</p>
+<p>What reaches the chain depends on whether the hub still cooperates afterwards:</p>
+<pre><code class="language-mermaid">sequenceDiagram
+  participant U as Honest player
+  participant R as Relayer
+  participant N as Nitro Adjudicator (T0.2)
+  participant D as Deposit/Payout (T0.3)
+  participant P as Pool (T0.0)
+  participant H as Hub (LP)
+  links N: {&quot;nitro-on-railgun overview (A.0)&quot;: &quot;https://afdudley.github.io/armada-laconic/engineering/A-nitro-on-railgun/A.0-overview.html&quot;, &quot;Cross-chain swap construction&quot;: &quot;https://afdudley.github.io/armada-laconic/engineering/shielded-nitro-bridge-design.html&quot;}
+
+  Note over U,H: a player refuses to follow a game's rules
+  U-&gt;&gt;R: challenge the game with the latest co-signed state
+  R-&gt;&gt;N: challenge(game channel)
+  Note over N: challenge window · no valid response · game finalizes by its rules
+  Note over N: public · this game's stakes and outcome
+
+  alt hub still cooperates
+    H--&gt;&gt;U: update the User–Hub channel to the finalized game outcome (off-chain)
+    Note over U,H: hub channel stays open and private · play continues
+  else hub is the uncooperative party
+    U-&gt;&gt;R: challenge the User–Hub channel
+    R-&gt;&gt;N: challenge, then conclude the hub channel and reclaim the game guarantee
+    Note over N: public · the hub channel's allocations as well
+    N--&gt;&gt;D: user balance released to T0.3
+    D-&gt;&gt;P: shield to fresh, unused addresses
+  end
+  Note over U,H: either way · funds recovered · the hub can deny service but cannot steal
+</code></pre>
+<h2 id="what-each-step-reveals">What each step reveals</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>On-chain?</th>
+<th>Amount public?</th>
+<th>Linked to the user?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shield into Armada</td>
+<td>yes</td>
+<td>yes, as any Railgun shield</td>
+<td>the shield itself is an ordinary public deposit</td>
+</tr>
+<tr>
+<td>Fund the hub channel (split, via relayer)</td>
+<td>yes</td>
+<td>the split amount</td>
+<td>no: the note's owner is proven in-circuit, and the relayer's address submits</td>
+</tr>
+<tr>
+<td>Play games, cooperative end</td>
+<td>no</td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Exit: cooperative close</td>
+<td>yes</td>
+<td>the payout amounts</td>
+<td>no: fresh, unused addresses</td>
+</tr>
+<tr>
+<td>Game dispute, hub cooperates</td>
+<td>yes</td>
+<td>that game's stakes and outcome</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Game dispute, hub uncooperative</td>
+<td>yes</td>
+<td>the game's stakes <strong>and</strong> the hub channel's allocations</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<p>Adjudication reveals the stakes of the disputed game, not the user's balance in the pool. The hub-channel deposit is different. It is public from the moment the channel opens, as the split amount of the funding unshield (Design A, <a href="./09-architecture-decisions.html#adr-0005">ADR-0005</a>). A dispute against an uncooperative hub also forces the hub channel on-chain, because Nitro releases a game's guarantee only from a finalized hub channel (<code>reclaim</code> in go-nitro's <code>MultiAssetHolder</code>). None of these amounts is linked to the user's identity. Hiding the amounts themselves is the T0.6 fork-lite upgrade (<a href="./A-nitro-on-railgun/A.9-native-commitment.html">A.9</a>).</p>
+<h2 id="the-first-games">The first games</h2>
+<p><strong>Swapping shielded WETH for wstETH.</strong> The hub quotes a price, and the game moves the agreed WETH and wstETH between the two players inside the channel, atomically. Both assets live in the channel's escrow, so this needs a two-asset settlement game, the multi-asset ForceMove app the build plan tracks as net-new (<a href="./11-risks-and-technical-debt.html">§11 R2</a>).</p>
+<p><strong>Aave USDC lending and borrowing.</strong> The hub runs the Aave position; the game settles the user's side of it in-channel.
+- <strong>Lending:</strong> the user stakes USDC into the game, and the game's rules pay principal plus accrued interest at close.
+- <strong>Borrowing:</strong> the user stakes collateral, receives USDC, and the game's rules repay principal plus interest or liquidate the collateral.</p>
+<p>The Aave interaction is the hub's own public activity and is not linked to the user. For a dispute to enforce interest, the game needs an on-chain rate reference, such as Aave's reserve index. That rate reference and the liquidation rules for borrowing are open design points.</p>
+<h2 id="where-this-fits">Where this fits</h2>
+<ul>
+<li><strong>Two-party swap walkthrough</strong> (same rail, one direct channel): <a href="./13-shielded-swap-walkthrough.html">13</a>.</li>
+<li><strong>Settlement rail</strong> — deposit/payout boundary and adjudicator: <a href="./A-nitro-on-railgun/A.0-overview.html">A.0 overview</a>, <a href="./A-nitro-on-railgun/A.5-deposit-payout-contract.html">A.5</a>.</li>
+<li><strong>Hubs, fronting, and routing across chains:</strong> <a href="./shielded-nitro-bridge-design.html">cross-chain swap construction</a>.</li>
+<li><strong>Dispute mechanics and the watchtower:</strong> runtime view <a href="./06-runtime-view.html">§6.3</a>.</li>
+<li><strong>Decisions:</strong> <a href="./09-architecture-decisions.html#adr-0004">ADR-0004</a> (settle via nitro-on-railgun), <a href="./09-architecture-decisions.html#adr-0005">ADR-0005</a> (Design A), <a href="./09-architecture-decisions.html#adr-0015">ADR-0015</a> (hubs, liveness-only trust).</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/14-shielded-games-over-nitro.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+for (const code of document.querySelectorAll("code.language-mermaid")) {
+  const div = document.createElement("div");
+  div.className = "mermaid";
+  div.textContent = code.textContent;
+  (code.closest("pre") || code).replaceWith(div);
+}
+mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+mermaid.run();
+</script>
+
+</body>
+</html>

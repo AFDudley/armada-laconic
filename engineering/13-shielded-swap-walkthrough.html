@@ -311,7 +311,7 @@
 <p>Two boundaries keep the 53 from being read as more than it is:</p>
 <ul>
 <li><strong>It is a slice of v1, not all of it.</strong> The v1 build totals 110 points; the 53 counts only the items on this swap's path. State ingestion (T1), the anonymity-set strategy (T0.7), the Adapters (T5), the fee-split, and several wallet items belong to v1 but sit off this path.</li>
-<li><strong>It is the base Nitro rail, not the cross-chain one.</strong> This swap is same-chain, so it uses the reused go-nitro adjudicator (T0.2, 2 points). The v1.5 nitro-railgun cross-chain adjudicator (<a href="./09-architecture-decisions.html#adr-0015">ADR-0015/0016</a>, +6 points) is a different scenario and is not counted here.</li>
+<li><strong>It is the base Nitro rail, not the cross-chain one.</strong> This swap is same-chain, so it uses the reused go-nitro adjudicator (T0.2, 2 points). The v1.5 armada-nitro cross-chain adjudicator (<a href="./09-architecture-decisions.html#adr-0015">ADR-0015/0016</a>, +6 points) is a different scenario and is not counted here.</li>
 </ul>
 <p>The full path is proven end to end only once the <strong>walking skeleton</strong> runs: a thin <code>shield → deposit → trivial settle → payout → scan</code> slice on a laconic fixturenet that retires integration risk before any item deepens (§4, <a href="./build-plan.html">build plan</a>).</p>
 <h2 id="where-this-fits">Where this fits</h2>

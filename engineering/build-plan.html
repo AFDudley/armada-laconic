@@ -41,8 +41,8 @@
 </tr>
 <tr>
 <td><strong>v1.5</strong> — private cross-chain swap</td>
-<td>Private cross-chain swap over nitro-railgun channels + fronting hubs; a ~10–12-point increment on the finished v1 rail, ahead of the v2 research work</td>
-<td>ADR-0015/0016: nitro-railgun adjudicator + DSS custodian</td>
+<td>Private cross-chain swap over armada-nitro channels + fronting hubs; a ~10–12-point increment on the finished v1 rail, ahead of the v2 research work</td>
+<td>ADR-0015/0016: armada-nitro adjudicator + DSS custodian</td>
 </tr>
 <tr>
 <td><strong>v2</strong> — matcher, fair-ordering &amp; bonded federation</td>
@@ -93,7 +93,7 @@
 <li><strong>T6.0 wallet base — partial/reuse</strong> (BIP-39/HD, secure enclave; §11 R5) · <strong>T6.1 WASM note-scanner + key bridge — net-new</strong> (audit surface) · <strong>T6.2 settlement client — net-new</strong> · <strong>T6.3 self-hosted watchtower — net-new</strong> · <strong>T6.4 address rotation — net-new (small)</strong> · <strong>T6.5 native mobile transport — net-new, the crux</strong> (go-nitro + go-waku gomobile; RN interim WebView) · <strong>T6.6 Groth16 mobile proving — reuse (constraint)</strong> · <strong>T6.7 Armada app + SDK — product</strong>. <code>wallet/ts-nitro validated; rest design</code></li>
 </ul>
 <h2 id="effort-linear-difficulty-points">Effort — linear difficulty points</h2>
-<p>A <strong>linear 1–10</strong> relative-difficulty estimate (1 = trivial config/reuse; 10 = massive, audit-critical, novel; a 10 is ~10× a 1). Weighted by net-new-ness + audit + novelty, <strong>not</strong> calendar time. The nitro-railgun adjudicator (v1.5) is included as an extra line.</p>
+<p>A <strong>linear 1–10</strong> relative-difficulty estimate (1 = trivial config/reuse; 10 = massive, audit-critical, novel; a 10 is ~10× a 1). Weighted by net-new-ness + audit + novelty, <strong>not</strong> calendar time. The armada-nitro adjudicator (v1.5) is included as an extra line.</p>
 <table>
 <thead>
 <tr>
@@ -239,7 +239,7 @@
 <td style="text-align: right;"><strong>110</strong></td>
 </tr>
 <tr>
-<td>nitro-railgun adjudicator <em>(v1.5)</em></td>
+<td>armada-nitro adjudicator <em>(v1.5)</em></td>
 <td>net-new, audit-critical</td>
 <td style="text-align: right;"><strong>6</strong></td>
 </tr>
@@ -251,7 +251,7 @@
 </tbody>
 </table>
 <p><strong>~35% concentrates in five items</strong> — pool (10) + circuits (9) + mobile transport (8) + nimbus ingestion (8) + adjudicator (6) = 41. The client tier (T6) is the biggest bucket (38, many moderate net-new pieces gated by the crux); the watcher substrate (T2) is cheapest (9, almost all reuse). The points weight <em>audit</em> heavily, and the two partials (T1.0 nimbus, T6.0 wallet) carry upstream-maturity schedule risk the raw points do not.</p>
-<p><strong>The v1.5 cross-chain-swap increment.</strong> Given Armada already deploys a pool per chain, the <em>marginal</em> engineering to add private cross-chain swaps on top of a finished v1 is small: the nitro-railgun adjudicator (6) + the hash-locked swap app (~2) + DSS hub wiring (~3–4), ≈ <strong>10–12 points</strong>, versus v1's 110 and the research-grade v2 lift. It reuses the whole v1 rail and has no hard v2 dependency (no ordering, no matcher, no market-making, no bonded federation; hubs front from static inventory and can run a single-entity DSS). Three caveats bound it: (1) it is all spend-authorizing, so the real cost is audit rather than code; (2) each additional chain re-incurs the anonymity-set cold-start (§11 R1), gating the privacy payoff per chain; (3) the DSS crypto is currently unaudited with stubbed production wiring — wiring and auditing it is real, but a subset of v2's federation work (key-security without bonding/slashing).</p>
+<p><strong>The v1.5 cross-chain-swap increment.</strong> Given Armada already deploys a pool per chain, the <em>marginal</em> engineering to add private cross-chain swaps on top of a finished v1 is small: the armada-nitro adjudicator (6) + the hash-locked swap app (~2) + DSS hub wiring (~3–4), ≈ <strong>10–12 points</strong>, versus v1's 110 and the research-grade v2 lift. It reuses the whole v1 rail and has no hard v2 dependency (no ordering, no matcher, no market-making, no bonded federation; hubs front from static inventory and can run a single-entity DSS). Three caveats bound it: (1) it is all spend-authorizing, so the real cost is audit rather than code; (2) each additional chain re-incurs the anonymity-set cold-start (§11 R1), gating the privacy payoff per chain; (3) the DSS crypto is currently unaudited with stubbed production wiring — wiring and auditing it is real, but a subset of v2's federation work (key-security without bonding/slashing).</p>
 <h2 id="long-poles-ranked-11">Long poles (ranked, §11)</h2>
 <ol>
 <li><strong>Own pool + circuits</strong> — T0.0/T0.1 (R9): the largest, audit-critical crypto-engineering build; a spec deviation is a soundness/fund-safety bug.</li>
@@ -268,7 +268,7 @@
 <li><strong>Own-pool build</strong>: pool (T0.0) + circuits/ceremony (T0.1) against the A.1 reference spec; freeze the spend-authorizing surface (T0.3) early.</li>
 <li><strong>Venue + Adapters</strong>: posted-price contract + quote/settle app + fee-split (T4.0/4.1/4.3) over the rail; ETH yield (T4.4) + USDC via the Aave adapter (T5.0/5.1).</li>
 <li><strong>Wallet</strong> (T6.*): WebView MVP, then native; note-scanner, settlement client, self-watchtower.</li>
-<li><strong>v1.5 — cross-chain shielded swap</strong>: the nitro-railgun adjudicator + DSS custodian, deployed per chain (ADR-0015/0016; <a href="./shielded-nitro-bridge-design.html">construction</a>, <a href="./nitro-bridge-audit.html">audit</a>) — a ~10–12-point increment ahead of the v2 research work.</li>
+<li><strong>v1.5 — cross-chain shielded swap</strong>: the armada-nitro adjudicator + DSS custodian, deployed per chain (ADR-0015/0016; <a href="./shielded-nitro-bridge-design.html">construction</a>, <a href="./nitro-bridge-audit.html">audit</a>) — a ~10–12-point increment ahead of the v2 research work.</li>
 <li><strong>v2</strong>: bonded federation + DKG (T2.4/T0.4/T0.5), ordering (T3), matcher + market-making (T4.2/4.5/4.6).</li>
 </ol>
 <h2 id="pinned-commits-reference-code">Pinned commits &amp; reference code</h2>

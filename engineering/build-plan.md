@@ -9,7 +9,7 @@ The [Building Block View (§5)](./05-building-block-view.md) is the structure an
 | Version | Scope | Tiers / items |
 |---|---|---|
 | **v1** — the private rail | Private, mobile-first USDC rails: shielded pool + settlement + posted-price venue + yield, on a phone | T0.0–0.3, T0.7 · T1 · T2.0–2.3 · T4.0/4.1/4.3/4.4 · T5.0/5.1 · T6.0–6.7 |
-| **v1.5** — private cross-chain swap | Private cross-chain swap over nitro-railgun channels + fronting hubs; a ~10–12-point increment on the finished v1 rail, ahead of the v2 research work | ADR-0015/0016: nitro-railgun adjudicator + DSS custodian |
+| **v1.5** — private cross-chain swap | Private cross-chain swap over armada-nitro channels + fronting hubs; a ~10–12-point increment on the finished v1 rail, ahead of the v2 research work | ADR-0015/0016: armada-nitro adjudicator + DSS custodian |
 | **v2** — matcher, fair-ordering & bonded federation | Price *discovery* + market-making + provably-fair ordering + economic security | T3.\* · T4.2/4.5/4.6 · T0.4/0.5 · T2.4 |
 | **optional** | Amount-privacy-in-play; thin identity | T0.6 fork-lite · T6.8 |
 
@@ -48,7 +48,7 @@ Facets: **status** (built · reuse · net-new · partial) · **confidence** (`va
 
 ## Effort — linear difficulty points
 
-A **linear 1–10** relative-difficulty estimate (1 = trivial config/reuse; 10 = massive, audit-critical, novel; a 10 is ~10× a 1). Weighted by net-new-ness + audit + novelty, **not** calendar time. The nitro-railgun adjudicator (v1.5) is included as an extra line.
+A **linear 1–10** relative-difficulty estimate (1 = trivial config/reuse; 10 = massive, audit-critical, novel; a 10 is ~10× a 1). Weighted by net-new-ness + audit + novelty, **not** calendar time. The armada-nitro adjudicator (v1.5) is included as an extra line.
 
 | Item | Status | Pts |
 |---|---|---:|
@@ -79,12 +79,12 @@ A **linear 1–10** relative-difficulty estimate (1 = trivial config/reuse; 10 =
 | T6.6 Groth16 mobile proving | reuse (constraint) | 5 |
 | T6.7 Armada app + SDK | product | 4 |
 | **v1 subtotal** | | **110** |
-| nitro-railgun adjudicator *(v1.5)* | net-new, audit-critical | **6** |
+| armada-nitro adjudicator *(v1.5)* | net-new, audit-critical | **6** |
 | **Total** | | **116** |
 
 **~35% concentrates in five items** — pool (10) + circuits (9) + mobile transport (8) + nimbus ingestion (8) + adjudicator (6) = 41. The client tier (T6) is the biggest bucket (38, many moderate net-new pieces gated by the crux); the watcher substrate (T2) is cheapest (9, almost all reuse). The points weight *audit* heavily, and the two partials (T1.0 nimbus, T6.0 wallet) carry upstream-maturity schedule risk the raw points do not.
 
-**The v1.5 cross-chain-swap increment.** Given Armada already deploys a pool per chain, the *marginal* engineering to add private cross-chain swaps on top of a finished v1 is small: the nitro-railgun adjudicator (6) + the hash-locked swap app (~2) + DSS hub wiring (~3–4), ≈ **10–12 points**, versus v1's 110 and the research-grade v2 lift. It reuses the whole v1 rail and has no hard v2 dependency (no ordering, no matcher, no market-making, no bonded federation; hubs front from static inventory and can run a single-entity DSS). Three caveats bound it: (1) it is all spend-authorizing, so the real cost is audit rather than code; (2) each additional chain re-incurs the anonymity-set cold-start (§11 R1), gating the privacy payoff per chain; (3) the DSS crypto is currently unaudited with stubbed production wiring — wiring and auditing it is real, but a subset of v2's federation work (key-security without bonding/slashing).
+**The v1.5 cross-chain-swap increment.** Given Armada already deploys a pool per chain, the *marginal* engineering to add private cross-chain swaps on top of a finished v1 is small: the armada-nitro adjudicator (6) + the hash-locked swap app (~2) + DSS hub wiring (~3–4), ≈ **10–12 points**, versus v1's 110 and the research-grade v2 lift. It reuses the whole v1 rail and has no hard v2 dependency (no ordering, no matcher, no market-making, no bonded federation; hubs front from static inventory and can run a single-entity DSS). Three caveats bound it: (1) it is all spend-authorizing, so the real cost is audit rather than code; (2) each additional chain re-incurs the anonymity-set cold-start (§11 R1), gating the privacy payoff per chain; (3) the DSS crypto is currently unaudited with stubbed production wiring — wiring and auditing it is real, but a subset of v2's federation work (key-security without bonding/slashing).
 
 ## Long poles (ranked, §11)
 
@@ -102,7 +102,7 @@ A **linear 1–10** relative-difficulty estimate (1 = trivial config/reuse; 10 =
 3. **Own-pool build**: pool (T0.0) + circuits/ceremony (T0.1) against the A.1 reference spec; freeze the spend-authorizing surface (T0.3) early.
 4. **Venue + Adapters**: posted-price contract + quote/settle app + fee-split (T4.0/4.1/4.3) over the rail; ETH yield (T4.4) + USDC via the Aave adapter (T5.0/5.1).
 5. **Wallet** (T6.\*): WebView MVP, then native; note-scanner, settlement client, self-watchtower.
-6. **v1.5 — cross-chain shielded swap**: the nitro-railgun adjudicator + DSS custodian, deployed per chain (ADR-0015/0016; [construction](./shielded-nitro-bridge-design.md), [audit](./nitro-bridge-audit.md)) — a ~10–12-point increment ahead of the v2 research work.
+6. **v1.5 — cross-chain shielded swap**: the armada-nitro adjudicator + DSS custodian, deployed per chain (ADR-0015/0016; [construction](./shielded-nitro-bridge-design.md), [audit](./nitro-bridge-audit.md)) — a ~10–12-point increment ahead of the v2 research work.
 7. **v2**: bonded federation + DKG (T2.4/T0.4/T0.5), ordering (T3), matcher + market-making (T4.2/4.5/4.6).
 
 ## Pinned commits & reference code

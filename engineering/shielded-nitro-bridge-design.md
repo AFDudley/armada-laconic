@@ -1,10 +1,10 @@
-# Shielded Nitro-Railgun Cross-Chain Swap — Construction Draft
+# Shielded Armada-Nitro Cross-Chain Swap — Construction Draft
 
 design draft · 2026-09-10 · builds on `nitro-bridge-audit.md`
 
 ## 0. Purpose & posture
 
-A general cross-chain swap for Armada, with an Armada shielded pool deployed on **every** chain. Value crosses as nitro-railgun notes on each side, cleared over Nitro state channels. Self-custodial; private; the hub is trusted for **liveness only, never custody**.
+A general cross-chain swap for Armada, with an Armada shielded pool deployed on **every** chain. Value crosses as armada-nitro notes on each side, cleared over Nitro state channels. Self-custodial; private; the hub is trusted for **liveness only, never custody**.
 
 The privacy anchor is the shielded pool, not the channel. Value enters the bridge already shielded (sender/recipient/amount hidden in-pool), funded through fresh rotating keys, carried over the shared Armada transport (optionally under a Nym mixnet). The channel and adjudicator machinery therefore operate on already-anonymous inputs and do not have to reproduce Lightning-style routing privacy: no onion routing, no PTLC. (Lightning needs those because there the channel graph *is* the privacy layer; here it is not.)
 
@@ -15,7 +15,7 @@ The privacy anchor is the shielded pool, not the channel. Value enters the bridg
 - **Maker / endpoint LP** — provides swap inventory and quotes at an endpoint, reached *through* a hub; needs one channel, no routing, no cross-chain capital, no bond. Many, permissionless. (**Hub ⊆ LP; LP ⊄ hub.**)
 - **DSS committee** — the threshold-key holders behind a hub. Single legal entity (pure key hygiene) or multiple entities (Byzantine trust + bond/slash). Same crypto either way (`chain-signatures` threshold Schnorr).
 - **Custodian contract** (per hub, per chain) — the DSS-controlled on-chain principal that gates the hub's collateral, verifies the group signature, and issues/rotates the hub's hot delegate key.
-- **nitro-railgun adjudicator** (per chain) — the net-new core, §3.
+- **armada-nitro adjudicator** (per chain) — the net-new core, §3.
 - **Armada shielded pool** (per chain) — our Railgun-design pool + circuits (T0.0/T0.1), independent per chain; each chain's anonymity set is its own.
 - **Transport** — the **unified Armada transport** (ADR-0008: Waku pub/sub + libp2p-noise, T2.3), the same one every Armada service uses — watcher feeds, Nitro channels, DSS signing coordination, wallet. IP/metadata privacy is the **optional Nym mixnet underlay** (opt-in, uniform across services, latency cost); it is *not* a bridge-specific transport. *(Open: Nym-underlay latency vs interactive co-signing — validate for the opt-in path.)*
 
@@ -32,7 +32,7 @@ Three independent surfaces, each with its own mechanism; do not conflate them:
 
 Consequence: per-swap activity is an **off-chain** channel-state update, so there is no per-user on-chain event to correlate. The user never performs the cross-chain crossing; the hub fronts the destination from standing inventory and squares its own books later. The hub's rebalancing is its own on-chain activity over already-anonymized inputs, unlinkable to any specific user's (off-chain) swap — it is **out of protocol** (§6) and not user-privacy-critical. The hash lock of the hash-locked swap is off-chain, seen only by counterparties deliberately on both legs, so it is not a meaningful leak.
 
-## 3. The nitro-railgun adjudicator (net-new core)
+## 3. The armada-nitro adjudicator (net-new core)
 
 Distinct from **both** (i) the go-nitro L2 adjudicator — a stub, and merely a plain `NitroAdjudicator` on a second chain — and (ii) work-package A's **T0.3** glue, which rides the *vanilla ECDSA* adjudicator with cleartext outcomes. We deploy a purpose-built adjudicator on **each** Armada chain. It is ForceMove's dispute machine plus three changes the vanilla contract cannot express:
 
@@ -55,7 +55,7 @@ This is exactly the "group delegate credentials + bind custodian contract" the l
 
 Fronting is the core mechanism. A hub with inventory on both chains gives the user the destination asset *now* out of its standing Y-inventory; it cannot teleport the user's specific X-value across. The user's input simply joins the hub's X-inventory, and the hub nets the resulting cross-chain imbalance later, in aggregate. That instant advance is what makes the swap usable, is where the hub earns its spread, and — because the destination funds come from a common pool rather than the user's own value crossing — is what severs the per-user cross-chain link (§2).
 
-1. **Fund (chain X).** User unshields a note into the nitro-railgun adjudicator on X, opening a ledger channel to a hub under a fresh key, over the shared Armada transport (Nym underlay optional). Amortized — one channel backs many swaps.
+1. **Fund (chain X).** User unshields a note into the armada-nitro adjudicator on X, opening a ledger channel to a hub under a fresh key, over the shared Armada transport (Nym underlay optional). Amortized — one channel backs many swaps.
 2. **Route + quote.** A virtual channel reaches the maker (or hub inventory) through the hub graph; a price is quoted (same-asset moves are ~1:1 minus the fronting spread).
 3. **Fronted swap (off-chain, atomic).** The hub **fronts** the destination side to the user from its standing Y-inventory in one round-trip, bound by a hash-locked swap so the advance is atomic: the hub is guaranteed the user's X-side the instant the user receives Y. No value crosses chains here — only the hub's inventory shifts. Settlement stays off-chain, no per-swap chain event.
 4. **Receive (chain Y).** The user holds Y immediately as a channel allocation and can withdraw it as a fresh shielded note on Y whenever it wants (shield-out via the Y adjudicator).
@@ -64,7 +64,7 @@ Fronting is the core mechanism. A hub with inventory on both chains gives the us
 
 - **Timeout / abort.** Nitro's hash-locked swap has no time lock. If the Y-leg never completes, the user challenges with the latest supported state; when the challenge window expires, it reclaims the X-leg and re-shields — a guaranteed refund.
 - **Hub offline / malicious.** User force-exits via challenge/checkpoint on the chain where its collateral sits, settling to a note. The hub can stall progress; it cannot take funds.
-- **Enforcement location.** Because the nitro-railgun adjudicator is on *both* chains, each leg is enforceable on its own chain — the hash-locked swap is not "atomic only where an adjudicator happens to exist" (the audited bridge's fatal gap, where L2 had none and exit depended on a live, honest operator).
+- **Enforcement location.** Because the armada-nitro adjudicator is on *both* chains, each leg is enforceable on its own chain — the hash-locked swap is not "atomic only where an adjudicator happens to exist" (the audited bridge's fatal gap, where L2 had none and exit depended on a live, honest operator).
 - **Watchtower.** Each party runs — or delegates to a keeper — a self-hosted watchtower (T6.3) to checkpoint a stale close inside the challenge window. Self-run; no operator to trust.
 
 ## 6. Hub economics & rebalancing — out of protocol
@@ -87,7 +87,7 @@ Two facts worth stating even though they're out of protocol, because they bound 
 ## 8. Reuse vs net-new (grounded)
 
 - **Reuse:** ForceMove dispute logic, exit-format, MultiAssetHolder patterns (go-nitro `@435eb2b`); Railgun pool/circuits design (our own implementation, T0.0/T0.1); `chain-signatures` threshold-Schnorr crypto + `SchnorrSECP256K1.sol`; ts-nitro client; the unified Waku + libp2p transport (ADR-0008, optional Nym underlay).
-- **Net-new (must build):** the nitro-railgun adjudicator (§3 a–c); the custodian contract + delegate issuance/rotation/slash; the DSS↔adjudicator wiring (unbuilt per audit); unilateral-exit-to-reshield; (v2) hidden-amount outcomes (T0.6) + ceremony. *(Hub rebalancing/inventory/pricing are out of protocol — §6 — at most a reference daemon, not a protocol deliverable.)*
+- **Net-new (must build):** the armada-nitro adjudicator (§3 a–c); the custodian contract + delegate issuance/rotation/slash; the DSS↔adjudicator wiring (unbuilt per audit); unilateral-exit-to-reshield; (v2) hidden-amount outcomes (T0.6) + ceremony. *(Hub rebalancing/inventory/pricing are out of protocol — §6 — at most a reference daemon, not a protocol deliverable.)*
 - **DSS scope — EVM + Nitro only, no laconicd:** we reuse only `chain-signatures`' threshold-Schnorr crypto and the kyber DKG/signing *logic*; we do **not** use laconicd's CometBFT vote-extension transport — signing coordination rides the unified Armada transport (ADR-0008). Net-new is the EVM custodian's group-sig verification + delegate rotation and hosting the DKG/signing over that transport. Bonding/slashing is absent; both DSS codebases are self-declared **unaudited**.
 
 ## 9. Deferred / out of scope for the first cut

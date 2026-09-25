@@ -22,8 +22,8 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 | [0012](#adr-0012) | Delivery model: reuse-oriented incremental delivery; scopes as WBS work packages | accepted |
 | [0013](#adr-0013) | Single team; scope spans the whole Armada product; Laconic is prior art | accepted |
 | [0014](#adr-0014) | Pool + circuits are our own implementation (net-new, audit-critical) | accepted |
-| [0015](#adr-0015) | Cross-chain shielded swap = nitro-railgun channels + fronting hubs | accepted · v1.5 |
-| [0016](#adr-0016) | nitro-railgun adjudicator + DSS custodian/delegate (EVM + Nitro only) | accepted · v1.5 |
+| [0015](#adr-0015) | Cross-chain shielded swap = armada-nitro channels + fronting hubs | accepted · v1.5 |
+| [0016](#adr-0016) | armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only) | accepted · v1.5 |
 
 ---
 
@@ -192,7 +192,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Alternatives.** Use Railgun's live deployed pool directly (rejected — no fee=0/own POI, no settlement hook; contradicts ADR-0002's rationale).
 
 ## ADR-0015
-**Cross-chain shielded swap = nitro-railgun channels + fronting hubs** · accepted · 2026-09-10 · v1.5 (after v1, before the v2 research work)
+**Cross-chain shielded swap = armada-nitro channels + fronting hubs** · accepted · 2026-09-10 · v1.5 (after v1, before the v2 research work)
 
 **Context.** Users hold shielded value in an Armada pool on each chain and want to swap or move value **across** chains privately and self-custodially (general cross-chain, independent of CCTP). A naive design — unshield on X, bridge, shield on Y — produces a **public matched pair** (equal/related amount, bounded timing) that correlates the two legs and collapses the anonymity set. The audited `go-nitro` "nitro bridge" is a single-operator, L1-anchored mirrored-channel construction with a **stubbed L2 adjudicator** and no DSS — neither private nor trust-minimized as written (`nitro-bridge-audit.md`).
 
@@ -208,11 +208,11 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Alternatives.** Single-operator mirrored-channel bridge (rejected — trusted, stubbed L2, no privacy; the audited `go-nitro` bridge). Direct self-serve cross-chain (rejected — public matched pair, correlatable). PTLC / adaptor-signature atomic swaps (deferred — research-grade, and unnecessary because the pool, not the channel, carries privacy).
 
 ## ADR-0016
-**nitro-railgun adjudicator + DSS custodian/delegate (EVM + Nitro only)** · accepted · 2026-09-10 · v1.5 capability
+**armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only)** · accepted · 2026-09-10 · v1.5 capability
 
 **Context.** Cross-chain shielded swaps (ADR-0015) need on-chain enforcement of channel outcomes on **every** participating chain, and each hub must be a threshold-key (DSS) principal, not a single EOA. Two audited facts constrain the design: `go-nitro`'s ForceMove verifies state signatures by hard ECDSA `ecrecover` against fixed participant addresses — **no pluggable verifier**; and `chain-signatures` is a threshold **Schnorr** DSS. The laconic integration that would bind the DSS to Nitro is declared-but-unbuilt and CometBFT-coupled.
 
-**Decision.** Build a **nitro-railgun adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains. The DSS is **EVM + Nitro only, no laconicd**: reuse only `chain-signatures`' threshold-Schnorr crypto + kyber DKG/signing *logic*, verified on-chain by the custodian (`SchnorrSECP256K1.sol`); do **not** use laconicd's CometBFT vote-extension transport — signing coordination rides the unified transport (ADR-0008). The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.
+**Decision.** Build a **armada-nitro adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains. The DSS is **EVM + Nitro only, no laconicd**: reuse only `chain-signatures`' threshold-Schnorr crypto + kyber DKG/signing *logic*, verified on-chain by the custodian (`SchnorrSECP256K1.sol`); do **not** use laconicd's CometBFT vote-extension transport — signing coordination rides the unified transport (ADR-0008). The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.
 
 **Consequences.** Two small net-new contracts (the adjudicator delta and the custodian) on top of reused ForceMove, threshold-Schnorr, and our own pool implementation — the weight is **audit, not code**. Deploying the adjudicator per chain gives each leg of the hash-locked swap real enforcement (fixing the audited L2-stub gap) and makes unilateral exit real, so hub trust stays liveness-only. Bonding/slashing (T0.4/T2.4) is the multi-entity economic layer (v2). Both DSS codebases are self-declared **unaudited**. Post-v1; depends on ADR-0015. Detail: `shielded-nitro-bridge-design.md`, `nitro-bridge-audit.md`.
 

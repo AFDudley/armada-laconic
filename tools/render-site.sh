@@ -24,6 +24,7 @@ PAGES=(
   "laconic_ethereum_privacy_via_armada.md|laconic_ethereum_privacy_via_armada.html|Leveraging Laconic for Ethereum Privacy (via Armada)"
   "builder-codes.md|builder-codes.html|Builder codes, attribution & liquidity — Armada × Laconic"
   "mobile-proving-research.md|mobile-proving-research.html|Mobile ZK proving — research note — Armada × Laconic"
+  "armada-metalex-plan.md|armada-metalex-plan.html|armada-metalex: plan — Armada × MetaLeX"
 )
 
 for page in "${PAGES[@]}"; do

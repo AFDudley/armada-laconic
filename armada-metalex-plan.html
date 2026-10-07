@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>armada-metalex: plan — Armada × MetaLeX</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="index.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="build-plan.html">Build plan</a>
+  <a href="execution-platform.html">Execution platform</a>
+  <a href="yield-clearing.html">Yield &amp; clearing</a>
+  <a href="mobile-privacy.html">Mobile privacy</a>
+  <a href="glossary.html">Glossary</a>
+  <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="builder-codes.html">Builder codes</a>
+  <a href="engineering/README.html">Engineering</a>
+</nav>
+
+<h1 id="armada-metalex-plan">armada-metalex: plan</h1>
+<h2 id="executive-summary">Executive summary</h2>
+<p><code>armada-metalex</code> is a new Armada repository that lets an Armada user take part in MetaLeX's
+on-chain legal and capital products (agreements, fundraising rounds, grants, escrows, BORG
+membership, company formation) without exposing their identity or the rest of their on-chain
+activity. MetaLeX is a client of this work and will cooperate on deployment and testing.</p>
+<p>The user acts in MetaLeX through a <strong>clean EVM address</strong>: a fresh secp256k1 key derived on the
+user's device from their Armada root secret, one per engagement, recoverable from their mnemonic.
+That address, not an Armada hub, is the party MetaLeX records, so the user holds their
+agreements, allocations and grants directly. Value reaches the address only from Armada's
+shielded pool (an unshield from the user's 0zk address) or from an armada-nitro hub's inventory
+(a channel payout), and value leaving it is shielded back to the user's 0zk address. The address
+therefore carries the engagement and nothing else: no link to the user's wallet, their other
+engagements or their shielded balance.</p>
+<p>Where MetaLeX verifies a signature instead of the transaction sender, our relayer submits the
+user's signature and the clean address never needs gas. Where MetaLeX requires the sender to
+act, the address is funded with gas and the needed asset through the same private routes.</p>
+<p>Scope is Ethereum L1. The work is about <strong>124 points</strong> in 17 chunks. A relayed agreement
+signature works end to end after about <strong>31 points</strong>, and the first engagement with funding and
+a return path after about <strong>53</strong>.</p>
+<h2 id="1-scope">1. Scope</h2>
+<p><strong>In scope</strong>, all on Ethereum mainnet, tested on Ethereum Sepolia and on our E12 fixturenet:</p>
+<ul>
+<li>MetaLeX's shared suite at its Ethereum deployment (<code>docs/reference/deployments.md:17-30</code>):
+  <code>CyberAgreementRegistry</code> (cyberSign), the cyberRAISE round and deal managers, secondary trading,
+  the cap-table and issuance contracts, and LeXcheX credentials.</li>
+<li>The Ethereum-only <code>ParentCoFactory</code> (<code>deployments.md:40</code>) and company formation, which is paid
+  in USDC on Ethereum mainnet (<code>docs/webapp/formation.md:35,240</code>).</li>
+<li>Products that users deploy themselves, deployed on Ethereum: MetaVesT, LeXscroW,
+  RicardianTripler and BORG.</li>
+</ul>
+<p><strong>Out of scope:</strong> every MetaLeX element that runs on another chain. That covers ACE and the
+PumpCorp stack (Base only), Solana-bridged tokens, and the shared suite's Base, Arbitrum and
+zkSync Era deployments. Off-chain MetaLeX tools that involve no address or transaction (the GAIBE
+assistant, cap-table planning tools) need no wrapper.</p>
+<h2 id="2-how-it-works">2. How it works</h2>
+<p>Every engagement uses the same four steps.</p>
+<ol>
+<li><strong>Derive the clean address.</strong> <code>engagementKey = HKDF-SHA256(ikm = rootSecret, salt =
+   "armada-metalex", info = "engagement/" || uint32(index))</code>, reduced to a valid secp256k1 scalar.
+   The domain tag keeps it disjoint from the user's 0zk keyset, which the Armada SDK derives from
+   the same root secret (<code>armada-sdk/src/wallet/derive.ts</code>). Each engagement gets its own index;
+   the device keeps an encrypted map from engagements to indices.</li>
+<li><strong>Fund it, if the action needs funds or gas.</strong> Either unshield from the user's 0zk address to
+   the clean address with <code>@armada/sdk</code>, or have the armada-nitro hub pay it from inventory
+   through a channel. A non-shield channel allocation to an external address is paid by
+   <code>_transferAsset</code> (<code>ArmadaNitroAdjudicator.sol:135-136</code>), which sends native ETH or any ERC-20
+   (<code>src/nitro/MultiAssetHolder.sol</code>), so the hub can deliver both gas and tokens.</li>
+<li><strong>Act.</strong> Sign the product's message with the clean key. If the contract verifies the signature
+   rather than the sender, armada-relayer submits it; otherwise the clean address sends the
+   transaction itself.</li>
+<li><strong>Return value.</strong> Whatever the address receives (vested tokens, refunds, sale proceeds) is
+   shielded to the user's 0zk address, through the SDK's gasless permit shield when the token
+   supports EIP-2612.</li>
+</ol>
+<p>The armada-nitro hub is never a MetaLeX party. Its role is funding: it pays from standing
+inventory, and the user's dealings with it are off-chain channel updates, so its payouts don't
+correspond to any per-user on-chain event.</p>
+<h2 id="3-products">3. Products</h2>
+<p>"Relayed" means our relayer submits the clean address's signature and the address needs no gas.
+"Sender" means the contract checks or charges <code>msg.sender</code>, so the address sends the transaction
+and needs gas.</p>
+<h3 id="31-cybersign-cyberagreementregistry">3.1 cyberSign: CyberAgreementRegistry</h3>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Signature</th>
+<th>Submission</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sign or countersign an agreement</td>
+<td>EIP-712 <code>SignatureData</code> (§4.1)</td>
+<td>Relayed through <code>signContractFor(signer, …)</code> (<code>CyberAgreementRegistry.sol:470</code>) when the agreement has no finalizer</td>
+</tr>
+<tr>
+<td>Void an agreement</td>
+<td>EIP-712 <code>VoidSignatureData</code></td>
+<td>Relayed through <code>voidContractFor</code>, which accepts any sender and checks the party's signature unless the finalizer submits</td>
+</tr>
+<tr>
+<td>Set or revoke a signing delegate</td>
+<td>none</td>
+<td>Sender</td>
+</tr>
+<tr>
+<td>Sign in to MetaLeX's app</td>
+<td>Off-chain sign-in message</td>
+<td>No transaction</td>
+</tr>
+</tbody>
+</table>
+<p><code>signContractFor</code> checks the signer's signature (<code>:1016-1039</code>) and requires the sender to be the
+finalizer or the signer <strong>only when the agreement names a finalizer</strong> (<code>:533-538</code>). The wrapper
+reads the finalizer from the registry's public <code>agreements(contractId)</code> getter (<code>:116</code>, field
+<code>:78</code>) before signing:</p>
+<ul>
+<li>Standalone cyberSign agreements, created through <code>createStandaloneContractAndSignFor</code>, always
+  have no finalizer (<code>:346-387</code>) and are always relayed.</li>
+<li>Agreements created by MetaLeX's contracts name that contract as finalizer: LeXcheX
+  (<code>creds/lexchexMinter.sol:182,257</code>), deals (<code>storage/DealManagerStorage.sol:154</code>), rounds
+  (<code>storage/RoundManagerStorage.sol:249</code>), secondary trades (<code>storage/SecondaryTradeStorage.sol:398</code>)
+  and the SegCo and board-consent agreements (<code>ParentCoFactory.sol:512,539</code>;
+  <code>MetaDAOFactory.sol:447,474</code>). Those signatures travel inside the product's own transaction.</li>
+</ul>
+<h3 id="32-cyberraise-rounds-and-deals">3.2 cyberRAISE: rounds and deals</h3>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Submission</th>
+<th>Funding and return</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Submit an expression of interest (<code>submitEOI</code>), with the registry signature and payment</td>
+<td>Sender; payment is taken from the caller</td>
+<td>Fund the ticket amount and gas; the allocated LET lands at the clean address</td>
+</tr>
+<tr>
+<td>Sign and pay a deal (<code>signDealAndPay</code>)</td>
+<td>Sender</td>
+<td>Same</td>
+</tr>
+<tr>
+<td>Recall an expired expression of interest (<code>recallEOI</code>)</td>
+<td>Sender</td>
+<td>Shield the refund back</td>
+</tr>
+<tr>
+<td>Secondary trades</td>
+<td>Sender</td>
+<td>Same pattern as primary deals</td>
+</tr>
+</tbody>
+</table>
+<p>A round can credential a qualifying investor with LeXcheX at allocation, binding the credential
+to the clean address (§3.4). The issuer-side officer actions (<code>createRound</code>, <code>allocate</code>, <code>reject</code>)
+are sender transactions, with the officer's escrowed signature checked under each RoundManager's
+own EIP-712 domain, read from the instance at runtime.</p>
+<h3 id="33-cap-table-and-company-operations">3.3 Cap table and company operations</h3>
+<p>Founder and officer actions are all sender transactions: setting up or forming a company
+(formation costs 1,000 USDC on Ethereum mainnet), publishing officers, seating a board, and the
+IssuanceManager's <code>onlyOwner</code> certificate and scrip functions. Holders transfer, scripify and
+de-scripify LETs as senders, and shield any proceeds back. Approving security-class terms is an
+off-chain signature. Board consents produce a cyberSign agreement (§3.1).</p>
+<h3 id="34-lexchex-credentials">3.4 LeXcheX credentials</h3>
+<p>The user verifies their wallets with off-chain signatures and signs the LeXcheX agreement, whose
+finalizer is the LeXcheX minter, so that signature rides in the minter's transaction. The
+credential is soulbound to the address that earns it and records investor type, jurisdiction and
+KYC facts. An address holding a credential is therefore a durable <strong>investor persona</strong> that the
+user creates on purpose, kept separate from one-off engagement addresses, and the wrapper warns
+the user before minting.</p>
+<h3 id="35-metavest-grants">3.5 MetaVesT grants</h3>
+<p>The grant's award agreement is signed through cyberSign. Every grantee action on the grant itself
+is sender-gated (<code>onlyGrantee</code>, <code>BaseAllocation.sol:306</code>; <code>TokenOptionAllocation.sol:134</code>;
+<code>RestrictedTokenAllocation.sol:152</code>): withdrawing vested tokens, exercising options (strike paid
+in USDC from the clean address), claiming repurchase proceeds, confirming milestones and
+transferring rights. The address is funded with gas, and with the strike for an exercise, and
+received tokens are shielded back.</p>
+<h3 id="36-lexscrow">3.6 LeXscroW</h3>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Submission</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>depositTokensWithPermit</code></td>
+<td>Relayed: the clean address signs an EIP-2612 permit and the relayer submits the deposit</td>
+</tr>
+<tr>
+<td><code>depositTokens</code></td>
+<td>Sender</td>
+</tr>
+<tr>
+<td><code>execute()</code></td>
+<td>Relayed: unpermissioned, anyone can call it</td>
+</tr>
+<tr>
+<td><code>updateBuyer</code>, <code>updateSeller</code>, <code>electToTerminate</code></td>
+<td>Sender</td>
+</tr>
+</tbody>
+</table>
+<p>Escrow outputs land at the party addresses and are shielded back.</p>
+<h3 id="37-ricardiantripler">3.7 RicardianTripler</h3>
+<p>Proposing and confirming a DoubleToken LeXscroW agreement are sender transactions.
+<code>adoptBORGParticipationAgreementWithSignature</code> accepts a signature from anyone and is relayed.
+That signature is over the <strong>raw digest</strong> <code>keccak256(abi.encode(details))</code>, checked with
+<code>ecrecover</code> or ERC-1271 (<code>RicardianTriplerBORGParticipation.sol:144-148</code>), not an EIP-712 or
+personal-sign message, so the wrapper's signer supports raw-digest signing.</p>
+<h3 id="38-borg">3.8 BORG</h3>
+<p>A BORG member is an owner of a Gnosis Safe that runs MetaLeX's guard. The member co-signs Safe
+transactions with EIP-712 <code>SafeTx</code> signatures; the relayer submits <code>execTransaction</code>, and the guard
+enforces the BORG's whitelist. Self-removal through <code>ejectImplant</code> is a sender transaction. Joining
+starts with the BORG Participation Agreement (§3.7). Membership is long-lived, so a BORG address is
+a durable persona, like a LeXcheX one.</p>
+<h2 id="4-signing">4. Signing</h2>
+<h3 id="41-cyberagreementregistry">4.1 CyberAgreementRegistry</h3>
+<ul>
+<li>Domain: <code>EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)</code>
+  with name <code>CyberAgreementRegistry</code>, version <code>1</code>, the chain ID fixed at initialization, and
+  verifying contract <code>0xa9E808B8eCBB60Bb19abF026B5b863215BC4c134</code>.</li>
+<li>Type: <code>SignatureData(bytes32 contractId,address signer,string legalContractUri,string[]
+  globalFields,string[] partyFields,string[] globalValues,string[] partyValues)</code>, with string
+  arrays hashed element by element (<code>_hashStringArray</code>, <code>:1068-1076</code>).</li>
+<li>Confirmed against the live Ethereum deployment: <code>DOMAIN_SEPARATOR()</code> returns
+  <code>0x2449d9cb31bee23a0bc07db884e744da4fdb3d6614e0811a30fb96d3b874a4f4</code> and
+  <code>SIGNATUREDATA_TYPEHASH()</code> returns
+  <code>0xe37d17c3ab7740aee31093101f9d27d139a5c3b35324b266efe5d085d6486f05</code>, both equal to the values
+  computed from source.</li>
+<li><code>VoidSignatureData(bytes32 contractId,address party)</code> uses the same domain.</li>
+</ul>
+<h3 id="42-other-signatures">4.2 Other signatures</h3>
+<table>
+<thead>
+<tr>
+<th>Signature</th>
+<th>Format</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RoundManager / DealManager officer signatures</td>
+<td>EIP-712 under each instance's own domain, read at runtime</td>
+</tr>
+<tr>
+<td>RicardianTripler adoption</td>
+<td>Raw <code>keccak256(abi.encode(details))</code> digest</td>
+</tr>
+<tr>
+<td>BORG co-signing</td>
+<td>Safe EIP-712 <code>SafeTx</code> under the Safe's domain</td>
+</tr>
+<tr>
+<td>LeXscroW permit deposit</td>
+<td>EIP-2612 permit for the token</td>
+</tr>
+<tr>
+<td>Return to the pool</td>
+<td><code>@armada/sdk</code> gasless shield intent (domain <code>ArmadaGaslessShield</code>, version <code>1</code>, <code>armada-sdk/src/tx/gasless-shield.ts</code>)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-privacy">5. Privacy</h2>
+<p>The clean address and everything it does are public by design: it is the user's MetaLeX
+identity for that engagement. The plan keeps it from linking to anything else.</p>
+<table>
+<thead>
+<tr>
+<th>Possible link</th>
+<th>How the plan prevents it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where the address's funds come from</td>
+<td>Its only inbound transfers are unshields from the pool and channel payouts from hub inventory; every gate asserts this</td>
+</tr>
+<tr>
+<td>Gas</td>
+<td>Relayed actions need none. Gas for sender actions arrives through the same two routes</td>
+</tr>
+<tr>
+<td>Amount and timing of an unshield</td>
+<td>Fund with rounded, slightly larger amounts, shield the change back, and fund ahead of the action where the product allows</td>
+</tr>
+<tr>
+<td>Where its value goes</td>
+<td>Back to the user's 0zk address through a shield, never to another address of theirs</td>
+</tr>
+<tr>
+<td>Reuse across engagements</td>
+<td>One address per engagement; durable personas (LeXcheX, BORG, a founder identity) only when the user creates one</td>
+</tr>
+<tr>
+<td>Network metadata</td>
+<td>The address's reads and writes go through Armada's relayer and its read API, never the user's own node</td>
+</tr>
+</tbody>
+</table>
+<p>Some products carry identity by nature. A LeXcheX credential records KYC facts, a company
+founder is a named party, and formation's fixed 1,000 USDC fee is a recognizable amount. For
+these, the guarantee is that the address's funding came from the pool, not that the person
+behind it is unknown, and the wrapper tells the user so.</p>
+<h2 id="6-repository">6. Repository</h2>
+<p><code>armada-metalex</code> follows <code>armada-sdk</code>'s conventions (<code>SPEC.md</code>, <code>CLAUDE.md</code>, tsup, vitest,
+<code>ABOUTME:</code> headers, subpath exports, <code>@armada/sdk</code> pinned by git SHA) and runs under exophial like
+armada-nitro.</p>
+<pre><code>armada-metalex/
+  SPEC.md  CLAUDE.md  package.json  .exophial/config.yaml
+  src/
+    keys/          engagement-key derivation; viem signer (EIP-712, personal-sign, raw digest)
+    engagements/   encrypted engagement registry, stored through @armada/sdk storage
+    funding/       fund from pool (unshield), fund from nitro (channel payout), return to pool
+    eip712/        typed-data and digest builders for every signature in section 4
+    clients/       cyber-sign, cyber-raise, issuance, company, lexchex, metavest,
+                   lexscrow, ricardian, borg
+    relay/         client for armada-relayer's MetaLeX endpoint
+    config/        MetaLeX Ethereum mainnet and Sepolia addresses
+  test/vectors/    derivation and digest vectors
+  ui/              embeddable React components (wagmi, viem), built last
+</code></pre>
+<p>Changes in existing repositories:</p>
+<ul>
+<li><strong>armada-relayer</strong> (<code>relayer-v2/actor</code>): a <code>/relay/metalex</code> endpoint with an allow-list of
+  MetaLeX selectors (<code>signContractFor</code>, <code>voidContractFor</code>, LeXscroW <code>execute</code> and
+  <code>depositTokensWithPermit</code>, RicardianTripler adoption, Safe <code>execTransaction</code>), modeled on the
+  existing selector list (<code>src/relay/selectors.ts</code>).</li>
+<li><strong>armada-nitro</strong>: a MetaLeX deploy module in the fixturenet stack (<code>stack/</code>, <code>env/reconciler</code>)
+  and the per-product gates under <code>env/gates/</code>.</li>
+<li><strong>armada-interface</strong>: optionally mounts the wrapper's components.</li>
+<li><strong>armada-sdk</strong>: no change.</li>
+</ul>
+<h2 id="7-testing">7. Testing</h2>
+<ul>
+<li><strong>Unit:</strong> derivation vectors (deterministic, domain-separated, disjoint from the 0zk keyset,
+  recoverable from the mnemonic); digest vectors for every signature in section 4, with
+  <code>SignatureData</code> checked against the live separator and typehash; a check that funding only
+  ever targets derived addresses and returns only ever target the user's 0zk address.</li>
+<li><strong>Integration on E12:</strong> MetaLeX's contracts deployed by the fixturenet stack, with their
+  addresses in its manifest. Each client runs end to end: derive, fund, act, return. The first
+  integration run also checks a relayed agreement signature against the registry's own digest.</li>
+<li><strong>Gates,</strong> one per product in armada-nitro's <code>env/gates</code> style: <code>metalex-cybersign</code> (relayed,
+  zero gas at the clean address), <code>metalex-cyberraise</code>, <code>metalex-metavest</code>, <code>metalex-lexscrow</code>,
+  <code>metalex-ricardian</code>, <code>metalex-lexchex</code> and <code>metalex-borg</code>.</li>
+<li><strong>Privacy assertion,</strong> in every gate: every inbound transfer to the clean address comes from the
+  pool, the relayer or the hub.</li>
+</ul>
+<h2 id="8-work-breakdown">8. Work breakdown</h2>
+<p>Chunks are sized for exophial workers (at most 12 points, one point being about 10k tokens of
+peak context).</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Chunk</th>
+<th>Depends on</th>
+<th>Points</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td>Repository bootstrap: build, test and exophial config; MetaLeX addresses; <code>@armada/sdk</code> dependency</td>
+<td>—</td>
+<td>4</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>Engagement-key derivation and signer, with derivation vectors</td>
+<td>C1</td>
+<td>7</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>Signature builders for section 4, with digest vectors</td>
+<td>C1</td>
+<td>6</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>Encrypted engagement registry</td>
+<td>C1</td>
+<td>4</td>
+</tr>
+<tr>
+<td>C5</td>
+<td>armada-relayer MetaLeX endpoint and allow-list</td>
+<td>—</td>
+<td>8</td>
+</tr>
+<tr>
+<td>C6</td>
+<td>cyberSign client and the first relayed signature, with its gate</td>
+<td>C2, C3, C5</td>
+<td>6</td>
+</tr>
+<tr>
+<td>C7</td>
+<td>Funding from the pool and return to the pool, with the privacy assertion</td>
+<td>C2</td>
+<td>9</td>
+</tr>
+<tr>
+<td>C8</td>
+<td>Funding from armada-nitro channel payouts</td>
+<td>C7</td>
+<td>7</td>
+</tr>
+<tr>
+<td>C9</td>
+<td>MetaLeX deploy module for the E12 fixturenet</td>
+<td>C1</td>
+<td>10</td>
+</tr>
+<tr>
+<td>C10</td>
+<td>cyberRAISE client and gate</td>
+<td>C3, C7, C9</td>
+<td>9</td>
+</tr>
+<tr>
+<td>C11</td>
+<td>MetaVesT client and gate</td>
+<td>C7, C9</td>
+<td>7</td>
+</tr>
+<tr>
+<td>C12</td>
+<td>LeXscroW and RicardianTripler clients and gates</td>
+<td>C3, C5, C7, C9</td>
+<td>9</td>
+</tr>
+<tr>
+<td>C13</td>
+<td>LeXcheX client and the persona model, with its gate</td>
+<td>C3, C9</td>
+<td>7</td>
+</tr>
+<tr>
+<td>C14</td>
+<td>BORG client and gate</td>
+<td>C3, C5, C9</td>
+<td>8</td>
+</tr>
+<tr>
+<td>C15</td>
+<td>Cap-table and company-officer clients, including secondary trades, with a gate</td>
+<td>C7, C9</td>
+<td>9</td>
+</tr>
+<tr>
+<td>C16</td>
+<td>Embeddable UI components</td>
+<td>C6, C10</td>
+<td>10</td>
+</tr>
+<tr>
+<td>C17</td>
+<td>SPEC and documentation, cross-repository cleanup</td>
+<td>all</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total: 124 points.</strong></p>
+<ul>
+<li>First relayed signature end to end: C1, C2, C3, C5, C6, about <strong>31 points</strong>.</li>
+<li>First engagement with funding and a return path: C1, C2, C3, C5, C7, C9, C10, about
+  <strong>53 points</strong>.</li>
+<li>After C1, chunks C2 to C5 and C9 can run in parallel. The product clients C10 to C15 are
+  independent of each other once C3, C7 and C9 have landed. C16 and C17 come last.</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>armada-metalex-plan.md</code> by <code>tools/render.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+for (const code of document.querySelectorAll("code.language-mermaid")) {
+  const div = document.createElement("div");
+  div.className = "mermaid";
+  div.textContent = code.textContent;
+  (code.closest("pre") || code).replaceWith(div);
+}
+mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+mermaid.run();
+</script>
+
+</body>
+</html>

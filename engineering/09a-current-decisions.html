@@ -125,11 +125,12 @@
 </ul>
 <h3 id="adr-0017-hub-yield-and-swaps-as-channel-state">ADR-0017 — Hub yield and swaps as channel state</h3>
 <ul>
-<li><strong>D17.1</strong> (supersedes D11.3) On the armada-nitro rail (ADR-0016), yield-bearing assets are held in hub channels as <strong>non-rebasing share tokens</strong> (<code>wstETH</code>; <code>waUSDC</code>, Aave's ERC-4626 StataToken over the USDC reserve), and a <strong>swap is one co-signed reallocation</strong> of a channel state under <code>ConsensusApp</code>.</li>
+<li><strong>D17.1</strong> On the armada-nitro rail (ADR-0016), yield-bearing assets are held in hub channels as <strong>non-rebasing share tokens</strong> (<code>wstETH</code>; <code>waUSDC</code>, Aave's ERC-4626 StataToken over the USDC reserve), and a <strong>swap is one co-signed reallocation</strong> of a channel state under <code>ConsensusApp</code>.</li>
 <li><strong>D17.2</strong> Yield accrues to the share holder with no contract tracking interest.</li>
 <li><strong>D17.3</strong> Channel amounts are token units; exchange rates are read off-chain at quote time and never on the settlement path.</li>
 <li><strong>D17.4</strong> The user signs a swap state first and the hub countersigns, so the quoting hub holds the free option.</li>
 <li><strong>D17.5</strong> The adjudicator gains an immutable asset allow-list, balance-delta accounting on <code>deposit</code>, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: <a href="./15-hub-yield-and-swaps.html">15</a>.</li>
+<li><strong>D17.6</strong> (supersedes D11.3) v1 yield is <strong>ETH/wstETH only</strong> (held as a note, T4.4). <strong>USDC yield arrives in v1.5</strong> as <code>waUSDC</code> held in hub channels (D17.1); the LP-buffered USDC rail (T4.5) stays v2.</li>
 </ul>
 <h3 id="adr-0018-decisions-are-clause-level-records-compiled-to-a-current-view">ADR-0018 — Decisions are clause-level records compiled to a current view</h3>
 <ul>
@@ -147,7 +148,7 @@
 <tbody>
 <tr>
 <td>D11.3</td>
-<td>D17.1</td>
+<td>D17.6</td>
 <td>Consequently v1 yield is <strong>ETH/wstETH only</strong> (held as a note, T4.4), and <strong>USDC yield defers to v2</strong>.</td>
 </tr>
 <tr>

@@ -39,7 +39,7 @@ Context, Consequences and Alternatives stay prose. They explain; they are not co
 A clause that replaces earlier clauses names them:
 
 ```markdown
-- **D17.1** (supersedes D11.3) USDC yield arrives with the v1.5 hub rail as `waUSDC` held in hub channels; the LP-buffered rail (T4.5) stays v2.
+- **D17.6** (supersedes D11.3) v1 yield is ETH/wstETH only (held as a note, T4.4). USDC yield arrives in v1.5 as `waUSDC` held in hub channels (D17.1); the LP-buffered USDC rail (T4.5) stays v2.
 ```
 
 Several targets are allowed: `(supersedes D7.2, D11.1)`.

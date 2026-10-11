@@ -45,7 +45,7 @@
 <p><em>Why.</em> The spec is what was decided, not why. Keeping rationale out of the compiled view keeps that view short enough to read as a spec, while the rationale stays in the ADR where it was written.</p>
 <h3 id="3-supersession-is-declared-on-the-new-clause">3. Supersession is declared on the new clause</h3>
 <p>A clause that replaces earlier clauses names them:</p>
-<pre><code class="language-markdown">- **D17.1** (supersedes D11.3) USDC yield arrives with the v1.5 hub rail as `waUSDC` held in hub channels; the LP-buffered rail (T4.5) stays v2.
+<pre><code class="language-markdown">- **D17.6** (supersedes D11.3) v1 yield is ETH/wstETH only (held as a note, T4.4). USDC yield arrives in v1.5 as `waUSDC` held in hub channels (D17.1); the LP-buffered USDC rail (T4.5) stays v2.
 </code></pre>
 <p>Several targets are allowed: <code>(supersedes D7.2, D11.1)</code>.</p>
 <p><em>Why.</em> The author of a change is the one who knows what it replaces, and they write it once, in the clause they are already writing. Old ADRs are never edited, so the log keeps its integrity: what ADR-0011 decided on 2026-09-05 still reads as it was decided.</p>

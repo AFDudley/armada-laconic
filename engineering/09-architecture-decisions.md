@@ -278,11 +278,12 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Decision.**
 
-- **D17.1** (supersedes D11.3) On the armada-nitro rail (ADR-0016), yield-bearing assets are held in hub channels as **non-rebasing share tokens** (`wstETH`; `waUSDC`, Aave's ERC-4626 StataToken over the USDC reserve), and a **swap is one co-signed reallocation** of a channel state under `ConsensusApp`.
+- **D17.1** On the armada-nitro rail (ADR-0016), yield-bearing assets are held in hub channels as **non-rebasing share tokens** (`wstETH`; `waUSDC`, Aave's ERC-4626 StataToken over the USDC reserve), and a **swap is one co-signed reallocation** of a channel state under `ConsensusApp`.
 - **D17.2** Yield accrues to the share holder with no contract tracking interest.
 - **D17.3** Channel amounts are token units; exchange rates are read off-chain at quote time and never on the settlement path.
 - **D17.4** The user signs a swap state first and the hub countersigns, so the quoting hub holds the free option.
 - **D17.5** The adjudicator gains an immutable asset allow-list, balance-delta accounting on `deposit`, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: [15](./15-hub-yield-and-swaps.md).
+- **D17.6** (supersedes D11.3) v1 yield is **ETH/wstETH only** (held as a note, T4.4). **USDC yield arrives in v1.5** as `waUSDC` held in hub channels (D17.1); the LP-buffered USDC rail (T4.5) stays v2.
 
 **Consequences.** USDC yield arrives with the v1.5 hub rail instead of v2, as a held asset rather than an LP-buffered rail (T4.5 stays v2). No new ForceMove app for the first games; the contract work is a hardening delta to the adjudicator. Borrowing needs liquidation and a price, so it stays a v2 app. The hub's Aave deposits and redemptions are its own inventory management, outside any channel, so Aave liquidity never conditions a user's exit. The fixturenet and E11 use Aave v3's StataToken; the Aave-v4 adapter of the work-package C plan would supply the same ERC-4626 shape.
 

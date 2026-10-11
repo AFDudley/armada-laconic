@@ -124,6 +124,11 @@
 <td>Decisions are clause-level records compiled to a current view</td>
 <td>accepted</td>
 </tr>
+<tr>
+<td><a href="#adr-0019">0019</a></td>
+<td>Architecture decisions state what must hold; code-level requirements live with the code</td>
+<td>accepted</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -328,6 +333,16 @@
 </ul>
 <p><strong>Consequences.</strong> The current spec is one generated page, correct by construction; authors write only new clauses and name what they replace, never editing old ADRs or hunting for every restatement. Status is one of {proposed · accepted · withdrawn}; only accepted ADRs contribute live clauses and only their supersessions apply, with a proposed ADR's supersessions reported as pending. Pointer prose ("amended by", "amends") leaves the index and status lines, since the <code>(supersedes …)</code> markers are the single source.</p>
 <p><strong>Alternatives.</strong> Editing ADRs in place with git as history (rejected — weakens the log and makes review a diff of decided text); a hand-maintained current-decisions page (rejected — an unchecked third copy that drifts); whole-ADR supersession (rejected — most changes replace one clause, not the whole decision). See <a href="./decision-records.html"><code>decision-records.md</code></a>.</p>
+<h2 id="adr-0019">ADR-0019</h2>
+<p><strong>Architecture decisions state what must hold; code-level requirements live with the code</strong> · accepted · 2026-10-11</p>
+<p><strong>Context.</strong> ADR-0017's D17.5 and design page 15 listed requirements on armada-nitro's Solidity (an asset allow-list in the constructor, a balance-delta override of <code>deposit</code>, a reentrancy guard, a pragma pin). Those are implementation requirements for one component, recorded in the product's architecture log, away from the code and the tests that verify them. armada-nitro keeps its own task briefs (<code>docs/tasks/</code>), which is where a contract's requirements and acceptance tests belong.</p>
+<p><strong>Decision.</strong></p>
+<ul>
+<li><strong>D19.1</strong> Architecture decisions and design pages in this repo state <strong>what must hold</strong> (decisions and invariants). Requirements on <strong>how a component's code enforces them</strong>, and the tests that verify it, live in that component's repository and cite the invariants they implement.</li>
+<li><strong>D19.2</strong> (supersedes D17.5) The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of <a href="./15-hub-yield-and-swaps.html">15</a>; its asset allow-list is <strong>immutable</strong>. The contract-level requirements and their tests are armada-nitro's task E16.</li>
+</ul>
+<p><strong>Consequences.</strong> Page 15 keeps the invariants and the immutable-allow-list choice; armada-nitro's E16 brief holds the concrete requirements (S1–S6) and their tests, next to the code they constrain. A change to how a contract enforces an invariant is a change in that repo, not an ADR.</p>
+<p><strong>Alternatives.</strong> Keep code-level requirements in ADRs (rejected — they drift from the code, and the log fills with implementation detail no architecture reader needs). Move whole designs into component repos (rejected — the invariants span components: clients, watchtowers and the hub all depend on them).</p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/09-architecture-decisions.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

@@ -83,70 +83,22 @@
 </ul>
 <p>Aave's redemption liquidity (<code>maxRedeem</code> falls while the reserve is borrowed out) is therefore the hub's risk, never a condition on a user's exit.</p>
 <p>The hub's calls follow ERC-4626 practice: an exact <code>forceApprove</code> of the deposited amount, and a minimum-output check on <code>deposit</code> (shares) and <code>redeem</code> (assets) against the preview taken when the operation was signed, since a FROST-signed operation can execute later than it was signed.</p>
-<h2 id="solidity-requirements-for-the-delta">Solidity requirements for the delta</h2>
-<p>The contract work is confined to <code>ArmadaNitroAdjudicator</code> and a pragma pin on <code>HubCustodian</code>:</p>
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>Requirement</th>
-<th>Invariant</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>S1</td>
-<td>Immutable asset allow-list set in the constructor; <code>deposit</code> and <code>depositFromNote</code> revert for any other asset</td>
-<td>I1, I6</td>
-</tr>
-<tr>
-<td>S2</td>
-<td>Override <code>deposit</code> to credit the measured balance change and require it to equal <code>amount</code></td>
-<td>I1</td>
-</tr>
-<tr>
-<td>S3</td>
-<td>A reentrancy guard on every function that changes <code>holdings</code></td>
-<td>I6</td>
-</tr>
-<tr>
-<td>S4</td>
-<td>Per-asset exit test: with one asset's token made to revert, <code>transfer(assetIndex)</code> still pays the others</td>
-<td>I5</td>
-</tr>
-<tr>
-<td>S5</td>
-<td>Pin <code>HubCustodian</code>'s pragma to an exact version (<code>^0.8.37</code> today); the adjudicator is already pinned at <code>0.8.17</code></td>
-<td>build reproducibility</td>
-</tr>
-<tr>
-<td>S6</td>
-<td>No settlement-path read of any exchange rate (a source-level check: the adjudicator imports no ERC-4626 interface)</td>
-<td>I4</td>
-</tr>
-</tbody>
-</table>
-<p>Conventions already in the code and kept: <code>SafeERC20</code> for every token call, <code>forceApprove</code> before <code>pool.shield</code>, <code>SafeCast</code> for the pool's <code>uint120</code> note values, checks-effects-interactions in <code>HubCustodian.execute</code> (nonce incremented before the call), and an event for every holdings change.</p>
-<p>An immutable allow-list means adding an asset is a new adjudicator deployment. With four assets and channels that are short-lived relative to deployments, that is acceptable and keeps governance off the settlement path. A governed list is a later decision.</p>
+<h2 id="implementation">Implementation</h2>
+<p>This page states what must hold. How the contracts enforce it lives with the contracts: armada-nitro's task <strong>E16 · Adjudicator hardening for multi-asset hub channels</strong> (<code>docs/tasks/E16-adjudicator-hardening.md</code>) turns I1, I4, I5 and I6 into concrete contract requirements and tests that fail before and pass after. I2 and I3 need no contract change; I7 concerns the hub's own operations.</p>
+<p>One design choice belongs here rather than there: the asset allow-list is <strong>immutable</strong>, so adding an asset is a new adjudicator deployment. With four assets and channels that are short-lived relative to deployments, that is acceptable and keeps governance off the settlement path. A governed list is a later decision.</p>
 <h2 id="what-this-does-not-cover">What this does not cover</h2>
 <ul>
 <li><strong>Borrowing.</strong> A borrow needs liquidation rules and an on-chain price, which makes it a real ForceMove app (option 1). It stays v2.</li>
 <li><strong>Unilateral swap enforcement.</strong> Option 2 swaps need both signatures. A swap routed across hubs through virtual channels needs the hash-locked swap pattern of <a href="./09-architecture-decisions.html#adr-0015">ADR-0015</a>.</li>
 <li><strong>Protocol fees on swaps.</strong> The fee split (T4.3) is an allocation on the same state and needs no further mechanism.</li>
 </ul>
-<h2 id="how-e11-tests-it">How E11 tests it</h2>
-<p>E11's four scenarios exercise I2, I4 and I7 on the fixturenet (Aave yield is real; <code>waUSDC</code> as a channel asset with an in-channel swap; <code>wstETH</code> as a channel asset; the hub's redeem). The delta above adds tests that must fail before S1–S4 and pass after:</p>
-<ul>
-<li>deposit of a non-allow-listed token, by each path, is refused (S1);</li>
-<li>a <code>deposit</code> whose token delivers less than <code>amount</code> is refused (S2);</li>
-<li>a re-entrant deposit through a hooking test token is refused (S3);</li>
-<li>with one asset's transfer made to revert, the other assets of the channel still pay out (S4).</li>
-</ul>
+<h2 id="how-it-is-tested">How it is tested</h2>
+<p>armada-nitro's E11 exercises I2, I4 and I7 on the fixturenet (Aave yield is real; <code>waUSDC</code> as a channel asset with an in-channel swap; <code>wstETH</code> as a channel asset; the hub's redeem). E16 tests I1, I5 and I6 at the contract level.</p>
 <h2 id="where-this-fits">Where this fits</h2>
 <ul>
 <li>First games and dispute structure: <a href="./14-shielded-games-over-nitro.html">14</a>.</li>
 <li>Settlement rail: <a href="./A-nitro-on-railgun/A.0-overview.html">A.0 overview</a>, <a href="./A-nitro-on-railgun/A.5-deposit-payout-contract.html">A.5 deposit/payout contract</a>.</li>
-<li>Decisions: <a href="./09-architecture-decisions.html#adr-0011">ADR-0011</a> (USDC yield deferred to v2, amended by ADR-0017), <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a> (brings the Aave yield adapter into scope), <a href="./09-architecture-decisions.html#adr-0016">ADR-0016</a> (adjudicator and custodian), <a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a> (this design).</li>
+<li>Decisions: <a href="./09-architecture-decisions.html#adr-0011">ADR-0011</a> (USDC yield, see D17.6), <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a> (brings the Aave yield adapter into scope), <a href="./09-architecture-decisions.html#adr-0016">ADR-0016</a> (adjudicator and custodian), <a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a> (this design), <a href="./09-architecture-decisions.html#adr-0019">ADR-0019</a> (contract requirements live with the contracts).</li>
 </ul>
 
 <hr/>

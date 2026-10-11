@@ -129,12 +129,16 @@
 <li><strong>D17.2</strong> Yield accrues to the share holder with no contract tracking interest.</li>
 <li><strong>D17.3</strong> Channel amounts are token units; exchange rates are read off-chain at quote time and never on the settlement path.</li>
 <li><strong>D17.4</strong> The user signs a swap state first and the hub countersigns, so the quoting hub holds the free option.</li>
-<li><strong>D17.5</strong> The adjudicator gains an immutable asset allow-list, balance-delta accounting on <code>deposit</code>, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: <a href="./15-hub-yield-and-swaps.html">15</a>.</li>
 <li><strong>D17.6</strong> (supersedes D11.3) v1 yield is <strong>ETH/wstETH only</strong> (held as a note, T4.4). <strong>USDC yield arrives in v1.5</strong> as <code>waUSDC</code> held in hub channels (D17.1); the LP-buffered USDC rail (T4.5) stays v2.</li>
 </ul>
 <h3 id="adr-0018-decisions-are-clause-level-records-compiled-to-a-current-view">ADR-0018 — Decisions are clause-level records compiled to a current view</h3>
 <ul>
 <li><strong>D18.1</strong> (supersedes D12.3) The accepted ADRs remain the <strong>fixed architecture baseline</strong>; specs build on them and never relitigate, and a decided ADR is <strong>never edited</strong>. Each ADR's <strong>Decision</strong> is a list of numbered clauses (<code>D&lt;ADR&gt;.&lt;clause&gt;</code>); a change is a new ADR whose clauses <strong>supersede</strong> specific earlier clauses, declared on the new clause as <code>(supersedes …)</code> and restating whatever of the superseded clause still holds. The current decision is read from the compiled <a href="./09a-current-decisions.html"><code>09a-current-decisions.md</code></a> — generated from this file by <code>tools/compile-decisions.py</code>, never hand-edited — not by replaying the log, and a pre-commit <code>--check</code> gate keeps that page and these clause/supersession rules consistent.</li>
+</ul>
+<h3 id="adr-0019-architecture-decisions-state-what-must-hold-code-level-requirements-live-with-the-code">ADR-0019 — Architecture decisions state what must hold; code-level requirements live with the code</h3>
+<ul>
+<li><strong>D19.1</strong> Architecture decisions and design pages in this repo state <strong>what must hold</strong> (decisions and invariants). Requirements on <strong>how a component's code enforces them</strong>, and the tests that verify it, live in that component's repository and cite the invariants they implement.</li>
+<li><strong>D19.2</strong> (supersedes D17.5) The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of <a href="./15-hub-yield-and-swaps.html">15</a>; its asset allow-list is <strong>immutable</strong>. The contract-level requirements and their tests are armada-nitro's task E16.</li>
 </ul>
 <h2 id="supersessions">Supersessions</h2>
 <table>
@@ -155,6 +159,11 @@
 <td>D12.3</td>
 <td>D18.1</td>
 <td><strong>Fixed architecture baseline.</strong> ADRs 0002–0011 are the baseline; specs build on them and never relitigate. Change means <em>superseding</em> an ADR, never editing a decided one.</td>
+</tr>
+<tr>
+<td>D17.5</td>
+<td>D19.2</td>
+<td>The adjudicator gains an immutable asset allow-list, balance-delta accounting on <code>deposit</code>, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: <a href="./15-hub-yield-and-swaps.html">15</a>.</td>
 </tr>
 </tbody>
 </table>

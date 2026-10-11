@@ -90,22 +90,11 @@ Aave's redemption liquidity (`maxRedeem` falls while the reserve is borrowed out
 
 The hub's calls follow ERC-4626 practice: an exact `forceApprove` of the deposited amount, and a minimum-output check on `deposit` (shares) and `redeem` (assets) against the preview taken when the operation was signed, since a FROST-signed operation can execute later than it was signed.
 
-## Solidity requirements for the delta
+## Implementation
 
-The contract work is confined to `ArmadaNitroAdjudicator` and a pragma pin on `HubCustodian`:
+This page states what must hold. How the contracts enforce it lives with the contracts: armada-nitro's task **E16 · Adjudicator hardening for multi-asset hub channels** (`docs/tasks/E16-adjudicator-hardening.md`) turns I1, I4, I5 and I6 into concrete contract requirements and tests that fail before and pass after. I2 and I3 need no contract change; I7 concerns the hub's own operations.
 
-| # | Requirement | Invariant |
-|---|---|---|
-| S1 | Immutable asset allow-list set in the constructor; `deposit` and `depositFromNote` revert for any other asset | I1, I6 |
-| S2 | Override `deposit` to credit the measured balance change and require it to equal `amount` | I1 |
-| S3 | A reentrancy guard on every function that changes `holdings` | I6 |
-| S4 | Per-asset exit test: with one asset's token made to revert, `transfer(assetIndex)` still pays the others | I5 |
-| S5 | Pin `HubCustodian`'s pragma to an exact version (`^0.8.37` today); the adjudicator is already pinned at `0.8.17` | build reproducibility |
-| S6 | No settlement-path read of any exchange rate (a source-level check: the adjudicator imports no ERC-4626 interface) | I4 |
-
-Conventions already in the code and kept: `SafeERC20` for every token call, `forceApprove` before `pool.shield`, `SafeCast` for the pool's `uint120` note values, checks-effects-interactions in `HubCustodian.execute` (nonce incremented before the call), and an event for every holdings change.
-
-An immutable allow-list means adding an asset is a new adjudicator deployment. With four assets and channels that are short-lived relative to deployments, that is acceptable and keeps governance off the settlement path. A governed list is a later decision.
+One design choice belongs here rather than there: the asset allow-list is **immutable**, so adding an asset is a new adjudicator deployment. With four assets and channels that are short-lived relative to deployments, that is acceptable and keeps governance off the settlement path. A governed list is a later decision.
 
 ## What this does not cover
 
@@ -113,17 +102,12 @@ An immutable allow-list means adding an asset is a new adjudicator deployment. W
 - **Unilateral swap enforcement.** Option 2 swaps need both signatures. A swap routed across hubs through virtual channels needs the hash-locked swap pattern of [ADR-0015](./09-architecture-decisions.md#adr-0015).
 - **Protocol fees on swaps.** The fee split (T4.3) is an allocation on the same state and needs no further mechanism.
 
-## How E11 tests it
+## How it is tested
 
-E11's four scenarios exercise I2, I4 and I7 on the fixturenet (Aave yield is real; `waUSDC` as a channel asset with an in-channel swap; `wstETH` as a channel asset; the hub's redeem). The delta above adds tests that must fail before S1–S4 and pass after:
-
-- deposit of a non-allow-listed token, by each path, is refused (S1);
-- a `deposit` whose token delivers less than `amount` is refused (S2);
-- a re-entrant deposit through a hooking test token is refused (S3);
-- with one asset's transfer made to revert, the other assets of the channel still pay out (S4).
+armada-nitro's E11 exercises I2, I4 and I7 on the fixturenet (Aave yield is real; `waUSDC` as a channel asset with an in-channel swap; `wstETH` as a channel asset; the hub's redeem). E16 tests I1, I5 and I6 at the contract level.
 
 ## Where this fits
 
 - First games and dispute structure: [14](./14-shielded-games-over-nitro.md).
 - Settlement rail: [A.0 overview](./A-nitro-on-railgun/A.0-overview.md), [A.5 deposit/payout contract](./A-nitro-on-railgun/A.5-deposit-payout-contract.md).
-- Decisions: [ADR-0011](./09-architecture-decisions.md#adr-0011) (USDC yield deferred to v2, amended by ADR-0017), [ADR-0013](./09-architecture-decisions.md#adr-0013) (brings the Aave yield adapter into scope), [ADR-0016](./09-architecture-decisions.md#adr-0016) (adjudicator and custodian), [ADR-0017](./09-architecture-decisions.md#adr-0017) (this design).
+- Decisions: [ADR-0011](./09-architecture-decisions.md#adr-0011) (USDC yield, see D17.6), [ADR-0013](./09-architecture-decisions.md#adr-0013) (brings the Aave yield adapter into scope), [ADR-0016](./09-architecture-decisions.md#adr-0016) (adjudicator and custodian), [ADR-0017](./09-architecture-decisions.md#adr-0017) (this design), [ADR-0019](./09-architecture-decisions.md#adr-0019) (contract requirements live with the contracts).

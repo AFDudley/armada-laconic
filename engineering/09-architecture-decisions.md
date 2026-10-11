@@ -18,13 +18,13 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 | [0008](#adr-0008) | Transport = Waku + libp2p-noise 1:1; optional Nym IP-privacy underlay | accepted · amended 2026-09-10 |
 | [0009](#adr-0009) | State ingestion targets nimbus-eth1; retire plugeth | accepted |
 | [0010](#adr-0010) | Terminology conventions | accepted |
-| [0011](#adr-0011) | Market-making & LP-buffered USDC yield are out of v1 | accepted · USDC-yield clause amended by 0017 (proposed) |
+| [0011](#adr-0011) | Market-making & LP-buffered USDC yield are out of v1 | accepted · USDC-yield clause amended by 0017 |
 | [0012](#adr-0012) | Delivery model: reuse-oriented incremental delivery; scopes as WBS work packages | accepted |
 | [0013](#adr-0013) | Single team; scope spans the whole Armada product; Laconic is prior art | accepted |
 | [0014](#adr-0014) | Pool + circuits are our own implementation (net-new, audit-critical) | accepted |
 | [0015](#adr-0015) | Cross-chain shielded swap = armada-nitro channels + fronting hubs | accepted · v1.5 |
 | [0016](#adr-0016) | armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only) | accepted · v1.5 |
-| [0017](#adr-0017) | Hub yield and swaps as channel state (non-rebasing share tokens, co-signed swaps) | proposed · v1.5 |
+| [0017](#adr-0017) | Hub yield and swaps as channel state (non-rebasing share tokens, co-signed swaps) | accepted · v1.5 |
 
 ---
 
@@ -220,7 +220,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Alternatives.** Reuse the vanilla `NitroAdjudicator` + T0.3 (rejected — ECDSA-only, no custodian/DSS participant, cleartext outcomes). Finish the `go-nitro` L2 stub (rejected — not Railgun-aware, single-key, no enforcement). Have the adjudicator natively Schnorr-verify each state (rejected — heavier, and does not solve delegate rotation vs `FixedPart` immutability). Use laconicd's CometBFT distsig transport (rejected — EVM + Nitro only, no Cosmos dependency).
 
 ## ADR-0017
-**Hub yield and swaps as channel state** · proposed · 2026-10-11 · v1.5 · amends the USDC-yield clause of ADR-0011
+**Hub yield and swaps as channel state** · accepted · 2026-10-11 · v1.5 · amends the USDC-yield clause of ADR-0011
 
 **Context.** The first hub games ([§14](./14-shielded-games-over-nitro.md)) are a WETH↔wstETH swap and Aave USDC lending. §14 sketches each as its own ForceMove app: a two-asset settlement app and a lending app that needs an on-chain rate reference for disputes. armada-nitro's E11 task already assumes a simpler shape ("option 2"), which no architecture document records. ADR-0011 defers USDC yield to v2.
 

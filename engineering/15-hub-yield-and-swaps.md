@@ -1,6 +1,6 @@
 # Hub yield and swaps as channel state
 
-design · 2026-10-11 · proposed ([ADR-0017](./09-architecture-decisions.md#adr-0017))
+design · 2026-10-11 · accepted ([ADR-0017](./09-architecture-decisions.md#adr-0017))
 
 ## What this decides
 

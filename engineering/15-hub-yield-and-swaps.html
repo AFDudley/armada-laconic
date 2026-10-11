@@ -22,7 +22,7 @@
 </nav>
 
 <h1 id="hub-yield-and-swaps-as-channel-state">Hub yield and swaps as channel state</h1>
-<p>design · 2026-10-11 · proposed (<a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a>)</p>
+<p>design · 2026-10-11 · accepted (<a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a>)</p>
 <h2 id="what-this-decides">What this decides</h2>
 <p>How a user earns yield and swaps assets with a hub over the armada-nitro rail, and which properties the contracts must enforce so that these flows are correct by construction rather than by careful operation. The rail is the armada-nitro adjudicator and hub custodian of <a href="./09-architecture-decisions.html#adr-0016">ADR-0016</a>, sequenced v1.5, so this design is v1.5 as well.</p>
 <p>The answer: <strong>yield-bearing assets are held in the channel as non-rebasing share tokens, and a swap is a co-signed reallocation of one channel state.</strong> No new ForceMove application is needed for the first hub games. The on-chain work is a small, hardening delta to the adjudicator.</p>

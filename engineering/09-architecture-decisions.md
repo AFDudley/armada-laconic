@@ -2,7 +2,7 @@
 
 arc42 §9 · **2026-09-04**
 
-Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, numbered, and status-tracked. A decided ADR is **never edited**. Instead, supersede it with a new one and mark the old record `Superseded by ADR-NNNN`. Status is one of {proposed · accepted · superseded · deprecated}.
+Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, numbered, and status-tracked. A decided ADR is **never edited**; each ADR's **Decision** is a list of numbered clauses (`D<ADR>.<clause>`), and a change is a new ADR whose clauses **supersede** specific earlier clauses, declared on the new clause as `(supersedes …)`. The current decision is read from the compiled [`09a-current-decisions.md`](./09a-current-decisions.md); the style and mechanics are recorded in [`decision-records.md`](./decision-records.md). Status is one of {proposed · accepted · withdrawn}.
 
 ## Index
 
@@ -14,17 +14,18 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 | [0004](#adr-0004) | Settle via nitro-on-railgun, not RelayAdapt | accepted |
 | [0005](#adr-0005) | Amount privacy = Design A default; fork-lite deferred | accepted |
 | [0006](#adr-0006) | Bootstrap anonymity set + Railgun onboarding bridge | accepted |
-| [0007](#adr-0007) | Venue = RFQ posted-price v1; provably-fair CLOB is v2 | accepted · amended by 0011 |
-| [0008](#adr-0008) | Transport = Waku + libp2p-noise 1:1; optional Nym IP-privacy underlay | accepted · amended 2026-09-10 |
+| [0007](#adr-0007) | Venue = RFQ posted-price v1; provably-fair CLOB is v2 | accepted |
+| [0008](#adr-0008) | Transport = Waku + libp2p-noise 1:1; optional Nym IP-privacy underlay | accepted |
 | [0009](#adr-0009) | State ingestion targets nimbus-eth1; retire plugeth | accepted |
 | [0010](#adr-0010) | Terminology conventions | accepted |
-| [0011](#adr-0011) | Market-making & LP-buffered USDC yield are out of v1 | accepted · USDC-yield clause amended by 0017 |
+| [0011](#adr-0011) | Market-making & LP-buffered USDC yield are out of v1 | accepted |
 | [0012](#adr-0012) | Delivery model: reuse-oriented incremental delivery; scopes as WBS work packages | accepted |
 | [0013](#adr-0013) | Single team; scope spans the whole Armada product; Laconic is prior art | accepted |
 | [0014](#adr-0014) | Pool + circuits are our own implementation (net-new, audit-critical) | accepted |
 | [0015](#adr-0015) | Cross-chain shielded swap = armada-nitro channels + fronting hubs | accepted · v1.5 |
 | [0016](#adr-0016) | armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only) | accepted · v1.5 |
 | [0017](#adr-0017) | Hub yield and swaps as channel state (non-rebasing share tokens, co-signed swaps) | accepted · v1.5 |
+| [0018](#adr-0018) | Decisions are clause-level records compiled to a current view | accepted |
 
 ---
 
@@ -33,29 +34,40 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Context.** A single mutable plan document was carrying four responsibilities at once — system decomposition, work breakdown, decision log, and schedule — and had been re-cut repeatedly, from workstreams to tiers to a tier/line matrix. The churn stemmed from the absence of separate, single-purpose artifacts and a stable "one model, many views" discipline.
 
-**Decision.** Adopt **arc42** (Starke/Hruschka) as the single documentation template. The system uses one item model (the §5 registry), and tiers and lines become *views/tags* rather than competing hierarchies. Decisions live here as ADRs, cross-cutting concerns in §8, and risks in §11.
+**Decision.**
+
+- **D1.1** Adopt **arc42** (Starke/Hruschka) as the single documentation template.
+- **D1.2** The system uses one item model (the §5 registry), and tiers and lines become *views/tags* rather than competing hierarchies.
+- **D1.3** Decisions live here as ADRs, cross-cutting concerns in §8, and risks in §11.
 
 **Consequences.** All engineering docs conform to the 12 arc42 sections. Building-block detail stays in the `T0..T6` docs (§5), and "lines" are expressed through solution strategy (§4) and cross-cutting concepts (§8) rather than a parallel file tree.
 
 **Alternatives.** C4/Simon Brown is diagram-centric and light on decisions and cross-cutting concerns; Views-and-Beyond/SEI is rigorous but heavyweight; and a bespoke structure is the status quo that failed.
 
 ## ADR-0002
-**Deploy our own Railgun pool (don't rent Railgun's)** · accepted · 2026-09-04 · amended by ADR-0014
+**Deploy our own Railgun pool (don't rent Railgun's)** · accepted · 2026-09-04
 
 **Context.** We need a shielded pool with our own fee policy and POI policy, plus the freedom to attach a settlement contract. The Railgun design can be reimplemented under our own control.
 
-**Decision.** Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (**T0.0**), configured with **fee = 0**, our POI allow-list, our token allow-list, and a reserved deposit/payout hook.
+**Decision.**
+
+- **D2.1** Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (**T0.0**), configured with **fee = 0**, our POI allow-list, our token allow-list, and a reserved deposit/payout hook.
 
 **Consequences.** We own upgrades and audit, and revenue comes from venue spread plus watcher metering rather than a pool skim. We do **not** modify Railgun's deployed protocol or touch their live pool; instead, a Railgun onboarding bridge (ADR-0006) imports value from their pool.
 
 **Alternatives.** Renting Railgun's live pool — which carries their ~0.25% fee, no fee or POI control, and no settlement hook — was rejected.
 
 ## ADR-0003
-**Keep Groth16; reuse Perpetual PoT Phase-1 + run our own Phase-2** · accepted · 2026-09-04 · amended by ADR-0014
+**Keep Groth16; reuse Perpetual PoT Phase-1 + run our own Phase-2** · accepted · 2026-09-04
 
 **Context.** Groth16 requires a per-circuit trusted setup. Two questions remained open: whether to run our own trusted setup, and whether to switch to Halo2 to avoid setup altogether.
 
-**Decision.** Keep **Groth16**. Reuse the community **Perpetual Powers of Tau** for Phase-1, and run **our own Phase-2 MPC** over our circuit set. Security rests on a **1-of-N honest** assumption, backed by a published transcript and a final randomness beacon (**T0.1**). Phase-2 is re-run **only** when circuits change — for example, the ADR-0005 fork-lite upgrade.
+**Decision.**
+
+- **D3.1** Keep **Groth16**.
+- **D3.2** Reuse the community **Perpetual Powers of Tau** for Phase-1, and run **our own Phase-2 MPC** over our circuit set.
+- **D3.3** Security rests on a **1-of-N honest** assumption, backed by a published transcript and a final randomness beacon (**T0.1**).
+- **D3.4** Phase-2 is re-run **only** when circuits change — for example, the ADR-0005 fork-lite upgrade.
 
 **Consequences.** There is no universal ceremony, since the expensive and risky part is inherited and vetted. Each circuit-set change costs a few days of MPC, and we take on no dependence on Railgun's specific ceremony instance. On-chain verification and mobile prover performance remain Groth16-cheap.
 
@@ -66,7 +78,10 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Context.** We need optimistic exits and arbitrary off-chain settlement games over shielded value. Railgun's native path is RelayAdapt recipes, which are governance-gated on-chain call composition.
 
-**Decision.** Build a **deposit/payout contract** (**T0.3**) that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**. The Nitro game analysis stays isolated from the Railgun privacy analysis; the two meet only at the allocation→note **boundary**.
+**Decision.**
+
+- **D4.1** Build a **deposit/payout contract** (**T0.3**) that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**.
+- **D4.2** The Nitro game analysis stays isolated from the Railgun privacy analysis; the two meet only at the allocation→note **boundary**.
 
 **Consequences.** We gain optimistic exits and arbitrary ForceMove games with **no new cryptography** and without governance-gated adapters. RelayAdapt is used only for the venue's atomic hedge leg (T4.2), never for settlement. The go-nitro maturity gaps — multi-asset outcomes, dispute wiring, and watchtower response — become our long poles (§11).
 
@@ -77,7 +92,11 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Context.** In the base construction, amounts are public at the deposit/payout boundary and on force-close. Hiding amounts in-play requires a circuit change.
 
-**Decision.** Ship **Design A**, in which amounts are public only at the transparent boundary, as the default. **Native channelized commitment** ("fork-lite", **T0.6**), which provides amount-privacy-during-play, is an **optional Phase-4 upgrade** rather than part of the v1 spine. **Fork-full** — shielded ForceMove, research-grade — is **excluded** unless separately greenlit.
+**Decision.**
+
+- **D5.1** Ship **Design A**, in which amounts are public only at the transparent boundary, as the default.
+- **D5.2** **Native channelized commitment** ("fork-lite", **T0.6**), which provides amount-privacy-during-play, is an **optional Phase-4 upgrade** rather than part of the v1 spine.
+- **D5.3** **Fork-full** — shielded ForceMove, research-grade — is **excluded** unless separately greenlit.
 
 **Consequences.** v1 needs zero new crypto. Fork-lite, if greenlit, changes circuits and therefore re-runs Phase-2 (ADR-0003), requires a fresh audit, and imposes heavier mobile proving.
 
@@ -88,29 +107,40 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Context.** A fresh pool's anonymity set starts near zero, which is the biggest non-engineering risk. The request was to have our own liquidity while also accepting Railgun's.
 
-**Decision.** **Bootstrap our own crowd** through incentives, our own market-making capital, and an LP flywheel, **plus a Railgun onboarding bridge**: a user unshields from Railgun, then shields into our pool in one public boundary hop. **Cross-pool membership proofs**, which would inherit Railgun's crowd, are deferred and optional, since they need a Phase-2 re-run and trust Railgun's root.
+**Decision.**
+
+- **D6.1** **Bootstrap our own crowd** through incentives, our own market-making capital, and an LP flywheel, **plus a Railgun onboarding bridge**: a user unshields from Railgun, then shields into our pool in one public boundary hop.
+- **D6.2** **Cross-pool membership proofs**, which would inherit Railgun's crowd, are deferred and optional, since they need a Phase-2 re-run and trust Railgun's root.
 
 **Consequences.** This gives day-one dual liquidity. **Liquidity import ≠ anonymity-set inheritance**: a Railgun note cannot be spent or nullified in our contract, so "accept Railgun's" means the unshield→shield hop, not native ingestion. Privacy compounds with volume (**T0.7**).
 
 **Alternatives.** Cross-pool proofs in v1 are deferred. Renting Railgun's pool for its set was rejected in ADR-0002.
 
 ## ADR-0007
-**Venue = RFQ posted-price v1; provably-fair CLOB is v2** · accepted · 2026-09-04 · amended by ADR-0011
+**Venue = RFQ posted-price v1; provably-fair CLOB is v2** · accepted · 2026-09-04
 
 **Context.** Armada needs clearing, not a service-provider marketplace. Fair-ordering machinery is expensive.
 
-**Decision.** The v1 venue is an **RFQ posted-price dealer market** (**T4**): Armada posts bid/ask on both sides on a take-it-or-leave-it basis and reposts if wrong, driven initially by a single `priceSetter` wallet that gives way to governance later. A **provably-fair CLOB** — a commit-reveal sequencer plus DSS, ex_net-grade — is a **v2** per-venue opt-in (**T3 + T4.6**).
+**Decision.**
+
+- **D7.1** The v1 venue is an **RFQ posted-price dealer market** (**T4**): Armada posts bid/ask on both sides on a take-it-or-leave-it basis and reposts if wrong, driven initially by a single `priceSetter` wallet that gives way to governance later.
+- **D7.2** A **provably-fair CLOB** — a commit-reveal sequencer plus DSS, ex_net-grade — is a **v2** per-venue opt-in (**T3 + T4.6**).
 
 **Consequences.** A posted price has nothing to front-run, so v1 removes the entire ordering problem. ex_net becomes a special case — a DSS-federated venue that also proves fair ordering — layered on the same spine rather than a rewrite.
 
 **Alternatives.** A CLOB/matcher in v1 was rejected: it is months of work requiring a DSS and sequencer, and it is not needed to clear.
 
 ## ADR-0008
-**Transport = Waku pub/sub + libp2p-noise 1:1; optional Nym underlay** · accepted · 2026-09-04 · amended 2026-09-10 (optional Nym underlay; unified across all services)
+**Transport = Waku pub/sub + libp2p-noise 1:1; optional Nym underlay** · accepted · 2026-09-04
 
 **Context.** The system needs both broadcast, for feed and quote discovery, and low-latency point-to-point exchange, for vouchers and quotes, running on servers, browsers, and phones.
 
-**Decision.** Use **Waku pub/sub** for gossip and discovery, and **libp2p-noise direct streams** for the 1:1 hot loop (**T2.3**). This is **one unified transport shared by every Armada service** — watcher feeds, Nitro channels (including the cross-chain swap hubs and their DSS signing coordination), and the wallet — never a per-service bespoke transport. IP/metadata privacy is an **optional Nym mixnet underlay**: uniform, opt-in, off by default for latency and on for maximum privacy, sitting beneath the same transport everywhere. Mobile production uses **native gomobile** modules — go-waku plus go-libp2p — with an interim WebView browser-stack (**T6.5**).
+**Decision.**
+
+- **D8.1** Use **Waku pub/sub** for gossip and discovery, and **libp2p-noise direct streams** for the 1:1 hot loop (**T2.3**).
+- **D8.2** This is **one unified transport shared by every Armada service** — watcher feeds, Nitro channels (including the cross-chain swap hubs and their DSS signing coordination), and the wallet — never a per-service bespoke transport.
+- **D8.3** IP/metadata privacy is an **optional Nym mixnet underlay**: uniform, opt-in, off by default for latency and on for maximum privacy, sitting beneath the same transport everywhere.
+- **D8.4** Mobile production uses **native gomobile** modules — go-waku plus go-libp2p — with an interim WebView browser-stack (**T6.5**).
 
 **Consequences.** This reuses the transport Railgun's broadcaster network already speaks and unifies transport across all services, so no service (the swap hubs included) rolls its own. Noise provides encryption and peer-id authentication only — **not IP privacy on its own**; IP/metadata privacy is the **optional Nym underlay** (opt-in, uniform, latency cost), not a separate per-feature transport. Native mobile libp2p is unbuilt (§11).
 
@@ -121,7 +151,10 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Context.** Watchers need fresh, proof-carrying Ethereum state. Our historical plugeth state-diff fork is badly out of date, and EIP-1186 alone is insufficient for what we emit.
 
-**Decision.** Target **nimbus-eth1** — stateless/witness execution plus the Aristo state DB — as the state-diff source, mapped into IPLD for proof-carrying diffs (**T1**). We build only enough local cache to compute what we consume, not a full archive EL.
+**Decision.**
+
+- **D9.1** Target **nimbus-eth1** — stateless/witness execution plus the Aristo state DB — as the state-diff source, mapped into IPLD for proof-carrying diffs (**T1**).
+- **D9.2** We build only enough local cache to compute what we consume, not a full archive EL.
 
 **Consequences.** T1 is the v1 long pole, since the nimbus stateless path is upstream-in-progress. It reuses the cerc-io ipld-eth lineage for codecs and backfill.
 
@@ -132,23 +165,29 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Context.** Several terms collided with established meanings or with Railgun/Ethereum vocabulary, causing repeated confusion.
 
-**Decision.** Enforce:
-- **deposit/payout contract** for T0.3 — **never "adapter."**
-- **RelayAdapt / Adapt modules / Cookbook** only for **Railgun's own** value-moving recipe; **Adapters** (capital-A tier) only for **Armada's T5**.
-- **boundary** (or interface), **never "seam"** (collides with Feathers' testability term).
-- **tier** (T0–T6), **never "layer"** (collides with Ethereum L1/L2).
-- **venue / clearing**, **never "marketplace."**
+**Decision.**
+
+- **D10.1** Enforce:
+  - **deposit/payout contract** for T0.3 — **never "adapter."**
+  - **RelayAdapt / Adapt modules / Cookbook** only for **Railgun's own** value-moving recipe; **Adapters** (capital-A tier) only for **Armada's T5**.
+  - **boundary** (or interface), **never "seam"** (collides with Feathers' testability term).
+  - **tier** (T0–T6), **never "layer"** (collides with Ethereum L1/L2).
+  - **venue / clearing**, **never "marketplace."**
 
 **Consequences.** Docs are grep-clean for the banned terms, and cross-references use `T#.#` ids.
 
 **Alternatives.** Ad-hoc wording is the status quo that caused the confusion.
 
 ## ADR-0011
-**Market-making and LP-buffered USDC yield are out of v1** · accepted · 2026-09-05 · refines ADR-0007
+**Market-making and LP-buffered USDC yield are out of v1** · accepted · 2026-09-05
 
 **Context.** ADR-0007 fixed the v1 venue as a posted-price dealer market but left the dealer's *operation* implicit. An automated market-making solver — cross-venue internalization, flash-loan hedging, and Aave rebalancing (**T4.2**) — and the LP-buffered USDC-yield rail that rides it (**T4.5**) carry the venue's real operational complexity and risk: hedge MEV, LP cold-start, and the two timing clocks. None of it is needed to demonstrate private exchange and clearing.
 
-**Decision.** v1 exchange is filled from a **simple pre-funded venue inventory** — an Armada-operated account holding both sides of a pair, filling at the posted price and topped up out-of-band. **No automated market-making** runs in v1: no internalization, no flash-loan hedge, no Aave rebalance loop. The **venue solver (T4.2)** and the **LP-buffered USDC-yield rail (T4.5)** move to **v2**. Consequently v1 yield is **ETH/wstETH only** (held as a note, T4.4), and **USDC yield defers to v2**.
+**Decision.**
+
+- **D11.1** v1 exchange is filled from a **simple pre-funded venue inventory** — an Armada-operated account holding both sides of a pair, filling at the posted price and topped up out-of-band.
+- **D11.2** **No automated market-making** runs in v1: no internalization, no flash-loan hedge, no Aave rebalance loop. The **venue solver (T4.2)** and the **LP-buffered USDC-yield rail (T4.5)** move to **v2**.
+- **D11.3** Consequently v1 yield is **ETH/wstETH only** (held as a note, T4.4), and **USDC yield defers to v2**.
 
 **Consequences.** The net-new v1 venue surface shrinks to the posted-price contract (T4.0), the quote/settle app (T4.1), and the fee-split wiring (T4.3), all settling over reused go-nitro clearing. The yield→USDC swap still ships, filled from static inventory rather than a hedged maker. The hedge-MEV and LP-cold-start risks become v2 concerns (§11). v1 capacity is bounded by the static inventory and refilled manually; running dry means quotes are withdrawn, never a custody risk.
 
@@ -160,33 +199,40 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Context.** Requirements are given (the Armada docs), most components already exist (Railgun, go-nitro, watcher-ts, the wallet), and the key architecture choices are already made and frozen as ADRs 0002–0011. The remaining job is to specify and integrate **incrementally** without re-opening settled decisions or drifting across adjacent scopes. This is the classic shape of a **reuse-oriented, requirements-given programme** — not greenfield design, and not agile requirements-discovery.
 
 **Decision.** Adopt an operating model with five rules, each drawn from established practice:
-1. **Reuse-oriented specs** (Sommerville reuse-oriented SE; CBSE). Each spec states **interfaces + the delta (config + net-new glue) + acceptance**, and *cites* reused components at pinned commits rather than re-documenting their internals.
-2. **WBS of work packages** (PMI, 100% rule; MECE). Decompose the programme into deliverable-oriented work packages — **A** nitro-on-railgun, **B** watcher parties, **C** yield, **D** client — each a system with a context boundary (arc42 §3) and an interface-control contract (ICD) to its siblings (INCOSE; ISO/IEC 15288). See [`00-work-packages.md`](./00-work-packages.md).
-3. **Fixed architecture baseline.** ADRs 0002–0011 are the baseline; specs build on them and never relitigate. Change means *superseding* an ADR, never editing a decided one.
-4. **Traceability** (ISO/IEC/IEEE 29148). Every requirement traces up to an Armada requirement and down to a work package, and is written to the 29148 bar: unambiguous, verifiable, complete, traceable.
-5. **Risk-first increments** (Boehm spiral / Boehm–Lane ICSM; McConnell staged delivery). Deliver against the baseline in increments sequenced by risk; one **walking skeleton** retires integration risk first, then each work package deepens; the long poles (T1 ingestion, mobile transport, go-nitro maturity) get spikes first.
+
+- **D12.1** **Reuse-oriented specs** (Sommerville reuse-oriented SE; CBSE). Each spec states **interfaces + the delta (config + net-new glue) + acceptance**, and *cites* reused components at pinned commits rather than re-documenting their internals.
+- **D12.2** **WBS of work packages** (PMI, 100% rule; MECE). Decompose the programme into deliverable-oriented work packages — **A** nitro-on-railgun, **B** watcher parties, **C** yield, **D** client — each a system with a context boundary (arc42 §3) and an interface-control contract (ICD) to its siblings (INCOSE; ISO/IEC 15288). See [`00-work-packages.md`](./00-work-packages.md).
+- **D12.3** **Fixed architecture baseline.** ADRs 0002–0011 are the baseline; specs build on them and never relitigate. Change means *superseding* an ADR, never editing a decided one.
+- **D12.4** **Traceability** (ISO/IEC/IEEE 29148). Every requirement traces up to an Armada requirement and down to a work package, and is written to the 29148 bar: unambiguous, verifiable, complete, traceable.
+- **D12.5** **Risk-first increments** (Boehm spiral / Boehm–Lane ICSM; McConnell staged delivery). Deliver against the baseline in increments sequenced by risk; one **walking skeleton** retires integration risk first, then each work package deepens; the long poles (T1 ingestion, mobile transport, go-nitro maturity) get spikes first.
 
 **Consequences.** Tiers (T0–T6) remain the shared **building-block vocabulary** (the product breakdown); work packages **own** subsets of tier-items and **consume** the rest across ICDs. The arc42 docs become per-work-package architecture descriptions plus a program context. Scope drift is structurally prevented: a work package may touch only its own boundary and its own deltas — everything else is a cited baseline decision or an external interface.
 
 **Alternatives.** One monolithic plan across all tiers (rejected — it caused repeated re-cutting and scope drift). Pure agile backlog discovery (rejected — requirements are given, not to be discovered). Greenfield design docs (rejected — most components exist; the work is integration).
 
 ## ADR-0013
-**Single engineering team; scope spans the whole Armada product; Laconic is prior art** · accepted · 2026-09-05 · amends ADR-0012 and the §3 build-ownership boundary
+**Single engineering team; scope spans the whole Armada product; Laconic is prior art** · accepted · 2026-09-05
 
 **Context.** Earlier docs drew an *Armada-builds-vs-Laconic-builds* ownership boundary (§3; T5 marked "out of Laconic build scope"; the ADR-0012 / §0 WBS treated Armada's Adapters as external). That boundary no longer holds. This is **one engineering team** building **Armada — a Railgun-based privacy product for USDC** (confirmed by Armada's own thesis and docs: Railgun ZK circuits (BN254/Groth16), a shielded USDC pool, Private Proofs of Innocence, non-custodial). **Laconic's existing work — nitro integration, watchers, wallet, chain-signatures, ingestion — is prior art the team reuses**, not a separate vendor's deliverable.
 
-**Decision.** Scope **both** the Armada-side and Laconic-side tasks as one programme. The WBS covers the whole product, including what was "T5 Armada Adapters" (CCTP, Aave-v4 yield, Swaps) — now in-scope work, not external systems. The governing framing is **"build Armada on Railgun, reusing Laconic prior art,"** not "Laconic supplies a substrate to Armada."
+**Decision.**
+
+- **D13.1** Scope **both** the Armada-side and Laconic-side tasks as one programme. The WBS covers the whole product, including what was "T5 Armada Adapters" (CCTP, Aave-v4 yield, Swaps) — now in-scope work, not external systems.
+- **D13.2** The governing framing is **"build Armada on Railgun, reusing Laconic prior art,"** not "Laconic supplies a substrate to Armada."
 
 **Consequences.** §1 purpose reframes from *Laconic work to satisfy Armada requirements* to *the team's work to build Armada, a Railgun-based product, on Laconic prior art*. §3's build-ownership boundary becomes a **reuse boundary** (what already exists vs what is net-new), not an org boundary. T5's items enter the WBS; "external systems" shrinks to genuine third parties (Ethereum L1, Circle/CCTP, Aave, the Railgun design we reimplement, nimbus-eth1 upstream, the Waku network). The architecture baseline (ADRs 0002–0011) is unchanged — those technical choices stand.
 
 **Alternatives.** Keep the two-org boundary (rejected — it's one team; the boundary created artificial "out of scope" gaps like T5 and mis-framed the yield/adapter work).
 
 ## ADR-0014
-**Pool + circuits are our own implementation (net-new, audit-critical)** · accepted · 2026-09-05 · amends ADR-0002, ADR-0003
+**Pool + circuits are our own implementation (net-new, audit-critical)** · accepted · 2026-09-05
 
 **Context.** The A deep dive ([A.1](A-nitro-on-railgun/A.1-reuse-inventory.md)) established that the shielded pool and JoinSplit circuits must be authored by us rather than reused as third-party binaries: they carry our fee=0 configuration, our POI policy, and the settlement/deposit-payout hook, and we own their upgrade and audit. So ADR-0002 (own pool) and ADR-0003 (own Phase-2) are executed as **our own implementation of the Railgun design**, not a binary reuse. `go-nitro`/`ts-nitro` remain reused as-is; Railgun's `engine`/`cookbook` serve as a behavioral reference.
 
-**Decision.** Implement the **shielded-pool contracts** (T0.0) and the **JoinSplit circuits** (T0.1) ourselves — independently authored, spec-compatible with the Railgun design the deep dive documents (A.1.1/A.1.2). Our engineers own this build. Everything else stands: reuse `go-nitro` (T0.2), `ts-nitro` (T6.2), and `engine`/`cookbook` as reference; reuse the community Perpetual PoT Phase-1 and run our own Phase-2 **over our own circuits** (ADR-0003 otherwise unchanged); keep Groth16.
+**Decision.**
+
+- **D14.1** Implement the **shielded-pool contracts** (T0.0) and the **JoinSplit circuits** (T0.1) ourselves — independently authored, spec-compatible with the Railgun design the deep dive documents (A.1.1/A.1.2). Our engineers own this build.
+- **D14.2** Everything else stands: reuse `go-nitro` (T0.2), `ts-nitro` (T6.2), and `engine`/`cookbook` as reference; reuse the community Perpetual PoT Phase-1 and run our own Phase-2 **over our own circuits** (ADR-0003 otherwise unchanged); keep Groth16.
 
 **Consequences.** T0.0 and T0.1 are **net-new, audit-critical crypto-engineering** — of a well-understood design that the deep dive de-risks by pinning the exact behavior and format to match. The "integration, not new cryptography" thesis (ADR-0012, §4) holds for the **settlement rail** (T0.2 adjudicator + T0.3 deposit/payout + T6.x) but **not** for the pool/circuits. **A.1 (the reuse inventory) doubles as the reference spec** the implementation follows. T0.6 (native commitment) is a change to our own circuits. Note format may match Railgun (to ease the T0.7 onboarding bridge) or diverge — our choice; our anonymity set is separate regardless.
 
@@ -197,12 +243,14 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Context.** Users hold shielded value in an Armada pool on each chain and want to swap or move value **across** chains privately and self-custodially (general cross-chain, independent of CCTP). A naive design — unshield on X, bridge, shield on Y — produces a **public matched pair** (equal/related amount, bounded timing) that correlates the two legs and collapses the anonymity set. The audited `go-nitro` "nitro bridge" is a single-operator, L1-anchored mirrored-channel construction with a **stubbed L2 adjudicator** and no DSS — neither private nor trust-minimized as written (`nitro-bridge-audit.md`).
 
-**Decision.** Clear cross-chain swaps as **Nitro state channels funded and settled from shielded notes, routed through a small set of bonded cross-chain hubs that *front* from standing inventory.** Key choices:
-- **The pool is the privacy anchor, not the channel.** Value enters already shielded, on fresh rotating keys, over the unified transport (ADR-0008, optional Nym underlay). Per-swap settlement is **off-chain**, so there is no per-user on-chain event to correlate — no Lightning-style routing privacy (onion routing / PTLC) is needed.
-- **Fronting is the core mechanism.** A hub with inventory on both chains gives the user the destination asset instantly from standing inventory; the user's input joins the hub's inventory; the hub squares its net cross-chain position later. Fronting supplies immediacy, the hub's spread, and the temporal decoupling that severs the per-user cross-chain link.
-- **Atomicity via an off-chain hash-locked swap** (Nitro's `HashLockedSwap` pattern; not PTLC): it makes the fronted advance atomic — the hub is guaranteed its inbound leg the instant the user receives the outbound. The hash lock is off-chain and visible only to counterparties already on both legs, so it is not a privacy leak here.
-- **Hub rebalancing, inventory sizing, and pricing are out of protocol** — operator business logic, at most a reference open-source daemon, never a wallet concern.
-- **Hub trust is liveness-only**, via user unilateral exit (ADR-0004 force-close, realized by the new adjudicator in ADR-0016).
+**Decision.**
+
+- **D15.1** Clear cross-chain swaps as **Nitro state channels funded and settled from shielded notes, routed through a small set of bonded cross-chain hubs that *front* from standing inventory.** Key choices:
+  - **The pool is the privacy anchor, not the channel.** Value enters already shielded, on fresh rotating keys, over the unified transport (ADR-0008, optional Nym underlay). Per-swap settlement is **off-chain**, so there is no per-user on-chain event to correlate — no Lightning-style routing privacy (onion routing / PTLC) is needed.
+  - **Fronting is the core mechanism.** A hub with inventory on both chains gives the user the destination asset instantly from standing inventory; the user's input joins the hub's inventory; the hub squares its net cross-chain position later. Fronting supplies immediacy, the hub's spread, and the temporal decoupling that severs the per-user cross-chain link.
+  - **Atomicity via an off-chain hash-locked swap** (Nitro's `HashLockedSwap` pattern; not PTLC): it makes the fronted advance atomic — the hub is guaranteed its inbound leg the instant the user receives the outbound. The hash lock is off-chain and visible only to counterparties already on both legs, so it is not a privacy leak here.
+  - **Hub rebalancing, inventory sizing, and pricing are out of protocol** — operator business logic, at most a reference open-source daemon, never a wallet concern.
+  - **Hub trust is liveness-only**, via user unilateral exit (ADR-0004 force-close, realized by the new adjudicator in ADR-0016).
 
 **Consequences.** A net-new capability sequenced **v1.5** — after v1, before the v2 matcher/ordering/bonded-federation work; a small (~10–12-point) increment on the finished v1 rail with no hard v2 dependency. Requires an Armada pool on every participating chain and depends on ADR-0016. Full amount-privacy on a *contested* force-close needs T0.6 (deferred, ADR-0005). Detailed construction in `shielded-nitro-bridge-design.md`.
 
@@ -213,19 +261,42 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Context.** Cross-chain shielded swaps (ADR-0015) need on-chain enforcement of channel outcomes on **every** participating chain, and each hub must be a threshold-key (DSS) principal, not a single EOA. Two audited facts constrain the design: `go-nitro`'s ForceMove verifies state signatures by hard ECDSA `ecrecover` against fixed participant addresses — **no pluggable verifier**; and `chain-signatures` is a threshold **Schnorr** DSS. The laconic integration that would bind the DSS to Nitro is declared-but-unbuilt and CometBFT-coupled.
 
-**Decision.** Build an **armada-nitro adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains. The DSS is **EVM + Nitro only, no laconicd**: reuse only `chain-signatures`' threshold-Schnorr crypto + kyber DKG/signing *logic*, verified on-chain by the custodian (`SchnorrSECP256K1.sol`); do **not** use laconicd's CometBFT vote-extension transport — signing coordination rides the unified transport (ADR-0008). The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.
+**Decision.**
+
+- **D16.1** Build an **armada-nitro adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains.
+- **D16.2** The DSS is **EVM + Nitro only, no laconicd**: reuse only `chain-signatures`' threshold-Schnorr crypto + kyber DKG/signing *logic*, verified on-chain by the custodian (`SchnorrSECP256K1.sol`); do **not** use laconicd's CometBFT vote-extension transport — signing coordination rides the unified transport (ADR-0008).
+- **D16.3** The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.
 
 **Consequences.** Two small net-new contracts (the adjudicator delta and the custodian) on top of reused ForceMove, threshold-Schnorr, and our own pool implementation — the weight is **audit, not code**. Deploying the adjudicator per chain gives each leg of the hash-locked swap real enforcement (fixing the audited L2-stub gap) and makes unilateral exit real, so hub trust stays liveness-only. Bonding/slashing (T0.4/T2.4) is the multi-entity economic layer (v2). Both DSS codebases are self-declared **unaudited**. Post-v1; depends on ADR-0015. Detail: `shielded-nitro-bridge-design.md`, `nitro-bridge-audit.md`.
 
 **Alternatives.** Reuse the vanilla `NitroAdjudicator` + T0.3 (rejected — ECDSA-only, no custodian/DSS participant, cleartext outcomes). Finish the `go-nitro` L2 stub (rejected — not Railgun-aware, single-key, no enforcement). Have the adjudicator natively Schnorr-verify each state (rejected — heavier, and does not solve delegate rotation vs `FixedPart` immutability). Use laconicd's CometBFT distsig transport (rejected — EVM + Nitro only, no Cosmos dependency).
 
 ## ADR-0017
-**Hub yield and swaps as channel state** · accepted · 2026-10-11 · v1.5 · amends the USDC-yield clause of ADR-0011
+**Hub yield and swaps as channel state** · accepted · 2026-10-11 · v1.5
 
 **Context.** The first hub games ([§14](./14-shielded-games-over-nitro.md)) are a WETH↔wstETH swap and Aave USDC lending. §14 sketches each as its own ForceMove app: a two-asset settlement app and a lending app that needs an on-chain rate reference for disputes. armada-nitro's E11 task already assumes a simpler shape ("option 2"), which no architecture document records. ADR-0011 defers USDC yield to v2.
 
-**Decision.** On the armada-nitro rail (ADR-0016), yield-bearing assets are held in hub channels as **non-rebasing share tokens** (`wstETH`; `waUSDC`, Aave's ERC-4626 StataToken over the USDC reserve), and a **swap is one co-signed reallocation** of a channel state under `ConsensusApp`. Yield accrues to the share holder with no contract tracking interest. Channel amounts are token units; exchange rates are read off-chain at quote time and never on the settlement path. The user signs a swap state first and the hub countersigns, so the quoting hub holds the free option. The adjudicator gains an immutable asset allow-list, balance-delta accounting on `deposit`, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: [15](./15-hub-yield-and-swaps.md).
+**Decision.**
+
+- **D17.1** (supersedes D11.3) On the armada-nitro rail (ADR-0016), yield-bearing assets are held in hub channels as **non-rebasing share tokens** (`wstETH`; `waUSDC`, Aave's ERC-4626 StataToken over the USDC reserve), and a **swap is one co-signed reallocation** of a channel state under `ConsensusApp`.
+- **D17.2** Yield accrues to the share holder with no contract tracking interest.
+- **D17.3** Channel amounts are token units; exchange rates are read off-chain at quote time and never on the settlement path.
+- **D17.4** The user signs a swap state first and the hub countersigns, so the quoting hub holds the free option.
+- **D17.5** The adjudicator gains an immutable asset allow-list, balance-delta accounting on `deposit`, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: [15](./15-hub-yield-and-swaps.md).
 
 **Consequences.** USDC yield arrives with the v1.5 hub rail instead of v2, as a held asset rather than an LP-buffered rail (T4.5 stays v2). No new ForceMove app for the first games; the contract work is a hardening delta to the adjudicator. Borrowing needs liquidation and a price, so it stays a v2 app. The hub's Aave deposits and redemptions are its own inventory management, outside any channel, so Aave liquidity never conditions a user's exit. The fixturenet and E11 use Aave v3's StataToken; the Aave-v4 adapter of the work-package C plan would supply the same ERC-4626 shape.
 
 **Alternatives.** One ForceMove app per game, as §14 first sketched (rejected for the first games: two net-new audited apps and an on-chain rate reference, for flows that need neither when both parties sign). Rebasing assets (`stETH`, `aUSDC`) as channel assets (rejected: balances drift away from fixed holdings, breaking per-asset solvency). A governed asset allow-list (deferred: keeps governance off the settlement path while the asset set is four tokens).
+
+## ADR-0018
+**Decisions are clause-level records compiled to a current view** · accepted · 2026-10-11
+
+**Context.** The ADR log is append-only and a decided ADR is never edited, so the *current* decision had to be reconstructed by replaying every later ADR that touched an earlier one — and nothing checked the replay. ADR-0011 still reads "USDC yield defers to v2" after ADR-0017 changed it; only its index row hinted otherwise. The remedy is to give each decision a clause ID, declare supersession on the new clause, and compile the live view. Style and mechanics — and the alternatives weighed — are recorded in [`decision-records.md`](./decision-records.md).
+
+**Decision.**
+
+- **D18.1** (supersedes D12.3) The accepted ADRs remain the **fixed architecture baseline**; specs build on them and never relitigate, and a decided ADR is **never edited**. Each ADR's **Decision** is a list of numbered clauses (`D<ADR>.<clause>`); a change is a new ADR whose clauses **supersede** specific earlier clauses, declared on the new clause as `(supersedes …)` and restating whatever of the superseded clause still holds. The current decision is read from the compiled [`09a-current-decisions.md`](./09a-current-decisions.md) — generated from this file by `tools/compile-decisions.py`, never hand-edited — not by replaying the log, and a pre-commit `--check` gate keeps that page and these clause/supersession rules consistent.
+
+**Consequences.** The current spec is one generated page, correct by construction; authors write only new clauses and name what they replace, never editing old ADRs or hunting for every restatement. Status is one of {proposed · accepted · withdrawn}; only accepted ADRs contribute live clauses and only their supersessions apply, with a proposed ADR's supersessions reported as pending. Pointer prose ("amended by", "amends") leaves the index and status lines, since the `(supersedes …)` markers are the single source.
+
+**Alternatives.** Editing ADRs in place with git as history (rejected — weakens the log and makes review a diff of decided text); a hand-maintained current-decisions page (rejected — an unchecked third copy that drifts); whole-ADR supersession (rejected — most changes replace one clause, not the whole decision). See [`decision-records.md`](./decision-records.md).

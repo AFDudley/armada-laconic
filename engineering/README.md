@@ -17,7 +17,9 @@ The documentation is organized according to **[arc42](https://arc42.org)** (Star
 | 6 | [Runtime View](./06-runtime-view.md) | swap, deposit→Nitro→payout, challenge/watchtower flows |
 | 7 | [Deployment View](./07-deployment-view.md) | watcher parties (browser/mobile/server peers), relays, fixturenet |
 | 8 | [Cross-cutting Concepts](./08-crosscutting-concepts.md) | privacy, settlement, transport, metering, identity, trusted setup |
-| 9 | [Architecture Decisions](./09-architecture-decisions.md) | ADRs 0001–0016 |
+| 9 | [Architecture Decisions](./09-architecture-decisions.md) | ADRs 0001–0018; append-only log with clause-level supersession |
+| 9a | [Current Decisions](./09a-current-decisions.md) | **generated** live view: every accepted ADR's live clauses + the supersession table ([`compile-decisions.py`](../tools/compile-decisions.py)) |
+| 9· | [Decision records](./decision-records.md) | how ADRs are written, superseded, and compiled (style + mechanics) |
 | 10 | [Quality Requirements](./10-quality-requirements.md) | non-custody, read-time privacy, latency, force-closability |
 | 11 | [Risks & Technical Debt](./11-risks-and-technical-debt.md) | cold-start, go-nitro maturity, ingestion long pole, mobile transport |
 | 12 | [Glossary](../glossary.md) | canonical `glossary.md` (rendered to `../glossary.html`); terms & collision resolutions |

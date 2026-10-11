@@ -1,0 +1,12 @@
+# Keeps the compiled current-decisions view (engineering/09a-current-decisions.md)
+# consistent with the ADR log (engineering/09-architecture-decisions.md).
+# Install once with: pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: compile-decisions-check
+        name: architecture decisions compile --check
+        entry: python3 tools/compile-decisions.py --check
+        language: system
+        pass_filenames: false
+        files: ^engineering/09a?-.*\.md$

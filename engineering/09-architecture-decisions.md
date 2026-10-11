@@ -18,12 +18,13 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 | [0008](#adr-0008) | Transport = Waku + libp2p-noise 1:1; optional Nym IP-privacy underlay | accepted · amended 2026-09-10 |
 | [0009](#adr-0009) | State ingestion targets nimbus-eth1; retire plugeth | accepted |
 | [0010](#adr-0010) | Terminology conventions | accepted |
-| [0011](#adr-0011) | Market-making & LP-buffered USDC yield are out of v1 | accepted |
+| [0011](#adr-0011) | Market-making & LP-buffered USDC yield are out of v1 | accepted · USDC-yield clause amended by 0017 (proposed) |
 | [0012](#adr-0012) | Delivery model: reuse-oriented incremental delivery; scopes as WBS work packages | accepted |
 | [0013](#adr-0013) | Single team; scope spans the whole Armada product; Laconic is prior art | accepted |
 | [0014](#adr-0014) | Pool + circuits are our own implementation (net-new, audit-critical) | accepted |
 | [0015](#adr-0015) | Cross-chain shielded swap = armada-nitro channels + fronting hubs | accepted · v1.5 |
 | [0016](#adr-0016) | armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only) | accepted · v1.5 |
+| [0017](#adr-0017) | Hub yield and swaps as channel state (non-rebasing share tokens, co-signed swaps) | proposed · v1.5 |
 
 ---
 
@@ -217,3 +218,14 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Consequences.** Two small net-new contracts (the adjudicator delta and the custodian) on top of reused ForceMove, threshold-Schnorr, and our own pool implementation — the weight is **audit, not code**. Deploying the adjudicator per chain gives each leg of the hash-locked swap real enforcement (fixing the audited L2-stub gap) and makes unilateral exit real, so hub trust stays liveness-only. Bonding/slashing (T0.4/T2.4) is the multi-entity economic layer (v2). Both DSS codebases are self-declared **unaudited**. Post-v1; depends on ADR-0015. Detail: `shielded-nitro-bridge-design.md`, `nitro-bridge-audit.md`.
 
 **Alternatives.** Reuse the vanilla `NitroAdjudicator` + T0.3 (rejected — ECDSA-only, no custodian/DSS participant, cleartext outcomes). Finish the `go-nitro` L2 stub (rejected — not Railgun-aware, single-key, no enforcement). Have the adjudicator natively Schnorr-verify each state (rejected — heavier, and does not solve delegate rotation vs `FixedPart` immutability). Use laconicd's CometBFT distsig transport (rejected — EVM + Nitro only, no Cosmos dependency).
+
+## ADR-0017
+**Hub yield and swaps as channel state** · proposed · 2026-10-11 · v1.5 · amends the USDC-yield clause of ADR-0011
+
+**Context.** The first hub games ([§14](./14-shielded-games-over-nitro.md)) are a WETH↔wstETH swap and Aave USDC lending. §14 sketches each as its own ForceMove app: a two-asset settlement app and a lending app that needs an on-chain rate reference for disputes. armada-nitro's E11 task already assumes a simpler shape ("option 2"), which no architecture document records. ADR-0011 defers USDC yield to v2.
+
+**Decision.** On the armada-nitro rail (ADR-0016), yield-bearing assets are held in hub channels as **non-rebasing share tokens** (`wstETH`; `waUSDC`, Aave's ERC-4626 StataToken over the USDC reserve), and a **swap is one co-signed reallocation** of a channel state under `ConsensusApp`. Yield accrues to the share holder with no contract tracking interest. Channel amounts are token units; exchange rates are read off-chain at quote time and never on the settlement path. The user signs a swap state first and the hub countersigns, so the quoting hub holds the free option. The adjudicator gains an immutable asset allow-list, balance-delta accounting on `deposit`, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: [15](./15-hub-yield-and-swaps.md).
+
+**Consequences.** USDC yield arrives with the v1.5 hub rail instead of v2, as a held asset rather than an LP-buffered rail (T4.5 stays v2). No new ForceMove app for the first games; the contract work is a hardening delta to the adjudicator. Borrowing needs liquidation and a price, so it stays a v2 app. The hub's Aave deposits and redemptions are its own inventory management, outside any channel, so Aave liquidity never conditions a user's exit. The fixturenet and E11 use Aave v3's StataToken; the Aave-v4 adapter of the work-package C plan would supply the same ERC-4626 shape.
+
+**Alternatives.** One ForceMove app per game, as §14 first sketched (rejected for the first games: two net-new audited apps and an on-chain rate reference, for flows that need neither when both parties sign). Rebasing assets (`stETH`, `aUSDC`) as channel assets (rejected: balances drift away from fixed holdings, breaking per-asset solvency). A governed asset allow-list (deferred: keeps governance off the settlement path while the asset set is four tokens).

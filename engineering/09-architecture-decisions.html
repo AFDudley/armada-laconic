@@ -87,7 +87,7 @@
 <tr>
 <td><a href="#adr-0011">0011</a></td>
 <td>Market-making &amp; LP-buffered USDC yield are out of v1</td>
-<td>accepted</td>
+<td>accepted · USDC-yield clause amended by 0017 (proposed)</td>
 </tr>
 <tr>
 <td><a href="#adr-0012">0012</a></td>
@@ -113,6 +113,11 @@
 <td><a href="#adr-0016">0016</a></td>
 <td>armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only)</td>
 <td>accepted · v1.5</td>
+</tr>
+<tr>
+<td><a href="#adr-0017">0017</a></td>
+<td>Hub yield and swaps as channel state (non-rebasing share tokens, co-signed swaps)</td>
+<td>proposed · v1.5</td>
 </tr>
 </tbody>
 </table>
@@ -228,6 +233,12 @@
 <p><strong>Decision.</strong> Build an <strong>armada-nitro adjudicator</strong> on each Armada chain — ForceMove's dispute machine plus: (a) <strong>note-native custody</strong> (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) <strong>EIP-1271 contract-signature participants</strong> so a hub's stable <strong>custodian contract</strong> is the channel participant, with the custodian verifying its <strong>hot delegate ECDSA key</strong> internally and <strong>rotating it without changing the channel's <code>FixedPart</code></strong>; (c) <strong>unilateral exit → re-shield</strong> on both chains. The DSS is <strong>EVM + Nitro only, no laconicd</strong>: reuse only <code>chain-signatures</code>' threshold-Schnorr crypto + kyber DKG/signing <em>logic</em>, verified on-chain by the custodian (<code>SchnorrSECP256K1.sol</code>); do <strong>not</strong> use laconicd's CometBFT vote-extension transport — signing coordination rides the unified transport (ADR-0008). The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.</p>
 <p><strong>Consequences.</strong> Two small net-new contracts (the adjudicator delta and the custodian) on top of reused ForceMove, threshold-Schnorr, and our own pool implementation — the weight is <strong>audit, not code</strong>. Deploying the adjudicator per chain gives each leg of the hash-locked swap real enforcement (fixing the audited L2-stub gap) and makes unilateral exit real, so hub trust stays liveness-only. Bonding/slashing (T0.4/T2.4) is the multi-entity economic layer (v2). Both DSS codebases are self-declared <strong>unaudited</strong>. Post-v1; depends on ADR-0015. Detail: <code>shielded-nitro-bridge-design.md</code>, <code>nitro-bridge-audit.md</code>.</p>
 <p><strong>Alternatives.</strong> Reuse the vanilla <code>NitroAdjudicator</code> + T0.3 (rejected — ECDSA-only, no custodian/DSS participant, cleartext outcomes). Finish the <code>go-nitro</code> L2 stub (rejected — not Railgun-aware, single-key, no enforcement). Have the adjudicator natively Schnorr-verify each state (rejected — heavier, and does not solve delegate rotation vs <code>FixedPart</code> immutability). Use laconicd's CometBFT distsig transport (rejected — EVM + Nitro only, no Cosmos dependency).</p>
+<h2 id="adr-0017">ADR-0017</h2>
+<p><strong>Hub yield and swaps as channel state</strong> · proposed · 2026-10-11 · v1.5 · amends the USDC-yield clause of ADR-0011</p>
+<p><strong>Context.</strong> The first hub games (<a href="./14-shielded-games-over-nitro.html">§14</a>) are a WETH↔wstETH swap and Aave USDC lending. §14 sketches each as its own ForceMove app: a two-asset settlement app and a lending app that needs an on-chain rate reference for disputes. armada-nitro's E11 task already assumes a simpler shape ("option 2"), which no architecture document records. ADR-0011 defers USDC yield to v2.</p>
+<p><strong>Decision.</strong> On the armada-nitro rail (ADR-0016), yield-bearing assets are held in hub channels as <strong>non-rebasing share tokens</strong> (<code>wstETH</code>; <code>waUSDC</code>, Aave's ERC-4626 StataToken over the USDC reserve), and a <strong>swap is one co-signed reallocation</strong> of a channel state under <code>ConsensusApp</code>. Yield accrues to the share holder with no contract tracking interest. Channel amounts are token units; exchange rates are read off-chain at quote time and never on the settlement path. The user signs a swap state first and the hub countersigns, so the quoting hub holds the free option. The adjudicator gains an immutable asset allow-list, balance-delta accounting on <code>deposit</code>, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: <a href="./15-hub-yield-and-swaps.html">15</a>.</p>
+<p><strong>Consequences.</strong> USDC yield arrives with the v1.5 hub rail instead of v2, as a held asset rather than an LP-buffered rail (T4.5 stays v2). No new ForceMove app for the first games; the contract work is a hardening delta to the adjudicator. Borrowing needs liquidation and a price, so it stays a v2 app. The hub's Aave deposits and redemptions are its own inventory management, outside any channel, so Aave liquidity never conditions a user's exit. The fixturenet and E11 use Aave v3's StataToken; the Aave-v4 adapter of the work-package C plan would supply the same ERC-4626 shape.</p>
+<p><strong>Alternatives.</strong> One ForceMove app per game, as §14 first sketched (rejected for the first games: two net-new audited apps and an on-chain rate reference, for flows that need neither when both parties sign). Rebasing assets (<code>stETH</code>, <code>aUSDC</code>) as channel assets (rejected: balances drift away from fixed holdings, breaking per-asset solvency). A governed asset allow-list (deferred: keeps governance off the settlement path while the asset set is four tokens).</p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/09-architecture-decisions.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

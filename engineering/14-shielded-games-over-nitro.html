@@ -155,6 +155,7 @@
 - <strong>Lending:</strong> the user stakes USDC into the game, and the game's rules pay principal plus accrued interest at close.
 - <strong>Borrowing:</strong> the user stakes collateral, receives USDC, and the game's rules repay principal plus interest or liquidate the collateral.</p>
 <p>The Aave interaction is the hub's own public activity and is not linked to the user. For a dispute to enforce interest, the game needs an on-chain rate reference, such as Aave's reserve index. That rate reference and the liquidation rules for borrowing are open design points.</p>
+<p><strong>How the first games are built.</strong> <a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a> (proposed) takes a simpler route than a separate app per game: the swap is one co-signed reallocation of the channel state, and lending is holding Aave's non-rebasing share token <code>waUSDC</code> in the channel, so interest accrues to the holder with no rate reference. Invariants and contract requirements: <a href="./15-hub-yield-and-swaps.html">15</a>.</p>
 <h2 id="where-this-fits">Where this fits</h2>
 <ul>
 <li><strong>Two-party swap walkthrough</strong> (same rail, one direct channel): <a href="./13-shielded-swap-walkthrough.html">13</a>.</li>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hub yield and swaps as channel state — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../engineering/build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="hub-yield-and-swaps-as-channel-state">Hub yield and swaps as channel state</h1>
+<p>design · 2026-10-11 · proposed (<a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a>)</p>
+<h2 id="what-this-decides">What this decides</h2>
+<p>How a user earns yield and swaps assets with a hub over the armada-nitro rail, and which properties the contracts must enforce so that these flows are correct by construction rather than by careful operation. The rail is the armada-nitro adjudicator and hub custodian of <a href="./09-architecture-decisions.html#adr-0016">ADR-0016</a>, sequenced v1.5, so this design is v1.5 as well.</p>
+<p>The answer: <strong>yield-bearing assets are held in the channel as non-rebasing share tokens, and a swap is a co-signed reallocation of one channel state.</strong> No new ForceMove application is needed for the first hub games. The on-chain work is a small, hardening delta to the adjudicator.</p>
+<p>This is the design the E11 task in armada-nitro (<code>docs/tasks/E11-aave-lido-channels.md</code>) calls "option 2". It refines the first games in <a href="./14-shielded-games-over-nitro.html">§14</a>.</p>
+<h2 id="the-two-options">The two options</h2>
+<p><strong>Option 1: one ForceMove app per game</strong> (§14 as first written). A two-asset settlement app enforces a quoted WETH↔wstETH swap, and a lending app pays principal plus interest at close. Lending needs an on-chain rate reference (Aave's reserve index) for disputes, and both apps are net-new contracts to write and audit (<a href="./11-risks-and-technical-debt.html">§11 R2</a>).</p>
+<p><strong>Option 2: assets as channel state</strong> (chosen for the first hub games).</p>
+<ul>
+<li>The channel holds several assets at once. go-nitro's outcome format already carries one <code>SingleAssetExit</code> per asset, and <code>MultiAssetHolder</code> keeps <code>holdings[asset][channelId]</code> per asset.</li>
+<li><strong>Yield is a property of the asset, not of a game.</strong> A user who wants USDC yield holds <code>waUSDC</code> (Aave's ERC-4626 StataToken over the USDC reserve); a user who wants ETH yield holds <code>wstETH</code>. Both are non-rebasing: the token count is fixed and the value per token grows. Holding the token in a channel, or as a note, earns the yield with no contract tracking interest.</li>
+<li><strong>A swap is one co-signed state</strong> that moves value between assets: for example, the user's <code>waUSDC</code> allocation goes to the hub and an equal-value USDC allocation goes to the user. It runs under <code>ConsensusApp</code> (every participant signs), like any other cooperative update.</li>
+</ul>
+<p>Option 2 needs no rate oracle, no new app, and no new dispute logic: a dispute replays the latest co-signed state exactly as for a single-asset channel.</p>
+<h2 id="invariants">Invariants</h2>
+<p>Each invariant names what makes it hold. "By construction" means a violating state cannot be represented or cannot be reached through the contracts, not that an operator is expected to avoid it.</p>
+<h3 id="i1-solvency-per-asset">I1 · Solvency per asset</h3>
+<p>For every asset <code>a</code>: the sum of <code>holdings[a][c]</code> over all channels <code>c</code> never exceeds <code>IERC20(a).balanceOf(adjudicator)</code>.</p>
+<p>This holds only for tokens whose balances change exclusively by transfers, with the transferred amount equal to the requested amount. It fails for:</p>
+<ul>
+<li><strong>rebasing tokens</strong> (<code>stETH</code>, <code>aUSDC</code>): balances drift while <code>holdings</code> stay fixed; a negative rebase (Lido slashing) leaves the last channel to exit short;</li>
+<li><strong>fee-on-transfer tokens</strong>: the adjudicator receives less than it credits;</li>
+<li><strong>tokens with transfer hooks</strong> (ERC-777 style): the hook re-enters during a deposit (see I6).</li>
+</ul>
+<p><strong>Enforcement:</strong></p>
+<ol>
+<li><strong>An asset allow-list in the adjudicator.</strong> Only allow-listed assets may be deposited, by either path. Initial list: USDC, WETH, <code>wstETH</code>, <code>waUSDC</code>. <code>stETH</code> and <code>aUSDC</code> are never listed; their non-rebasing wrappers are.</li>
+<li><strong>Balance-delta accounting on every deposit path.</strong> <code>depositFromNote</code> already credits the measured balance change and requires it to equal the note's value. The inherited go-nitro <code>deposit</code>, which the hub custodian uses to fund its side, credits the requested <code>amount</code> without measuring. Override it to measure the balance change and require equality, so a token outside the assumptions is refused at the deposit rather than discovered at the exit.</li>
+</ol>
+<p>The pool's own token allow-list (<a href="./T0-ethereum-anchor.html">T0</a>) governs which notes can exist. It does not cover <code>deposit</code>, which takes tokens straight from an address, so the adjudicator needs its own.</p>
+<h3 id="i2-swaps-are-atomic">I2 · Swaps are atomic</h3>
+<p>A swap changes two assets' allocations in one state. ForceMove accepts or rejects whole states, so a half-executed swap (one leg moved, the other not) cannot be represented on chain. Nothing in the contracts needs to coordinate the legs.</p>
+<h3 id="i3-no-free-option-in-a-swap">I3 · No free option in a swap</h3>
+<p>Under <code>ConsensusApp</code> a state is valid only when every participant has signed it, so whoever signs last holds an option: they can countersign if the price is still good and withhold if it moved.</p>
+<p><strong>Signing order fixes who holds it: the user signs the swap state first, the hub countersigns.</strong> The hub quotes, so the hub bears the option it priced. If the hub withholds, the previous state stands and the user has lost nothing; this is denial of service, which <a href="./09-architecture-decisions.html#adr-0015">ADR-0015</a> already accepts from a hub. The user can never hold a signed state the hub must honour later at a stale price.</p>
+<p>Quote expiry is enforced by the hub refusing to countersign after it; states carry no timestamps, and none are needed.</p>
+<h3 id="i4-amounts-are-token-units-rates-never-reach-the-chain">I4 · Amounts are token units; rates never reach the chain</h3>
+<p>Every channel amount is denominated in its token's own units: <code>waUSDC</code> shares, not USDC-equivalent. The exchange rate between USDC and <code>waUSDC</code> (<code>convertToAssets</code>) is read <strong>off-chain, at quote time</strong>, by both parties, and agreed by signing.</p>
+<p>So no contract on the settlement path calls <code>convertToAssets</code>, <code>previewRedeem</code>, or any price source. There is no oracle to manipulate and no rounding mode to get wrong in a dispute. Yield accrues to whoever holds the shares when they are redeemed, which is the definition of holding a yield-bearing token.</p>
+<h3 id="i5-each-asset-exits-independently">I5 · Each asset exits independently</h3>
+<p>A channel's exit must not let one asset's failure block another's. Causes that make one asset's payout revert:</p>
+<ul>
+<li>the pool refuses to shield that token (removed from its allow-list, or paused);</li>
+<li>the token itself pauses or blocks transfers (Circle's USDC blocklist; an Aave reserve pause freezing the StataToken).</li>
+</ul>
+<p>go-nitro already provides per-asset exits: <code>transfer(assetIndex, ...)</code> pays one asset of a finalized channel. <code>transferAllAssets</code> and <code>concludeAndTransferAllAssets</code> loop over every asset and revert as a whole. <strong>Clients and watchtowers must fall back to per-asset <code>transfer</code> when the all-assets call reverts</strong>, so one frozen asset never strands the others. <code>ArmadaNitroAdjudicator._executeSingleAssetExit</code> is already per asset; this is a client-behaviour requirement plus a test, not a contract change.</p>
+<h3 id="i6-deposits-cannot-be-re-entered">I6 · Deposits cannot be re-entered</h3>
+<p><code>depositFromNote</code> reads <code>holdings[asset][channelId]</code>, calls <code>pool.transact</code>, then writes <code>held + received</code>. A re-entrant deposit to the same channel and asset during that call would be overwritten (a lost update). Today this is closed only by assumption: the pool is our own contract and the tokens have no hooks. (This is the slither reentrancy finding on <code>depositFromNote</code>.)</p>
+<p>Close it by construction with two measures:</p>
+<ul>
+<li>the allow-list (I1) excludes tokens with hooks;</li>
+<li>a reentrancy guard on every function that moves holdings (<code>deposit</code>, <code>depositFromNote</code>, <code>transfer</code>, <code>transferAllAssets</code>, <code>concludeAndTransferAllAssets</code>, <code>reclaim</code>).</li>
+</ul>
+<h3 id="i7-the-hubs-aave-position-stays-off-the-channel">I7 · The hub's Aave position stays off the channel</h3>
+<p>The hub turns USDC into <code>waUSDC</code> (ERC-4626 <code>deposit</code>) and back (<code>redeem</code>) as its own inventory management, through <code>HubCustodian.execute</code> under its FROST group key. Users never depend on these calls:</p>
+<ul>
+<li>a user who holds <code>waUSDC</code> exits with a <code>waUSDC</code> note, a transferable token, whether or not Aave has liquidity to redeem it;</li>
+<li>a user who swaps to USDC exits with the hub's USDC inventory.</li>
+</ul>
+<p>Aave's redemption liquidity (<code>maxRedeem</code> falls while the reserve is borrowed out) is therefore the hub's risk, never a condition on a user's exit.</p>
+<p>The hub's calls follow ERC-4626 practice: an exact <code>forceApprove</code> of the deposited amount, and a minimum-output check on <code>deposit</code> (shares) and <code>redeem</code> (assets) against the preview taken when the operation was signed, since a FROST-signed operation can execute later than it was signed.</p>
+<h2 id="solidity-requirements-for-the-delta">Solidity requirements for the delta</h2>
+<p>The contract work is confined to <code>ArmadaNitroAdjudicator</code> and a pragma pin on <code>HubCustodian</code>:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Requirement</th>
+<th>Invariant</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1</td>
+<td>Immutable asset allow-list set in the constructor; <code>deposit</code> and <code>depositFromNote</code> revert for any other asset</td>
+<td>I1, I6</td>
+</tr>
+<tr>
+<td>S2</td>
+<td>Override <code>deposit</code> to credit the measured balance change and require it to equal <code>amount</code></td>
+<td>I1</td>
+</tr>
+<tr>
+<td>S3</td>
+<td>A reentrancy guard on every function that changes <code>holdings</code></td>
+<td>I6</td>
+</tr>
+<tr>
+<td>S4</td>
+<td>Per-asset exit test: with one asset's token made to revert, <code>transfer(assetIndex)</code> still pays the others</td>
+<td>I5</td>
+</tr>
+<tr>
+<td>S5</td>
+<td>Pin <code>HubCustodian</code>'s pragma to an exact version (<code>^0.8.37</code> today); the adjudicator is already pinned at <code>0.8.17</code></td>
+<td>build reproducibility</td>
+</tr>
+<tr>
+<td>S6</td>
+<td>No settlement-path read of any exchange rate (a source-level check: the adjudicator imports no ERC-4626 interface)</td>
+<td>I4</td>
+</tr>
+</tbody>
+</table>
+<p>Conventions already in the code and kept: <code>SafeERC20</code> for every token call, <code>forceApprove</code> before <code>pool.shield</code>, <code>SafeCast</code> for the pool's <code>uint120</code> note values, checks-effects-interactions in <code>HubCustodian.execute</code> (nonce incremented before the call), and an event for every holdings change.</p>
+<p>An immutable allow-list means adding an asset is a new adjudicator deployment. With four assets and channels that are short-lived relative to deployments, that is acceptable and keeps governance off the settlement path. A governed list is a later decision.</p>
+<h2 id="what-this-does-not-cover">What this does not cover</h2>
+<ul>
+<li><strong>Borrowing.</strong> A borrow needs liquidation rules and an on-chain price, which makes it a real ForceMove app (option 1). It stays v2.</li>
+<li><strong>Unilateral swap enforcement.</strong> Option 2 swaps need both signatures. A swap routed across hubs through virtual channels needs the hash-locked swap pattern of <a href="./09-architecture-decisions.html#adr-0015">ADR-0015</a>.</li>
+<li><strong>Protocol fees on swaps.</strong> The fee split (T4.3) is an allocation on the same state and needs no further mechanism.</li>
+</ul>
+<h2 id="how-e11-tests-it">How E11 tests it</h2>
+<p>E11's four scenarios exercise I2, I4 and I7 on the fixturenet (Aave yield is real; <code>waUSDC</code> as a channel asset with an in-channel swap; <code>wstETH</code> as a channel asset; the hub's redeem). The delta above adds tests that must fail before S1–S4 and pass after:</p>
+<ul>
+<li>deposit of a non-allow-listed token, by each path, is refused (S1);</li>
+<li>a <code>deposit</code> whose token delivers less than <code>amount</code> is refused (S2);</li>
+<li>a re-entrant deposit through a hooking test token is refused (S3);</li>
+<li>with one asset's transfer made to revert, the other assets of the channel still pay out (S4).</li>
+</ul>
+<h2 id="where-this-fits">Where this fits</h2>
+<ul>
+<li>First games and dispute structure: <a href="./14-shielded-games-over-nitro.html">14</a>.</li>
+<li>Settlement rail: <a href="./A-nitro-on-railgun/A.0-overview.html">A.0 overview</a>, <a href="./A-nitro-on-railgun/A.5-deposit-payout-contract.html">A.5 deposit/payout contract</a>.</li>
+<li>Decisions: <a href="./09-architecture-decisions.html#adr-0011">ADR-0011</a> (USDC yield deferred to v2, amended by ADR-0017), <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a> (brings the Aave yield adapter into scope), <a href="./09-architecture-decisions.html#adr-0016">ADR-0016</a> (adjudicator and custodian), <a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a> (this design).</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/15-hub-yield-and-swaps.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+for (const code of document.querySelectorAll("code.language-mermaid")) {
+  const div = document.createElement("div");
+  div.className = "mermaid";
+  div.textContent = code.textContent;
+  (code.closest("pre") || code).replaceWith(div);
+}
+mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+mermaid.run();
+</script>
+
+</body>
+</html>

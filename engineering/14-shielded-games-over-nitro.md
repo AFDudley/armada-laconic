@@ -111,6 +111,8 @@ Adjudication reveals the stakes of the disputed game, not the user's balance in 
 
 The Aave interaction is the hub's own public activity and is not linked to the user. For a dispute to enforce interest, the game needs an on-chain rate reference, such as Aave's reserve index. That rate reference and the liquidation rules for borrowing are open design points.
 
+**How the first games are built.** [ADR-0017](./09-architecture-decisions.md#adr-0017) (proposed) takes a simpler route than a separate app per game: the swap is one co-signed reallocation of the channel state, and lending is holding Aave's non-rebasing share token `waUSDC` in the channel, so interest accrues to the holder with no rate reference. Invariants and contract requirements: [15](./15-hub-yield-and-swaps.md).
+
 ## Where this fits
 
 - **Two-party swap walkthrough** (same rail, one direct channel): [13](./13-shielded-swap-walkthrough.md).

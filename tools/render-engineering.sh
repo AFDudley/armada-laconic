@@ -120,4 +120,4 @@ HTML
 # Walk the engineering tree in a stable order.
 while IFS= read -r md; do
   render_one "$md"
-done < <(find engineering -type f -name '*.md' | LC_ALL=C sort)
+done < <(find engineering -type f -name '*.md' ! -name AGENTS.md | LC_ALL=C sort)

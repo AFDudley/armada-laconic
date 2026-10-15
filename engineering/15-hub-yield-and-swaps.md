@@ -68,7 +68,7 @@ A channel's exit must not let one asset's failure block another's. Causes that m
 - the pool refuses to shield that token (removed from its allow-list, or paused);
 - the token itself pauses or blocks transfers (Circle's USDC blocklist; an Aave reserve pause freezing the StataToken).
 
-go-nitro already provides per-asset exits: `transfer(assetIndex, ...)` pays one asset of a finalized channel. `transferAllAssets` and `concludeAndTransferAllAssets` loop over every asset and revert as a whole. **Clients and watchtowers must fall back to per-asset `transfer` when the all-assets call reverts**, so one frozen asset never strands the others. `ArmadaNitroAdjudicator._executeSingleAssetExit` is already per asset; this is a client-behaviour requirement plus a test, not a contract change.
+go-nitro already provides per-asset exits: `transfer(assetIndex, ...)` pays one asset of a finalized channel. `transferAllAssets` and `concludeAndTransferAllAssets` pay every asset in one call and revert as a whole. **A client's or watchtower's payout of one asset never depends on another asset's payout**, so one frozen asset never strands the others. `ArmadaNitroAdjudicator._executeSingleAssetExit` is already per asset; this is a client-behaviour requirement plus a test, not a contract change.
 
 ### I6 · Deposits cannot be re-entered
 

@@ -27,6 +27,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 | [0017](#adr-0017) | Hub yield and swaps as channel state (non-rebasing share tokens, co-signed swaps) | accepted · v1.5 |
 | [0018](#adr-0018) | Decisions are clause-level records compiled to a current view | accepted |
 | [0019](#adr-0019) | Architecture decisions state what must hold; code-level requirements live with the code | accepted |
+| [0020](#adr-0020) | Selective disclosure of a chain of custody (voluntary, off-chain) | proposed |
 
 ---
 
@@ -316,3 +317,21 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Consequences.** Page 15 keeps the invariants and the immutable-allow-list choice; armada-nitro's E16 brief holds the concrete requirements (S1–S6) and their tests, next to the code they constrain. A change to how a contract enforces an invariant is a change in that repo, not an ADR.
 
 **Alternatives.** Keep code-level requirements in ADRs (rejected — they drift from the code, and the log fills with implementation detail no architecture reader needs). Move whole designs into component repos (rejected — the invariants span components: clients, watchtowers and the hub all depend on them).
+
+## ADR-0020
+**Selective disclosure of a chain of custody (voluntary, off-chain)** · proposed · 2026-10-15
+
+**Context.** A user who withdraws from the pool, for example to an exchange, can be asked where the value came from. Ownership of a public address is easy to prove with a signature. Inside the pool, no public record links a spend to the note that it spent, because a nullifier is `Poseidon(nullifyingKey, leafIndex)`. To disclose the `nullifyingKey` would show every spend the wallet ever made. Value that goes through armada-nitro hub channels (ADR-0016, ADR-0017) adds a channel deposit and a payout to the chain. `armada-poc/specs/GOVERNANCE.md` §Pool access conditions permits voluntary disclosure tooling and forbids any disclosure as a condition of pool use. Design: [16](./16-selective-disclosure.md).
+
+**Decision.**
+
+- **D20.1** Armada provides a voluntary, off-chain selective disclosure protocol. With it, a user proves a chain of custody for chosen value: from a shielding address, through notes, spends and armada-nitro channels, to a payout note or a withdrawal address. The user reveals nothing else about the wallet.
+- **D20.2** A disclosure proof links a spend to the note it spent. The proof keeps the `nullifyingKey` and the viewing key secret. The protocol never asks the user to disclose either key.
+- **D20.3** The spending key authorizes each disclosure statement inside the disclosure proof. Each public address in the chain signs the same statement, so the binding between the addresses and the shielded wallet holds in both directions.
+- **D20.4** The protocol needs no change to the pool, its circuits or the armada-nitro contracts. It must never become a condition to deposit into, transfer in, or withdraw from the pool.
+- **D20.5** A statement either claims an attribution for a channel's gain or claims none. A claimed attribution requires the channel's co-signed states, and the verifier checks all of them. Without a claim, the verifier reports only the deposit and payout amounts. The protocol has no optional evidence.
+- **D20.6** The statement names one chain, one pool and, for channel hops, one armada-nitro adjudicator. The verifier accepts only events from that chain and those contracts.
+
+**Consequences.** One net-new component: a small disclosure circuit (a few Poseidon hashes and one EdDSA check), with its own proof system choice and verifier. All other links in the chain use data that is already public or that the wallet already holds. Users do not need to rotate keys to limit what a disclosure reveals. A disclosure package can be forwarded and checked by anyone who holds it, and it opens the disclosed notes permanently. Address-ownership verification products, such as WalletConnect Wallet Verification, are complementary to this protocol and compatible with it.
+
+**Alternatives.** Disclose the `nullifyingKey` (rejected: it reveals every spend of the wallet). Disclose the viewing key (rejected: it reveals every note and balance of the wallet). Rotate keys often to limit what one disclosure reveals (rejected as the mechanism: it does not hide spends made under a disclosed key, and each rotation costs a migration transaction and adds a step to every proof chain). A disclosure gate in the pool or the adjudicator (rejected: forbidden by §Pool access conditions). Optional attribution evidence (rejected: a package without it has no defined meaning, and a checker cannot be tested against it).

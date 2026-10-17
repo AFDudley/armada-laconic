@@ -110,4 +110,5 @@ armada-nitro's E11 exercises I2, I4 and I7 on the fixturenet (Aave yield is real
 
 - First games and dispute structure: [14](./14-shielded-games-over-nitro.md).
 - Settlement rail: [A.0 overview](./A-nitro-on-railgun/A.0-overview.md), [A.5 deposit/payout contract](./A-nitro-on-railgun/A.5-deposit-payout-contract.md).
+- Proving that hub yield came from the user's own shielded value: [16](./16-selective-disclosure.md).
 - Decisions: [ADR-0011](./09-architecture-decisions.md#adr-0011) (USDC yield, see D17.6), [ADR-0013](./09-architecture-decisions.md#adr-0013) (brings the Aave yield adapter into scope), [ADR-0016](./09-architecture-decisions.md#adr-0016) (adjudicator and custodian), [ADR-0017](./09-architecture-decisions.md#adr-0017) (this design), [ADR-0019](./09-architecture-decisions.md#adr-0019) (contract requirements live with the contracts).

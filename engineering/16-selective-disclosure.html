@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Selective disclosure — proving a chain of custody — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../engineering/build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="selective-disclosure-proving-a-chain-of-custody">Selective disclosure — proving a chain of custody</h1>
+<p>design · 2026-10-15 · proposed (<a href="./09-architecture-decisions.html#adr-0020">ADR-0020</a>)</p>
+<h2 id="what-this-decides">What this decides</h2>
+<p>How a user proves to a third party where specific shielded value came from and where it went, and reveals nothing else about the wallet.</p>
+<p>A user can already prove ownership of a public address with an ordinary signature. Inside the pool, no public record links a spend to the note that it spent. This page defines the proofs that restore that link for the notes that the user chooses, and only for those notes.</p>
+<p>The protocol is voluntary and off-chain. It changes no pool contract, no pool circuit and no armada-nitro contract. One new component is necessary: a small <strong>disclosure circuit</strong> (see <a href="#the-disclosure-circuit">The disclosure circuit</a>).</p>
+<h2 id="the-problem">The problem</h2>
+<p>The pool hides three things: the owner of each note, the note that each spend consumes, and the value of each output that stays shielded. The public record shows:</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Public data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Shield</code></td>
+<td>The note preimage: <code>npk</code>, token, value. The transaction sender.</td>
+</tr>
+<tr>
+<td><code>Transact</code></td>
+<td>The output commitment hashes and their ciphertexts.</td>
+</tr>
+<tr>
+<td><code>Nullified</code></td>
+<td>The nullifiers of the spent notes.</td>
+</tr>
+<tr>
+<td><code>Unshield</code></td>
+<td>The recipient, token and amount.</td>
+</tr>
+</tbody>
+</table>
+<p>A nullifier is <code>Poseidon(nullifyingKey, leafIndex)</code> (<code>armada-circuits/src/operations/Transact.circom</code>, step 2d). Nobody can connect a nullifier to its note without the <code>nullifyingKey</code>. That is the property that makes the pool private.</p>
+<p>The <code>nullifyingKey</code> is not a good disclosure tool. With it, a verifier can compute the nullifier of every leaf in the tree and compare them with all published nullifiers. The verifier then sees every spend that the wallet ever made. Rotation of the key limits this scope but does not remove it, and each rotation adds a migration transaction and one more step to the proof chain. The disclosure circuit proves one link and keeps the key secret.</p>
+<h2 id="key-facts-the-protocol-uses">Key facts the protocol uses</h2>
+<p>From <code>armada-circuits/src/operations/Transact.circom</code> and <code>armada-sdk/vendor/railgun-engine/src/key-derivation/wallet-node.ts</code>:</p>
+<ul>
+<li><code>masterPublicKey = Poseidon(spendingPublicKeyX, spendingPublicKeyY, nullifyingKey)</code>. The 0zk address carries the <code>masterPublicKey</code>.</li>
+<li><code>nullifyingKey = Poseidon(viewingPrivateKey)</code>.</li>
+<li><code>npk = Poseidon(masterPublicKey, random)</code>. Each note has its own <code>random</code>. The owner knows it, and nobody else does.</li>
+<li><code>commitment = Poseidon(npk, token, value)</code>.</li>
+<li><code>nullifier = Poseidon(nullifyingKey, leafIndex)</code>.</li>
+<li>Each spend carries an EdDSA signature by the spending key over the proof's public inputs, which include <code>boundParamsHash</code>.</li>
+</ul>
+<h2 id="the-hops">The hops</h2>
+<p>A disclosure is a chain of <strong>hops</strong>. Each hop links two public facts. The verifier checks each hop on its own.</p>
+<table>
+<thead>
+<tr>
+<th>Hop</th>
+<th>From → to</th>
+<th>Evidence</th>
+<th>New component?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H1 · Address shields note</td>
+<td>EOA → note</td>
+<td>The <code>Shield</code> event shows <code>npk</code>. The user discloses <code>masterPublicKey</code> and <code>random</code>, and the verifier checks <code>npk = Poseidon(masterPublicKey, random)</code>. The EOA signs the statement.</td>
+<td>No</td>
+</tr>
+<tr>
+<td>H2 · Note is spent</td>
+<td>note → spend transaction</td>
+<td>A disclosure proof that a published nullifier belongs to the note at a given leaf, for the disclosed <code>masterPublicKey</code>.</td>
+<td><strong>Yes: the disclosure circuit</strong></td>
+</tr>
+<tr>
+<td>H3 · Spend creates note</td>
+<td>spend → output note</td>
+<td>The user opens the output commitment: <code>npk</code>, token, value and <code>random</code>. The verifier recomputes the hash and compares it with the <code>Transact</code> event.</td>
+<td>No</td>
+</tr>
+<tr>
+<td>H4 · Spend funds a channel</td>
+<td>spend → armada-nitro channel</td>
+<td><code>depositFromNote</code> requires <code>adaptParams == depositBinding(channelId, expectedHeld)</code> (<code>armada-nitro/src/ArmadaNitroAdjudicator.sol</code>). The spend proof commits to <code>boundParamsHash</code>, so the spending key authorized this channel. The adjudicator emits <code>Deposited(channelId, asset, held)</code>.</td>
+<td>No</td>
+</tr>
+<tr>
+<td>H5 · Channel pays a note</td>
+<td>channel → payout note</td>
+<td>The finalized outcome has a <code>SHIELD</code> allocation whose <code>destination</code> is the payout <code>npk</code>. The pool's <code>Shield</code> event in the same transaction shows the note. The user opens the <code>npk</code> as in H1.</td>
+<td>No</td>
+</tr>
+<tr>
+<td>H6 · Note leaves the pool</td>
+<td>note → EOA</td>
+<td>H2 for the spent note, plus the <code>Unshield</code> event to the recipient EOA. The recipient EOA signs the statement.</td>
+<td>No (uses H2)</td>
+</tr>
+<tr>
+<td>H7 · Channel gain is attributed</td>
+<td>channel deposit → channel payout</td>
+<td>The co-signed states of the channel, from the state after the deposit to the finalized state. Required when the statement claims how the channel's gain arose; see <a href="#attribution">Attribution</a>.</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>H2 is the only hop that needs new cryptography. All the other hops use data that is already public or that the user already holds.</p>
+<h2 id="the-disclosure-circuit">The disclosure circuit</h2>
+<p><strong>Statement.</strong> "I hold the keys of the wallet with <code>masterPublicKey</code> M. The nullifier N belongs to the leaf at <code>leafIndex</code> L in tree T. The spending key of M authorizes the statement hash S for this nullifier."</p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Visibility</th>
+<th>Constraint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>masterPublicKey</code> M</td>
+<td>public</td>
+<td><code>M == Poseidon(Ax, Ay, nullifyingKey)</code></td>
+</tr>
+<tr>
+<td><code>nullifier</code> N</td>
+<td>public</td>
+<td><code>N == Poseidon(nullifyingKey, L)</code></td>
+</tr>
+<tr>
+<td><code>leafIndex</code> L, <code>treeNumber</code> T</td>
+<td>public</td>
+<td>Each fits in 16 bits. The verifier checks off-circuit that the disclosed commitment is at (T, L), and that N is in the pool's <code>Nullified</code> event for tree T.</td>
+</tr>
+<tr>
+<td>statement hash S</td>
+<td>public</td>
+<td>—</td>
+</tr>
+<tr>
+<td>(Ax, Ay), signature (R8, S<sub>sig</sub>)</td>
+<td>private</td>
+<td>Both points are on BabyJubJub. The EdDSA signature by (Ax, Ay) over <code>Poseidon(S, M, N, T, L)</code> verifies.</td>
+</tr>
+<tr>
+<td><code>nullifyingKey</code></td>
+<td>private</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>The circuit needs no Merkle path, because the leaf position is public in the <code>Shield</code> and <code>Transact</code> events. It is a few Poseidon hashes and one EdDSA check: 8,248 non-linear and 1,835 linear constraints.</p>
+<p><strong>Why the circuit checks the spending key.</strong> The <code>nullifyingKey</code> derives from the viewing key. A holder of the viewing key alone, such as an auditor or a compromised device, could prove N without the signature check. With the signature check, only the holder of the spending key can make a disclosure.</p>
+<p><strong>Why the signed message includes every public input.</strong> In Groth16, a public input that no constraint uses is not bound by the proof. The message hash uses all five public inputs, so the proof binds each of them. It also stops a holder of the viewing key from reusing an old signature with a different nullifier. T is in the message because the same <code>nullifyingKey</code> and leaf index give the same nullifier in every tree.</p>
+<p><strong>Why S is public.</strong> S is the hash of the full disclosure statement: the verifier, a context string, the list of hops and the EOA addresses. A proof for one statement cannot be reused in another statement.</p>
+<p><strong>Implementation.</strong> <code>armada-circuits</code>: <code>src/operations/NullifierDisclosure.circom</code>, with tests in <code>tests/disclosure.test.js</code>. The circuit is under review in <a href="https://github.com/ship-armada/armada-circuits/pull/3">ship-armada/armada-circuits#3</a>.</p>
+<p><strong>Verification status.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Part of the circuit</th>
+<th>Evidence</th>
+<th>Kind</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Our wiring: the range checks, the equality checks, the on-curve checks and the message routing</td>
+<td>Picus with cvc5, strong safety, with the hashes and the verifier replaced by free inputs: properly constrained, given a full assignment to the piece's declared inputs. Picus does not use the public/private split of inputs for any circuit.</td>
+<td>Proof of uniqueness</td>
+</tr>
+<tr>
+<td><code>Poseidon(2)</code>, <code>Poseidon(3)</code>, <code>Poseidon(5)</code></td>
+<td>Picus with cvc5, weak safety: properly constrained</td>
+<td>Proof of uniqueness</td>
+</tr>
+<tr>
+<td>circomlib <code>EdDSAPoseidonVerifier</code></td>
+<td>Rejection tests for another signer, another statement, a public input changed after signing, <code>S</code> plus the subgroup order, and a forged signature for a small-order key</td>
+<td>Tests only</td>
+</tr>
+<tr>
+<td>The whole circuit against the statement above</td>
+<td>18 tests: parity with the armada-sdk engine vectors, the 9 captured spends, acceptance, rejection and a Groth16 round trip</td>
+<td>Tests only</td>
+</tr>
+</tbody>
+</table>
+<p>Picus did not finish on <code>EdDSAPoseidonVerifier</code>, because cvc5 does not terminate on its scalar multiplications. No published work proves this template either. Coda (Veridise, IEEE S&amp;P 2024) proves that its constraints imply the EdDSA verification equation. That proof treats point doubling, point addition and scalar multiplication as axioms, and it models no check for <code>S</code> &lt; subgroup order or for <code>A</code> ≠ 0. So the verifier stays a trusted circomlib component, as it is for <code>Transact.circom</code>.</p>
+<p>A formal proof in Lean that the circuit's constraints are equivalent to the statement, relative to a specified EdDSA verifier, is planned work at low priority.</p>
+<h2 id="key-binding-between-eoas-and-the-shielded-wallet">Key binding between EOAs and the shielded wallet</h2>
+<p>The hops start and end at public addresses. So the statement binds each EOA to M in both directions:</p>
+<ul>
+<li>the EOA signs S (EIP-712), and S names M;</li>
+<li>the spending key of M signs S inside the disclosure circuit, and S names the EOA.</li>
+</ul>
+<p>A key holder on only one side cannot make the binding alone.</p>
+<h2 id="chain-scope">Chain scope</h2>
+<p>The statement's EIP-712 domain names one chain and one pool. The statement also names the armada-nitro adjudicator when it has an H4, H5 or H7 hop. The verifier accepts an event only when it comes from that chain and from that pool or adjudicator. A package that cites an event from any other chain or contract fails.</p>
+<h2 id="attribution">Attribution</h2>
+<p>Without attribution, a verifier learns the amounts that went into a channel and came out of it, but not why they differ. An attribution states how the gain of one channel arose, for example yield from a <code>waUSDC</code> holding at the quoted rates.</p>
+<p>A statement either claims an attribution for a channel or it does not. There is no optional evidence:</p>
+<ul>
+<li><strong>The statement claims an attribution.</strong> The package must contain the co-signed states of that channel (hop H7). The verifier checks every one of them. The verifier reports each change to the user's allocation: the state, the asset, and the amount before and after.</li>
+<li><strong>The statement claims no attribution.</strong> The package contains no channel states. The verifier reports only the deposit and payout amounts, and states no reason for a difference.</li>
+</ul>
+<p>For H7, the verifier checks:</p>
+<ol>
+<li>The states' fixed part gives the channel id C of the H4 hop.</li>
+<li>The statement names the user's channel participant address. That address signs the statement (EIP-712), as an endpoint EOA does.</li>
+<li>Every state carries the signatures of all participants. The user's signature recovers to the named participant address. The hub's signature passes <code>HubCustodian.isValidSignature</code> (EIP-1271) at a block where the hub's delegate was active.</li>
+<li>The turn numbers increase from state to state.</li>
+<li>The first state allocates to the user the amount of the H4 deposit. The last state's outcome equals the finalized outcome on chain (H5).</li>
+</ol>
+<h2 id="example-aave-yield-through-an-armada-nitro-hub">Example: Aave yield through an armada-nitro hub</h2>
+<p>Alice shields USDC, earns Aave yield through a hub channel as <code>waUSDC</code> (<a href="./15-hub-yield-and-swaps.html">page 15</a>), and withdraws to a new address. She then proves to an exchange that the withdrawn USDC is her own principal plus yield. The numbers are illustrative.</p>
+<pre><code class="language-mermaid">flowchart LR
+  A[&quot;EOA 0xA&quot;] -- &quot;H1: shield 10,000 USDC&quot; --&gt; N1[&quot;note N1&lt;br/&gt;npk1&quot;]
+  N1 -- &quot;H2 + H4: depositFromNote&lt;br/&gt;nullifier n1, channel C&quot; --&gt; C[&quot;hub channel C&lt;br/&gt;(USDC ↔ waUSDC)&lt;br/&gt;H7: co-signed states&quot;]
+  C -- &quot;H5: SHIELD payout&lt;br/&gt;10,400 USDC&quot; --&gt; N2[&quot;note N2&lt;br/&gt;npk2&quot;]
+  N2 -- &quot;H2 + H6: unshield&lt;br/&gt;nullifier n2&quot; --&gt; B[&quot;EOA 0xB&quot;]
+</code></pre>
+<ol>
+<li><strong>Shield.</strong> Alice's EOA <code>0xA</code> shields 10,000 USDC. The <code>Shield</code> event shows <code>npk1</code> and the note value after the shield fee.</li>
+<li><strong>Fund the channel.</strong> Alice spends N1 through <code>depositFromNote(C, expectedHeld, [tx])</code>. A broadcaster can submit it, so the transaction sender is not Alice. The transaction publishes the nullifier <code>n1</code> and the binding to channel C.</li>
+<li><strong>Earn yield.</strong> Alice and the hub co-sign a swap state: her USDC allocation goes to the hub, and an equal value of <code>waUSDC</code> shares goes to her at the rate that the hub quoted. Later, a second co-signed state swaps the shares back to USDC at the new, higher rate. The difference is the Aave yield. The hub keeps its Aave position outside the channel (page 15, I7).</li>
+<li><strong>Close.</strong> The channel finalizes with a <code>SHIELD</code> allocation of 10,400 USDC to <code>npk2</code>. The pool's <code>Shield</code> event shows the note N2 (value after the shield fee).</li>
+<li><strong>Withdraw.</strong> Alice unshields N2 to her new EOA <code>0xB</code>. The transaction publishes the nullifier <code>n2</code> and an <code>Unshield</code> event to <code>0xB</code>.</li>
+</ol>
+<p><strong>The disclosure package.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Statement S: verifier, context, chain, pool, adjudicator, hops, attribution claim for C, <code>0xA</code>, <code>0xB</code>, Alice's participant address, M</td>
+<td>What Alice claims</td>
+</tr>
+<tr>
+<td>EIP-712 signatures over S by <code>0xA</code>, <code>0xB</code> and Alice's participant address</td>
+<td>Alice controls both EOAs and her side of channel C</td>
+</tr>
+<tr>
+<td><code>random1</code>, <code>random2</code></td>
+<td>N1 and N2 belong to M (H1, H5)</td>
+</tr>
+<tr>
+<td>Disclosure proofs for <code>n1</code> and <code>n2</code></td>
+<td>N1 funded channel C, and N2 left the pool to <code>0xB</code> (H2)</td>
+</tr>
+<tr>
+<td>Transaction hashes of the shield, the deposit, the conclude and the unshield</td>
+<td>The verifier finds the events (H4, H5, H6)</td>
+</tr>
+<tr>
+<td>The co-signed states of channel C, and the signature of Alice's participant address over S</td>
+<td>The 400 USDC gain is yield from the <code>waUSDC</code> holding, at the quoted rates (H7). Required, because Alice's statement claims this attribution.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What the verifier checks.</strong></p>
+<ol>
+<li>The three EIP-712 signatures over S, and that every cited event comes from the chain, pool and adjudicator that S names.</li>
+<li><code>npk1 = Poseidon(M, random1)</code> against the <code>Shield</code> event of step 1.</li>
+<li>The disclosure proof for <code>n1</code>, and that <code>n1</code> is in the <code>Nullified</code> event of the deposit transaction.</li>
+<li>The deposit transaction's <code>adaptParams</code> equals <code>depositBinding(C, expectedHeld)</code>, and <code>Deposited(C, USDC, …)</code> is in the same transaction.</li>
+<li>The finalized outcome of C pays <code>npk2</code>, and <code>npk2 = Poseidon(M, random2)</code>.</li>
+<li>The disclosure proof for <code>n2</code>, and the <code>Unshield</code> event to <code>0xB</code> in the same transaction.</li>
+<li>The H7 checks for channel C, because Alice's statement claims an attribution.</li>
+</ol>
+<p><strong>What the verifier learns:</strong> the four transactions, the amounts at the deposit and the payout, channel C, the hub, <code>0xA</code>, <code>0xB</code>, M, and the two swaps in channel C with their rates.</p>
+<p><strong>What the verifier does not learn:</strong> any other note of Alice's wallet, any other spend, her balance, her viewing key or her <code>nullifyingKey</code>.</p>
+<p><strong>The source of the yield.</strong> The proof shows that Alice's principal came from her shield and that her payout returned to her wallet. The 400 USDC above the principal is the hub's money. The hub paid it into her allocation from its own <code>waUSDC</code> and USDC inventory. The H7 states show that it is yield at the quoted rates.</p>
+<h2 id="limits">Limits</h2>
+<ul>
+<li><strong>An attribution covers only signed states.</strong> H7 shows what the user and the hub agreed in co-signed states. It does not show the hub's reasons, or prices outside the channel.</li>
+<li><strong>A received note ends the chain.</strong> If a note came from another user, the user can open it (H3) but cannot prove the sender's history. The sender must make their own disclosure.</li>
+<li><strong>The package can be forwarded.</strong> The verifier can pass the package to others, and each one can check it. This is necessary for an audit record. S names the verifier and the context, so the package states for whom and for what the user made it.</li>
+<li><strong>Disclosed data is permanent.</strong> After disclosure, M links the package to the user's 0zk address, and <code>random1</code> and <code>random2</code> open N1 and N2 for anyone who holds the package.</li>
+</ul>
+<h2 id="walletconnect">WalletConnect</h2>
+<p>WalletConnect Wallet Verification (<code>walletconnect.com/compliance/wallet-verification</code>) is complementary to this protocol and compatible with it. It verifies the public addresses at the ends of the chain. This protocol covers the shielded part between them.</p>
+<h2 id="policy">Policy</h2>
+<p>Disclosure is voluntary. It is the application-layer tooling that <code>armada-poc/specs/GOVERNANCE.md</code> §Pool access conditions permits. It must never become a condition to deposit into, transfer in, or withdraw from the pool.</p>
+<h2 id="open">Open</h2>
+<ul>
+<li><strong>The proof system for the disclosure circuit.</strong> Groth16 needs its own Phase-2 ceremony (as in <a href="./09-architecture-decisions.html#adr-0003">ADR-0003</a>). A universal-setup system avoids the ceremony. The circuit is small, so the proving cost is low in both cases.</li>
+<li><strong>The package format</strong> and its encoding (EIP-712 domain, statement schema, serialization).</li>
+</ul>
+<p>The SDK builds and checks disclosure packages. A client app uses the SDK and holds no disclosure logic of its own.</p>
+<h2 id="where-this-fits">Where this fits</h2>
+<ul>
+<li>Hub yield and swaps: <a href="./15-hub-yield-and-swaps.html">15</a>. Hub channels and games: <a href="./14-shielded-games-over-nitro.html">14</a>.</li>
+<li>Settlement rail: <a href="./A-nitro-on-railgun/A.5-deposit-payout-contract.html">A.5 deposit/payout contract</a>. Anonymity set and POI: <a href="./A-nitro-on-railgun/A.7-anonymity-set.html">A.7</a>.</li>
+<li>Decisions: <a href="./09-architecture-decisions.html#adr-0016">ADR-0016</a> (adjudicator and custodian), <a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a> (hub yield), <a href="./09-architecture-decisions.html#adr-0020">ADR-0020</a> (this design).</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/16-selective-disclosure.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+for (const code of document.querySelectorAll("code.language-mermaid")) {
+  const div = document.createElement("div");
+  div.className = "mermaid";
+  div.textContent = code.textContent;
+  (code.closest("pre") || code).replaceWith(div);
+}
+mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+mermaid.run();
+</script>
+
+</body>
+</html>

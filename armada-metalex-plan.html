@@ -79,6 +79,85 @@ assistant, cap-table planning tools) need no wrapper.</p>
 <p>The armada-nitro hub is never a MetaLeX party. Its role is funding: it pays from standing
 inventory, and the user's dealings with it are off-chain channel updates, so its payouts don't
 correspond to any per-user on-chain event.</p>
+<h3 id="system-interactions">System interactions</h3>
+<p>The diagrams show the interactions between the system components in three stages. Each lane is
+one component. A label on an arrow names what passes to the next lane. <code>/relay/metalex</code> is
+planned (C5). Every other component exists.</p>
+<p><strong>Funding.</strong> The relayer already relays <code>transact</code>
+(<code>armada-relayer/relayer-v2/actor/src/relay/selectors.ts:33</code>). <code>transfer</code> pays only a finalized
+channel (<code>armada-nitro/src/nitro/MultiAssetHolder.sol:153</code>), and any caller can submit it.</p>
+<pre><code class="language-mermaid">swimlane-beta TB
+  subgraph DEV[&quot;Device · armada-metalex, @armada/sdk&quot;]
+    d1[&quot;prove unshield&lt;br/&gt;to clean address&quot;]
+    d2[&quot;agree channel state&lt;br/&gt;paying clean address&quot;]
+  end
+  subgraph REL[&quot;armada-relayer&quot;]
+    r1[&quot;POST /relay&lt;br/&gt;transact&quot;]
+  end
+  subgraph HUB[&quot;armada-nitro hub&quot;]
+    h1[&quot;co-sign final state&quot;]
+  end
+  subgraph POOL[&quot;PrivacyPool&quot;]
+    p1[&quot;transact: unshield&quot;]
+  end
+  subgraph ADJ[&quot;ArmadaNitroAdjudicator&quot;]
+    j1[&quot;transfer after finalization&lt;br/&gt;→ _transferAsset&quot;]
+  end
+  subgraph EOA[&quot;Clean address&quot;]
+    a1[&quot;receives ETH, tokens&quot;]
+  end
+  d1 --&gt;|proof, fee note| r1
+  r1 --&gt;|transact| p1
+  p1 --&gt;|unshield| a1
+  d2 --&gt;|off-chain state| h1
+  h1 --&gt;|&quot;finalized outcome (any caller)&quot;| j1
+  j1 --&gt;|payout| a1
+</code></pre>
+<p><strong>Action.</strong> The contract decides the path. If it checks the signature, the relayer submits it. If
+it checks <code>msg.sender</code>, the clean address sends the transaction.</p>
+<pre><code class="language-mermaid">swimlane-beta TB
+  subgraph DEV[&quot;Device · armada-metalex&quot;]
+    d1[&quot;sign typed data, permit,&lt;br/&gt;raw digest or SafeTx&lt;br/&gt;with clean key&quot;]
+    d2[&quot;sign transaction&lt;br/&gt;with clean key&quot;]
+  end
+  subgraph REL[&quot;armada-relayer&quot;]
+    r1[&quot;POST /relay/metalex&lt;br/&gt;selector allow-list (planned)&quot;]
+  end
+  subgraph EOA[&quot;Clean address&quot;]
+    a1[&quot;sends transaction,&lt;br/&gt;pays gas&quot;]
+  end
+  subgraph MLX[&quot;MetaLeX contracts&quot;]
+    m1[&quot;signContractFor, voidContractFor,&lt;br/&gt;LeXscroW execute, depositTokensWithPermit,&lt;br/&gt;adoptBORGParticipationAgreementWithSignature,&lt;br/&gt;Safe execTransaction&quot;]
+    m2[&quot;submitEOI, signDealAndPay,&lt;br/&gt;MetaVesT withdraw, exercise, ...&quot;]
+  end
+  d1 --&gt;|&quot;relayed: signature&quot;| r1
+  r1 --&gt;|&quot;msg.sender = relayer&quot;| m1
+  d2 --&gt;|&quot;sender: signed tx&quot;| a1
+  a1 --&gt;|&quot;msg.sender = clean address&quot;| m2
+</code></pre>
+<p><strong>Return.</strong> The wrapper pulls the tokens from the clean address with the permit. The relayer pays
+the gas (<code>selectors.ts:21,40</code>).</p>
+<pre><code class="language-mermaid">swimlane-beta TB
+  subgraph MLX[&quot;MetaLeX contracts&quot;]
+    m1[&quot;pay vested tokens,&lt;br/&gt;refunds, proceeds&quot;]
+  end
+  subgraph EOA[&quot;Clean address&quot;]
+    a1[&quot;holds tokens&quot;]
+  end
+  subgraph DEV[&quot;Device · @armada/sdk&quot;]
+    d1[&quot;sign EIP-2612 permit&lt;br/&gt;and ShieldIntent&quot;]
+  end
+  subgraph REL[&quot;armada-relayer&quot;]
+    r1[&quot;POST /relay&lt;br/&gt;gaslessShield&quot;]
+  end
+  subgraph POOL[&quot;gasless shield wrapper, PrivacyPool&quot;]
+    p1[&quot;gaslessShield&lt;br/&gt;→ shield to 0zk note&quot;]
+  end
+  m1 --&gt;|transfer| a1
+  d1 --&gt;|signatures| r1
+  r1 --&gt;|gaslessShield| p1
+  a1 --&gt;|&quot;permit: transferFrom&quot;| p1
+</code></pre>
 <h2 id="3-products">3. Products</h2>
 <p>"Relayed" means our relayer submits the clean address's signature and the address needs no gas.
 "Sender" means the contract checks or charges <code>msg.sender</code>, so the address sends the transaction

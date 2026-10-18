@@ -66,6 +66,96 @@ The armada-nitro hub is never a MetaLeX party. Its role is funding: it pays from
 inventory, and the user's dealings with it are off-chain channel updates, so its payouts don't
 correspond to any per-user on-chain event.
 
+### System interactions
+
+The diagrams show the interactions between the system components in three stages. Each lane is
+one component. A label on an arrow names what passes to the next lane. `/relay/metalex` is
+planned (C5). Every other component exists.
+
+**Funding.** The relayer already relays `transact`
+(`armada-relayer/relayer-v2/actor/src/relay/selectors.ts:33`). `transfer` pays only a finalized
+channel (`armada-nitro/src/nitro/MultiAssetHolder.sol:153`), and any caller can submit it.
+
+```mermaid
+swimlane-beta TB
+  subgraph DEV["Device · armada-metalex, @armada/sdk"]
+    d1["prove unshield<br/>to clean address"]
+    d2["agree channel state<br/>paying clean address"]
+  end
+  subgraph REL["armada-relayer"]
+    r1["POST /relay<br/>transact"]
+  end
+  subgraph HUB["armada-nitro hub"]
+    h1["co-sign final state"]
+  end
+  subgraph POOL["PrivacyPool"]
+    p1["transact: unshield"]
+  end
+  subgraph ADJ["ArmadaNitroAdjudicator"]
+    j1["transfer after finalization<br/>→ _transferAsset"]
+  end
+  subgraph EOA["Clean address"]
+    a1["receives ETH, tokens"]
+  end
+  d1 -->|proof, fee note| r1
+  r1 -->|transact| p1
+  p1 -->|unshield| a1
+  d2 -->|off-chain state| h1
+  h1 -->|"finalized outcome (any caller)"| j1
+  j1 -->|payout| a1
+```
+
+**Action.** The contract decides the path. If it checks the signature, the relayer submits it. If
+it checks `msg.sender`, the clean address sends the transaction.
+
+```mermaid
+swimlane-beta TB
+  subgraph DEV["Device · armada-metalex"]
+    d1["sign typed data, permit,<br/>raw digest or SafeTx<br/>with clean key"]
+    d2["sign transaction<br/>with clean key"]
+  end
+  subgraph REL["armada-relayer"]
+    r1["POST /relay/metalex<br/>selector allow-list (planned)"]
+  end
+  subgraph EOA["Clean address"]
+    a1["sends transaction,<br/>pays gas"]
+  end
+  subgraph MLX["MetaLeX contracts"]
+    m1["signContractFor, voidContractFor,<br/>LeXscroW execute, depositTokensWithPermit,<br/>adoptBORGParticipationAgreementWithSignature,<br/>Safe execTransaction"]
+    m2["submitEOI, signDealAndPay,<br/>MetaVesT withdraw, exercise, ..."]
+  end
+  d1 -->|"relayed: signature"| r1
+  r1 -->|"msg.sender = relayer"| m1
+  d2 -->|"sender: signed tx"| a1
+  a1 -->|"msg.sender = clean address"| m2
+```
+
+**Return.** The wrapper pulls the tokens from the clean address with the permit. The relayer pays
+the gas (`selectors.ts:21,40`).
+
+```mermaid
+swimlane-beta TB
+  subgraph MLX["MetaLeX contracts"]
+    m1["pay vested tokens,<br/>refunds, proceeds"]
+  end
+  subgraph EOA["Clean address"]
+    a1["holds tokens"]
+  end
+  subgraph DEV["Device · @armada/sdk"]
+    d1["sign EIP-2612 permit<br/>and ShieldIntent"]
+  end
+  subgraph REL["armada-relayer"]
+    r1["POST /relay<br/>gaslessShield"]
+  end
+  subgraph POOL["gasless shield wrapper, PrivacyPool"]
+    p1["gaslessShield<br/>→ shield to 0zk note"]
+  end
+  m1 -->|transfer| a1
+  d1 -->|signatures| r1
+  r1 -->|gaslessShield| p1
+  a1 -->|"permit: transferFrom"| p1
+```
+
 ## 3. Products
 
 "Relayed" means our relayer submits the clean address's signature and the address needs no gas.

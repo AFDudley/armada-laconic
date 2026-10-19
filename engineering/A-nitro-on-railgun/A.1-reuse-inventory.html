@@ -85,7 +85,7 @@
 </tr>
 </tbody>
 </table>
-<p>POI is not in these contracts; it is an alongside partner system (A.1.7). The pool-side levers are <code>changeFee(0,0,0)</code> and vkey registration; everything else is client-side or settlement-side policy.</p>
+<p>The pool-side levers are <code>changeFee(0,0,0)</code> and vkey registration; everything else is client-side or settlement-side policy.</p>
 <h2 id="a12-joinsplit-circuits-trusted-setup-t01-reference-spec">A.1.2 JoinSplit circuits &amp; trusted setup (T0.1) — reference spec</h2>
 <p>This is the reference spec T0.1's circuits are authored against: our own circuits, spec-compatible with the JoinSplit behavior below (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>). The citations pin the note, commitment, and nullifier format and the public-signal arity our own circuits must reproduce. They are the design we match, not source we reuse.</p>
 <table>
@@ -253,7 +253,6 @@
 <h2 id="a17-anonymity-set-t07-the-payments-primitive">A.1.7 Anonymity set (T0.7) &amp; the payments primitive</h2>
 <ul>
 <li><strong>Shielded payments</strong> are a <code>transact()</code> with <code>unshield=NONE</code>: inputs are nullified, outputs are created, and <code>sumIn==sumOut</code> holds in-circuit. The sender, recipient, and amount stay hidden; only the root, <code>boundParamsHash</code>, nullifiers, and output-commitment hashes are public. This is the base capability A inherits for free.</li>
-<li><strong>POI</strong> (docs.railgun.org/…/private-proofs-of-innocence) is an alongside partner system, not in the pool. On shield, an Unshield-Only Standby Period (default 1h) precedes a blinded non-inclusion ZK proof against list-provider datasets; proofs carry forward through transfers. The T0.0 POI configuration selects list providers and the standby period at the client and POI node, while T0.3 gated-entry enforces a valid POI in the settlement path. The POI node stack is a separate dependency, not redeployable from the four repos scoped here.</li>
 </ul>
 <h2 id="a18-corrections-to-earlier-docs-the-deep-dive-caught-these">A.1.8 Corrections to earlier docs (the deep dive caught these)</h2>
 <ol>
@@ -268,17 +267,16 @@
 <li><strong>Multi-asset ForceMove settlement app</strong> — for ETH-in/USDC-out atomicity, where HashLockedSwap is single-asset only. (A.4/A.5; C authors the real quote/settle variant.)</li>
 <li><strong>T6.3 auto-watchtower loop and liveness</strong> — it watches <code>ChallengeRegistered</code> and submits a higher-turn <code>checkpoint</code> before <code>FinalizesAt</code>, on an always-on node. (A.6)</li>
 <li><strong><code>changeFee(0,0,0)</code> governance action and vkey registration</strong> for the chosen combo subset. (A.2/A.3)</li>
-<li><strong>POI policy wiring</strong> in the settlement path, plus integration of the separate POI node stack. (A.7)</li>
+<li><strong>No compliance gate.</strong> Selective disclosure (<a href="../09-architecture-decisions.html#adr-0020">ADR-0020</a>) is voluntary and off-chain, and needs no change to the pool, the circuits, or T0.3.</li>
 <li><strong>In-browser dispute API</strong> — ts-nitro exposes only fund/defund/pay, so the challenge/checkpoint surface is net-new. (A.6)</li>
 <li><strong>(opt) native-ETH / native-commitment</strong> — the pool is ERC20/721 only, so this needs a WETH wrap or T0.6. (A.9)</li>
 </ol>
 <h2 id="a110-risks">A.1.10 Risks</h2>
 <ul>
-<li><strong>Own pool and circuits are audit-critical net-new.</strong> T0.0 (pool) and T0.1 (circuits) are our own implementation of the Railgun design (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>), spec-compatible with the behavior and format pinned in A.1.1/A.1.2. We own upgrades, audit, fee policy, and POI policy for them (ADR-0002); the residual load is that the build is audit-critical, not config-only.</li>
+<li><strong>Own pool and circuits are audit-critical net-new.</strong> T0.0 (pool) and T0.1 (circuits) are our own implementation of the Railgun design (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>), spec-compatible with the behavior and format pinned in A.1.1/A.1.2. We own upgrades, audit, and fee policy for them (ADR-0002); the residual load is that the build is audit-critical, not config-only.</li>
 <li><strong>Unpinned Railgun commit</strong> — pin before build.</li>
 <li><strong>91-vs-54 circuit ambiguity</strong> — the registered subset must be decided, which drives the ceremony count.</li>
 <li><strong><code>snarkSafetyVector</code>/<code>checkSafetyVectors</code></strong> magic constants must be reproduced verbatim in our own implementation, matching the reference <code>RailgunLogic.sol</code> L111–127, or <code>transact</code> reverts.</li>
-<li><strong>POI is a separate partner stack</strong>, not redeployable from these repos.</li>
 <li><strong>ERC1155 unsupported</strong> by the pool (bounds T0.6).</li>
 </ul>
 <hr />

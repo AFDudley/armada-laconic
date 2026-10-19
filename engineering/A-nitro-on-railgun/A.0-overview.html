@@ -60,7 +60,7 @@
 <tr>
 <td><a href="./A.2-pool-deployment.html">A.2</a></td>
 <td>T0.0</td>
-<td>Our own pool implementation (spec-compatible with Railgun, <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>); fee=0; POI policy; token allow-list; vkey registration</td>
+<td>Our own pool implementation (spec-compatible with Railgun, <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>); fee=0; token allow-list; vkey registration</td>
 </tr>
 <tr>
 <td><a href="./A.3-trusted-setup.html">A.3</a></td>
@@ -85,7 +85,7 @@
 <tr>
 <td><a href="./A.7-anonymity-set.html">A.7</a></td>
 <td>T0.7</td>
-<td>Bootstrap + Railgun import bridge; POI binding; shielded-payments primitive</td>
+<td>Bootstrap the crowd with new users; shielded-payments primitive</td>
 </tr>
 <tr>
 <td><a href="./A.8-interfaces-acceptance.html">A.8</a></td>
@@ -110,7 +110,7 @@
 <h2 id="a05-open-items-resolve-before-or-during-a">A.0.5 Open items (resolve before or during A)</h2>
 <ol>
 <li><strong>Register a circuit subset.</strong> The source generates 91 <code>(nInputs,nOutputs)</code> combos; the widely-cited "~54" is a registered subset. Decide which subset to ceremony and register (T0.1/T0.0; A.3).</li>
-<li><strong>Settle the POI policy.</strong> POI is an alongside partner system, not a pool setting: set the list-provider and standby policy and stand up the separate POI node. Gated-entry is settlement-side, enforced by T0.3 (A.7).</li>
+<li><strong>Compliance posture: resolved.</strong> Selective disclosure (<a href="../09-architecture-decisions.html#adr-0020">ADR-0020</a>, <a href="../16-selective-disclosure.html">16</a>) is voluntary and off-chain. No gate blocks a deposit, a transfer, a withdrawal, or channel funding, so A builds no gate.</li>
 <li><strong>Build the multi-asset settlement app.</strong> <code>MultiAssetHolder</code> supports multiple assets, but no shipped ForceMove app settles ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).</li>
 <li><strong>Build the auto-watchtower.</strong> T6.3's auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).</li>
 </ol>

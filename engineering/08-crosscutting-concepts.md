@@ -57,13 +57,15 @@ The larger design moves the dispute game itself into a proof, so that every stat
 
 The pool hides each spend among all the unspent notes that look alike. This crowd is the **anonymity set**. A spend is only as private as the crowd is large, so a new pool starts with almost no privacy and gains it with use.
 
-We grow the crowd in two ways. We build our own users. We also offer a bridge for Railgun users: they unshield from Railgun and shield into our pool, which is one public step. The bridge moves money, not privacy. A Railgun note cannot be spent in our pool, so the value that crosses must build a new crowd here.
+The crowd grows only from deposits into our own pool. A note in another pool cannot hide a spend here, so we grow the crowd by bringing in new users.
 
-### Proofs of Innocence control what enters
+The wallet also makes it easy for a Railgun user to move funds in. The move is a Railgun unshield followed by a shield into our pool, so it is an ordinary deposit. It costs the user some privacy. The token, the amount and the time are public on both pools, so an observer can match the two sides. The moved value also leaves Railgun's large crowd for our smaller one. The wallet shows these costs before the user confirms.
 
-A **Proof of Innocence** shows that a note does not come from a listed illicit source, and it does so without revealing the note. We keep Railgun's construction for these proofs, under an allow-list policy that we set.
+### Selective disclosure shows where value came from
 
-The channel deposit checks a note's proof before it funds the channel. A payout creates fresh notes that keep their status. Nothing links a payout note to the deposit note, except the public deposit amount. Value that a user brings across from Railgun does not keep its status.
+No check stands between a user and the pool. Deposits, transfers, withdrawals and channel deposits proceed without any proof of origin.
+
+A user who must show where value came from, for example to an exchange, uses **selective disclosure**. This is a voluntary, off-chain proof of a chain of custody for chosen value. The chain runs from a shielding address, through notes and channels, to a payout or a withdrawal. The proof reveals nothing else about the wallet, and it never becomes a condition of pool use.
 
 ### Reading and writing leave no trace
 
@@ -75,7 +77,7 @@ On the write side, a keeper or broadcaster submits transactions for the user. So
 
 One limit remains. The transport encrypts traffic and authenticates peers, but it does not hide a user's IP address. Section 8.4 covers the transport.
 
-*Items:* T0.0, T0.3, T0.6, T0.7, T2.0, T6.1, T6.4, T6.5. *Decisions:* ADR-0002, ADR-0005, ADR-0006, ADR-0008. *Quality scenarios:* §10. *Cold-start risk:* §11.
+*Items:* T0.0, T0.3, T0.6, T0.7, T2.0, T6.1, T6.4, T6.5, T6.7. *Decisions:* ADR-0002, ADR-0005, ADR-0006, ADR-0008, ADR-0020. *Design:* [16 selective disclosure](./16-selective-disclosure.md). *Quality scenarios:* §10. *Cold-start risk:* §11.
 
 ## 8.3 Non-custody & exit
 
@@ -105,7 +107,7 @@ Reads and settlement are **paid the same way**: private per-request **go-nitro p
 
 Groth16 needs a per-circuit setup, and the concept here is a **reuse-Phase-1 / own-Phase-2** discipline (ADR-0003), owned as a process — not code — in T0.1. Phase-1 reuses the community Perpetual Powers of Tau, the expensive, vetted, circuit-agnostic part; we never run our own universal ceremony. Phase-2 is **ours**: a circuit-specific MPC over our deployed set, with **1-of-N honest** security (≥5 organizationally distinct contributors), a published transcript, and a final randomness beacon. The Solidity verifier is generated from the final vkey and wired into T0.0.
 
-The key coupling is that any circuit change re-runs Phase-2 while Phase-1 is never re-run. The canonical trigger is the T0.6 amount-privacy upgrade (§8.2), and the optional cross-pool membership path (T0.7) is the other. New `wasm` and `zkey` artifacts then ship to the mobile prover (T6.6). This is why fork-lite carries a ceremony, fresh-audit, and heavier-prover cost (ADR-0005): nothing new is invented, the same pipeline is simply re-executed.
+The key coupling is that any circuit change re-runs Phase-2 while Phase-1 is never re-run. The canonical trigger is the T0.6 amount-privacy upgrade (§8.2). New `wasm` and `zkey` artifacts then ship to the mobile prover (T6.6). This is why fork-lite carries a ceremony, fresh-audit, and heavier-prover cost (ADR-0005): nothing new is invented, the same pipeline is simply re-executed.
 
 → detail in §5 T0.1; prover constraint in §5 T6.6; deferral rationale in §11.
 

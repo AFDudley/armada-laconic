@@ -15,13 +15,13 @@ The value-moving construction, step by step (the yield → USDC route):
 2. **Quote** (T4.1): the wallet requests a quote, and the venue returns the current signed posted bid/ask (T4.0). Take-it-or-leave-it.
 3. **Settle** (T4.1): acceptance drives the quote/settle ForceMove app to a co-signed fill state — user leg out, venue leg in, at the posted price.
 4. **Fill from inventory** (T4.0/T4.1, v1): the venue fills the leg from its pre-funded static inventory at the posted price. Automated netting/hedging/rebalancing (T4.2) and the LP-buffered USDC rail (T4.5) are v2 (ADR-0011).
-5. **Payout → fresh notes** (T0.3): channel finalize routes the outcome through the payout endpoint, shielding fresh USDC notes to the user — a fresh-shield exit that preserves POI (T0.0).
+5. **Payout → fresh notes** (T0.3): channel finalize routes the outcome through the payout endpoint, shielding fresh USDC notes to the user (a fresh-shield exit).
 
 ## T4.0 Posted-price contract
 
 **Status:** net-new · v1.
 
-The on-chain price surface. A single privileged `priceSetter` holds the current bid/ask per pair — one ETH L1 wallet to start, **migratable to a governance address later** via the same admin-key→governance path used for the T0.0 POI update authority and the T0.3 game allow-list.
+The on-chain price surface. A single privileged `priceSetter` holds the current bid/ask per pair — one ETH L1 wallet to start, **migratable to a governance address later** via the same admin-key→governance path used for the T0.3 game allow-list.
 
 - **What it is:** the venue holds the current posted price, executes fills at it, and clears and settles over Nitro. **No order book, no auction, no queue.** A posted, take-it-or-leave-it price has **nothing to front-run**, which is precisely what removes the entire fair-ordering problem (commit-reveal, sequencing, epoch set-agreement) from v1 and defers it to T4.6.
 - **Reuse vs build:** build — a small contract plus poster (net-new, small).

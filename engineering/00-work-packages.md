@@ -19,7 +19,7 @@ Note the split of the T6 client tier: **A** owns the settlement client (T6.2) an
 
 Each work package binds to its siblings only through these; the interface *is* the boundary.
 
-- **A exposes:** deposit/payout contract address + ABI + events (`Deposit`/`Payout`, adjudicator `Challenge`/`Checkpoint`/`Finalized`); the channel-lifecycle API; the ForceMove app registry; the voucher format; the pool commitment/nullifier event ABI; circuit `wasm`/`zkey` artifacts; the POI allow-list root.
+- **A exposes:** deposit/payout contract address + ABI + events (`Deposit`/`Payout`, adjudicator `Challenge`/`Checkpoint`/`Finalized`); the channel-lifecycle API; the ForceMove app registry; the voucher format; the pool commitment/nullifier event ABI; circuit `wasm`/`zkey` artifacts.
 - **B exposes:** the proof-carrying feed schema (`getStorageAt → {value, proof}`); the Nitro voucher metering interface; the per-contract head-cursor freshness signal (which T6.3 gates on).
 - **C exposes:** the quote RPC; the posted price + `priceSetter` authority; the quote/settle app id; the per-venue loyalty-key scheme; the capacity hint.
 - **D exposes:** the Armada-branded app + SDK surface over A/B/C.
@@ -37,7 +37,7 @@ Per [ADR-0012](./09-architecture-decisions.md#adr-0012) rule 5:
 
 Kept with their owner so they no longer contaminate the core scope:
 
-- **A:** native amount-privacy (T0.6, opt, ADR-0005); cross-pool membership proofs (T0.7, opt, ADR-0006).
+- **A:** native amount-privacy (T0.6, opt, ADR-0005).
 - **B:** federation bonding + threshold DKG (T2.4, v2); the T1 nimbus long pole (ADR-0009).
 - **C:** **USDC yield is the priority and in scope** via the Aave-v4 adapter (ADR-0013); the open decision is the **v1 mechanism** — direct adapter recipe (public Design-A boundary) vs the private **LP-buffered rail** (T4.5, which needs v2 market-making, ADR-0011) — and may amend ADR-0011. **Adapter source** (build vs reuse Railgun's Cookbook Aave/Swaps recipes) is an open decision. ETH/wstETH yield (T4.4) is the trivial path; market-making stays v2 (ADR-0011).
 - **D:** mobile transport crux (T6.5, ADR-0008); optional identity (T6.8).

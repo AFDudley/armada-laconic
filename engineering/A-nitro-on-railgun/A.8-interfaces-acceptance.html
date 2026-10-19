@@ -32,7 +32,7 @@
 <h2 id="a82-boundary">A.8.2 Boundary</h2>
 <ul>
 <li><strong>In scope:</strong> the consolidated contract/event/API surface A publishes; the freshness contract A depends on from B; the fixturenet acceptance slice and adversarial cases; the roll-up acceptance matrix.</li>
-<li><strong>Out of scope (owned elsewhere):</strong> the deposit/payout ABI internals (see A.5), pool config (see A.2), ceremony artifacts (see A.3), adjudicator and app choice (see A.4), client and watchtower loop (see A.6), POI and anon-set (see A.7). This doc cites them; it never re-specifies them.</li>
+<li><strong>Out of scope (owned elsewhere):</strong> the deposit/payout ABI internals (see A.5), pool config (see A.2), ceremony artifacts (see A.3), adjudicator and app choice (see A.4), client and watchtower loop (see A.6), anon-set (see A.7). This doc cites them; it never re-specifies them.</li>
 <li><strong>Phase-0 assumption.</strong> The pool (T0.0, see A.2) and circuits (T0.1, see A.3) are our own implementation, so the skeleton runs against our own pool. The ICD shapes below are stable regardless.</li>
 </ul>
 <h2 id="a83-reuse-inventory-cite-a1">A.8.3 Reuse inventory (cite A.1)</h2>
@@ -77,7 +77,7 @@
 <td>reused (+delta, A.1.9 §6)</td>
 </tr>
 <tr>
-<td><code>Deposit</code>/<code>Payout</code> events; T0.3 fund/payout entrypoints; app registry; POI-gate</td>
+<td><code>Deposit</code>/<code>Payout</code> events; T0.3 fund/payout entrypoints; app registry</td>
 <td><a href="./A.1-reuse-inventory.html">A.1.4</a>, <a href="./A.1-reuse-inventory.html">A.1.9</a> §1 (→ A.5)</td>
 <td><strong>net-new</strong></td>
 </tr>
@@ -115,8 +115,6 @@ The set of <code>appDefinition</code> addresses T0.3 accepts for a funded channe
 <p><strong>(f) Pool commitment-insert and nullifier-spend event ABI, plus circuit artifacts (see A.2 and A.3; consumed by B·T1.2, T6.1, T6.6).</strong>
 - Events <code>Shield</code>, <code>Transact</code>, <code>Nullified</code> (and <code>Action</code>/<code>Unshield</code>) at <code>RailgunLogic.sol</code> L57–77 (<a href="./A.1-reuse-inventory.html">A.1.1</a>) are the commitment-insert and nullifier-spend feed that B indexes (T1.2) and that the note-scanner rebuilds the tree from (T6.1). Tree params: <code>TREE_DEPTH=16</code>, <code>rootHistory</code> (<code>Commitments.sol</code> L28–55).
 - Circuit <code>wasm</code> and <code>zkey</code> artifacts number one pair per registered <code>(nIn,nOut)</code> combo, out of the 91 generated (A.1.8 §3; the registered subset is reconciled in A.3). They are published from T0.1's ceremony (see A.3) and consumed by D's mobile prover (T6.6) and any prover B runs. The matching on-chain <code>verificationKeys[nIn][nOut]</code> registration is A.2's job.</p>
-<p><strong>(g) POI allow-list policy and root (see A.7).</strong>
-POI is not a pool setting; it is an alongside partner system (<a href="./A.1-reuse-inventory.html">A.1.7</a>, <a href="./A.0-overview.html">A.0.5</a> gate 2). A exposes the allow-list root (chosen list-provider datasets and standby period) and the gate policy. T0.3 gated-entry enforces a valid POI proof in the settlement path before a deposit is accepted. The POI node stack is a separate dependency, not redeployable from the four scoped repos. Consumers treat the root as opaque policy input. Detail: A.7.</p>
 <h3 id="a852-what-a-consumes-from-b-hosted-by-d">A.8.5.2 What A consumes (from B; hosted by D)</h3>
 <p>A depends on exactly one sibling interface at runtime, plus D as host:</p>
 <ul>
@@ -216,12 +214,12 @@ POI is not a pool setting; it is an alongside partner system (<a href="./A.1-reu
 </tr>
 <tr>
 <td><strong>T0.3</strong> deposit/payout</td>
-<td>Deposit-in escrows the exact unshielded amount into <code>channelId</code>; payout-out re-shields the full outcome; <code>Deposit</code>/<code>Payout</code> emitted; rejects unregistered <code>appDefinition</code> and invalid POI</td>
+<td>Deposit-in escrows the exact unshielded amount into <code>channelId</code>; payout-out re-shields the full outcome; <code>Deposit</code>/<code>Payout</code> emitted; rejects unregistered <code>appDefinition</code></td>
 <td>A.5</td>
 </tr>
 <tr>
 <td><strong>T0.7</strong> anon-set</td>
-<td>Import-bridge hop (unshield-Railgun → shield-ours) works; POI gate honoured at deposit</td>
+<td>Anonymity-set size, effective-k and boundary-exposure metrics computed and trend-visible</td>
 <td>A.7</td>
 </tr>
 <tr>

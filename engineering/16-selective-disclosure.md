@@ -188,5 +188,5 @@ The SDK builds and checks disclosure packages. A client app uses the SDK and hol
 ## Where this fits
 
 - Hub yield and swaps: [15](./15-hub-yield-and-swaps.md). Hub channels and games: [14](./14-shielded-games-over-nitro.md).
-- Settlement rail: [A.5 deposit/payout contract](./A-nitro-on-railgun/A.5-deposit-payout-contract.md). Anonymity set and POI: [A.7](./A-nitro-on-railgun/A.7-anonymity-set.md).
+- Settlement rail: [A.5 deposit/payout contract](./A-nitro-on-railgun/A.5-deposit-payout-contract.md). Anonymity set: [A.7](./A-nitro-on-railgun/A.7-anonymity-set.md).
 - Decisions: [ADR-0016](./09-architecture-decisions.md#adr-0016) (adjudicator and custodian), [ADR-0017](./09-architecture-decisions.md#adr-0017) (hub yield), [ADR-0020](./09-architecture-decisions.md#adr-0020) (this design).

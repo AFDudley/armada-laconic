@@ -80,7 +80,7 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **Armada** — pluggable **asset-privacy infrastructure for USDC** on Railgun; three tiers (shielded pool / adapters / apps+SDK), crowdfunded, ARM-token DAO + steward. `@ship_armada`, `armada.wtf`. In testnet.
 - **Shielded pool** — the shared privacy pool; privacy compounds with volume (one anonymity set). Railgun pool **T0.0**.
 - **Shielded note / Note** — a shielded UTXO-like value commitment inside the pool, and the unit of shielded value. Railgun pool **T0.0**.
-- **Anonymity set** — the crowd of shielded notes among which a spend is indistinguishable; privacy compounds with volume. Bootstrap own crowd + Railgun import bridge (**T0.7**, ADR-0006). Import ≠ set inheritance.
+- **Anonymity set** — the crowd of shielded notes among which a spend is indistinguishable; privacy compounds with volume. It grows only from deposits into our own pool (**T0.7**, ADR-0006).
 - **Commitment** — a note's on-chain hash (its value commitment), added to the pool's Merkle tree. Railgun pool **T0.0**; indexed by **T1.2**.
 - **Nullifier** — a note's spend-marker; prevents double-spending without revealing which note was spent. Railgun pool **T0.0**; indexed by **T1.2**.
 - **0zk address** — a Railgun private receiving address.
@@ -91,7 +91,7 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **MASP** — Namada's Multi-Asset Shielded Pool note primitive — a note primitive, **not** a state channel (contrast Design B). Reference only.
 - **RelayAdapt / recipe** — Railgun's cross-contract module: an atomic `unshield → external call → reshield` (Cookbook "recipes", e.g. an Aave deposit). The value-moving "adapter" — *not* a custodial vault, *not* DSS.
 - **wstETH / weETH** — non-rebasing LSTs (value accrues via a rising exchange rate). Held as a shielded note they earn ETH staking yield intrinsically, with no Aave/LP rail needed. ETH yield **T4.4**.
-- **POI** — Proofs of Innocence: an allow-list membership policy proving a note is not from a sanctioned or illicit source, without deanonymizing it. Our POI policy on the redeployed pool **T0.0** (ADR-0002).
+- **Selective disclosure** — a voluntary, off-chain proof of a chain of custody for chosen value, from a shielding address through notes and channels to a payout or withdrawal, that reveals nothing else about the wallet. It never gates a pool action (ADR-0020; [16](engineering/16-selective-disclosure.html)).
 
 ## 5. This project's design terms
 

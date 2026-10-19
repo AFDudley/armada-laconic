@@ -24,7 +24,7 @@ Facets: **status** (built · reuse · net-new · partial) · **confidence** (`va
 - **T0.1 circuits + trusted setup — net-new** (ADR-0014): our own JoinSplit circuits + a Phase-2 MPC over the community Phase-1 (never re-run). Audit-critical; ceremony is a process risk (§11 R6). `design`
 - **T0.2 Nitro adjudicator — reuse** go-nitro `@435eb2b` (ForceMove / MultiAssetHolder), live on Ethereum. `validated`
 - **T0.3 deposit/payout contract — net-new** — the notes-in / notes-out boundary; **never an "adapter"** (ADR-0010). Spend-authorizing (§11 R5). `design`
-- **T0.7 anonymity-set strategy — process** — bootstrap the crowd + the Railgun onboarding import bridge (§11 R1). `design`
+- **T0.7 anonymity-set strategy — process** — bootstrap the crowd with new users (§11 R1). The move from Railgun is a wallet feature (T6.7). `design`
 
 ### T1 · Ingestion — **the v1 long pole (§11 R3)**
 - **T1.0 nimbus-eth1 state-diff emitter → IPLD — net-new**; the stateless/witness + Aristo path is upstream-in-progress. The one genuinely unbuilt v1-spine tier; a stale feed is a **safety** problem for the watchtower, not just latency. `design`
@@ -56,7 +56,7 @@ A **linear 1–10** relative-difficulty estimate (1 = trivial config/reuse; 10 =
 | T0.1 circuits + trusted setup | net-new | **9** |
 | T0.2 Nitro adjudicator | reuse | 2 |
 | T0.3 deposit/payout contract | net-new | 5 |
-| T0.7 anon-set strategy + import bridge | process | 3 |
+| T0.7 anon-set strategy | process | 3 |
 | T1.0 nimbus state-diff emitter | net-new (long pole) | **8** |
 | T1.1 IPLD proof-carrying diffs | partial | 4 |
 | T1.2 watcher ingest config | net-new | 3 |

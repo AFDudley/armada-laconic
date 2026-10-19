@@ -34,11 +34,11 @@
 <li><strong>Quote</strong> (T4.1): the wallet requests a quote, and the venue returns the current signed posted bid/ask (T4.0). Take-it-or-leave-it.</li>
 <li><strong>Settle</strong> (T4.1): acceptance drives the quote/settle ForceMove app to a co-signed fill state — user leg out, venue leg in, at the posted price.</li>
 <li><strong>Fill from inventory</strong> (T4.0/T4.1, v1): the venue fills the leg from its pre-funded static inventory at the posted price. Automated netting/hedging/rebalancing (T4.2) and the LP-buffered USDC rail (T4.5) are v2 (ADR-0011).</li>
-<li><strong>Payout → fresh notes</strong> (T0.3): channel finalize routes the outcome through the payout endpoint, shielding fresh USDC notes to the user — a fresh-shield exit that preserves POI (T0.0).</li>
+<li><strong>Payout → fresh notes</strong> (T0.3): channel finalize routes the outcome through the payout endpoint, shielding fresh USDC notes to the user (a fresh-shield exit).</li>
 </ol>
 <h2 id="t40-posted-price-contract">T4.0 Posted-price contract</h2>
 <p><strong>Status:</strong> net-new · v1.</p>
-<p>The on-chain price surface. A single privileged <code>priceSetter</code> holds the current bid/ask per pair — one ETH L1 wallet to start, <strong>migratable to a governance address later</strong> via the same admin-key→governance path used for the T0.0 POI update authority and the T0.3 game allow-list.</p>
+<p>The on-chain price surface. A single privileged <code>priceSetter</code> holds the current bid/ask per pair — one ETH L1 wallet to start, <strong>migratable to a governance address later</strong> via the same admin-key→governance path used for the T0.3 game allow-list.</p>
 <ul>
 <li><strong>What it is:</strong> the venue holds the current posted price, executes fills at it, and clears and settles over Nitro. <strong>No order book, no auction, no queue.</strong> A posted, take-it-or-leave-it price has <strong>nothing to front-run</strong>, which is precisely what removes the entire fair-ordering problem (commit-reveal, sequencing, epoch set-agreement) from v1 and defers it to T4.6.</li>
 <li><strong>Reuse vs build:</strong> build — a small contract plus poster (net-new, small).</li>

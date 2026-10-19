@@ -25,7 +25,7 @@ This is the reference spec T0.0 implements: a spec-compatible shielded pool that
 | ABI structs (`ShieldRequest`,`CommitmentPreimage`,`TokenData`,`Transaction`,`BoundParams`,`SnarkProof`) | `Globals.sol` L21–122 | Exact encode surface for **T0.3** + **T6.2**. |
 | `TokenBlocklist` | `TokenBlocklist.sol` L33–73 | T0.0 leaves USDC unblocked; unshield always allowed. |
 
-POI is not in these contracts; it is an alongside partner system (A.1.7). The pool-side levers are `changeFee(0,0,0)` and vkey registration; everything else is client-side or settlement-side policy.
+The pool-side levers are `changeFee(0,0,0)` and vkey registration; everything else is client-side or settlement-side policy.
 
 ## A.1.2 JoinSplit circuits & trusted setup (T0.1) — reference spec
 
@@ -86,7 +86,6 @@ T0.3 is a public-side ERC20 counterparty. It touches the pool and the adjudicato
 ## A.1.7 Anonymity set (T0.7) & the payments primitive
 
 - **Shielded payments** are a `transact()` with `unshield=NONE`: inputs are nullified, outputs are created, and `sumIn==sumOut` holds in-circuit. The sender, recipient, and amount stay hidden; only the root, `boundParamsHash`, nullifiers, and output-commitment hashes are public. This is the base capability A inherits for free.
-- **POI** (docs.railgun.org/…/private-proofs-of-innocence) is an alongside partner system, not in the pool. On shield, an Unshield-Only Standby Period (default 1h) precedes a blinded non-inclusion ZK proof against list-provider datasets; proofs carry forward through transfers. The T0.0 POI configuration selects list providers and the standby period at the client and POI node, while T0.3 gated-entry enforces a valid POI in the settlement path. The POI node stack is a separate dependency, not redeployable from the four repos scoped here.
 
 ## A.1.8 Corrections to earlier docs (the deep dive caught these)
 
@@ -101,17 +100,16 @@ T0.3 is a public-side ERC20 counterparty. It touches the pool and the adjudicato
 2. **Multi-asset ForceMove settlement app** — for ETH-in/USDC-out atomicity, where HashLockedSwap is single-asset only. (A.4/A.5; C authors the real quote/settle variant.)
 3. **T6.3 auto-watchtower loop and liveness** — it watches `ChallengeRegistered` and submits a higher-turn `checkpoint` before `FinalizesAt`, on an always-on node. (A.6)
 4. **`changeFee(0,0,0)` governance action and vkey registration** for the chosen combo subset. (A.2/A.3)
-5. **POI policy wiring** in the settlement path, plus integration of the separate POI node stack. (A.7)
+5. **No compliance gate.** Selective disclosure ([ADR-0020](../09-architecture-decisions.md#adr-0020)) is voluntary and off-chain, and needs no change to the pool, the circuits, or T0.3.
 6. **In-browser dispute API** — ts-nitro exposes only fund/defund/pay, so the challenge/checkpoint surface is net-new. (A.6)
 7. **(opt) native-ETH / native-commitment** — the pool is ERC20/721 only, so this needs a WETH wrap or T0.6. (A.9)
 
 ## A.1.10 Risks
 
-- **Own pool and circuits are audit-critical net-new.** T0.0 (pool) and T0.1 (circuits) are our own implementation of the Railgun design ([ADR-0014](../09-architecture-decisions.md#adr-0014)), spec-compatible with the behavior and format pinned in A.1.1/A.1.2. We own upgrades, audit, fee policy, and POI policy for them (ADR-0002); the residual load is that the build is audit-critical, not config-only.
+- **Own pool and circuits are audit-critical net-new.** T0.0 (pool) and T0.1 (circuits) are our own implementation of the Railgun design ([ADR-0014](../09-architecture-decisions.md#adr-0014)), spec-compatible with the behavior and format pinned in A.1.1/A.1.2. We own upgrades, audit, and fee policy for them (ADR-0002); the residual load is that the build is audit-critical, not config-only.
 - **Unpinned Railgun commit** — pin before build.
 - **91-vs-54 circuit ambiguity** — the registered subset must be decided, which drives the ceremony count.
 - **`snarkSafetyVector`/`checkSafetyVectors`** magic constants must be reproduced verbatim in our own implementation, matching the reference `RailgunLogic.sol` L111–127, or `transact` reverts.
-- **POI is a separate partner stack**, not redeployable from these repos.
 - **ERC1155 unsupported** by the pool (bounds T0.6).
 
 ---

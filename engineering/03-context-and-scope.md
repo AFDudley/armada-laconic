@@ -37,7 +37,7 @@ Direction is stated relative to our system.
 | External system | Interface & direction | Touched by | Decision |
 |---|---|---|---|
 | **Ethereum L1** | Settlement root: our own pool, `go-nitro` adjudicator, and deposit/payout contract live here. Bidirectional — write channel state, read commitment/nullifier/adjudicator events. | T0.0, T0.2, T0.3 (read at T1.2) | ADR-0002/0004/0014 |
-| **Railgun deployed pool** (live) | Onboarding bridge: user **unshields from Railgun → shields into our pool** — one public boundary hop; a Railgun note is never spent/nullified in our contract. Inbound. | T0.7 | ADR-0006 |
+| **Railgun deployed pool** (live) | Wallet move: the user **unshields from Railgun, then shields into our pool** — one public step that shows token, amount and time. No contract of ours reads or touches Railgun's pool. Inbound. | T6.7 | ADR-0006 |
 | **Aave v4** | The yield protocol the USDC-yield rail reaches through, via our Aave-v4 adapter's recipe (`unshield USDC → supply → reshield aUSDC`). Amounts public only at the transparent supply boundary (Design A). | T5.0 (C) | ADR-0005 |
 | **Circle CCTP** | Cross-chain USDC mint wrapped into the shield by our CCTP adapter — arrives as a fresh shielded USDC note. Inbound; adapter already built. | T5.0 (C), enters via T0.3 | — |
 | **Public Waku network** | Transport underlay: pub/sub for feed/quote gossip + discovery; libp2p-noise direct streams for the 1:1 hot loop. Bidirectional P2P. Noise gives peer-auth, **not** IP privacy. | T2.3 (T6.5 mobile) | ADR-0008 |

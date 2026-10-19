@@ -35,7 +35,7 @@
 </ul>
 <h3 id="adr-0002-deploy-our-own-railgun-pool-dont-rent-railguns">ADR-0002 — Deploy our own Railgun pool (don't rent Railgun's)</h3>
 <ul>
-<li><strong>D2.1</strong> Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (<strong>T0.0</strong>), configured with <strong>fee = 0</strong>, our POI allow-list, our token allow-list, and a reserved deposit/payout hook.</li>
+<li><strong>D2.1</strong> Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (<strong>T0.0</strong>), configured with <strong>fee = 0</strong>, our token allow-list, and a reserved deposit/payout hook.</li>
 </ul>
 <h3 id="adr-0003-keep-groth16-reuse-perpetual-pot-phase-1-run-our-own-phase-2">ADR-0003 — Keep Groth16; reuse Perpetual PoT Phase-1 + run our own Phase-2</h3>
 <ul>
@@ -55,10 +55,10 @@
 <li><strong>D5.2</strong> <strong>Native channelized commitment</strong> ("fork-lite", <strong>T0.6</strong>), which provides amount-privacy-during-play, is an <strong>optional Phase-4 upgrade</strong> rather than part of the v1 spine.</li>
 <li><strong>D5.3</strong> <strong>Fork-full</strong> — shielded ForceMove, research-grade — is <strong>excluded</strong> unless separately greenlit.</li>
 </ul>
-<h3 id="adr-0006-bootstrap-anonymity-set-railgun-onboarding-bridge">ADR-0006 — Bootstrap anonymity set + Railgun onboarding bridge</h3>
+<h3 id="adr-0006-grow-the-anonymity-set-with-our-own-users-wallet-move-from-railgun">ADR-0006 — Grow the anonymity set with our own users; wallet move from Railgun</h3>
 <ul>
-<li><strong>D6.1</strong> <strong>Bootstrap our own crowd</strong> through incentives, our own market-making capital, and an LP flywheel, <strong>plus a Railgun onboarding bridge</strong>: a user unshields from Railgun, then shields into our pool in one public boundary hop.</li>
-<li><strong>D6.2</strong> <strong>Cross-pool membership proofs</strong>, which would inherit Railgun's crowd, are deferred and optional, since they need a Phase-2 re-run and trust Railgun's root.</li>
+<li><strong>D6.1</strong> <strong>Bootstrap our own crowd</strong> with new users, through incentives, our own market-making capital, and an LP flywheel (<strong>T0.7</strong>).</li>
+<li><strong>D6.2</strong> <strong>The wallet makes it easy to move funds from Railgun</strong> (<strong>T6.7</strong>). The move is a Railgun unshield followed by a shield into our pool. It is a wallet feature, not a protocol component: no contract of ours reads or touches Railgun's pool.</li>
 </ul>
 <h3 id="adr-0007-venue-rfq-posted-price-v1-provably-fair-clob-is-v2">ADR-0007 — Venue = RFQ posted-price v1; provably-fair CLOB is v2</h3>
 <ul>
@@ -139,6 +139,15 @@
 <ul>
 <li><strong>D19.1</strong> Architecture decisions and design pages in this repo state <strong>what must hold</strong> (decisions and invariants). Requirements on <strong>how a component's code enforces them</strong>, and the tests that verify it, live in that component's repository and cite the invariants they implement.</li>
 <li><strong>D19.2</strong> (supersedes D17.5) The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of <a href="./15-hub-yield-and-swaps.html">15</a>; its asset allow-list is <strong>immutable</strong>. The contract-level requirements and their tests are armada-nitro's task E16.</li>
+</ul>
+<h3 id="adr-0020-selective-disclosure-of-a-chain-of-custody-voluntary-off-chain">ADR-0020 — Selective disclosure of a chain of custody (voluntary, off-chain)</h3>
+<ul>
+<li><strong>D20.1</strong> Armada provides a voluntary, off-chain selective disclosure protocol. With it, a user proves a chain of custody for chosen value: from a shielding address, through notes, spends and armada-nitro channels, to a payout note or a withdrawal address. The user reveals nothing else about the wallet.</li>
+<li><strong>D20.2</strong> A disclosure proof links a spend to the note it spent. The proof keeps the <code>nullifyingKey</code> and the viewing key secret. The protocol never asks the user to disclose either key.</li>
+<li><strong>D20.3</strong> The spending key authorizes each disclosure statement inside the disclosure proof. Each public address in the chain signs the same statement, so the binding between the addresses and the shielded wallet holds in both directions.</li>
+<li><strong>D20.4</strong> The protocol needs no change to the pool, its circuits or the armada-nitro contracts. It must never become a condition to deposit into, transfer in, or withdraw from the pool.</li>
+<li><strong>D20.5</strong> A statement either claims an attribution for a channel's gain or claims none. A claimed attribution requires the channel's co-signed states, and the verifier checks all of them. Without a claim, the verifier reports only the deposit and payout amounts. The protocol has no optional evidence.</li>
+<li><strong>D20.6</strong> The statement names one chain, one pool and, for channel hops, one armada-nitro adjudicator. The verifier accepts only events from that chain and those contracts.</li>
 </ul>
 <h2 id="supersessions">Supersessions</h2>
 <table>

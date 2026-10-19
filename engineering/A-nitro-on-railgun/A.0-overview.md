@@ -35,12 +35,12 @@ On deposit, a Railgun `transact()` sets `unshieldPreimage.npk` to the T0.3 addre
 | Doc | Item(s) | Contents |
 |---|---|---|
 | [A.1](./A.1-reuse-inventory.md) | all | The deep dive: reuse inventory with pinned file/line citations (Railgun, go-nitro/ts-nitro, mobymask), corrections, net-new deltas, risks |
-| [A.2](./A.2-pool-deployment.md) | T0.0 | Our own pool implementation (spec-compatible with Railgun, [ADR-0014](../09-architecture-decisions.md#adr-0014)); fee=0; POI policy; token allow-list; vkey registration |
+| [A.2](./A.2-pool-deployment.md) | T0.0 | Our own pool implementation (spec-compatible with Railgun, [ADR-0014](../09-architecture-decisions.md#adr-0014)); fee=0; token allow-list; vkey registration |
 | [A.3](./A.3-trusted-setup.md) | T0.1 | Our own JoinSplit circuits ([ADR-0014](../09-architecture-decisions.md#adr-0014)); Phase-1 reuse + own Phase-2; circuit-set reconciliation (91 generated vs registered subset); artifacts |
 | [A.4](./A.4-adjudicator-integration.md) | T0.2 | go-nitro adjudicator reuse; the ForceMove app choice; maturity gaps |
 | [A.5](./A.5-deposit-payout-contract.md) | T0.3 | The net-new contract: deposit-in, payout-out, outcome encoding, app registry |
 | [A.6](./A.6-settlement-client-watchtower.md) | T6.2, T6.3 | ts-nitro client + submit-on-behalf keeper; the net-new auto-watchtower loop |
-| [A.7](./A.7-anonymity-set.md) | T0.7 | Bootstrap + Railgun import bridge; POI binding; shielded-payments primitive |
+| [A.7](./A.7-anonymity-set.md) | T0.7 | Bootstrap the crowd with new users; shielded-payments primitive |
 | [A.8](./A.8-interfaces-acceptance.md) | ICD | What A exposes to B/C/D; the walking skeleton; acceptance/verification |
 | [A.9](./A.9-native-commitment.md) | T0.6 *(opt)* | Amount-privacy-in-play; circuit delta ⇒ re-run T0.1 |
 
@@ -61,7 +61,7 @@ Use a trivial single-asset ForceMove app (HashLockedSwap-grade) as a stand-in fo
 ## A.0.5 Open items (resolve before or during A)
 
 1. **Register a circuit subset.** The source generates 91 `(nInputs,nOutputs)` combos; the widely-cited "~54" is a registered subset. Decide which subset to ceremony and register (T0.1/T0.0; A.3).
-2. **Settle the POI policy.** POI is an alongside partner system, not a pool setting: set the list-provider and standby policy and stand up the separate POI node. Gated-entry is settlement-side, enforced by T0.3 (A.7).
+2. **Compliance posture: resolved.** Selective disclosure ([ADR-0020](../09-architecture-decisions.md#adr-0020), [16](../16-selective-disclosure.md)) is voluntary and off-chain. No gate blocks a deposit, a transfer, a withdrawal, or channel funding, so A builds no gate.
 3. **Build the multi-asset settlement app.** `MultiAssetHolder` supports multiple assets, but no shipped ForceMove app settles ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).
 4. **Build the auto-watchtower.** T6.3's auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).
 

@@ -15,7 +15,7 @@ Per [ADR-0012](../09-architecture-decisions.md#adr-0012), A binds to B, C, and D
 ## A.8.2 Boundary
 
 - **In scope:** the consolidated contract/event/API surface A publishes; the freshness contract A depends on from B; the fixturenet acceptance slice and adversarial cases; the roll-up acceptance matrix.
-- **Out of scope (owned elsewhere):** the deposit/payout ABI internals (see A.5), pool config (see A.2), ceremony artifacts (see A.3), adjudicator and app choice (see A.4), client and watchtower loop (see A.6), POI and anon-set (see A.7). This doc cites them; it never re-specifies them.
+- **Out of scope (owned elsewhere):** the deposit/payout ABI internals (see A.5), pool config (see A.2), ceremony artifacts (see A.3), adjudicator and app choice (see A.4), client and watchtower loop (see A.6), anon-set (see A.7). This doc cites them; it never re-specifies them.
 - **Phase-0 assumption.** The pool (T0.0, see A.2) and circuits (T0.1, see A.3) are our own implementation, so the skeleton runs against our own pool. The ICD shapes below are stable regardless.
 
 ## A.8.3 Reuse inventory (cite A.1)
@@ -30,7 +30,7 @@ The exposed surface is mostly reused ABI, published under A's control:
 | `ChallengeRegistered`/`Checkpointed`/`ChallengeCleared` events | go-nitro `ForceMove.sol` L39–119 (NitroScout) | reused |
 | Voucher `{ChannelId, Amount, Signature}` + `Hash()` | [A.1.3](./A.1-reuse-inventory.md) `payments/vouchers.go` L23–52 | reused |
 | Channel-lifecycle node API (fund/defund/pay) | [A.1.5](./A.1-reuse-inventory.md) ts-nitro **@884d616** `node.ts` L69–190 | reused (+delta, A.1.9 §6) |
-| `Deposit`/`Payout` events; T0.3 fund/payout entrypoints; app registry; POI-gate | [A.1.4](./A.1-reuse-inventory.md), [A.1.9](./A.1-reuse-inventory.md) §1 (→ A.5) | **net-new** |
+| `Deposit`/`Payout` events; T0.3 fund/payout entrypoints; app registry | [A.1.4](./A.1-reuse-inventory.md), [A.1.9](./A.1-reuse-inventory.md) §1 (→ A.5) | **net-new** |
 
 ## A.8.4 Net-new delta (what A.8 itself adds)
 
@@ -75,9 +75,6 @@ The set of `appDefinition` addresses T0.3 accepts for a funded channel is define
 **(f) Pool commitment-insert and nullifier-spend event ABI, plus circuit artifacts (see A.2 and A.3; consumed by B·T1.2, T6.1, T6.6).**
 - Events `Shield`, `Transact`, `Nullified` (and `Action`/`Unshield`) at `RailgunLogic.sol` L57–77 ([A.1.1](./A.1-reuse-inventory.md)) are the commitment-insert and nullifier-spend feed that B indexes (T1.2) and that the note-scanner rebuilds the tree from (T6.1). Tree params: `TREE_DEPTH=16`, `rootHistory` (`Commitments.sol` L28–55).
 - Circuit `wasm` and `zkey` artifacts number one pair per registered `(nIn,nOut)` combo, out of the 91 generated (A.1.8 §3; the registered subset is reconciled in A.3). They are published from T0.1's ceremony (see A.3) and consumed by D's mobile prover (T6.6) and any prover B runs. The matching on-chain `verificationKeys[nIn][nOut]` registration is A.2's job.
-
-**(g) POI allow-list policy and root (see A.7).**
-POI is not a pool setting; it is an alongside partner system ([A.1.7](./A.1-reuse-inventory.md), [A.0.5](./A.0-overview.md) gate 2). A exposes the allow-list root (chosen list-provider datasets and standby period) and the gate policy. T0.3 gated-entry enforces a valid POI proof in the settlement path before a deposit is accepted. The POI node stack is a separate dependency, not redeployable from the four scoped repos. Consumers treat the root as opaque policy input. Detail: A.7.
 
 ### A.8.5.2 What A consumes (from B; hosted by D)
 
@@ -124,8 +121,8 @@ Each A item passes its own acceptance in its A.x; the harness asserts they compo
 | **T0.0** pool | Own pool implementation with `changeFee(0,0,0)`; a shield+unshield round-trips; `snarkSafetyVector` reproduced so `transact` does not revert | A.2 |
 | **T0.1** setup | Phase-2 zkey per registered combo; a JoinSplit proof verifies against the registered vkey; artifacts published (A.8.5.1(f)) | A.3 |
 | **T0.2** adjudicator | go-nitro @435eb2b deployed unmodified; deposit→conclude→transfer path lands funds at an external destination | A.4 |
-| **T0.3** deposit/payout | Deposit-in escrows the exact unshielded amount into `channelId`; payout-out re-shields the full outcome; `Deposit`/`Payout` emitted; rejects unregistered `appDefinition` and invalid POI | A.5 |
-| **T0.7** anon-set | Import-bridge hop (unshield-Railgun → shield-ours) works; POI gate honoured at deposit | A.7 |
+| **T0.3** deposit/payout | Deposit-in escrows the exact unshielded amount into `channelId`; payout-out re-shields the full outcome; `Deposit`/`Payout` emitted; rejects unregistered `appDefinition` | A.5 |
+| **T0.7** anon-set | Anonymity-set size, effective-k and boundary-exposure metrics computed and trend-visible | A.7 |
 | **T6.2** client | Drives the full A.8.6.1 lifecycle; dispute surface (challenge/checkpoint) present, not just fund/defund/pay | A.6 |
 | **T6.3** watchtower | Auto watch→compare-turn→checkpoint loop fires before `finalizesAt`; **blocks on B freshness** (A.8.5.2); always-on liveness | A.6 |
 

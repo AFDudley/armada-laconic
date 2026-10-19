@@ -39,14 +39,14 @@ Facets: **status** (`net-new` · `reuse` / `built/reuse` · `partial`) · **rele
 ### T0 · Ethereum anchor
 | id | item | status | release |
 |---|---|---|---|
-| T0.0 | Shielded pool — our own implementation of the Railgun design (spec-compatible); POI policy; fee=0 (ADR-0014) | net-new | v1 |
+| T0.0 | Shielded pool — our own implementation of the Railgun design (spec-compatible); fee=0 (ADR-0014) | net-new | v1 |
 | T0.1 | Circuits + trusted setup — our own JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N) (ADR-0014) | net-new | v1 |
 | T0.2 | Nitro adjudicator — `go-nitro` NitroAdjudicator / ForceMove / MultiAssetHolder | built/reuse | v1 |
 | T0.3 | Deposit/payout contract — the Nitro↔Railgun boundary (notes in / notes out) | net-new | v1 |
 | T0.4 | Registry + bond contract — venue/party bonding | net-new | v2 |
 | T0.5 | Sequencing-cert + fraud-proof verifier | net-new | v2 |
 | T0.6 | Native channelized commitment — amount-privacy-in-play (change to our own circuits ⇒ re-run T0.1) | net-new | opt |
-| T0.7 | Anonymity-set strategy — bootstrap own crowd + Railgun import bridge | strategy | v1 |
+| T0.7 | Anonymity-set strategy — bootstrap the crowd with new users | strategy | v1 |
 
 ### T1 · Ingestion
 | id | item | status | release |
@@ -98,7 +98,7 @@ Facets: **status** (`net-new` · `reuse` / `built/reuse` · `partial`) · **rele
 | T6.4 | Address rotation + per-venue loyalty keys | net-new | v1 |
 | T6.5 | Mobile transport — native gomobile (go-waku, go-libp2p-noise); interim WebView | net-new (crux) | v1 |
 | T6.6 | Groth16 mobile proving — snarkjs-WASM / rapidsnark; artifacts from T0.0/T0.1 | reuse (constraint) | v1 |
-| T6.7 | Armada-branded app + SDK wiring | product | v1 |
+| T6.7 | Armada-branded app + SDK wiring; wallet move from Railgun | product | v1 |
 | T6.8 | Identity — optional Self zk-passport attestation | opt | opt |
 
 *Decisions that shaped these items: [§9 ADRs](./09-architecture-decisions.md). Recurring concerns spanning tiers: [§8 cross-cutting concepts](./08-crosscutting-concepts.md).*

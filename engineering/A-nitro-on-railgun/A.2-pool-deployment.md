@@ -24,7 +24,6 @@ The pool is our own implementation of the Railgun design ([ADR-0014](../09-archi
 **Out of scope (elsewhere):**
 - The ceremony that *produces* the vkeys, and the 91-vs-54 combo-subset reconciliation, belong to [A.3](A.3-trusted-setup.md) (T0.1). T0.0 only *registers* what A.3 hands over.
 - The deposit/payout contract itself belongs to [A.5](A.5-deposit-payout-contract.md) (T0.3). T0.0 exposes the shield/unshield entrypoints it binds to; it does not build T0.3.
-- POI is not a pool setting. POI is an alongside partner stack; its "config" is a client- or POI-node-side choice of list providers and standby, and gated entry is enforced in the settlement path (see [A.7](A.7-anonymity-set.md)). T0.0 sets no on-chain POI switch (A.1.7).
 - Consumers that index and scan pool events belong to B (T1.2) and T6.1; T0.0 only publishes the event ABI (A.2.5).
 
 ## A.2.3 Reuse inventory (cite A.1 + pinned commit)
@@ -50,13 +49,13 @@ RelayAdapt and Cookbook (Railgun's own recipe layer) are not part of T0.0; Armad
 
 Per [ADR-0014](../09-architecture-decisions.md#adr-0014) (and [A.1.9 item 4](A.1-reuse-inventory.md#a19-net-new-deltas-what-a-actually-builds)), T0.0's net-new surface is the **pool contracts** together with their deployment and governance, an audit-critical build, not config-only:
 
-1. **Author and own the pool contract stack.** Implement the proxy to `RailgunSmartWallet` / `RailgunLogic` / `{Commitments, TokenBlocklist, Verifier}` stack, spec-compatible with A.1.1 ([ADR-0014](../09-architecture-decisions.md#adr-0014)); deploy it under keys we control; and hold upgrade and owner authority. This is the whole point of ADR-0002: own upgrades, audit, fee, and POI policy. This contract set is the **audit-critical** net-new artifact of T0.0, and downstream items assume the proxy address is stable and admin-owned.
+1. **Author and own the pool contract stack.** Implement the proxy to `RailgunSmartWallet` / `RailgunLogic` / `{Commitments, TokenBlocklist, Verifier}` stack, spec-compatible with A.1.1 ([ADR-0014](../09-architecture-decisions.md#adr-0014)); deploy it under keys we control; and hold upgrade and owner authority. This is the whole point of ADR-0002: own upgrades, audit, and fee policy. This contract set is the **audit-critical** net-new artifact of T0.0, and downstream items assume the proxy address is stable and admin-owned.
 2. **`changeFee(0,0,0)` governance action.** Call `changeFee(shieldFee, unshieldFee, nftFee)` with `(0,0,0)` (`RailgunLogic.sol` L146–161) so shield, unshield, and NFT fees are zero; Armada earns from venue spread and watcher metering, not a pool skim (ADR-0002). This is an owner-gated transaction, part of the deploy runbook.
 3. **Vkey registration.** For each chosen `(nIn,nOut)` combo (the subset reconciled in A.3, with 91 generated, not 54; A.1.8), call `Verifier.setVerificationKey(nIn, nOut, vkey)` with the Phase-2 output of our ceremony (see A.3). Until this is done, `transact`/`shield` proofs have no key to verify against.
 4. **Token allow-list posture.** Deploy `TokenBlocklist` empty of USDC (and of any asset A/C settles) so shield admits it; unshield is always allowed regardless of blocklist (`TokenBlocklist.sol` L33–73).
 5. **Reproduce SNARK-safety config.** Carry `snarkSafetyVector` and the `checkSafetyVectors` magic constants (matching the reference `RailgunLogic.sol` L111–127) verbatim into our implementation; a mismatch makes every `transact` revert. This is a must-match delta, noted because a build that regenerates or drops these constants breaks the pool.
 
-**What T0.0 does not author:** no fee-taking logic, and no on-chain POI switch. POI is client- or POI-node-side policy (A.1.7; see A.7), and gated entry lives in the settlement path (T0.3, A.5). Asserting an on-chain POI config here would be wrong.
+**What T0.0 does not author:** no fee-taking logic, and no entry gate. Selective disclosure ([ADR-0020](../09-architecture-decisions.md#adr-0020)) is off-chain and needs no pool setting.
 
 ## A.2.5 Interfaces (ICD)
 
@@ -78,8 +77,6 @@ The Merkle root each event advances lives in `Commitments` (`rootHistory`, `TREE
 - `shield(ShieldRequest[])` is the payout-out entrypoint T0.3 calls to mint fresh notes to beneficiaries (A.1.4, A.5).
 - `transact(Transaction[])` with `boundParams.unshield=NORMAL` and `unshieldPreimage.npk = bytes32(uint160(T0.3 address))` is the deposit-in entrypoint. `transferTokenOut` (`RailgunLogic.sol` L318–364) lands the ERC20 in T0.3, which then escrows via `MultiAssetHolder.deposit` (A.1.4). The "reserved deposit/payout hook" is precisely this address-as-recipient convention, not a code hook inside the pool; T0.0 reserves nothing beyond a stable, allow-listed asset path and the pool's normal unshield-recipient semantics.
 
-**(d) POI allow-list policy**, for A.7: T0.0 sets no on-chain POI value. The exposed "policy" is the decision surface — choose list providers and a standby period — resolved in the client or POI-node software and enforced in the settlement path (T0.3 gated entry). It is documented here as an explicit non-interface so downstream items do not look for a pool setter that does not exist (A.1.7).
-
 ## A.2.6 Acceptance / verification
 
 **Primary acceptance (the roundtrip):** on the laconic fixturenet, drive a full shield then transact-unshield roundtrip and confirm each leg proves against our own registered vkeys. That is, `Verifier` verifies the Groth16 proof using keys set by our T0.1 ceremony, not Railgun's:
@@ -91,7 +88,7 @@ The Merkle root each event advances lives in `Commitments` (`rootHistory`, `TREE
 
 **Fixturenet integration hook (walking skeleton, [A.0.4](A.0-overview.md#a04-walking-skeleton-as-first-integration-target)):** this roundtrip is the pool half of `shield → unshield-in → deposit → settle → conclude → shield`. T0.0 acceptance is the shield/unshield legs proving against our vkeys; the deposit/settle/conclude legs are A.4/A.5. Full end-to-end acceptance is owned by [A.8](A.8-interfaces-acceptance.md).
 
-**Explicitly not acceptance for T0.0:** ceremony soundness (A.3), deposit escrow / channel settle (A.4/A.5), POI enforcement (A.7). Registering vkeys is T0.0; *producing* them is T0.1.
+**Explicitly not acceptance for T0.0:** ceremony soundness (A.3), deposit escrow / channel settle (A.4/A.5). Registering vkeys is T0.0; *producing* them is T0.1.
 
 ## A.2.7 Risks / open
 
@@ -100,6 +97,5 @@ The Merkle root each event advances lives in `Commitments` (`rootHistory`, `TREE
 - **Combo-subset dependency on A.3.** T0.0 can only register the vkeys A.3 reconciles (91 generated vs the cited ~54 registered subset; A.1.8). Registering the wrong subset means some `(nIn,nOut)` `transact`/`shield` shapes have no key and revert. Sequence T0.0 vkey registration after A.3 fixes the subset.
 - **Safety-vector regression.** A build that regenerates rather than reproduces `snarkSafetyVector`/`checkSafetyVectors` (matching the reference `RailgunLogic.sol` L111–127) silently breaks `transact`. Treat these as pinned constants, and cover them in A.2.6 step 1.
 - **Proxy-admin key custody.** Owning the upgrade admin (A.2.4) concentrates upgrade, fee, and vkey authority; key management and governance for the admin is an operational risk to flag to the settlement client and watcher operators (A.6), out of T0.0 code scope.
-- **POI mis-modeling.** Repeated because it is a common error: there is no on-chain POI setter to reimplement; POI is a separate partner stack and a settlement-side policy (A.1.7; see A.7). Do not add a pool config for it.
 
 See also: Ceremony that feeds A.2.4 vkey registration: [A.3](A.3-trusted-setup.md). Contract that binds A.2.5(c): [A.5](A.5-deposit-payout-contract.md). Deep-dive citations: [A.1.1](A.1-reuse-inventory.md#a11-shielded-pool-t00-reference-spec), [A.1.10](A.1-reuse-inventory.md#a110-risks).

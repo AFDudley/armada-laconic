@@ -61,7 +61,7 @@
 </tr>
 <tr>
 <td><a href="#adr-0006">0006</a></td>
-<td>Bootstrap anonymity set + Railgun onboarding bridge</td>
+<td>Grow the anonymity set with our own users; wallet move from Railgun</td>
 <td>accepted</td>
 </tr>
 <tr>
@@ -132,7 +132,7 @@
 <tr>
 <td><a href="#adr-0020">0020</a></td>
 <td>Selective disclosure of a chain of custody (voluntary, off-chain)</td>
-<td>proposed</td>
+<td>accepted</td>
 </tr>
 </tbody>
 </table>
@@ -150,13 +150,13 @@
 <p><strong>Alternatives.</strong> C4/Simon Brown is diagram-centric and light on decisions and cross-cutting concerns; Views-and-Beyond/SEI is rigorous but heavyweight; and a bespoke structure is the status quo that failed.</p>
 <h2 id="adr-0002">ADR-0002</h2>
 <p><strong>Deploy our own Railgun pool (don't rent Railgun's)</strong> · accepted · 2026-09-04</p>
-<p><strong>Context.</strong> We need a shielded pool with our own fee policy and POI policy, plus the freedom to attach a settlement contract. The Railgun design can be reimplemented under our own control.</p>
+<p><strong>Context.</strong> We need a shielded pool with our own fee policy, plus the freedom to attach a settlement contract. The Railgun design can be reimplemented under our own control.</p>
 <p><strong>Decision.</strong></p>
 <ul>
-<li><strong>D2.1</strong> Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (<strong>T0.0</strong>), configured with <strong>fee = 0</strong>, our POI allow-list, our token allow-list, and a reserved deposit/payout hook.</li>
+<li><strong>D2.1</strong> Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (<strong>T0.0</strong>), configured with <strong>fee = 0</strong>, our token allow-list, and a reserved deposit/payout hook.</li>
 </ul>
-<p><strong>Consequences.</strong> We own upgrades and audit, and revenue comes from venue spread plus watcher metering rather than a pool skim. We do <strong>not</strong> modify Railgun's deployed protocol or touch their live pool; instead, a Railgun onboarding bridge (ADR-0006) imports value from their pool.</p>
-<p><strong>Alternatives.</strong> Renting Railgun's live pool — which carries their ~0.25% fee, no fee or POI control, and no settlement hook — was rejected.</p>
+<p><strong>Consequences.</strong> We own upgrades and audit, and revenue comes from venue spread plus watcher metering rather than a pool skim. We do <strong>not</strong> modify Railgun's deployed protocol or touch their live pool. Railgun users move funds in through a wallet action (ADR-0006).</p>
+<p><strong>Alternatives.</strong> Renting Railgun's live pool — which carries their ~0.25% fee, no fee control, and no settlement hook — was rejected.</p>
 <h2 id="adr-0003">ADR-0003</h2>
 <p><strong>Keep Groth16; reuse Perpetual PoT Phase-1 + run our own Phase-2</strong> · accepted · 2026-09-04</p>
 <p><strong>Context.</strong> Groth16 requires a per-circuit trusted setup. Two questions remained open: whether to run our own trusted setup, and whether to switch to Halo2 to avoid setup altogether.</p>
@@ -191,15 +191,15 @@
 <p><strong>Consequences.</strong> v1 needs zero new crypto. Fork-lite, if greenlit, changes circuits and therefore re-runs Phase-2 (ADR-0003), requires a fresh audit, and imposes heavier mobile proving.</p>
 <p><strong>Alternatives.</strong> Fork-lite in v1 was rejected: it is unneeded for the feature set and adds ceremony, audit, and prover cost. Fork-full is out of scope.</p>
 <h2 id="adr-0006">ADR-0006</h2>
-<p><strong>Bootstrap anonymity set + Railgun onboarding bridge</strong> · accepted · 2026-09-04</p>
-<p><strong>Context.</strong> A fresh pool's anonymity set starts near zero, which is the biggest non-engineering risk. The request was to have our own liquidity while also accepting Railgun's.</p>
+<p><strong>Grow the anonymity set with our own users; wallet move from Railgun</strong> · accepted · 2026-09-04</p>
+<p><strong>Context.</strong> A fresh pool's anonymity set starts near zero, which is the biggest non-engineering risk. Railgun users hold value that they may want to move into our pool.</p>
 <p><strong>Decision.</strong></p>
 <ul>
-<li><strong>D6.1</strong> <strong>Bootstrap our own crowd</strong> through incentives, our own market-making capital, and an LP flywheel, <strong>plus a Railgun onboarding bridge</strong>: a user unshields from Railgun, then shields into our pool in one public boundary hop.</li>
-<li><strong>D6.2</strong> <strong>Cross-pool membership proofs</strong>, which would inherit Railgun's crowd, are deferred and optional, since they need a Phase-2 re-run and trust Railgun's root.</li>
+<li><strong>D6.1</strong> <strong>Bootstrap our own crowd</strong> with new users, through incentives, our own market-making capital, and an LP flywheel (<strong>T0.7</strong>).</li>
+<li><strong>D6.2</strong> <strong>The wallet makes it easy to move funds from Railgun</strong> (<strong>T6.7</strong>). The move is a Railgun unshield followed by a shield into our pool. It is a wallet feature, not a protocol component: no contract of ours reads or touches Railgun's pool.</li>
 </ul>
-<p><strong>Consequences.</strong> This gives day-one dual liquidity. <strong>Liquidity import ≠ anonymity-set inheritance</strong>: a Railgun note cannot be spent or nullified in our contract, so "accept Railgun's" means the unshield→shield hop, not native ingestion. Privacy compounds with volume (<strong>T0.7</strong>).</p>
-<p><strong>Alternatives.</strong> Cross-pool proofs in v1 are deferred. Renting Railgun's pool for its set was rejected in ADR-0002.</p>
+<p><strong>Consequences.</strong> Privacy grows only with our own volume. Moved value joins our crowd like any other deposit. The move is a public step: the token, the amount and the time are visible on both pools, so an observer can match the two sides. A user who moves from Railgun's larger crowd into our smaller one has weaker privacy until our pool grows. The wallet states these costs before the user confirms (T6.7).</p>
+<p><strong>Alternatives.</strong> Renting Railgun's pool for its set was rejected in ADR-0002.</p>
 <h2 id="adr-0007">ADR-0007</h2>
 <p><strong>Venue = RFQ posted-price v1; provably-fair CLOB is v2</strong> · accepted · 2026-09-04</p>
 <p><strong>Context.</strong> Armada needs clearing, not a service-provider marketplace. Fair-ordering machinery is expensive.</p>
@@ -272,7 +272,7 @@
 <p><strong>Alternatives.</strong> One monolithic plan across all tiers (rejected — it caused repeated re-cutting and scope drift). Pure agile backlog discovery (rejected — requirements are given, not to be discovered). Greenfield design docs (rejected — most components exist; the work is integration).</p>
 <h2 id="adr-0013">ADR-0013</h2>
 <p><strong>Single engineering team; scope spans the whole Armada product; Laconic is prior art</strong> · accepted · 2026-09-05</p>
-<p><strong>Context.</strong> Earlier docs drew an <em>Armada-builds-vs-Laconic-builds</em> ownership boundary (§3; T5 marked "out of Laconic build scope"; the ADR-0012 / §0 WBS treated Armada's Adapters as external). That boundary no longer holds. This is <strong>one engineering team</strong> building <strong>Armada — a Railgun-based privacy product for USDC</strong> (confirmed by Armada's own thesis and docs: Railgun ZK circuits (BN254/Groth16), a shielded USDC pool, Private Proofs of Innocence, non-custodial). <strong>Laconic's existing work — nitro integration, watchers, wallet, chain-signatures, ingestion — is prior art the team reuses</strong>, not a separate vendor's deliverable.</p>
+<p><strong>Context.</strong> Earlier docs drew an <em>Armada-builds-vs-Laconic-builds</em> ownership boundary (§3; T5 marked "out of Laconic build scope"; the ADR-0012 / §0 WBS treated Armada's Adapters as external). That boundary no longer holds. This is <strong>one engineering team</strong> building <strong>Armada — a Railgun-based privacy product for USDC</strong> (confirmed by Armada's own thesis and docs: Railgun ZK circuits (BN254/Groth16), a shielded USDC pool, non-custodial). <strong>Laconic's existing work — nitro integration, watchers, wallet, chain-signatures, ingestion — is prior art the team reuses</strong>, not a separate vendor's deliverable.</p>
 <p><strong>Decision.</strong></p>
 <ul>
 <li><strong>D13.1</strong> Scope <strong>both</strong> the Armada-side and Laconic-side tasks as one programme. The WBS covers the whole product, including what was "T5 Armada Adapters" (CCTP, Aave-v4 yield, Swaps) — now in-scope work, not external systems.</li>
@@ -282,14 +282,14 @@
 <p><strong>Alternatives.</strong> Keep the two-org boundary (rejected — it's one team; the boundary created artificial "out of scope" gaps like T5 and mis-framed the yield/adapter work).</p>
 <h2 id="adr-0014">ADR-0014</h2>
 <p><strong>Pool + circuits are our own implementation (net-new, audit-critical)</strong> · accepted · 2026-09-05</p>
-<p><strong>Context.</strong> The A deep dive (<a href="A-nitro-on-railgun/A.1-reuse-inventory.html">A.1</a>) established that the shielded pool and JoinSplit circuits must be authored by us rather than reused as third-party binaries: they carry our fee=0 configuration, our POI policy, and the settlement/deposit-payout hook, and we own their upgrade and audit. So ADR-0002 (own pool) and ADR-0003 (own Phase-2) are executed as <strong>our own implementation of the Railgun design</strong>, not a binary reuse. <code>go-nitro</code>/<code>ts-nitro</code> remain reused as-is; Railgun's <code>engine</code>/<code>cookbook</code> serve as a behavioral reference.</p>
+<p><strong>Context.</strong> The A deep dive (<a href="A-nitro-on-railgun/A.1-reuse-inventory.html">A.1</a>) established that the shielded pool and JoinSplit circuits must be authored by us rather than reused as third-party binaries: they carry our fee=0 configuration and the settlement/deposit-payout hook, and we own their upgrade and audit. So ADR-0002 (own pool) and ADR-0003 (own Phase-2) are executed as <strong>our own implementation of the Railgun design</strong>, not a binary reuse. <code>go-nitro</code>/<code>ts-nitro</code> remain reused as-is; Railgun's <code>engine</code>/<code>cookbook</code> serve as a behavioral reference.</p>
 <p><strong>Decision.</strong></p>
 <ul>
 <li><strong>D14.1</strong> Implement the <strong>shielded-pool contracts</strong> (T0.0) and the <strong>JoinSplit circuits</strong> (T0.1) ourselves — independently authored, spec-compatible with the Railgun design the deep dive documents (A.1.1/A.1.2). Our engineers own this build.</li>
 <li><strong>D14.2</strong> Everything else stands: reuse <code>go-nitro</code> (T0.2), <code>ts-nitro</code> (T6.2), and <code>engine</code>/<code>cookbook</code> as reference; reuse the community Perpetual PoT Phase-1 and run our own Phase-2 <strong>over our own circuits</strong> (ADR-0003 otherwise unchanged); keep Groth16.</li>
 </ul>
-<p><strong>Consequences.</strong> T0.0 and T0.1 are <strong>net-new, audit-critical crypto-engineering</strong> — of a well-understood design that the deep dive de-risks by pinning the exact behavior and format to match. The "integration, not new cryptography" thesis (ADR-0012, §4) holds for the <strong>settlement rail</strong> (T0.2 adjudicator + T0.3 deposit/payout + T6.x) but <strong>not</strong> for the pool/circuits. <strong>A.1 (the reuse inventory) doubles as the reference spec</strong> the implementation follows. T0.6 (native commitment) is a change to our own circuits. Note format may match Railgun (to ease the T0.7 onboarding bridge) or diverge — our choice; our anonymity set is separate regardless.</p>
-<p><strong>Alternatives.</strong> Use Railgun's live deployed pool directly (rejected — no fee=0/own POI, no settlement hook; contradicts ADR-0002's rationale).</p>
+<p><strong>Consequences.</strong> T0.0 and T0.1 are <strong>net-new, audit-critical crypto-engineering</strong> — of a well-understood design that the deep dive de-risks by pinning the exact behavior and format to match. The "integration, not new cryptography" thesis (ADR-0012, §4) holds for the <strong>settlement rail</strong> (T0.2 adjudicator + T0.3 deposit/payout + T6.x) but <strong>not</strong> for the pool/circuits. <strong>A.1 (the reuse inventory) doubles as the reference spec</strong> the implementation follows. T0.6 (native commitment) is a change to our own circuits. Note format may match Railgun, so that one wallet can hold both and the T6.7 move from Railgun is simpler, or diverge — our choice; our anonymity set is separate regardless.</p>
+<p><strong>Alternatives.</strong> Use Railgun's live deployed pool directly (rejected — no fee=0, no settlement hook; contradicts ADR-0002's rationale).</p>
 <h2 id="adr-0015">ADR-0015</h2>
 <p><strong>Cross-chain shielded swap = armada-nitro channels + fronting hubs</strong> · accepted · 2026-09-10 · v1.5 (after v1, before the v2 research work)</p>
 <p><strong>Context.</strong> Users hold shielded value in an Armada pool on each chain and want to swap or move value <strong>across</strong> chains privately and self-custodially (general cross-chain, independent of CCTP). A naive design — unshield on X, bridge, shield on Y — produces a <strong>public matched pair</strong> (equal/related amount, bounded timing) that correlates the two legs and collapses the anonymity set. The audited <code>go-nitro</code> "nitro bridge" is a single-operator, L1-anchored mirrored-channel construction with a <strong>stubbed L2 adjudicator</strong> and no DSS — neither private nor trust-minimized as written (<code>nitro-bridge-audit.md</code>).</p>
@@ -349,7 +349,7 @@
 <p><strong>Consequences.</strong> Page 15 keeps the invariants and the immutable-allow-list choice; armada-nitro's E16 brief holds the concrete requirements (S1–S6) and their tests, next to the code they constrain. A change to how a contract enforces an invariant is a change in that repo, not an ADR.</p>
 <p><strong>Alternatives.</strong> Keep code-level requirements in ADRs (rejected — they drift from the code, and the log fills with implementation detail no architecture reader needs). Move whole designs into component repos (rejected — the invariants span components: clients, watchtowers and the hub all depend on them).</p>
 <h2 id="adr-0020">ADR-0020</h2>
-<p><strong>Selective disclosure of a chain of custody (voluntary, off-chain)</strong> · proposed · 2026-10-15</p>
+<p><strong>Selective disclosure of a chain of custody (voluntary, off-chain)</strong> · accepted · 2026-10-15</p>
 <p><strong>Context.</strong> A user who withdraws from the pool, for example to an exchange, can be asked where the value came from. Ownership of a public address is easy to prove with a signature. Inside the pool, no public record links a spend to the note that it spent, because a nullifier is <code>Poseidon(nullifyingKey, leafIndex)</code>. To disclose the <code>nullifyingKey</code> would show every spend the wallet ever made. Value that goes through armada-nitro hub channels (ADR-0016, ADR-0017) adds a channel deposit and a payout to the chain. <code>armada-poc/specs/GOVERNANCE.md</code> §Pool access conditions permits voluntary disclosure tooling and forbids any disclosure as a condition of pool use. Design: <a href="./16-selective-disclosure.html">16</a>.</p>
 <p><strong>Decision.</strong></p>
 <ul>

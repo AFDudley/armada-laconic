@@ -21,13 +21,13 @@ sidechain.
 We author our own shielded-pool contracts and JoinSplit circuits, matching the Railgun
 design (note/commitment/nullifier format spec-compatible; T0.0/T0.1), and never edit or
 touch Railgun's live pool (ADR-0014, amending ADR-0002). We run our own pool for fee=0,
-our POI policy, the reserved settlement/deposit-payout hook, and upgrade & audit control
+the reserved settlement/deposit-payout hook, and upgrade & audit control
 (ADR-0002).
 - *Consequence:* Shielded-pool cryptography follows a known, de-risked design rather than
   novel research, but authoring and auditing it is our responsibility. Note format and
-  nullifier semantics stay Railgun-compatible, and value from Railgun enters only via the
-  unshield→shield bridge hop (T0.7).
-- *Governs:* ADR-0002, ADR-0014 · §5 T0.0, T0.1, T0.7.
+  nullifier semantics stay Railgun-compatible. Value from Railgun enters as an ordinary
+  deposit, through a wallet move (T6.7).
+- *Governs:* ADR-0002, ADR-0014 · §5 T0.0, T0.1.
 
 **TC-3 — Groth16 over BN254 proving.** v1 keeps Groth16: Phase-1 reuses the community
 Perpetual Powers of Tau, and Phase-2 is our own 1-of-N MPC over our own circuits (T0.1).
@@ -71,7 +71,7 @@ it move them unilaterally; custody is contract-enforced (T0).
   user-signed channel state or transparent-boundary hops, never on discretionary custody.
 - *Governs:* §5 T0 · quality scenarios in →§10.
 
-**OC-2 — Railgun's deployed protocol is untouched; we run our own pool.** We stand up our own pool and circuits (our own implementation of the Railgun design, T0.0/T0.1) for fee=0, our POI policy, the reserved settlement/deposit-payout hook, and upgrade & audit control, and never fork, patch, or govern Railgun's *deployed* protocol or live pool ([ADR-0002](./09-architecture-decisions.md#adr-0002), [ADR-0014](./09-architecture-decisions.md#adr-0014)).
+**OC-2 — Railgun's deployed protocol is untouched; we run our own pool.** We stand up our own pool and circuits (our own implementation of the Railgun design, T0.0/T0.1) for fee=0, the reserved settlement/deposit-payout hook, and upgrade & audit control, and never fork, patch, or govern Railgun's *deployed* protocol or live pool ([ADR-0002](./09-architecture-decisions.md#adr-0002), [ADR-0014](./09-architecture-decisions.md#adr-0014)).
 - *Consequence:* Blast radius splits cleanly — pool and audit changes never route through the product work above T0.0. This reinforces TC-2.
 - *Governs:* ADR-0002, ADR-0014 · §5 T0.0, T0.1.
 

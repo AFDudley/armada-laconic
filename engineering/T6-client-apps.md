@@ -3,7 +3,7 @@
 **Status:** draft · tier doc · 2026-09-04
 **Parent:** [`05-building-block-view.md`](./05-building-block-view.md) · **Tier:** T6
 **Release:** v1 (T6.0–T6.7) · opt (T6.8)
-**Depends on / Blocks:** depends on T0.0 (circuit `wasm`/`zkey`, pool commitment/nullifier ABI, POI root), T0.3 (deposit/payout + channel lifecycle + app registry + vouchers), T2 (proof-carrying feeds + metering; T6.3 gates on T2 feed freshness). Blocks end-user delivery — nothing downstream.
+**Depends on / Blocks:** depends on T0.0 (circuit `wasm`/`zkey`, pool commitment/nullifier ABI), T0.3 (deposit/payout + channel lifecycle + app registry + vouchers), T2 (proof-carrying feeds + metering; T6.3 gates on T2 feed freshness). Blocks end-user delivery — nothing downstream.
 
 The Client tier is the wallet and everything a real user runs on their own device. It shields, trades, settles, and **scans their own notes** end-to-end, and it does so without keys ever leaving the OS secure enclave. It is a fork of `laconic-wallet` / `laconic-wallet-web`, a React-Native app with a browser build that already ships production-grade custody (T6.0), extended with a WASM note-scanner (T6.1), a settlement client that drives T0.3 (T6.2), a phone-resident watchtower (T6.3), key-derivation policy for unlinkability (T6.4), the mobile transport crux (T6.5), Groth16 proving (T6.6), and the Armada-branded product build-up plus SDK wiring (T6.7). The wallet is a watcher-party (P2P) client, not a client of a server: it talks peer-to-peer to bonded watcher parties (T2) for feeds and metering and to counterparties/hubs for channel play, and it never surrenders custody — a watcher party is exited unilaterally by force-close. The main constraint is that mobile is unbuilt, so this doc states one concrete interim→production path.
 
@@ -120,7 +120,19 @@ The shipped starting point is modest: the Laconic wallet is bare-bones, and Moby
 
 Concretely this is net-new "build up," not new protocol. First brand + productize the RN shell and browser build (UI, WalletConnect, orchestration in Hermes), then expose the T6.1–T6.6 capabilities — local scan, T6.2 settlement, T6.5 transport, T6.6 proving — as a coherent **Armada SDK surface** that integrator apps call without re-solving privacy. Armada is pluggable asset-privacy infrastructure for USDC (shielded pool + governance-added adapters + apps/SDK tier); T6.7 is that apps/SDK tier, funded by integrator revenue-share. It routes to the T4 venue and, through T5, to Armada's adapters (Swaps, Aave-v4 yield, CCTP), so an app built on the SDK gets shield → trade → settle → scan for free.
 
-**Key tasks.** Brand + productize the RN shell and browser build; define the Armada SDK surface over T6.1–T6.6; wire routing to the T4 venue and, via T5, to the Swaps / Aave-v4 / CCTP adapters so an SDK app inherits shield → trade → settle → scan without re-solving privacy.
+**Move from Railgun.** The app makes it easy for a Railgun user to move funds into our pool (ADR-0006). The app reads the user's Railgun balance with the user's Railgun keys. The move is a Railgun unshield followed by a shield into our pool. It is a wallet feature only: no contract of ours reads or touches Railgun's pool, and the moved value is an ordinary deposit. The move has security costs, and the app shows them before the user confirms:
+
+- **The move is public.** The token, the amount and the time are visible on both pools, so an observer can match the Railgun unshield to our shield. If one transaction does both steps, through Railgun's `RelayAdapt`, the match is certain. Two transactions with a delay leave the observer only amount and timing to match on. An unusual amount is still easy to match.
+- **The unshield recipient is public.** If the unshield goes to an address the user has used before, that address links the user to the move. The app uses `RelayAdapt` or a fresh address.
+- **The crowd is smaller.** The value leaves Railgun's crowd and joins ours. Until our pool grows, our crowd is smaller, so the moved value is less private than it was in Railgun.
+- **A later exit can link back.** If the user later withdraws a matching amount from our pool, an observer can link that withdrawal to the Railgun unshield.
+- **Railgun charges its unshield fee** on the moved amount.
+
+The app reduces the matching risk: it suggests common amounts, spreads a large move over time, and keeps the value shielded after the move. These steps reduce the risk. They do not remove it.
+
+What stays hidden: which Railgun note paid, its owner, and the owner of the new note in our pool.
+
+**Key tasks.** Brand + productize the RN shell and browser build; define the Armada SDK surface over T6.1–T6.6; wire routing to the T4 venue and, via T5, to the Swaps / Aave-v4 / CCTP adapters so an SDK app inherits shield → trade → settle → scan without re-solving privacy; build the move from Railgun. Its acceptance check runs on a fixturenet with a stand-in Railgun pool: one move gives exactly one unshield and one shield, the value is conserved less the fee, the scan finds the fresh note, and the app showed the cost notice before the user confirmed.
 
 ## T6.8 Identity (optional)
 

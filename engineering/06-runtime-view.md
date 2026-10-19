@@ -28,7 +28,7 @@ sequenceDiagram
 2. **Deposit / unshield-in.** T6.2 drives the T0.3 deposit endpoint, which unshields the note and uses its value to open and fund a Nitro channel via the T0.2 `NitroAdjudicator`. **This is the one public boundary amount** (Design A). T0.3 records the consumed nullifier and the funded `channelId` (`Deposit(channelId, asset, amount, consumedNullifier)`).
 3. **Off-chain play.** Counterparties exchange **signed ForceMove states and payment vouchers** (T0.2) over virtual channels routed through a hub; these are pure state machines with no circuits involved. Delivery rides the T2.3 libp2p-noise 1:1 hot loop, and metering vouchers (T2.1) pay for any watcher reads.
 4. **Cooperative close.** When both sides agree, T6.2 co-signs a final state and calls the T0.3 cooperative close, and the adjudicator finalizes without opening a challenge window.
-5. **Payout / shield-out.** The T0.3 payout endpoint reads the channel outcome and **shields it into fresh notes**, a fresh-shield exit that preserves POI (T0.0). Settlement returns to notes rather than public keys (`Payout(channelId, newCommitments[])`).
+5. **Payout / shield-out.** The T0.3 payout endpoint reads the channel outcome and **shields it into fresh notes** (a fresh-shield exit). Settlement returns to notes rather than public keys (`Payout(channelId, newCommitments[])`).
 6. **Scan.** The wallet's T6.1 WASM note-scanner pulls the `Payout` commitment slice from the T2.0 proof-carrying feed, verifies the storage proof against L1, and **trial-decrypts locally** to find the new notes. No public RPC query ever leaves the device.
 
 → boundary detail §5 T0.3; read-path privacy §8.

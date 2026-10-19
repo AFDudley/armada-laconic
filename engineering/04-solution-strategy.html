@@ -49,7 +49,7 @@ crypto-engineering (of a well-understood, de-risked design, not novel cryptograp
 hard cryptographic assets break down as:</p>
 <ul>
 <li><strong>T0.0 / T0.1</strong> — the shielded pool and its JoinSplit circuits, our own implementation
-  of the Railgun design (spec-compatible, fee=0, our POI policy; ADR-0014), plus our
+  of the Railgun design (spec-compatible, fee=0; ADR-0014), plus our
   own Phase-2 ceremony. Net-new and audit-critical, but a reimplementation of a known
   design, not novel cryptography. Amounts are hidden in-circuit; the SNARK enforces
   value-conservation + range, so <em>$50 and $5M are equally opaque</em> — no Tornado-style
@@ -142,8 +142,8 @@ opt-in T0.6 upgrade, which sits outside the v1 spine.</p>
   adjudicator (T0.2), <strong>deposit/payout boundary (T0.3)</strong>, ingestion (T1.0–T1.2),
   watcher feeds + metering + transport (T2.0–T2.3), <strong>RFQ posted-price venue filled from a
   static inventory (T4.0, T4.1, T4.3) + ETH/wstETH yield (T4.4)</strong>, Armada adapters +
-  routing (T5.0/T5.1), full wallet (T6.0–T6.7), anonymity-set bootstrap + Railgun import
-  bridge (T0.7 / ADR-0006). This is our own pool/circuits (audit-critical, of a
+  routing (T5.0/T5.1), full wallet (T6.0–T6.7) with a move from Railgun, and anonymity-set
+  bootstrap with new users (T0.7 / ADR-0006). This is our own pool/circuits (audit-critical, of a
   known design; ADR-0014) plus integration + one small boundary contract + thin app code
   — no market-making, no new consensus, no novel ZK research (ADR-0011).</li>
 <li><strong>v2 — market-making + ex_net matcher (price discovery + fair ordering).</strong> The venue

@@ -93,7 +93,7 @@ Two facts worth stating even though they're out of protocol, because they bound 
 ## 9. Deferred / out of scope for the first cut
 
 - **PTLC / adaptor sigs** — unnecessary; the pool is the privacy anchor. Revisit only if the channel graph ever carries identity.
-- Nym-underlay latency validation (the opt-in IP-privacy path); denomination/anonymity-set policy; quote/RFQ privacy; MEV/ordering (T3); cross-chain POI gated-entry.
+- Nym-underlay latency validation (the opt-in IP-privacy path); denomination/anonymity-set policy; quote/RFQ privacy; MEV/ordering (T3).
 
 ## 10. The one on-chain leak that survives v1
 

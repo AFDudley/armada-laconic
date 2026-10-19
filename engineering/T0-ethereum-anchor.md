@@ -7,7 +7,7 @@
 
 The on-chain anchor is where value lives and where disputes settle. Its reuse boundary splits cleanly (ADR-0014): the settlement rail is reuse — vanilla `go-nitro` adjudicator/ForceMove/MultiAssetHolder (T0.2) plus the modest deposit/payout contract (T0.3) that binds it to the pool and realizes *notes in → normal Nitro → notes out* — while the shielded pool (T0.0) and JoinSplit circuits (T0.1) are net-new, our own implementation of the Railgun design the A deep dive documents (A.1.1/A.1.2). The pool and circuits plus our own Phase-2 ceremony (T0.1) and the anonymity-set strategy (T0.7) are the audit-critical net-new crypto-engineering here; the deposit/payout boundary (T0.3) is the net-new integration code. Two v2 economic-security contracts (T0.4 registry+bond, T0.5 sequencing-cert + fraud-proof verifier) and one optional cryptographic upgrade (T0.6 native channelized commitment) round out the tier. Amounts are public only at the T0.3 boundary — Design A, the default.
 
-## T0.0 Shielded pool — our own implementation (spec-compatible with Railgun); POI policy; fee=0
+## T0.0 Shielded pool — our own implementation (spec-compatible with Railgun); fee=0
 
 **What it is.** This is our own shielded pool: our own implementation of the shielded-pool contracts, spec-compatible with the Railgun design (ADR-0014), and it forms the root of the spine. Every downstream item references the pool address, its commitment/nullifier event ABI, and its `shield`/`unshield` entrypoints.
 
@@ -22,15 +22,15 @@ The proof system is Groth16 via Circom and snarkjs ([`iden3/snarkjs`](https://gi
 
 **Design deltas from the Railgun spec** (our choices, not a protocol fork):
 1. **Fee = 0.** Zero the shield/unshield fee params. Revenue is venue spread plus watcher metering, not a pool skim, and this is the whole reason to own the deployment.
-2. **POI policy.** Implement a Railgun-compatible Proof-of-Innocence construction but set our policy — gated entry plus fresh-shield exit (T0.7, §5 overview). The allow-list root and update authority are our L1 governance wallet initially, moving to on-chain governance later.
+2. **No entry gate.** Selective disclosure ([ADR-0020](./09-architecture-decisions.md#adr-0020), [16](./16-selective-disclosure.md)) is voluntary and off-chain. No deposit, transfer, or withdrawal checks it, so the pool carries no compliance list or list authority.
 3. **Settlement-contract allow-list.** Reserve and authorize the T0.3 deposit/payout contract address in the pool config. Here we only leave the config hook; the contract itself is T0.3.
 4. **Token allow-list.** Start with USDC, ETH/wstETH, and expand later.
 
-**Interface exposed.** The pool publishes pool and verifier addresses per network; the commitment-insert and nullifier-spend event ABI (consumed by T1.2, decrypted by T6.1); `shield`/`unshield` plus the reserved deposit/payout hook that T0.3 binds to; circuit `wasm` and `zkey` artifacts and hashes for T6.6; and the POI allow-list root plus update authority.
+**Interface exposed.** The pool publishes pool and verifier addresses per network; the commitment-insert and nullifier-spend event ABI (consumed by T1.2, decrypted by T6.1); `shield`/`unshield` plus the reserved deposit/payout hook that T0.3 binds to; and circuit `wasm` and `zkey` artifacts and hashes for T6.6.
 
-**Testing.** Use a Laconic fixturenet for deterministic E2E (shield → commitment event → unshield → nullifier, proofs against our keys). We author our own test suite for the pool and circuits — the Railgun design is the behavioral oracle — with explicit coverage of fee=0 enforced, POI gating, deposit/payout hook authorization, and spec-compatibility (note/commitment format, nullifier semantics) against the A.1 reference.
+**Testing.** Use a Laconic fixturenet for deterministic E2E (shield → commitment event → unshield → nullifier, proofs against our keys). We author our own test suite for the pool and circuits — the Railgun design is the behavioral oracle — with explicit coverage of fee=0 enforced, deposit/payout hook authorization, and spec-compatibility (note/commitment format, nullifier semantics) against the A.1 reference.
 
-**Risks.** The pool and circuits are a real, audit-critical crypto-engineering workstream (§11): correctness and exact spec-compatibility with the Railgun design (note format, nullifier semantics, verifier wiring) are the primary concern, and anything touching pool spend authorization or POI config is audit-critical before mainnet.
+**Risks.** The pool and circuits are a real, audit-critical crypto-engineering workstream (§11): correctness and exact spec-compatibility with the Railgun design (note format, nullifier semantics, verifier wiring) are the primary concern, and anything touching pool spend authorization is audit-critical before mainnet.
 
 ## T0.1 Circuits + trusted setup — our own JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N)
 
@@ -43,7 +43,7 @@ The proof system is Groth16 via Circom and snarkjs ([`iden3/snarkjs`](https://gi
 
 **Tooling.** The `snarkjs zkey new → contribute → beacon → verify` sequence is the primary path and remains the standard ([`iden3/snarkjs`](https://github.com/iden3/snarkjs)). Target ≥5 independent contributors (team plus external), organizationally distinct, so the 1-honest assumption is credible. Publish the `.zkey`/`.vkey` hashes and the verification transcript in-repo, then generate the Solidity verifier(s) from the final `vkey`s and wire them into T0.0's verifier contract.
 
-**Re-run trigger.** Phase 2 is repeated only when circuits change; the canonical trigger is T0.6 (native channelized commitment) or the optional T0.7 cross-pool path. Phase 1 is never re-run.
+**Re-run trigger.** Phase 2 is repeated only when circuits change; the canonical trigger is T0.6 (native channelized commitment). Phase 1 is never re-run.
 
 > **Reuse-Railgun-keys alternative, moot.** Railgun's published Phase-2 `.zkey`s are bound to *their* circuit instances. Because our circuits are net-new (ADR-0014), those keys do not apply regardless — a fresh Phase-2 over our own set is required, not merely preferred.
 
@@ -82,11 +82,11 @@ go-nitro is documented pre-production, so treat these as pre-mainnet blockers; n
 
 - **Deposit (unshield-in).** The user unshields from the T0.0 pool into the deposit endpoint, which opens and funds a Nitro channel via `NitroAdjudicator`. This is the one boundary where the amount is public (Design A). Deposit records the consumed nullifier and the funded `channelId`.
 - **Off-chain play.** This is vanilla T0.2: signed states, vouchers, and virtual channels via a hub. The application logic lives in ForceMove apps — pure state machines such as oracle-as-signer markets, TLSNotary-fed outcomes, and HashLockedSwap.
-- **Payout (shield-out).** On finalize (cooperative close *or* post-challenge), the payout endpoint reads the channel outcome and shields it into fresh notes — a fresh-shield exit that preserves POI. Settlement returns to notes, not public keys.
+- **Payout (shield-out).** On finalize (cooperative close *or* post-challenge), the payout endpoint reads the channel outcome and shields it into fresh notes (a fresh-shield exit). Settlement returns to notes, not public keys.
 
 The Nitro game analysis is fully isolated from the Railgun privacy analysis; the two meet only at the allocation→note boundary. This adds Nitro's optimistic exits and arbitrary games to Railgun-style notes without new cryptography and without governance-gated RelayAdapt modules. RelayAdapt is Railgun's own recipe, used only inside T4.2's solver and never here.
 
-**POI & allow-lists.** Deposit checks the T0.0 POI allow-list before funding (gated entry). Payout mints new commitments, so recipients get clean notes with no linkage to the deposit note beyond the public deposit amount (fresh-shield exit). ForceMove app bytecode and adjudication logic is allow-listed, so both the games and the participants are gated; the update authority is our L1 governance wallet, moving to on-chain governance later.
+**Allow-lists.** Payout mints new commitments, so recipients get clean notes with no linkage to the deposit note beyond the public deposit amount (fresh-shield exit). ForceMove app bytecode and adjudication logic is allow-listed, so the games are gated; the update authority is our L1 governance wallet, moving to on-chain governance later. No compliance check gates a deposit (selective disclosure is off-chain, ADR-0020).
 
 **Interface exposed (consumers bind to this, MUST NOT re-derive):**
 - Contract address and ABI per network, plus the `NitroAdjudicator` (T0.2) address it uses.
@@ -136,30 +136,26 @@ It is kept concise as v2 economic-security and verification, not v1 detail.
 
 **Testing (lighter — PoC gate).** On a fixturenet, force-close a committed-amount channel and show that the challenge/finalize state reveals no cleartext amount while payout still opens to the correct fresh notes; that a proof where allocations don't sum to the deposit is rejected (no value creation); and that `snarkjs zkey verify` against the new transcript passes in CI.
 
-## T0.7 Anonymity-set strategy — bootstrap own crowd + Railgun import bridge
+## T0.7 Anonymity-set strategy — bootstrap the crowd with new users
 
-**What it is.** This is a strategy/decision owning exactly one lever — crowd size (and the timing discipline that keeps a large deposit from re-narrowing the set on exit). A shielded pool's privacy is k-anonymity against the set of unspent, indistinguishable notes; a fresh pool starts near zero and compounds with volume, which makes crowd size the single biggest non-engineering risk. The mechanics it rides — `shield`/`unshield`, POI, the import path — all land in T0.0.
+**What it is.** This is a strategy/decision owning exactly one lever — crowd size (and the timing discipline that keeps a large deposit from re-narrowing the set on exit). A shielded pool's privacy is k-anonymity against the set of unspent, indistinguishable notes; a fresh pool starts near zero and compounds with volume, which makes crowd size the single biggest non-engineering risk. The mechanics it rides — `shield`/`unshield` — land in T0.0.
 
 **What the pool already gives for free** (narrowing what T0.7 must solve): amounts are hidden inside the shield, since the SNARK enforces value-conservation plus range — *$50 and $5,000,000 are equally opaque* — so there are no Tornado-style denomination buckets; the amount leaks only at the transparent boundary (`shield`/`unshield` and the T0.3 deposit hop). The read side (watcher, T2.0) and write side (broadcaster) are covered by the substrate, so T0.7 is purely about populating the set.
 
-**Default strategy (settled).** No new crypto:
-1. **Bootstrap our own crowd** — incentivized early volume, our own market-making capital, and the yield-clearing flywheel where saturating depositors convert to LPs (T4.5).
-2. **Railgun onboarding bridge** — a one-click import in which the user unshields from Railgun → shields into our pool. This is one public boundary hop (amount and token visible only at that instant, standard for any deposit from a public balance); it costs Railgun's unshield fee once, after which the user is on our fee-0 rail with day-one dual liquidity. It is deploy/config — a scripted flow scoped in T0.0 — and T0.7 sets the policy and growth plan.
+**Strategy (settled, ADR-0006).** No new crypto. The crowd grows only from our own users: incentivized early volume, our own market-making capital, and the yield-clearing flywheel where saturating depositors convert to LPs (T4.5). Every note in our pool comes from a deposit into our pool, so nothing outside the pool adds to the crowd.
 
-**Liquidity import is not anonymity-set inheritance.** The bridge imports value, not Railgun's crowd: after the hop the value sits in our tree, indistinguishable among our notes. "Accept Railgun's" means the unshield→shield hop, not native note ingestion — a Railgun note lives in *their* Merkle tree with *their* nullifier accounting and cannot be spent/nullified in our contract (double-spend safety). Importing a large balance does not teleport a user into a large crowd; it moves capital that must then *build* a crowd here.
+**Moving from Railgun.** The wallet makes it easy for a Railgun user to move funds in (T6.7). The move is a Railgun unshield followed by a shield into our pool, so it is an ordinary deposit with the security costs listed in T6.7. It is a wallet feature: no contract of ours reads or touches Railgun's pool. Moved value counts towards our crowd only from the moment it is shielded here, like any other deposit.
 
-**POI interaction.** The import shield is a normal entry, checked against our POI allow-list root (T0.0's root plus update authority); a note's Railgun history does not exempt it. The T0.3 deposit endpoint enforces the same gate before funding a channel, and payout is a fresh-shield exit, so settlement never re-links to the imported deposit beyond the one public amount. Importing does not import POI status.
+**No entry check.** A moved-in deposit is a normal entry, and no compliance check gates it (selective disclosure is off-chain, ADR-0020). Payout is a fresh-shield exit, so settlement never re-links to the deposit beyond the one public amount.
 
 **Bootstrap levers (discipline, not crypto).** Incentivize early depositors and LPs, and convert saturating whales to LPs to deepen the pool and grow the crowd together. Mitigate the boundary risk for large actors with aggregation, not buckets: trade an aggregation window (bigger means a larger crowd but more latency) against LP build-up depth — two clocks — or dribble value in and out incrementally. Quantization matters only at the transparent boundary hops (round or common amounts), a light convention.
 
-**Optional advanced path — cross-pool membership proofs.** *Optional / future, NOT a prerequisite.* Our withdrawal circuits reference Railgun's published Merkle root so a spend proves membership in *either* tree, hiding in Railgun's larger crowd. This proves provenance/innocence, not spend authority — we still never let a Railgun note be spent or nullified in our contract; the foreign root is a membership witness for privacy only. It trusts Railgun's root (a new assumption) and requires circuit work, so a new T0.1 Phase-2 ceremony. Defer it, and adopt only if organic plus bridged growth stalls and the trust plus ceremony cost is judged worthwhile.
-
-**Metrics (instrument via T1.2/T2.0 feeds).** Track anonymity-set size (unspent indistinguishable commitments over time); effective k (the realistic crowd a spend hides in after correlation — track the worst-case lone large crossing separately); boundary-exposure rate (value transiting the transparent hop vs. staying shielded); bridge conversion; and LP-conversion rate.
+**Metrics (instrument via T1.2/T2.0 feeds).** Track anonymity-set size (unspent indistinguishable commitments over time); effective k (the realistic crowd a spend hides in after correlation — track the worst-case lone large crossing separately); boundary-exposure rate (value transiting the transparent hop vs. staying shielded); moves from Railgun; and LP-conversion rate.
 
 ## Sources
 
 - go-nitro (cerc-io @435eb2b) — https://github.com/cerc-io/go-nitro — `NitroAdjudicator.sol`, `ForceMove.sol`, `MultiAssetHolder.sol`, `protocols/virtualfund/virtualfund.go`, `payments/vouchers.go`, `examples/HashLockedSwap.sol` · upstream https://github.com/statechannels/go-nitro
-- Railgun pool + POI construction (reference spec for T0.0/T0.1; ADR-0014) — https://github.com/Railgun-Privacy/contract · circuits (note/commitment format) https://github.com/Railgun-Privacy/circuits-v2
+- Railgun pool (reference spec for T0.0/T0.1; ADR-0014) — https://github.com/Railgun-Privacy/contract · circuits (note/commitment format) https://github.com/Railgun-Privacy/circuits-v2
 - Railgun RelayAdapt / Cookbook recipe (T4.2 only, not this tier) — https://github.com/Railgun-Community/cookbook
 - Railgun trusted-setup / proving system — https://docs.railgun.org/wiki/learn/privacy-system/trusted-setup-ceremony
 - Perpetual Powers of Tau (Phase-1 reuse) — https://github.com/privacy-ethereum/perpetualpowersoftau

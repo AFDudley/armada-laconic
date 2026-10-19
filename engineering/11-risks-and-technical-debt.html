@@ -46,7 +46,7 @@ measures the odds it bites before we mitigate.</p>
 <td><strong>Anonymity-set cold-start</strong> — a fresh pool's k-anonymity starts near zero, and privacy only compounds with volume. This is the biggest <strong>non-engineering</strong> risk: no code fixes it, it needs a crowd.</td>
 <td>High (the product's core promise degrades to k≈1)</td>
 <td>High at launch, decaying with volume</td>
-<td>Bootstrap own crowd (incentives, own market-making capital, LP flywheel) <strong>+</strong> Railgun onboarding bridge for day-one dual liquidity; aggregation-window / dribble discipline at the boundary; instrument effective-k. Import ≠ set inheritance.</td>
+<td>Bootstrap own crowd with new users (incentives, own market-making capital, LP flywheel); a wallet move from Railgun (T6.7) brings value, which then counts like any other deposit; aggregation-window / dribble discipline at the boundary; instrument effective-k.</td>
 <td>T0.7 · ADR-0006</td>
 </tr>
 <tr>
@@ -86,7 +86,7 @@ measures the odds it bites before we mitigate.</p>
 <td><strong>Trusted-setup ceremony logistics</strong> — Phase-2 MPC security is <strong>1-of-N honest</strong>, so the assumption is only credible if contributors are genuinely independent. Coordinating ≥5 organizationally-distinct participants, publishing transcript + beacon, and regenerating/redeploying verifiers is a process risk, not a code risk.</td>
 <td>Medium (a botched ceremony undermines soundness of every proof)</td>
 <td>Low — snarkjs path is standard, Phase-1 is inherited</td>
-<td>Reuse vetted <strong>Perpetual PoT</strong> Phase-1 (never re-run); target <strong>≥5 independent contributors</strong>; publish <code>.zkey</code>/<code>.vkey</code> hashes + verification transcript in-repo; CI fails on <code>zkey</code> hash mismatch. Re-run <strong>only</strong> on a circuit change (T0.6 / cross-pool).</td>
+<td>Reuse vetted <strong>Perpetual PoT</strong> Phase-1 (never re-run); target <strong>≥5 independent contributors</strong>; publish <code>.zkey</code>/<code>.vkey</code> hashes + verification transcript in-repo; CI fails on <code>zkey</code> hash mismatch. Re-run <strong>only</strong> on a circuit change (T0.6).</td>
 <td>T0.1 · ADR-0003</td>
 </tr>
 <tr>
@@ -102,7 +102,7 @@ measures the odds it bites before we mitigate.</p>
 <td><strong>Price-setter trust until governance</strong> — v1 posts prices from a <strong>single privileged <code>priceSetter</code> wallet</strong>, so a wrong or malicious price yields bad fills.</td>
 <td>Low–Medium (bad fills, <strong>not</strong> lost custody — fills are take-it-or-leave-it and force-closable)</td>
 <td>Medium while single-key</td>
-<td>Fills are take-it-or-leave-it and force-closable via T0.3; <strong>migrate <code>priceSetter</code> → governance</strong> (same admin-key→governance path as T0.0 POI authority and T0.3 app allow-list); trust is <strong>removed entirely</strong> only by the T4.6 CLOB upgrade.</td>
+<td>Fills are take-it-or-leave-it and force-closable via T0.3; <strong>migrate <code>priceSetter</code> → governance</strong> (same admin-key→governance path as the T0.3 app allow-list); trust is <strong>removed entirely</strong> only by the T4.6 CLOB upgrade.</td>
 <td>T4.0 · ADR-0007</td>
 </tr>
 <tr>
@@ -110,7 +110,7 @@ measures the odds it bites before we mitigate.</p>
 <td><strong>Own pool + circuits (net-new crypto-engineering)</strong> — T0.0/T0.1 are our own implementation of the Railgun design (ADR-0014): independently authored, spec-compatible shielded-pool contracts + JoinSplit circuits + our own Phase-2. This is real, audit-critical crypto-engineering — a subtle spec deviation (note/commitment format, nullifier semantics, <code>snarkSafetyVector</code>, verifier wiring) is a soundness or fund-safety bug.</td>
 <td>High (a soundness/format bug = unprovable spend or value creation)</td>
 <td>Medium — a well-understood, de-risked design (A.1 pins exact behavior/format), but net-new code</td>
-<td>Treat A.1 as the reference spec and behavioral oracle; author our own conformance suite (spec-compatibility + fee=0/POI); freeze the circuit subset early; <strong>external crypto audit gates mainnet</strong>.</td>
+<td>Treat A.1 as the reference spec and behavioral oracle; author our own conformance suite (spec-compatibility + fee=0); freeze the circuit subset early; <strong>external crypto audit gates mainnet</strong>.</td>
 <td>T0.0 / T0.1 · ADR-0014</td>
 </tr>
 </tbody>

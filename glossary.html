@@ -216,7 +216,7 @@
 <li><strong>Armada</strong> — pluggable <strong>asset-privacy infrastructure for USDC</strong> on Railgun; three tiers (shielded pool / adapters / apps+SDK), crowdfunded, ARM-token DAO + steward. <code>@ship_armada</code>, <code>armada.wtf</code>. In testnet.</li>
 <li><strong>Shielded pool</strong> — the shared privacy pool; privacy compounds with volume (one anonymity set). Railgun pool <strong>T0.0</strong>.</li>
 <li><strong>Shielded note / Note</strong> — a shielded UTXO-like value commitment inside the pool, and the unit of shielded value. Railgun pool <strong>T0.0</strong>.</li>
-<li><strong>Anonymity set</strong> — the crowd of shielded notes among which a spend is indistinguishable; privacy compounds with volume. Bootstrap own crowd + Railgun import bridge (<strong>T0.7</strong>, ADR-0006). Import ≠ set inheritance.</li>
+<li><strong>Anonymity set</strong> — the crowd of shielded notes among which a spend is indistinguishable; privacy compounds with volume. It grows only from deposits into our own pool (<strong>T0.7</strong>, ADR-0006).</li>
 <li><strong>Commitment</strong> — a note's on-chain hash (its value commitment), added to the pool's Merkle tree. Railgun pool <strong>T0.0</strong>; indexed by <strong>T1.2</strong>.</li>
 <li><strong>Nullifier</strong> — a note's spend-marker; prevents double-spending without revealing which note was spent. Railgun pool <strong>T0.0</strong>; indexed by <strong>T1.2</strong>.</li>
 <li><strong>0zk address</strong> — a Railgun private receiving address.</li>
@@ -227,7 +227,7 @@
 <li><strong>MASP</strong> — Namada's Multi-Asset Shielded Pool note primitive — a note primitive, <strong>not</strong> a state channel (contrast Design B). Reference only.</li>
 <li><strong>RelayAdapt / recipe</strong> — Railgun's cross-contract module: an atomic <code>unshield → external call → reshield</code> (Cookbook "recipes", e.g. an Aave deposit). The value-moving "adapter" — <em>not</em> a custodial vault, <em>not</em> DSS.</li>
 <li><strong>wstETH / weETH</strong> — non-rebasing LSTs (value accrues via a rising exchange rate). Held as a shielded note they earn ETH staking yield intrinsically, with no Aave/LP rail needed. ETH yield <strong>T4.4</strong>.</li>
-<li><strong>POI</strong> — Proofs of Innocence: an allow-list membership policy proving a note is not from a sanctioned or illicit source, without deanonymizing it. Our POI policy on the redeployed pool <strong>T0.0</strong> (ADR-0002).</li>
+<li><strong>Selective disclosure</strong> — a voluntary, off-chain proof of a chain of custody for chosen value, from a shielding address through notes and channels to a payout or withdrawal, that reveals nothing else about the wallet. It never gates a pool action (ADR-0020; <a href="engineering/16-selective-disclosure.html">16</a>).</li>
 </ul>
 <h2 id="5-this-projects-design-terms">5. This project's design terms</h2>
 <ul>

@@ -34,13 +34,24 @@ Value lives in our own pool as commitments. The pool follows the Railgun design.
 
 ### Amounts become public only at the boundary
 
-Hidden value becomes visible where it crosses from the pool to the public chain. In the design we ship, called **Design A**, this happens at three points:
+Hidden value becomes visible where it crosses from the pool to the public chain. In the design we ship, this happens at three points:
 
 - when a user shields or unshields;
 - when a Nitro channel takes a deposit or makes a payout;
 - when a channel is force-closed.
 
-To hide amounts during play and during a dispute as well, our circuits must change. That change is called **fork-lite**. It is an optional later upgrade and is not part of version 1. A fully shielded dispute game, called **fork-full**, is out of scope unless someone approves it separately.
+Two designs could also hide the amounts inside a channel. The smaller one keeps the dispute game as it is. A finalized channel then lists its payouts as commitments instead of amounts, and the payout opens them into fresh notes. It changes our circuits, so it needs a new trusted-setup ceremony and a new audit, and it makes proving on phones slower. It is an optional later upgrade, not part of version 1.
+
+The larger design moves the dispute game itself into a proof, so that every state change proves its own validity against hidden balances. It is out of scope.[^proven-dispute]
+
+[^proven-dispute]: **Why a proven dispute game is out of scope.** ADR-0005 names the smaller design *fork-lite* (item T0.6) and the larger one *fork-full*, and calls the larger one research-grade. The reasons came out in a design session on 2026-10-18 (session `01a150cb`, 23:03–23:26 UTC):
+
+    - Every rule of the dispute game that reads a balance must become a circuit constraint. The audited Nitro contracts would turn into a verifier plus a new circuit, with a new ceremony and a new audit.
+    - Every party, the hub included, must prove every state change. Today a state change costs one signature.
+    - Each participant must keep the hidden balances, and keep them available, or lose the ability to challenge a stale state.
+    - A related variant attaches a complete payout proof to every signed state. The operator rejected it as "the worst of both worlds" (23:16 UTC). It pays for a proof on every update, and each state is still valid only by its signatures.
+
+    Where hidden state is the point, as in a game with hidden information, the proof belongs in that game's rules. Those rules live in the game's `IForceMoveApp`, not in the dispute game. The dispute game then stays as it is, and only the game's moves carry proofs (23:18 UTC).
 
 ### Privacy grows with the crowd
 

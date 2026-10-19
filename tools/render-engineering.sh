@@ -62,7 +62,7 @@ render_one() {
   # Render body, strip trailing whitespace, then rewrite intra-doc .md links
   # (href="...md" / href="...md#anchor") to their rendered .html targets.
   local body
-  body="$("$MARKDOWN" -x tables -x toc -x attr_list -x fenced_code -x sane_lists "$md" \
+  body="$("$MARKDOWN" -x tables -x toc -x attr_list -x fenced_code -x sane_lists -x footnotes "$md" \
     | "$SED" -e 's/[[:space:]]*$//' \
              -e 's@href="\([^"]\+\)\.md\(#[^"]*\)\?"@href="\1.html\2"@g')"
 

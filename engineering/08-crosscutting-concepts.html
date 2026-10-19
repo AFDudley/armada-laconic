@@ -88,13 +88,14 @@
 <h3 id="inside-the-pool-amounts-are-hidden">Inside the pool, amounts are hidden</h3>
 <p>Value lives in our own pool as commitments. The pool follows the Railgun design. A commitment is a hash that hides the note's owner and its amount. A zero-knowledge proof checks every spend. The proof shows that the spend conserves value and that each amount is in range, but it does not reveal the amounts. A large note therefore looks the same as a small one. The pool needs no fixed denominations, unlike Tornado Cash.</p>
 <h3 id="amounts-become-public-only-at-the-boundary">Amounts become public only at the boundary</h3>
-<p>Hidden value becomes visible where it crosses from the pool to the public chain. In the design we ship, called <strong>Design A</strong>, this happens at three points:</p>
+<p>Hidden value becomes visible where it crosses from the pool to the public chain. In the design we ship, this happens at three points:</p>
 <ul>
 <li>when a user shields or unshields;</li>
 <li>when a Nitro channel takes a deposit or makes a payout;</li>
 <li>when a channel is force-closed.</li>
 </ul>
-<p>To hide amounts during play and during a dispute as well, our circuits must change. That change is called <strong>fork-lite</strong>. It is an optional later upgrade and is not part of version 1. A fully shielded dispute game, called <strong>fork-full</strong>, is out of scope unless someone approves it separately.</p>
+<p>Two designs could also hide the amounts inside a channel. The smaller one keeps the dispute game as it is. A finalized channel then lists its payouts as commitments instead of amounts, and the payout opens them into fresh notes. It changes our circuits, so it needs a new trusted-setup ceremony and a new audit, and it makes proving on phones slower. It is an optional later upgrade, not part of version 1.</p>
+<p>The larger design moves the dispute game itself into a proof, so that every state change proves its own validity against hidden balances. It is out of scope.<sup id="fnref:proven-dispute"><a class="footnote-ref" href="#fn:proven-dispute">1</a></sup></p>
 <h3 id="privacy-grows-with-the-crowd">Privacy grows with the crowd</h3>
 <p>The pool hides each spend among all the unspent notes that look alike. This crowd is the <strong>anonymity set</strong>. A spend is only as private as the crowd is large, so a new pool starts with almost no privacy and gains it with use.</p>
 <p>We grow the crowd in two ways. We build our own users. We also offer a bridge for Railgun users: they unshield from Railgun and shield into our pool, which is one public step. The bridge moves money, not privacy. A Railgun note cannot be spent in our pool, so the value that crosses must build a new crowd here.</p>
@@ -128,6 +129,21 @@
 <p>→ detail in §5 T6.8; per-venue loyalty-key policy in §5 T6.4.</p>
 <hr />
 <p><em>Decisions behind these concepts: <a href="./09-architecture-decisions.html">§9 ADRs</a>. The building blocks they span: <a href="./05-building-block-view.html">§5 registry</a>. Quality scenarios that exercise them: <a href="./10-quality-requirements.html">§10</a>; open risks: <a href="./11-risks-and-technical-debt.html">§11</a>.</em></p>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:proven-dispute">
+<p><strong>Why a proven dispute game is out of scope.</strong> ADR-0005 names the smaller design <em>fork-lite</em> (item T0.6) and the larger one <em>fork-full</em>, and calls the larger one research-grade. The reasons came out in a design session on 2026-10-18 (session <code>01a150cb</code>, 23:03–23:26 UTC):</p>
+<ul>
+<li>Every rule of the dispute game that reads a balance must become a circuit constraint. The audited Nitro contracts would turn into a verifier plus a new circuit, with a new ceremony and a new audit.</li>
+<li>Every party, the hub included, must prove every state change. Today a state change costs one signature.</li>
+<li>Each participant must keep the hidden balances, and keep them available, or lose the ability to challenge a stale state.</li>
+<li>A related variant attaches a complete payout proof to every signed state. The operator rejected it as "the worst of both worlds" (23:16 UTC). It pays for a proof on every update, and each state is still valid only by its signatures.</li>
+</ul>
+<p>Where hidden state is the point, as in a game with hidden information, the proof belongs in that game's rules. Those rules live in the game's <code>IForceMoveApp</code>, not in the dispute game. The dispute game then stays as it is, and only the game's moves carry proofs (23:18 UTC).&#160;<a class="footnote-backref" href="#fnref:proven-dispute" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
 
 <hr/>
 <p class="small">Generated from <code>engineering/08-crosscutting-concepts.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

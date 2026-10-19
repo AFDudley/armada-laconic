@@ -54,7 +54,7 @@ measures the odds it bites before we mitigate.</p>
 <td><strong>go-nitro maturity gaps</strong> — a <strong>multi-asset ForceMove <em>app</em></strong> is net-new: the holder/outcome machinery (<code>MultiAssetHolder</code> / <code>transferAllAssets</code> / <code>protocols/swap/swap.go</code>) <strong>already supports</strong> multi-asset ETH-in/USDC-out, but no shipped <em>app</em> does (<code>HashLockedSwap</code> is single-asset/2-party); <strong>dispute wiring</strong> exists in the adjudicator but is not driven end-to-end in the node; and <strong>watchtower response</strong> plus <strong>persistent connections/liveness</strong> are unproven for our flow. go-nitro is documented pre-production.</td>
 <td>High (settlement is spend-authorizing; a gap = stuck or lost funds)</td>
 <td>Medium — primitives exist, our wiring/app does not</td>
-<td>Treat all four as <strong>pre-mainnet blockers, not spine-demo blockers</strong>; author the multi-asset settlement <em>app</em> first (the swap-demo pull) on top of the existing holder; drive challenge/response E2E on fixturenet; watchtower response is T6.3 gated on T2 freshness; liveness ties to transport.</td>
+<td>Treat all four as <strong>pre-mainnet blockers, not spine-demo blockers</strong>; author the multi-asset settlement <em>app</em> first (the swap-demo pull) on top of the existing holder; drive challenge/response E2E on fixturenet; watchtower response is T6.3 gated on T2 freshness; liveness ties to transport. Check the vendored contracts against the published statechannels specification (docs.statechannels.org and the 2022 SATP paper) clause by clause: armada-nitro task E17 (<code>docs/tasks/E17-nitro-spec-conformance.md</code>), later work.</td>
 <td>T0.2 / T0.3 / T6.3 · ADR-0004</td>
 </tr>
 <tr>

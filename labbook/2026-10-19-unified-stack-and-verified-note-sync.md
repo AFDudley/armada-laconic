@@ -181,3 +181,53 @@ peers serving the data?
   snapshot size.
 - **`watcher-ts` beyond servers.** Decide whether to add a non-Postgres backend,
   or to keep the indexer server-only.
+
+## 7. Addendum, 2026-10-19 (after commit `a00ad0f`)
+
+This addendum corrects decision 5. The text above stays as written.
+
+### Correction: a single log can be proven to the block
+
+Decision 5 says "A single log: no". That is true only for statediff v5. The
+audit read only v5. Statediff v4 proved a receipt, and the logs inside it, to
+the block.
+
+- `cerc-io/go-ethereum` branch `v1.10.26-statediff-4.2.2-alpha`,
+  `statediff/indexer/ipld/eth_parser.go`, `processReceiptsAndLogs` (line 185).
+  It builds the block's receipt trie (`NewRctTrie()`, line 191). It refuses the
+  block if the root differs from the header: "wrong receipt hash computed".
+- It publishes every receipt-trie node (`receiptTrie.GetNodes()`) and records
+  each receipt's leaf CID (`GetLeafNodes()`, line 223). The dump indexer caches
+  the nodes as IPLD blocks (`dump/indexer.go:379`).
+- It also builds a log trie inside each receipt (`newLogTrie()`, line 246). That
+  trie is not part of Ethereum consensus. A client can instead read a log out of
+  the proven receipt.
+- `ipld-eth-server` `5772d52e` (2021-09-16): "Change receipt CID and MHKey to
+  point trie leaf cid and mkhey."
+- A client walked from `receiptsRoot` to the receipt leaf by fetching trie nodes
+  by hash. GraphQL `blockByMhKey` served them. `watcher-ts` still queries
+  `blockByMhKey`.
+- v5 removed this. `ipld-eth-db` `9f060ff` and `f67f034` (2023-02-08) drop
+  `leaf_cid`, `leaf_mh_key` and `log_root`. `go-ethereum`
+  `v1.11.6-statediff-v5` arrived as one squash commit, `b59a60eed`
+  (2023-03-30). No commit records a reason.
+
+Corrected decision 5: a client can verify a single log by its receipt-trie path
+to `receiptsRoot`, if the proof source publishes receipt-trie nodes. The v4 code
+did this. Completeness of a block's pool logs still needs the block's full
+receipt set, because an inclusion proof cannot show that no log is missing.
+
+### Operator ruling, verbatim
+
+- 2026-10-19 — "we should avoid ADRs and just generate lab notes for the
+  moment."
+
+Consequence: decisions go into lab book entries, not ADRs. Chunk D1 of the
+209-point list (a governance ADR and a contract-owned-notes ADR) is replaced by
+the two 2026-10-18 entries. Chunk D2 (doc updates to A.2, A.3, A.5, the ADR-0005
+note, the page-16 note and the ZK-app page) waits for the rewrite scope.
+
+### Pending
+
+An opus assessment of the full proofs with nimbus-eth1 is running (agent
+`NimbusProofs`). Its result goes into a new entry.

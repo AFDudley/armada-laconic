@@ -26,15 +26,45 @@ The optional amount-privacy upgrade (T0.6, §8.2/ADR-0005) preserves this isolat
 
 ## 8.2 Privacy model
 
-This concept fixes what is hidden, from whom, and where value is exposed — the model every other tier is built to defend.
+The privacy model states what Armada hides, from whom it hides it, and where value becomes visible. Every other part of the system exists to defend it.
 
-- **Shielded value (T0.0).** Value lives as commitments in our own Railgun pool (ADR-0002). The SNARK enforces value-conservation and range, so **amounts inside the shield are opaque regardless of size**; no Tornado-style denomination buckets are needed.
-- **Design-A boundary leak (T0.3, ADR-0005).** Amounts become public **only** at the two transparent boundaries — the `shield`/`unshield` hop and the T0.3 deposit/payout — and on force-close. Hiding amounts *in-play and on dispute* requires the **native channelized commitment** upgrade (T0.6, "fork-lite"), an optional Phase-4 item that is not on the v1 spine; fork-full (shielded ForceMove) is excluded unless separately greenlit.
-- **Anonymity set + bootstrap/import (T0.7, ADR-0006).** Pool privacy is k-anonymity over the set of unspent indistinguishable notes: a fresh pool starts near zero and compounds with volume. There are two levers — bootstrapping our own crowd, plus a Railgun onboarding bridge (unshield-from-Railgun → shield-into-ours, one public boundary hop). Liquidity import is not anonymity-set inheritance: a Railgun note cannot be spent or nullified in our contract, so the bridge only moves capital that must then build a crowd here.
-- **POI: gated entry / fresh-shield exit (T0.0, T0.3).** We keep Railgun's Proof-of-Innocence construction under **our** allow-list policy. The deposit endpoint checks the POI root before funding (gated entry), and payout mints fresh notes that preserve POI (fresh-shield exit) with no linkage back to the deposit note beyond the public deposit amount. Importing value does **not** import POI status.
-- **Read-side vs write-side unlinkability (duality).** The two ends of the same anonymity set are protected by different components. The **read side** is covered by the T2 watcher's proof-carrying, identical-bytes feeds and local scan (T2.0, consumed by the T6.1 scanner), so no RPC fingerprint reveals *which* commitments or nullifiers you read. The **write side** is covered by the keeper/broadcaster submit-on-behalf path (T6.5), so no EOA links you to *submitting*. Same set, opposite ends. Per-channel address rotation (T6.4) decorrelates the Design-A boundary across interactions. Note (ADR-0008): transport noise gives IP-level encryption and peer-id auth **only, not IP privacy** — see §8.4.
+### Inside the pool, amounts are hidden
 
-→ detail in §5 T0.0, T0.3, T0.7 and T2.0, T6.1, T6.4; quality scenarios in §10; cold-start risk in §11.
+Value lives in our own pool as commitments. The pool follows the Railgun design. A commitment is a hash that hides the note's owner and its amount. A zero-knowledge proof checks every spend. The proof shows that the spend conserves value and that each amount is in range, but it does not reveal the amounts. A large note therefore looks the same as a small one. The pool needs no fixed denominations, unlike Tornado Cash.
+
+### Amounts become public only at the boundary
+
+Hidden value becomes visible where it crosses from the pool to the public chain. In the design we ship, called **Design A**, this happens at three points:
+
+- when a user shields or unshields;
+- when a Nitro channel takes a deposit or makes a payout;
+- when a channel is force-closed.
+
+To hide amounts during play and during a dispute as well, our circuits must change. That change is called **fork-lite**. It is an optional later upgrade and is not part of version 1. A fully shielded dispute game, called **fork-full**, is out of scope unless someone approves it separately.
+
+### Privacy grows with the crowd
+
+The pool hides each spend among all the unspent notes that look alike. This crowd is the **anonymity set**. A spend is only as private as the crowd is large, so a new pool starts with almost no privacy and gains it with use.
+
+We grow the crowd in two ways. We build our own users. We also offer a bridge for Railgun users: they unshield from Railgun and shield into our pool, which is one public step. The bridge moves money, not privacy. A Railgun note cannot be spent in our pool, so the value that crosses must build a new crowd here.
+
+### Proofs of Innocence control what enters
+
+A **Proof of Innocence** shows that a note does not come from a listed illicit source, and it does so without revealing the note. We keep Railgun's construction for these proofs, under an allow-list policy that we set.
+
+The channel deposit checks a note's proof before it funds the channel. A payout creates fresh notes that keep their status. Nothing links a payout note to the deposit note, except the public deposit amount. Value that a user brings across from Railgun does not keep its status.
+
+### Reading and writing leave no trace
+
+A user touches the pool in two ways. The user reads the pool to find their notes, and writes to it to submit a transaction. Different components protect each side of the same crowd.
+
+On the read side, a watcher serves every user the same bytes, each with a proof that the bytes are correct. The user's device scans them locally. So no RPC provider learns which commitments or nullifiers a user looks for.
+
+On the write side, a keeper or broadcaster submits transactions for the user. So no address of the user's own appears as the sender. A fresh address for each channel also stops one boundary crossing from being linked to the next.
+
+One limit remains. The transport encrypts traffic and authenticates peers, but it does not hide a user's IP address. Section 8.4 covers the transport.
+
+*Items:* T0.0, T0.3, T0.6, T0.7, T2.0, T6.1, T6.4, T6.5. *Decisions:* ADR-0002, ADR-0005, ADR-0006, ADR-0008. *Quality scenarios:* §10. *Cold-start risk:* §11.
 
 ## 8.3 Non-custody & exit
 

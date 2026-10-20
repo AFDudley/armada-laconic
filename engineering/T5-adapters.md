@@ -11,7 +11,7 @@ CCTP and Aave-v4 yield are built, in `armada-poc`. Swaps has no contract. None o
 
 ## T5.0b Aave-v4 yield — built
 
-`ArmadaYieldAdapter`/`ArmadaYieldVault` (`contracts/yield/`) wrap an Aave V4 Spoke. `ArmadaYieldAdapter.lendAndShield`/`redeemAndShield` are trustless lend/redeem through the adapt-contract pattern: `YieldAdaptParams` binds `npk`, an encrypted bundle, and a shield key (or a seven-argument form with a fee destination for redeem), and the adapter checks `boundParams.adaptContract == address(this)` and re-derives `adaptParams` before acting. The vault is a plain ERC-20 (not a proxy) wrapper, shares priced net of a pending protocol fee, with a high-water mark so a loss recovery is not double-charged. This is the mechanism for USDC yield today: a direct adapter recipe, with the amount public only at the transparent supply boundary. The LP-buffered private rail the earlier docs described (T4.5) is not built.
+`ArmadaYieldAdapter`/`ArmadaYieldVault` (`contracts/yield/`) wrap an Aave V4 Spoke. `ArmadaYieldAdapter.lendAndShield`/`redeemAndShield` are trustless lend/redeem through the adapt-contract pattern: `YieldAdaptParams` binds `npk`, an encrypted bundle, and a shield key (or a seven-argument form with a fee destination for redeem), and the adapter checks `boundParams.adaptContract == address(this)` and re-derives `adaptParams` before acting. The vault is a plain ERC-20 (not a proxy) wrapper, shares priced net of a pending protocol fee, with a high-water mark so a loss recovery is not double-charged. This is the mechanism for USDC yield today: a direct adapter recipe, with the amount public only at the transparent supply boundary. The LP-buffered rail (T4.5) is not built.
 
 ## T5.0c Swaps — not built
 

@@ -24,7 +24,7 @@
 <h1 id="a1-reuse-inventory">A.1 — Reuse Inventory</h1>
 <p>work package A · <strong>2026-10-20</strong>
 <strong>Parent:</strong> <a href="./A.0-overview.html"><code>A.0</code></a></p>
-<p>This inventory replaces the earlier pre-code deep dive. It states what each component of the settlement rail is: reused as-is, reused then patched, or built new, each with a code citation.</p>
+<p>This inventory states what each component of the settlement rail is: reused as-is, reused then patched, or built new, each with a code citation.</p>
 <h2 id="a11-shielded-pool-t00-built-own-implementation">A.1.1 Shielded pool (T0.0) — built, own implementation</h2>
 <p><code>PrivacyPool</code> (<code>armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol</code>) routes by <code>delegatecall</code> to <code>ShieldModule</code>, <code>TransactModule</code>, <code>MerkleModule</code>, <code>VerifierModule</code>. It is not a proxy. It matches Railgun's note/commitment/nullifier shape (spec-compatible, ADR-0014), not Railgun's deployed contracts. See <a href="../T0-ethereum-anchor.html">T0-ethereum-anchor.md</a> for the full citation set.</p>
 <h2 id="a12-the-transact-circuit-t01-built-phase-2-open">A.1.2 The <code>Transact</code> circuit (T0.1) — built, Phase-2 open</h2>
@@ -66,21 +66,18 @@
 </tbody>
 </table>
 <p>This is a patched adjudicator, not a vanilla deploy. <code>ArmadaNitroAdjudicator</code> (<code>src/ArmadaNitroAdjudicator.sol</code>) extends it and adds <code>depositFromNote</code> and a <code>SHIELD</code>-type payout branch. See <a href="./A.4-adjudicator-integration.html">A.4</a>.</p>
-<h2 id="a14-the-depositpayout-boundary-built-merged-into-the-adjudicator">A.1.4 The deposit/payout boundary — built, merged into the adjudicator</h2>
-<p>There is no separate deposit/payout contract. <code>depositFromNote</code> and <code>_executeSingleAssetExit</code>'s <code>SHIELD</code> branch, both on <code>ArmadaNitroAdjudicator</code>, are the boundary. See <a href="./A.5-deposit-payout-contract.html">A.5</a>.</p>
-<h2 id="a15-hubcustodian-built-frost-not-chain-signatures">A.1.5 <code>HubCustodian</code> — built, FROST not <code>chain-signatures</code></h2>
-<p><code>armada-nitro@55939ef:src/HubCustodian.sol</code> verifies a group signature with <code>FROST.verifySignature</code> (<code>frost-secp256k1-evm</code>, pinned <code>65d03d0</code>), not <code>chain-signatures</code>' Schnorr DSS or its kyber DKG. It authorizes a hot delegate by EIP-1271 with a timed revocation, and rotates its group key with <code>FROST.isValidPublicKey</code>.</p>
+<h2 id="a14-the-depositpayout-boundary-built">A.1.4 The deposit/payout boundary — built</h2>
+<p><code>depositFromNote</code> and <code>_executeSingleAssetExit</code>'s <code>SHIELD</code> branch, both on <code>ArmadaNitroAdjudicator</code>, are the boundary. See <a href="./A.5-deposit-payout-contract.html">A.5</a>.</p>
+<h2 id="a15-hubcustodian-built-frost">A.1.5 <code>HubCustodian</code> — built, FROST</h2>
+<p><code>armada-nitro@55939ef:src/HubCustodian.sol</code> verifies a group signature with <code>FROST.verifySignature</code> (<code>frost-secp256k1-evm</code>, pinned <code>65d03d0</code>). It authorizes a hot delegate by EIP-1271 with a timed revocation, and rotates its group key with <code>FROST.isValidPublicKey</code>.</p>
 <h2 id="a16-armada-sdk-built-client-side-primitives-no-nitro-code">A.1.6 <code>armada-sdk</code> — built client-side primitives, no nitro code</h2>
 <p><code>armada-sdk@db5757f</code> wraps the vendored Railgun engine for note/shield/transact primitives, and ships a Groth16 prover (<code>src/prover/</code>, <code>snarkjs</code> + WASM, worker-first). It has no code addressing the nitro adjudicator or <code>HubCustodian</code> (<code>git grep -ln "nitro\|Nitro\|HubCustodian"</code> returns nothing in <code>src</code>). No <code>exportDisclosure</code> API exists yet (selective disclosure is still in progress, A.0.5).</p>
-<h2 id="a17-what-is-not-reused">A.1.7 What is not reused</h2>
-<p><code>watcher-ts</code>, <code>ts-nitro</code>, <code>@cerc-io/peer</code>, <code>mobymask</code>, <code>laconic-wallet</code>, and <code>chain-signatures</code> appear in none of the seven ship-armada repos checked. Railgun's <code>RelayAdapt</code>/Cookbook recipe pattern is not used anywhere in <code>armada-poc</code>; the Aave-v4 yield adapter uses the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding instead.</p>
-<h2 id="a18-governance-and-revenue-contracts-built-not-in-the-earlier-inventory">A.1.8 Governance and revenue contracts — built, not in the earlier inventory</h2>
+<h2 id="a17-governance-and-revenue-contracts-built">A.1.7 Governance and revenue contracts — built</h2>
 <p><code>armada-poc@102f17b8:contracts/governance/</code>: <code>ArmadaGovernor</code> (UUPS, five proposal types, a Security Council veto), <code>ArmadaTreasuryGov</code>, <code>TreasurySteward</code>, <code>ArmadaToken</code> (ERC20Votes, 12M fixed supply), <code>ArmadaWindDown</code>, <code>ArmadaRedemption</code>, <code>AdapterRegistry</code>, <code>RevenueCounter</code>, <code>RevenueLock</code>, <code>RevenueReserveDistributor</code>; <code>contracts/crowdfund/ArmadaCrowdfund</code>.</p>
 <h2 id="a19-risks">A.1.9 Risks</h2>
 <ul>
 <li><strong>The pool and the circuit are audit-critical.</strong> Both are built and tested, but the Phase-2 ceremony has not run, so no deployed verifying key yet traces to a published, multi-party transcript.</li>
 <li><strong>The patched adjudicator is the audit surface, not a vanilla deploy.</strong> The six <code>src/nitro</code> commits, not only <code>ArmadaNitroAdjudicator</code>'s own code, need audit coverage.</li>
-<li><strong>FROST is a different cryptographic scheme than any earlier doc named.</strong> <code>chain-signatures</code>' Schnorr DSS and its kyber DKG do not apply to <code>HubCustodian</code>.</li>
 </ul>
 <p>See also: <a href="../T0-ethereum-anchor.html">T0-ethereum-anchor.md</a>, <code>labbook/2026-10-19-docs-versus-code.md</code>, and <code>.scratch/rewrite-evidence/inv-InvPool.md</code>, <code>inv-InvNitroSdk.md</code> (in <code>armada-laconic</code>).</p>
 

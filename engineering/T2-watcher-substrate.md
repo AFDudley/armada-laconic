@@ -4,7 +4,7 @@
 **Parent:** [`05-building-block-view.md`](./05-building-block-view.md) · **Tier:** T2
 **Depends on / Blocks:** T1 (the proxy is what a client trusts); T2 only caches what T1 can re-verify.
 
-The earlier docs planned a bonded federation of watcher parties serving proof-carrying feeds over `watcher-ts`, `ts-nitro`, `@cerc-io/peer`, and Waku. None of that exists in any of the ship-armada repos. With the nimbus verified proxy as the proof path (T1, ADR-0009), a server-side watcher becomes optional: a cache a client may read from, then re-verify through the proxy. It is never a trust boundary.
+With the nimbus verified proxy as the proof path (T1, ADR-0009), a server-side watcher is optional: a cache a client may read from, then re-verify through the proxy. It is never a trust boundary.
 
 ```
   nimbus verified proxy (T1, the trust boundary)
@@ -18,14 +18,10 @@ The earlier docs planned a bonded federation of watcher parties serving proof-ca
         ▲
         │  today's live cache is a different system:
   ┌─────────────────────────────┐
-  │  armada-relayer's Ponder     │  built, out of the plan
+  │  armada-relayer's Ponder     │  built
   │  watcher (Postgres)          │
   └─────────────────────────────┘
 ```
-
-## T2.0 Verified feeds — superseded by T1
-
-**What it is.** The earlier plan's proof-carrying GraphQL feed (`watcher-ts` `getStorageAt → {value, proof}`) is not needed. The client verifies directly against the nimbus proxy, so no server-side proof-carrying feed sits between the client and the chain.
 
 ## T2.1 Relay fee — built, a different mechanism
 
@@ -33,7 +29,7 @@ The earlier docs planned a bonded federation of watcher parties serving proof-ca
 
 ## T2.2 Indexer — not built (watcher-ts); built, to be replaced (Ponder)
 
-**What is live today.** `armada-relayer`'s `relayer-v2/watcher/` is a Ponder indexer (`ponder` `0.16.8`) over Postgres 16, under Docker Compose. It indexes `MessageTransmitter`/`PrivacyPool`/`PrivacyPoolClient` ABI events by direct RPC, and serves `/v2/quick-sync`, which `armada-sdk` and `armada-interface` use. It has one operator and no proofs. This is out of the plan (`labbook/2026-10-19-unified-stack-and-verified-note-sync.md` decision 2); neither the relayer's Ponder indexer nor the cerc-io Ponder fork is part of the plan.
+**What is live today.** `armada-relayer`'s `relayer-v2/watcher/` is a Ponder indexer (`ponder` `0.16.8`) over Postgres 16, under Docker Compose. It indexes `MessageTransmitter`/`PrivacyPool`/`PrivacyPoolClient` ABI events by direct RPC, and serves `/v2/quick-sync`, which `armada-sdk` and `armada-interface` use. It has one operator and no proofs.
 
 **What `watcher-ts` would add.** `watcher-ts@18ca4e1a:packages/util/src/database.ts:98` asserts a Postgres backend; the indexer packages depend on `typeorm`, `pg`, `express`, `apollo-server-express`. It runs server-only today. No React Native or browser indexing code exists. Its event "proof" field (`{blockHash, receiptCID, log}`) has no link to `receiptsRoot` and would not be trusted even if used; it attaches structure, not a checked proof (`util/src/indexer.ts:706-715`; the only check in the codebase, `assertProofData`, checks that fields are present, not that they verify).
 
@@ -53,7 +49,7 @@ No bonding, no DKG ceremony, and no signer set exist. This is a design note (`la
 
 ## What stays true across the tier
 
-A client never trusts a watcher. It re-verifies anything it reads from a cache through the T1 proxy: commitment roots against `rootHistory`, and any claimed log against a receipt-trie rebuild. The watcher/watchtower/keeper/relay terminology distinction from the earlier docs still holds: a watcher serves and caches; a watchtower (T6.3) additionally responds to a stale-state challenge; this tier covers only the read-and-cache half, and no implementation of any of the three exists outside `armada-nitro`'s own test harness watchtower.
+A client never trusts a watcher. It re-verifies anything it reads from a cache through the T1 proxy: commitment roots against `rootHistory`, and any claimed log against a receipt-trie rebuild. The watcher/watchtower/keeper/relay terminology distinction holds: a watcher serves and caches; a watchtower (T6.3) additionally responds to a stale-state challenge; this tier covers only the read-and-cache half, and no implementation of any of the three exists outside `armada-nitro`'s own test harness watchtower.
 
 ## Sources
 

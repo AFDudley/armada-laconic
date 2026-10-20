@@ -4,7 +4,7 @@
 **Parent:** [`05-building-block-view.md`](./05-building-block-view.md) · **Tier:** T1
 **Depends on / Blocks:** consumes T0.0 (pool event ABI, storage layout) and T0.2 (adjudicator events, the merged deposit/payout boundary). Blocks T2 (the proxy is what a client trusts; T2 only caches).
 
-T1 is the proof path: how a client, on any target, verifies Ethereum state against a header a beacon light client checks. The earlier docs planned a nimbus-eth1 state-diff emitter mapped into IPLD, served by `watcher-ts`. `status-im/nimbus-eth1` already ships a verified proxy that does this job upstream of the client, so that path is replaced (ADR-0009, `labbook/2026-10-19-nimbus-verified-proxy-proofs.md`).
+T1 is the proof path: how a client, on any target, verifies Ethereum state against a header a beacon light client checks. `status-im/nimbus-eth1` ships a verified proxy that does this job upstream of the client (ADR-0009, `labbook/2026-10-19-nimbus-verified-proxy-proofs.md`).
 
 ```
   beacon light client (trusted block root)

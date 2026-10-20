@@ -94,7 +94,7 @@
 <h2 id="technical-debt-known-shortcuts">Technical debt / known shortcuts</h2>
 <ul>
 <li><strong>The deployed shield fee is not zero.</strong> <code>scripts/deploy_privacy_pool.ts</code> sets 50 bps against a 0-bps contract default. Any downstream integration that assumed fee = 0 is wrong. → ADR-0002.</li>
-<li><strong>The live indexer is <code>armada-relayer</code>'s Ponder/Postgres watcher, not a verified feed.</strong> It serves <code>/v2/quick-sync</code> with no proof, and is out of the plan (<code>labbook/2026-10-19-unified-stack-and-verified-note-sync.md</code>). It stays live until the proof path (T1) is integrated and a client stops depending on it as a trust boundary.</li>
+<li><strong>The live indexer is <code>armada-relayer</code>'s Ponder/Postgres watcher, not a verified feed.</strong> It serves <code>/v2/quick-sync</code> with no proof. It stays live until the proof path (T1) is integrated and a client stops depending on it as a trust boundary.</li>
 <li><strong>The web client is the only client.</strong> <code>armada-interface</code> covers shield, transfer, and unshield; it does not cover channel settlement, watchtower response, or mobile. This is a real capability gap, not a deferred nicety.</li>
 <li><strong>Selective disclosure is unmerged.</strong> <code>NullifierDisclosure.circom</code> and its SDK counterpart exist only on <code>disclosure-circuit</code>/<code>selective-disclosure</code> branches. → ADR-0020.</li>
 </ul>

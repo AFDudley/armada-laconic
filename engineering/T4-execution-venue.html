@@ -25,13 +25,13 @@
 <p><strong>Status:</strong> not built · tier doc · 2026-10-20
 <strong>Parent:</strong> <a href="./05-building-block-view.html"><code>05-building-block-view.md</code></a> · <strong>Tier:</strong> T4</p>
 <p>No contract in <code>armada-poc</code> implements a venue. There is no posted-price contract, no quote/settle app, and no matcher. T4.4, the one item marked built in the registry, needs no venue at all: any non-blocklisted ERC-20, including wstETH, can already be shielded as a note, so ETH-denominated yield already works without a swap path.</p>
-<p>The design reasoning below is unchanged from the earlier docs, because no evidence contradicts it; it is simply unimplemented. It states the plan, not a build in progress.</p>
+<p>The design below states the plan, not a build in progress.</p>
 <h2 id="t40-posted-price-contract-not-built">T4.0 Posted-price contract — not built</h2>
 <p>The idea: a single privileged <code>priceSetter</code> posts bid/ask per pair, take-it-or-leave-it, migratable to governance later. No such contract exists.</p>
 <h2 id="t41-quotesettle-forcemove-app-not-built">T4.1 Quote/settle ForceMove app — not built</h2>
 <p>The idea: a pure state machine (<code>propose-quote → accept → fill → settle/abort</code>) registered as a <code>go-nitro</code> ForceMove app. <code>armada-nitro</code>'s test suite (<code>ArmadaNitroAdjudicator.t.sol</code> and siblings) has no quote/settle app test. No such app exists.</p>
 <h2 id="t42-venue-solver-not-built">T4.2 Venue solver — not built</h2>
-<p>The idea: an off-chain keeper that internalizes flow, hedges the residual on public liquidity, and rebalances Aave on a decorrelated schedule. The earlier docs routed the hedge leg through Railgun's RelayAdapt/Cookbook recipe; no RelayAdapt contract exists anywhere in <code>armada-poc</code>, so any future hedge leg would need a different mechanism, likely the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding, the same pattern <code>ArmadaYieldAdapter</code> already uses.</p>
+<p>The idea: an off-chain keeper that internalizes flow, hedges the residual on public liquidity, and rebalances Aave on a decorrelated schedule. No RelayAdapt contract exists anywhere in <code>armada-poc</code>; any future hedge leg would need a different mechanism, likely the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding, the same pattern <code>ArmadaYieldAdapter</code> already uses.</p>
 <h2 id="t43-fee-split-allocation-not-built">T4.3 Fee-split allocation — not built</h2>
 <p>The idea: a co-signed channel allocation split across user, protocol, and integrator, cleared over <code>go-nitro</code>. No code implements this.</p>
 <h2 id="t44-eth-yield-built-as-a-consequence-of-the-pools-design">T4.4 ETH yield — built, as a consequence of the pool's design</h2>

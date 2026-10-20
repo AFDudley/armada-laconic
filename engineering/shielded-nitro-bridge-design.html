@@ -22,17 +22,14 @@
 </nav>
 
 <h1 id="shielded-armada-nitro-cross-chain-swap-construction-draft">Shielded Armada-Nitro Cross-Chain Swap — Construction Draft</h1>
-<p>design draft · 2026-09-10 · builds on <code>nitro-bridge-audit.md</code></p>
-<p><strong>Status.</strong> This remains a draft for a multi-chain construction; no cross-chain
-adjudicator, custodian, or hub exists today. One piece described below has since
-shipped, with a different crypto scheme than planned here: <code>armada-nitro</code>'s
-<code>ArmadaNitroAdjudicator</code> already merges the deposit/payout boundary into the
-adjudicator (so the "T0.3 glue" contrast in §3 no longer applies — there is no
-separate T0.3 contract to contrast with), and its <code>HubCustodian</code> signs with <strong>FROST</strong>
-over secp256k1 (<code>frost-secp256k1-evm</code>), not the <code>chain-signatures</code>/kyber threshold
-Schnorr this draft specifies throughout. Read every <code>chain-signatures</code> reference below
-as superseded by FROST (ruling 3, brief §4). No cross-chain swap, hash-locked or
-otherwise, is built.</p>
+<p>design draft · 2026-09-10, status updated 2026-10-20</p>
+<p><strong>Status.</strong> The hub custodian core is built: <code>HubCustodian.sol</code> verifies a FROST
+threshold signature over secp256k1, via <code>frost-secp256k1-evm</code>, with
+<code>test/HubCustodian.t.sol</code> and the <code>hub-custodian-frost</code> gate
+(<code>armada-nitro@55939ef:src/HubCustodian.sol</code>). <code>ArmadaNitroAdjudicator</code> merges the
+deposit/payout boundary into the adjudicator itself, not a separate contract. The
+cross-chain swap flow this draft describes — the adjudicator's cross-chain
+enforcement, the hash-locked swap, and unilateral exit-to-reshield — is not built.</p>
 <h2 id="0-purpose-posture">0. Purpose &amp; posture</h2>
 <p>A general cross-chain swap for Armada, with an Armada shielded pool deployed on <strong>every</strong> chain. Value crosses as armada-nitro notes on each side, cleared over Nitro state channels. Self-custodial; private; the hub is trusted for <strong>liveness only, never custody</strong>.</p>
 <p>The privacy anchor is the shielded pool, not the channel. Value enters the bridge already shielded (sender/recipient/amount hidden in-pool), funded through fresh rotating keys, carried over the shared Armada transport (optionally under a Nym mixnet). The channel and adjudicator machinery therefore operate on already-anonymous inputs and do not have to reproduce Lightning-style routing privacy: no onion routing, no PTLC. (Lightning needs those because there the channel graph <em>is</em> the privacy layer; here it is not.)</p>
@@ -41,7 +38,7 @@ otherwise, is built.</p>
 <li><strong>User</strong> — holds shielded notes; wants to swap A@X for B@Y, or move an asset X→Y, privately and self-custodially.</li>
 <li><strong>Hub</strong> — a bonded, always-on cross-chain routing party holding inventory on both chains; the only entity that touches the on-chain boundary, and only via <strong>aggregate</strong> rebalancing. Every hub is a <strong>DSS construction</strong> (threshold key). Few, fat, well-connected.</li>
 <li><strong>Maker / endpoint LP</strong> — provides swap inventory and quotes at an endpoint, reached <em>through</em> a hub; needs one channel, no routing, no cross-chain capital, no bond. Many, permissionless. (<strong>Hub ⊆ LP; LP ⊄ hub.</strong>)</li>
-<li><strong>DSS committee</strong> — the threshold-key holders behind a hub. Single legal entity (pure key hygiene) or multiple entities (Byzantine trust + bond/slash). Armada's one deployed threshold scheme is FROST over secp256k1 (<code>frost-secp256k1-evm</code>), not the <code>chain-signatures</code> DSS this draft otherwise assumes.</li>
+<li><strong>DSS committee</strong> — the threshold-key holders behind a hub. Single legal entity (pure key hygiene) or multiple entities (Byzantine trust + bond/slash). Armada's deployed threshold scheme is FROST over secp256k1 (<code>frost-secp256k1-evm</code>, <code>HubCustodian.sol</code>).</li>
 <li><strong>Custodian contract</strong> (per hub, per chain) — the DSS-controlled on-chain principal that gates the hub's collateral, verifies the group signature, and issues/rotates the hub's hot delegate key.</li>
 <li><strong>armada-nitro adjudicator</strong> (per chain) — the net-new core, §3.</li>
 <li><strong>Armada shielded pool</strong> (per chain) — our Railgun-design pool + circuits (T0.0/T0.1), independent per chain; each chain's anonymity set is its own.</li>
@@ -82,8 +79,8 @@ otherwise, is built.</p>
 </table>
 <p>Consequence: per-swap activity is an <strong>off-chain</strong> channel-state update, so there is no per-user on-chain event to correlate. The user never performs the cross-chain crossing; the hub fronts the destination from standing inventory and squares its own books later. The hub's rebalancing is its own on-chain activity over already-anonymized inputs, unlinkable to any specific user's (off-chain) swap — it is <strong>out of protocol</strong> (§6) and not user-privacy-critical. The hash lock of the hash-locked swap is off-chain, seen only by counterparties deliberately on both legs, so it is not a meaningful leak.</p>
 <h2 id="3-the-armada-nitro-adjudicator-net-new-core">3. The armada-nitro adjudicator (net-new core)</h2>
-<p>Distinct from <strong>both</strong> (i) the go-nitro L2 adjudicator — a stub, and merely a plain <code>NitroAdjudicator</code> on a second chain — and (ii) work-package A's <strong>T0.3</strong> glue, which rides the <em>vanilla ECDSA</em> adjudicator with cleartext outcomes. We deploy a purpose-built adjudicator on <strong>each</strong> Armada chain. It is ForceMove's dispute machine plus three changes the vanilla contract cannot express:</p>
-<p><strong>(a) Note-native custody — the Railgun↔Nitro boundary.</strong> Funded by an <strong>unshield</strong> from the local pool (a note's value escrowed into the adjudicator); settled by <strong>shielding</strong> fresh notes on conclude. "Deposit" = unshield-in; "payout / exit" = shield-out. This folds A's T0.3 role <em>into</em> the adjudicator; it is the spend-authorizing, audit-critical boundary.</p>
+<p>Distinct from the go-nitro L2 adjudicator — a stub, and merely a plain <code>NitroAdjudicator</code> on a second chain. We deploy a purpose-built adjudicator on <strong>each</strong> Armada chain. It is ForceMove's dispute machine plus three changes the vanilla contract cannot express:</p>
+<p><strong>(a) Note-native custody — the Railgun↔Nitro boundary.</strong> Funded by an <strong>unshield</strong> from the local pool (a note's value escrowed into the adjudicator); settled by <strong>shielding</strong> fresh notes on conclude. "Deposit" = unshield-in; "payout / exit" = shield-out. This is the spend-authorizing, audit-critical boundary.</p>
 <p><strong>(b) Contract-signature participants (EIP-1271) — resolving the DSS/ECDSA clash.</strong> The audit confirmed ForceMove verifies state sigs by hard <code>ecrecover</code> against <code>fixedPart.participants</code> (EOAs), with <strong>no pluggable verifier</strong>, while the DSS is threshold <strong>Schnorr</strong> — so a hub cannot be an EOA participant signed by the group key. Fix:
 - The channel <strong>participant is the custodian contract address</strong> — stable, so it satisfies ForceMove's fixed-participant immutability.
 - The adjudicator verifies a custodian participant's signature via <strong>EIP-1271 <code>isValidSignature</code></strong>, not <code>ecrecover</code>. (On-chain verification only ever happens on challenge/checkpoint/conclude, so the extra call cost is dispute-only.)
@@ -91,7 +88,7 @@ otherwise, is built.</p>
 <p>This is exactly the "group delegate credentials + bind custodian contract" the laconic nitro integration <em>declared but never built</em>. It also dissolves the key-rotation-vs-channel-immutability tension: the channel names the stable custodian, and rotation happens inside it.</p>
 <p><strong>(c) Unilateral exit → re-shield, on every chain.</strong> Any party can force-close at the latest supported state (challenge/checkpoint/conclude) and have its allocation <strong>shielded back to its Railgun address</strong>. Because the adjudicator exists on <em>both</em> chains, each leg has real enforcement — this is what makes the hash-locked swap genuinely trustless-atomic and reduces hub trust to liveness. This is precisely the gap the L2 stub left open; we fill it by <strong>building the adjudicator, not finishing the stub</strong>.</p>
 <p><strong>(d) Amount privacy on exit — phased.</strong> v1: outcomes are cleartext on a forced conclusion (Design A; a <em>contested</em> swap leaks its size on-chain). v2: outcome allocations carry <strong>hidden-amount commitments</strong> (T0.6 "fork-lite") so even a forced exit reveals no amount — requires the circuit change + a fresh ceremony (A.3/A.9); deferred.</p>
-<p><strong>Reused inside it:</strong> ForceMove challenge/checkpoint/conclude logic, exit-format outcomes, MultiAssetHolder-style holdings + <code>expectedHeld</code> guard, the pool's shield/unshield entrypoints, and the <code>chain-signatures</code> Schnorr verifier (<code>SchnorrSECP256K1.sol</code>) <em>inside</em> the custodian.</p>
+<p><strong>Reused inside it:</strong> ForceMove challenge/checkpoint/conclude logic, exit-format outcomes, MultiAssetHolder-style holdings + <code>expectedHeld</code> guard, the pool's shield/unshield entrypoints, and the built FROST verifier (<code>HubCustodian.sol</code>, <code>frost-secp256k1-evm</code>) inside the custodian.</p>
 <h2 id="4-swap-flow-happy-path">4. Swap flow — happy path</h2>
 <p>Fronting is the core mechanism. A hub with inventory on both chains gives the user the destination asset <em>now</em> out of its standing Y-inventory; it cannot teleport the user's specific X-value across. The user's input simply joins the hub's X-inventory, and the hub nets the resulting cross-chain imbalance later, in aggregate. That instant advance is what makes the swap usable, is where the hub earns its spread, and — because the destination funds come from a common pool rather than the user's own value crossing — is what severs the per-user cross-chain link (§2).</p>
 <ol>
@@ -151,9 +148,9 @@ otherwise, is built.</p>
 </table>
 <h2 id="8-reuse-vs-net-new-grounded">8. Reuse vs net-new (grounded)</h2>
 <ul>
-<li><strong>Reuse:</strong> ForceMove dispute logic, exit-format, MultiAssetHolder patterns (go-nitro <code>@435eb2b</code>); Railgun pool/circuits design (our own implementation, T0.0/T0.1); <code>chain-signatures</code> threshold-Schnorr crypto + <code>SchnorrSECP256K1.sol</code>; ts-nitro client; the unified Waku + libp2p transport (ADR-0008, optional Nym underlay).</li>
-<li><strong>Net-new (must build):</strong> the armada-nitro adjudicator (§3 a–c); the custodian contract + delegate issuance/rotation/slash; the DSS↔adjudicator wiring (unbuilt per audit); unilateral-exit-to-reshield; (v2) hidden-amount outcomes (T0.6) + ceremony. <em>(Hub rebalancing/inventory/pricing are out of protocol — §6 — at most a reference daemon, not a protocol deliverable.)</em></li>
-<li><strong>DSS scope — EVM + Nitro only, no laconicd:</strong> we reuse only <code>chain-signatures</code>' threshold-Schnorr crypto and the kyber DKG/signing <em>logic</em>; we do <strong>not</strong> use laconicd's CometBFT vote-extension transport — signing coordination rides the unified Armada transport (ADR-0008). Net-new is the EVM custodian's group-sig verification + delegate rotation and hosting the DKG/signing over that transport. Bonding/slashing is absent; both DSS codebases are self-declared <strong>unaudited</strong>.</li>
+<li><strong>Reuse:</strong> ForceMove dispute logic, exit-format, MultiAssetHolder patterns (go-nitro <code>@435eb2b</code>); Railgun pool/circuits design (our own implementation, T0.0/T0.1); the built <code>HubCustodian</code>/FROST threshold-signature core (<code>frost-secp256k1-evm</code>); ts-nitro client; the unified Waku + libp2p transport (ADR-0008, optional Nym underlay).</li>
+<li><strong>Net-new (must build):</strong> the cross-chain swap flow on top of the built adjudicator and custodian — the hash-locked swap, unilateral-exit-to-reshield, and the cross-chain enforcement of §3; (v2) hidden-amount outcomes (T0.6) + ceremony. <em>(Hub rebalancing/inventory/pricing are out of protocol — §6 — at most a reference daemon, not a protocol deliverable.)</em></li>
+<li><strong>DSS scope — EVM + Nitro only, no laconicd:</strong> <code>HubCustodian.sol</code> verifies the FROST group signature on-chain; signing coordination rides the unified Armada transport (ADR-0008), not laconicd's CometBFT vote-extension transport. Bonding/slashing is absent; the FROST codebase (<code>frost-secp256k1-evm</code>) is self-declared <strong>unaudited</strong>.</li>
 </ul>
 <h2 id="9-deferred-out-of-scope-for-the-first-cut">9. Deferred / out of scope for the first cut</h2>
 <ul>

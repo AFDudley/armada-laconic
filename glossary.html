@@ -156,7 +156,7 @@
 </tr>
 <tr>
 <td><strong>ts-nitro</strong></td>
-<td>TypeScript port of Nitro for in-browser/mobile use. <strong>Not reused</strong>: <code>armada-sdk</code>'s <code>src/</code> has no <code>nitro</code> reference anywhere.</td>
+<td>TypeScript port of Nitro for in-browser/mobile use. Not used by <code>armada-sdk</code>; <code>armada-client</code>'s plan (<code>docs/SPEC.md</code> D6) vendors it for the client's channel package.</td>
 </tr>
 <tr>
 <td><strong>go-nitro</strong></td>
@@ -164,7 +164,7 @@
 </tr>
 <tr>
 <td><strong>FROST</strong></td>
-<td>the threshold-signature scheme <code>armada-nitro</code>'s <code>HubCustodian</code> actually verifies: FROST over secp256k1 (KECCAK-256), via the <code>frost-secp256k1-evm</code> library. Not <code>chain-signatures</code>.</td>
+<td>the threshold-signature scheme <code>armada-nitro</code>'s <code>HubCustodian</code> actually verifies: FROST over secp256k1 (KECCAK-256), via the <code>frost-secp256k1-evm</code> library.</td>
 </tr>
 <tr>
 <td><strong>chain-signatures</strong></td>
@@ -227,7 +227,7 @@
 <li><strong>Broadcaster / Relayer</strong> — see §1 ("Relay", Railgun); the <strong>keeper</strong>'s Railgun analog.</li>
 <li><strong>Waku</strong> — decentralized libp2p-based p2p messaging (filter / lightpush / store), carrying broadcaster↔user comms and gossip/discovery. Transport <strong>T2.3</strong> (ADR-0008).</li>
 <li><strong>CCTP</strong> — Circle's Cross-Chain Transfer Protocol (burn-and-mint native USDC); Armada's cross-chain Adapter, used as <em>mint-and-shield</em>. <strong>T5</strong> (Armada Adapters).</li>
-<li><strong>Aave-yield adapter</strong> — built: <code>ArmadaYieldAdapter</code>/<code>ArmadaYieldVault</code>, a direct recipe through the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding, with the amount public at the transparent supply boundary. The LP-buffered private rail the earlier docs described is not built. ETH yield instead uses a shielded wstETH note, which needs no adapter at all. Armada's adapter tier (<strong>T5</strong>).</li>
+<li><strong>Aave-yield adapter</strong> — built: <code>ArmadaYieldAdapter</code>/<code>ArmadaYieldVault</code>, a direct recipe through the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding, with the amount public at the transparent supply boundary. The LP-buffered rail (T4.5) is not built. ETH yield instead uses a shielded wstETH note, which needs no adapter at all. Armada's adapter tier (<strong>T5</strong>).</li>
 <li><strong>MASP</strong> — Namada's Multi-Asset Shielded Pool note primitive — a note primitive, <strong>not</strong> a state channel (contrast Design B). Reference only.</li>
 <li><strong>RelayAdapt / recipe</strong> — Railgun's cross-contract module: an atomic <code>unshield → external call → reshield</code>. <strong>Not used anywhere in this codebase.</strong> Armada's Aave-v4 yield adapter uses the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding instead.</li>
 <li><strong>wstETH / weETH</strong> — non-rebasing LSTs (value accrues via a rising exchange rate). Held as a shielded note they earn ETH staking yield intrinsically, with no Aave/LP rail needed. ETH yield <strong>T4.4</strong>.</li>
@@ -248,7 +248,7 @@
 <li><strong>Filler-filtered order</strong> — an order carrying an allowlist of who may fill it; empty ⇒ open (lit/CLOB), non-empty ⇒ private/RFQ.</li>
 <li><strong>CLOB / RFQ</strong> — Central Limit Order Book (public, lit) / Request-for-Quote (bilateral, private). The matcher unifies both in one order type.</li>
 <li><strong>LP vault</strong> — pooled market-making capital run by a keeper (lets passive LPs participate).</li>
-<li><strong>Threshold Schnorr / DKG / t-of-n</strong> — a design for a future federation signature; no threshold scheme is chosen for T3. <code>HubCustodian</code> uses FROST, not a <code>chain-signatures</code>-style DSS, for a different purpose (channel-participant signing, ADR-0016).</li>
+<li><strong>Threshold Schnorr / DKG / t-of-n</strong> — a design for a future federation signature; no threshold scheme is chosen for T3. <code>HubCustodian</code> uses FROST for a different purpose (channel-participant signing, ADR-0016).</li>
 <li><strong>DSS</strong> — Distributed Schnorr Signature, a Stinson–Strobl <em>(t,n)</em> design over a <code>kyber</code> DKG. <strong>Not built and not used anywhere in the ship-armada repos.</strong></li>
 <li><strong>Perpetual PoT (Phase-1)</strong> — Community Perpetual Powers of Tau: the universal, inherited and vetted Groth16 trusted-setup phase. Reused as-is (<strong>T0.1</strong>, ADR-0003).</li>
 <li><strong>Phase-2</strong> — per-circuit MPC over our circuit set; security is <strong>1-of-N honest</strong>, with a published transcript plus a final randomness beacon. Re-run only when circuits change (our own, <strong>T0.1</strong>, ADR-0003).</li>

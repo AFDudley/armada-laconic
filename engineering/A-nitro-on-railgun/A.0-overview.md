@@ -8,9 +8,9 @@ work package A · **2026-10-20**
 
 ## A.0.1 What is built
 
-The settlement rail — *notes in, normal Nitro, notes out* — is built, not planned. `armada-poc` built the shielded pool and its governance contracts. `armada-circuits` built the `Transact` circuit. `armada-nitro` built `ArmadaNitroAdjudicator`, a patched `go-nitro` adjudicator that also carries the deposit/payout boundary: `depositFromNote` funds a channel from a note, and a `SHIELD`-type allocation pays a note back out. There is no separate deposit/payout contract and no `fundChannel` (ruling 1, `labbook/2026-10-19-docs-versus-code.md`).
+The settlement rail — *notes in, normal Nitro, notes out* — is built, not planned. `armada-poc` built the shielded pool and its governance contracts. `armada-circuits` built the `Transact` circuit. `armada-nitro` built `ArmadaNitroAdjudicator`, a patched `go-nitro` adjudicator that also carries the deposit/payout boundary: `depositFromNote` funds a channel from a note, and a `SHIELD`-type allocation pays a note back out.
 
-The hub principal, `HubCustodian`, signs with FROST over secp256k1 (`frost-secp256k1-evm`), not `chain-signatures`.
+The hub principal, `HubCustodian`, signs with FROST over secp256k1 (`frost-secp256k1-evm`).
 
 ## A.0.2 The construction, as built
 
@@ -33,7 +33,7 @@ The hub principal, `HubCustodian`, signs with FROST over secp256k1 (`frost-secp2
 | [A.4](./A.4-adjudicator-integration.md) | T0.2 | The patched adjudicator and its six post-vendor commits. |
 | [A.5](./A.5-deposit-payout-contract.md) | T0.2 | The deposit/payout boundary, merged into the adjudicator. |
 | [A.6](./A.6-settlement-client-watchtower.md) | T6.2, T6.3 | The web client's settlement calls; the watchtower that exists only in the test harness. |
-| [A.7](./A.7-anonymity-set.md) | T0.7 | The crowd-growth strategy; no cross-pool proof. |
+| [A.7](./A.7-anonymity-set.md) | T0.7 | The crowd-growth strategy. |
 | [A.8](./A.8-interfaces-acceptance.md) | ICD | What the rail exposes; the test suites that already run against it. |
 | [A.9](./A.9-native-commitment.md) | T0.6 *(not built)* | Amount-privacy-in-play, still a deferred circuit change. |
 

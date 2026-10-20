@@ -46,7 +46,7 @@
 </ul>
 <h3 id="adr-0004-settle-via-nitro-on-railgun-not-relayadapt">ADR-0004 — Settle via nitro-on-railgun, not RelayAdapt</h3>
 <ul>
-<li><strong>D4.1</strong> Build the deposit/payout boundary (<strong>T0.3</strong>) that funds a <code>go-nitro</code> channel from a shielded note and settles the channel outcome back into fresh notes: <strong>notes in → normal Nitro → notes out</strong>.</li>
+<li><strong>D4.1</strong> Build the deposit/payout boundary that funds a <code>go-nitro</code> channel from a shielded note and settles the channel outcome back into fresh notes: <strong>notes in → normal Nitro → notes out</strong>.</li>
 <li><strong>D4.2</strong> The Nitro game analysis stays isolated from the Railgun privacy analysis; the two meet only at the allocation→note <strong>boundary</strong>.</li>
 </ul>
 <h3 id="adr-0005-amount-privacy-design-a-default-fork-lite-deferred">ADR-0005 — Amount privacy = Design A default; fork-lite deferred</h3>
@@ -81,7 +81,7 @@
 <h3 id="adr-0010-terminology-conventions">ADR-0010 — Terminology conventions</h3>
 <ul>
 <li><strong>D10.1</strong> Enforce:</li>
-<li><strong>deposit/payout contract</strong> for T0.3 — <strong>never "adapter."</strong></li>
+<li><strong>deposit/payout boundary</strong> (inside <code>ArmadaNitroAdjudicator</code>) — <strong>never "adapter."</strong></li>
 <li><strong>RelayAdapt / Adapt modules / Cookbook</strong> only for <strong>Railgun's own</strong> value-moving recipe; <strong>Adapters</strong> (capital-A tier) only for <strong>Armada's T5</strong>.</li>
 <li><strong>boundary</strong> (or interface), <strong>never "seam"</strong> (collides with Feathers' testability term).</li>
 <li><strong>tier</strong> (T0–T6), <strong>never "layer"</strong> (collides with Ethereum L1/L2).</li>
@@ -120,8 +120,8 @@
 </ul>
 <h3 id="adr-0016-armada-nitro-adjudicator-dss-custodiandelegate-evm-nitro-only">ADR-0016 — armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only)</h3>
 <ul>
-<li><strong>D16.1</strong> Build an <strong>armada-nitro adjudicator</strong> on each Armada chain — ForceMove's dispute machine plus: (a) <strong>note-native custody</strong> (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) <strong>EIP-1271 contract-signature participants</strong> so a hub's stable <strong>custodian contract</strong> is the channel participant, with the custodian verifying its <strong>hot delegate ECDSA key</strong> internally and <strong>rotating it without changing the channel's <code>FixedPart</code></strong>; (c) <strong>unilateral exit → re-shield</strong> on both chains.</li>
-<li><strong>D16.2</strong> The DSS is <strong>EVM + Nitro only, no laconicd</strong>: the hub custodian (<code>HubCustodian.sol</code>) verifies a threshold signature on-chain with <strong>FROST over secp256k1</strong> (KECCAK-256), via the <code>frost-secp256k1-evm</code> library (<code>lib/frost-secp256k1-evm</code>, pinned <code>65d03d0</code>); signing coordination rides the unified transport (ADR-0008). This is not <code>chain-signatures</code>' Schnorr DSS or its kyber DKG: the built custodian verifies with <code>FROST.verifySignature</code>, and rotates its group key with <code>FROST.isValidPublicKey</code>, not a <code>SchnorrSECP256K1.sol</code> contract.</li>
+<li><strong>D16.1</strong> Build an <strong>armada-nitro adjudicator</strong> on each Armada chain — ForceMove's dispute machine plus: (a) <strong>note-native custody</strong> (funded by unshield-in, settled by shield-out; folds the deposit/payout boundary in); (b) <strong>EIP-1271 contract-signature participants</strong> so a hub's stable <strong>custodian contract</strong> is the channel participant, with the custodian verifying its <strong>hot delegate ECDSA key</strong> internally and <strong>rotating it without changing the channel's <code>FixedPart</code></strong>; (c) <strong>unilateral exit → re-shield</strong> on both chains.</li>
+<li><strong>D16.2</strong> The DSS is <strong>EVM + Nitro only, no laconicd</strong>: the hub custodian (<code>HubCustodian.sol</code>) verifies a threshold signature on-chain with <strong>FROST over secp256k1</strong> (KECCAK-256), via the <code>frost-secp256k1-evm</code> library (<code>lib/frost-secp256k1-evm</code>, pinned <code>65d03d0</code>); signing coordination rides the unified transport (ADR-0008). The built custodian verifies with <code>FROST.verifySignature</code>, and rotates its group key with <code>FROST.isValidPublicKey</code>.</li>
 <li><strong>D16.3</strong> The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.</li>
 </ul>
 <h3 id="adr-0017-hub-yield-and-swaps-as-channel-state">ADR-0017 — Hub yield and swaps as channel state</h3>

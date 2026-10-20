@@ -82,10 +82,10 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Decision.**
 
-- **D4.1** Build the deposit/payout boundary (**T0.3**) that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**.
+- **D4.1** Build the deposit/payout boundary that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**.
 - **D4.2** The Nitro game analysis stays isolated from the Railgun privacy analysis; the two meet only at the allocation→note **boundary**.
 
-**Consequences.** We gain optimistic exits and arbitrary ForceMove games with **no new cryptography** and without governance-gated adapters. `armada-nitro` built this: `ArmadaNitroAdjudicator` carries the boundary inside the adjudicator contract itself, rather than as a second contract. `depositFromNote` funds a channel from a note, and a `SHIELD`-type allocation in `_executeSingleAssetExit` pays a note back out. There is no separate T0.3 contract and no `fundChannel`. RelayAdapt is not used anywhere in this codebase; no venue hedge leg (T4.2) exists yet.
+**Consequences.** We gain optimistic exits and arbitrary ForceMove games with **no new cryptography** and without governance-gated adapters. `armada-nitro` built this: `ArmadaNitroAdjudicator` carries the boundary inside the adjudicator contract itself, rather than as a second contract. `depositFromNote` funds a channel from a note, and a `SHIELD`-type allocation in `_executeSingleAssetExit` pays a note back out. RelayAdapt is not used anywhere in this codebase; no venue hedge leg (T4.2) exists yet.
 
 **Alternatives.** RelayAdapt-only settlement was rejected: it is governance-gated, less expressive, and offers no channel exits.
 
@@ -171,7 +171,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Decision.**
 
 - **D10.1** Enforce:
-  - **deposit/payout contract** for T0.3 — **never "adapter."**
+  - **deposit/payout boundary** (inside `ArmadaNitroAdjudicator`) — **never "adapter."**
   - **RelayAdapt / Adapt modules / Cookbook** only for **Railgun's own** value-moving recipe; **Adapters** (capital-A tier) only for **Armada's T5**.
   - **boundary** (or interface), **never "seam"** (collides with Feathers' testability term).
   - **tier** (T0–T6), **never "layer"** (collides with Ethereum L1/L2).
@@ -216,7 +216,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 ## ADR-0013
 **Single engineering team; scope spans the whole Armada product; Laconic is prior art** · accepted · 2026-09-05
 
-**Context.** Earlier docs drew an *Armada-builds-vs-Laconic-builds* ownership boundary (§3; T5 marked "out of Laconic build scope"; the ADR-0012 / §0 WBS treated Armada's Adapters as external). That boundary no longer holds. This is **one engineering team** building **Armada — a Railgun-based privacy product for USDC** (confirmed by Armada's own thesis and docs: Railgun ZK circuits (BN254/Groth16), a shielded USDC pool, non-custodial). The team works from the **ship-armada repos** (`armada-poc`, `armada-circuits`, `armada-nitro`, `armada-sdk`, `armada-client`, `armada-relayer`, `armada-interface`), which already carry the pool, the circuits, the adjudicator, and the client SDK. Only `go-nitro`, vendored and then patched, is Laconic prior art still in the build; `watcher-ts`, `ts-nitro`, `@cerc-io/peer`, `mobymask`, `laconic-wallet`, and `chain-signatures` are not in any of the seven repos.
+**Context.** This is **one engineering team** building **Armada — a Railgun-based privacy product for USDC** (confirmed by Armada's own thesis and docs: Railgun ZK circuits (BN254/Groth16), a shielded USDC pool, non-custodial). The team works from the **ship-armada repos** (`armada-poc`, `armada-circuits`, `armada-nitro`, `armada-sdk`, `armada-client`, `armada-relayer`, `armada-interface`), which already carry the pool, the circuits, the adjudicator, and the client SDK. Only `go-nitro`, vendored and then patched, is Laconic prior art still in the build.
 
 **Decision.**
 
@@ -237,14 +237,14 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 - **D14.1** The **shielded-pool contracts** (T0.0) and the **`Transact` circuit** (T0.1) are implemented by us — independently authored, spec-compatible with the Railgun design. Built: `PrivacyPool` and its four modules (`armada-poc`); `Transact.circom` and its 19 shapes (`armada-circuits`).
 - **D14.2** The settlement rail reuses `go-nitro`, patched by six commits (ADR-0004); Railgun's `engine`/`cookbook` served as a reference, not as reused code; the community Perpetual PoT Phase-1 is reused and our own Phase-2 runs **over our own circuits** (ADR-0003 otherwise unchanged); Groth16 stands.
 
-**Consequences.** T0.0 and T0.1 are **net-new, audit-critical crypto-engineering** — of a well-understood design, now built and tested (`armada-poc`, `armada-circuits` test suites). The "integration, not new cryptography" thesis (ADR-0012, §4) holds for the **settlement rail** (T0.2 adjudicator, which also carries the T0.3 deposit/payout boundary, plus T6.x) but **not** for the pool/circuits. T0.6 (native commitment) is a change to our own circuits, still not built. Note format may match Railgun, so that one wallet can hold both and the T6.7 move from Railgun is simpler, or diverge — our choice; our anonymity set is separate regardless.
+**Consequences.** T0.0 and T0.1 are **net-new, audit-critical crypto-engineering** — of a well-understood design, now built and tested (`armada-poc`, `armada-circuits` test suites). The "integration, not new cryptography" thesis (ADR-0012, §4) holds for the **settlement rail** (T0.2 adjudicator, which also carries the deposit/payout boundary, plus T6.x) but **not** for the pool/circuits. T0.6 (native commitment) is a change to our own circuits, still not built. Note format may match Railgun, so that one wallet can hold both and the T6.7 move from Railgun is simpler, or diverge — our choice; our anonymity set is separate regardless.
 
 **Alternatives.** Use Railgun's live deployed pool directly (rejected — no fee=0, no settlement hook; contradicts ADR-0002's rationale).
 
 ## ADR-0015
 **Cross-chain shielded swap = armada-nitro channels + fronting hubs** · accepted · 2026-09-10 · v1.5 (after v1, before the v2 research work)
 
-**Context.** Users hold shielded value in an Armada pool on each chain and want to swap or move value **across** chains privately and self-custodially (general cross-chain, independent of CCTP). A naive design — unshield on X, bridge, shield on Y — produces a **public matched pair** (equal/related amount, bounded timing) that correlates the two legs and collapses the anonymity set. The audited `go-nitro` "nitro bridge" is a single-operator, L1-anchored mirrored-channel construction with a **stubbed L2 adjudicator** and no DSS — neither private nor trust-minimized as written (`nitro-bridge-audit.md`).
+**Context.** Users hold shielded value in an Armada pool on each chain and want to swap or move value **across** chains privately and self-custodially (general cross-chain, independent of CCTP). A naive design — unshield on X, bridge, shield on Y — produces a **public matched pair** (equal/related amount, bounded timing) that correlates the two legs and collapses the anonymity set. The audited `go-nitro` "nitro bridge" is a single-operator, L1-anchored mirrored-channel construction with a **stubbed L2 adjudicator** and no DSS — neither private nor trust-minimized as written.
 
 **Decision.**
 
@@ -266,18 +266,18 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Decision.**
 
-- **D16.1** Build an **armada-nitro adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains.
-- **D16.2** The DSS is **EVM + Nitro only, no laconicd**: the hub custodian (`HubCustodian.sol`) verifies a threshold signature on-chain with **FROST over secp256k1** (KECCAK-256), via the `frost-secp256k1-evm` library (`lib/frost-secp256k1-evm`, pinned `65d03d0`); signing coordination rides the unified transport (ADR-0008). This is not `chain-signatures`' Schnorr DSS or its kyber DKG: the built custodian verifies with `FROST.verifySignature`, and rotates its group key with `FROST.isValidPublicKey`, not a `SchnorrSECP256K1.sol` contract.
+- **D16.1** Build an **armada-nitro adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains.
+- **D16.2** The DSS is **EVM + Nitro only, no laconicd**: the hub custodian (`HubCustodian.sol`) verifies a threshold signature on-chain with **FROST over secp256k1** (KECCAK-256), via the `frost-secp256k1-evm` library (`lib/frost-secp256k1-evm`, pinned `65d03d0`); signing coordination rides the unified transport (ADR-0008). The built custodian verifies with `FROST.verifySignature`, and rotates its group key with `FROST.isValidPublicKey`.
 - **D16.3** The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.
 
-**Consequences.** Two small net-new contracts (the adjudicator delta and the custodian) on top of reused ForceMove, threshold-Schnorr, and our own pool implementation — the weight is **audit, not code**. Deploying the adjudicator per chain gives each leg of the hash-locked swap real enforcement (fixing the audited L2-stub gap) and makes unilateral exit real, so hub trust stays liveness-only. Bonding/slashing (T0.4/T2.4) is the multi-entity economic layer (v2). Both DSS codebases are self-declared **unaudited**. Post-v1; depends on ADR-0015. Detail: `shielded-nitro-bridge-design.md`, `nitro-bridge-audit.md`.
+**Consequences.** Two small net-new contracts (the adjudicator delta and the custodian) on top of reused ForceMove, threshold-Schnorr, and our own pool implementation — the weight is **audit, not code**. Deploying the adjudicator per chain gives each leg of the hash-locked swap real enforcement (fixing the audited L2-stub gap) and makes unilateral exit real, so hub trust stays liveness-only. Bonding/slashing (T0.4/T2.4) is the multi-entity economic layer (v2). Both DSS codebases are self-declared **unaudited**. Depends on ADR-0015. Detail: `shielded-nitro-bridge-design.md`.
 
-**Alternatives.** Reuse the vanilla `NitroAdjudicator` + T0.3 (rejected — ECDSA-only, no custodian/DSS participant, cleartext outcomes). Finish the `go-nitro` L2 stub (rejected — not Railgun-aware, single-key, no enforcement). Have the adjudicator natively Schnorr-verify each state (rejected — heavier, and does not solve delegate rotation vs `FixedPart` immutability). Use laconicd's CometBFT distsig transport (rejected — EVM + Nitro only, no Cosmos dependency).
+**Alternatives.** Reuse the vanilla `NitroAdjudicator` (rejected — ECDSA-only, no custodian/DSS participant, cleartext outcomes). Finish the `go-nitro` L2 stub (rejected — not Railgun-aware, single-key, no enforcement). Have the adjudicator natively Schnorr-verify each state (rejected — heavier, and does not solve delegate rotation vs `FixedPart` immutability). Use laconicd's CometBFT distsig transport (rejected — EVM + Nitro only, no Cosmos dependency).
 
 ## ADR-0017
 **Hub yield and swaps as channel state** · accepted · 2026-10-11 · v1.5
 
-**Context.** The first hub games ([§14](./14-shielded-games-over-nitro.md)) are a WETH↔wstETH swap and Aave USDC lending. §14 sketches each as its own ForceMove app: a two-asset settlement app and a lending app that needs an on-chain rate reference for disputes. armada-nitro's E11 task already assumes a simpler shape ("option 2"), which no architecture document records. ADR-0011 defers USDC yield to v2.
+**Context.** The first hub games ([§14](./14-shielded-games-over-nitro.md)) are a WETH↔wstETH swap and Aave USDC lending. §14 sketches each as its own ForceMove app: a two-asset settlement app and a lending app that needs an on-chain rate reference for disputes. armada-nitro's E11 task already assumes a simpler shape ("option 2"), which no architecture document records.
 
 **Decision.**
 
@@ -295,7 +295,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 ## ADR-0018
 **Decisions are clause-level records compiled to a current view** · accepted · 2026-10-11
 
-**Context.** The ADR log is append-only and a decided ADR is never edited, so the *current* decision had to be reconstructed by replaying every later ADR that touched an earlier one — and nothing checked the replay. ADR-0011 still reads "USDC yield defers to v2" after ADR-0017 changed it; only its index row hinted otherwise. The remedy is to give each decision a clause ID, declare supersession on the new clause, and compile the live view. Style and mechanics — and the alternatives weighed — are recorded in [`decision-records.md`](./decision-records.md).
+**Context.** The ADR log is append-only and a decided ADR is never edited, so the *current* decision had to be reconstructed by replaying every later ADR that touched an earlier one — and nothing checked the replay. The remedy is to give each decision a clause ID, declare supersession on the new clause, and compile the live view. Style and mechanics — and the alternatives weighed — are recorded in [`decision-records.md`](./decision-records.md).
 
 **Decision.**
 

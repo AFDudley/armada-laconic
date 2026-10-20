@@ -23,7 +23,7 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
 - **D3.4** Phase-2 is re-run **only** when circuits change — for example, the ADR-0005 fork-lite upgrade, or the selective-disclosure circuit (ADR-0020), which adds shapes to this same ceremony rather than starting a new one.
 
 ### ADR-0004 — Settle via nitro-on-railgun, not RelayAdapt
-- **D4.1** Build the deposit/payout boundary (**T0.3**) that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**.
+- **D4.1** Build the deposit/payout boundary that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**.
 - **D4.2** The Nitro game analysis stays isolated from the Railgun privacy analysis; the two meet only at the allocation→note **boundary**.
 
 ### ADR-0005 — Amount privacy = Design A default; fork-lite deferred
@@ -52,7 +52,7 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
 
 ### ADR-0010 — Terminology conventions
 - **D10.1** Enforce:
-  - **deposit/payout contract** for T0.3 — **never "adapter."**
+  - **deposit/payout boundary** (inside `ArmadaNitroAdjudicator`) — **never "adapter."**
   - **RelayAdapt / Adapt modules / Cookbook** only for **Railgun's own** value-moving recipe; **Adapters** (capital-A tier) only for **Armada's T5**.
   - **boundary** (or interface), **never "seam"** (collides with Feathers' testability term).
   - **tier** (T0–T6), **never "layer"** (collides with Ethereum L1/L2).
@@ -85,8 +85,8 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
   - **Hub trust is liveness-only**, via user unilateral exit (ADR-0004 force-close, realized by the new adjudicator in ADR-0016).
 
 ### ADR-0016 — armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only)
-- **D16.1** Build an **armada-nitro adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains.
-- **D16.2** The DSS is **EVM + Nitro only, no laconicd**: the hub custodian (`HubCustodian.sol`) verifies a threshold signature on-chain with **FROST over secp256k1** (KECCAK-256), via the `frost-secp256k1-evm` library (`lib/frost-secp256k1-evm`, pinned `65d03d0`); signing coordination rides the unified transport (ADR-0008). This is not `chain-signatures`' Schnorr DSS or its kyber DKG: the built custodian verifies with `FROST.verifySignature`, and rotates its group key with `FROST.isValidPublicKey`, not a `SchnorrSECP256K1.sol` contract.
+- **D16.1** Build an **armada-nitro adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains.
+- **D16.2** The DSS is **EVM + Nitro only, no laconicd**: the hub custodian (`HubCustodian.sol`) verifies a threshold signature on-chain with **FROST over secp256k1** (KECCAK-256), via the `frost-secp256k1-evm` library (`lib/frost-secp256k1-evm`, pinned `65d03d0`); signing coordination rides the unified transport (ADR-0008). The built custodian verifies with `FROST.verifySignature`, and rotates its group key with `FROST.isValidPublicKey`.
 - **D16.3** The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.
 
 ### ADR-0017 — Hub yield and swaps as channel state

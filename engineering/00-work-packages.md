@@ -8,7 +8,7 @@ This is the work breakdown: the deliverable-oriented decomposition of the progra
 
 | WP | Mission | Owns (`T#.#`) | Status |
 |---|---|---|---|
-| **A · on-chain anchor** | Non-custodial settlement of shielded value: the pool, the circuits, the adjudicator, and governance. | T0.0–T0.7; the deposit/payout boundary (merged into T0.2) | Mostly built |
+| **A · on-chain anchor** | Non-custodial settlement of shielded value: the pool, the circuits, the adjudicator, and governance. | T0.0–T0.7 | Mostly built |
 | **B · proof path** | A client verifies Ethereum state against a header a beacon light client checks, through the nimbus verified proxy. | T1.0–T1.2, T2.0–T2.4; note-scanner T6.1 | In progress, upstream, unintegrated |
 | **C · venue and adapters** | Let users earn yield and swap, over a future venue; the adapters are already live. | T3.\*, T4.\* (plan); T5.0, T5.1 | Adapters partly built; venue not built |
 | **D · client** | The wallet/app. | T6.0, T6.2–T6.8 | The web app is built; mobile is a spec only |
@@ -37,8 +37,8 @@ This is the work breakdown: the deliverable-oriented decomposition of the progra
 
 ## Sequencing, revised
 
-1. **The on-chain anchor is already built**, so it is no longer the first thing to land; it is the baseline everything else now targets.
-2. **The proof path is the next concrete target**, not the long pole it used to be: operate the proxy, patch the fixturenet genesis, and run the first proof (`labbook/2026-10-19-nimbus-verified-proxy-proofs.md` §3.8).
+1. **The on-chain anchor is already built**; it is the baseline everything else now targets.
+2. **The proof path is the next concrete target**: operate the proxy, patch the fixturenet genesis, and run the first proof (`labbook/2026-10-19-nimbus-verified-proxy-proofs.md` §3.8).
 3. **The client's settlement lifecycle and watchtower** are the next client-side gap, once a verified read path exists to build them against.
 4. **A venue** has no code and no near-term dependency forcing it; it stays last.
 

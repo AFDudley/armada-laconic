@@ -12,7 +12,7 @@ work package A · **2026-10-20**
 
 ## A.2.2 What was configured, as deployed
 
-- **Fee.** `shieldFee` defaults to 0 bps, owner-settable, capped at `MAX_SHIELD_FEE_BPS = 1000`. The Sepolia deploy script sets it to 50 bps (`scripts/deploy_privacy_pool.ts:264-265`). This is not the fee = 0 design the earlier docs assumed.
+- **Fee.** `shieldFee` defaults to 0 bps, owner-settable, capped at `MAX_SHIELD_FEE_BPS = 1000`. The Sepolia deploy script sets it to 50 bps (`scripts/deploy_privacy_pool.ts:264-265`).
 - **Token policy.** A blocklist, not an allow-list: any ERC-20 not blocklisted can be shielded, and USDC can never be blocked.
 - **No admin proxy.** `PrivacyPool` has no upgrade admin to own; `owner` is a plain address wired to a timelock by the deploy scripts, and the four module addresses are immutable after `initialize()`.
 - **Verifier registry.** `VerifierModule` holds `verificationKeys[nullifierCount][commitmentCount]`, owner-set via `PrivacyPool.setVerificationKey`, with no deletion path. 19 shapes from `armada-circuits` are registered, `(1,1)` through `(8,4)`.

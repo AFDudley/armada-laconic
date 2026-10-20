@@ -28,9 +28,8 @@
 <p>This document walks one scenario end to end: <strong>Alice swaps shielded USDC for shielded ETH with a Provider who holds shielded ETH</strong>, on a single chain, non-custodially. It is self-contained — the building blocks are defined inline, and the status table at the end separates what already exists from what is net-new.</p>
 <p><strong>Status.</strong> This walkthrough is a plan. No quote/settle app, posted-price contract, or
 venue exists yet (T4.0, T4.1, not built). The deposit/payout boundary it diagrams as a
-separate contract is, in the built code, merged into the Nitro adjudicator itself
-(<code>ArmadaNitroAdjudicator.depositFromNote</code> and its SHIELD payout path, T0.2) — there is
-no separate <code>T0.3</code> contract.</p>
+separate contract is built inside the Nitro adjudicator itself
+(<code>ArmadaNitroAdjudicator.depositFromNote</code> and its SHIELD payout path, T0.2).</p>
 <p>The flow follows one motto: <strong>notes in → normal Nitro → notes out.</strong> Both parties unshield notes into a shared settlement channel, they settle off-chain, and the outcome is re-shielded into fresh notes.</p>
 <h2 id="the-building-blocks-in-play">The building blocks in play</h2>
 <p>Each is a <code>T#.#</code> item in the building-block registry:</p>

@@ -25,7 +25,7 @@
 <p><strong>Status:</strong> in progress · tier doc · 2026-10-20
 <strong>Parent:</strong> <a href="./05-building-block-view.html"><code>05-building-block-view.md</code></a> · <strong>Tier:</strong> T2
 <strong>Depends on / Blocks:</strong> T1 (the proxy is what a client trusts); T2 only caches what T1 can re-verify.</p>
-<p>The earlier docs planned a bonded federation of watcher parties serving proof-carrying feeds over <code>watcher-ts</code>, <code>ts-nitro</code>, <code>@cerc-io/peer</code>, and Waku. None of that exists in any of the ship-armada repos. With the nimbus verified proxy as the proof path (T1, ADR-0009), a server-side watcher becomes optional: a cache a client may read from, then re-verify through the proxy. It is never a trust boundary.</p>
+<p>With the nimbus verified proxy as the proof path (T1, ADR-0009), a server-side watcher is optional: a cache a client may read from, then re-verify through the proxy. It is never a trust boundary.</p>
 <pre><code>  nimbus verified proxy (T1, the trust boundary)
         ▲
         │  re-verify anything read from the cache
@@ -37,16 +37,14 @@
         ▲
         │  today's live cache is a different system:
   ┌─────────────────────────────┐
-  │  armada-relayer's Ponder     │  built, out of the plan
+  │  armada-relayer's Ponder     │  built
   │  watcher (Postgres)          │
   └─────────────────────────────┘
 </code></pre>
-<h2 id="t20-verified-feeds-superseded-by-t1">T2.0 Verified feeds — superseded by T1</h2>
-<p><strong>What it is.</strong> The earlier plan's proof-carrying GraphQL feed (<code>watcher-ts</code> <code>getStorageAt → {value, proof}</code>) is not needed. The client verifies directly against the nimbus proxy, so no server-side proof-carrying feed sits between the client and the chain.</p>
 <h2 id="t21-relay-fee-built-a-different-mechanism">T2.1 Relay fee — built, a different mechanism</h2>
 <p><strong>What it is.</strong> <code>armada-relayer</code>'s actor charges a flat USDC fee from a gas estimate (<code>relayer-v2/.../fee-calculator.ts</code>, fee = gas estimate × gas price), not go-nitro payment vouchers. No voucher code (<code>payments.ts</code>-equivalent) exists in <code>armada-poc</code>, <code>armada-relayer</code>, or <code>armada-interface</code>.</p>
 <h2 id="t22-indexer-not-built-watcher-ts-built-to-be-replaced-ponder">T2.2 Indexer — not built (watcher-ts); built, to be replaced (Ponder)</h2>
-<p><strong>What is live today.</strong> <code>armada-relayer</code>'s <code>relayer-v2/watcher/</code> is a Ponder indexer (<code>ponder</code> <code>0.16.8</code>) over Postgres 16, under Docker Compose. It indexes <code>MessageTransmitter</code>/<code>PrivacyPool</code>/<code>PrivacyPoolClient</code> ABI events by direct RPC, and serves <code>/v2/quick-sync</code>, which <code>armada-sdk</code> and <code>armada-interface</code> use. It has one operator and no proofs. This is out of the plan (<code>labbook/2026-10-19-unified-stack-and-verified-note-sync.md</code> decision 2); neither the relayer's Ponder indexer nor the cerc-io Ponder fork is part of the plan.</p>
+<p><strong>What is live today.</strong> <code>armada-relayer</code>'s <code>relayer-v2/watcher/</code> is a Ponder indexer (<code>ponder</code> <code>0.16.8</code>) over Postgres 16, under Docker Compose. It indexes <code>MessageTransmitter</code>/<code>PrivacyPool</code>/<code>PrivacyPoolClient</code> ABI events by direct RPC, and serves <code>/v2/quick-sync</code>, which <code>armada-sdk</code> and <code>armada-interface</code> use. It has one operator and no proofs.</p>
 <p><strong>What <code>watcher-ts</code> would add.</strong> <code>watcher-ts@18ca4e1a:packages/util/src/database.ts:98</code> asserts a Postgres backend; the indexer packages depend on <code>typeorm</code>, <code>pg</code>, <code>express</code>, <code>apollo-server-express</code>. It runs server-only today. No React Native or browser indexing code exists. Its event "proof" field (<code>{blockHash, receiptCID, log}</code>) has no link to <code>receiptsRoot</code> and would not be trusted even if used; it attaches structure, not a checked proof (<code>util/src/indexer.ts:706-715</code>; the only check in the codebase, <code>assertProofData</code>, checks that fields are present, not that they verify).</p>
 <h2 id="t23-transport-not-built">T2.3 Transport — not built</h2>
 <p>No Waku, no libp2p dependency, and no code of either exists in the client, relayer, or interface repos checked.</p>
@@ -59,7 +57,7 @@
 </ul>
 <p>No bonding, no DKG ceremony, and no signer set exist. This is a design note (<code>labbook/2026-10-19-unified-stack-and-verified-note-sync.md</code> decision 7), not a build in progress.</p>
 <h2 id="what-stays-true-across-the-tier">What stays true across the tier</h2>
-<p>A client never trusts a watcher. It re-verifies anything it reads from a cache through the T1 proxy: commitment roots against <code>rootHistory</code>, and any claimed log against a receipt-trie rebuild. The watcher/watchtower/keeper/relay terminology distinction from the earlier docs still holds: a watcher serves and caches; a watchtower (T6.3) additionally responds to a stale-state challenge; this tier covers only the read-and-cache half, and no implementation of any of the three exists outside <code>armada-nitro</code>'s own test harness watchtower.</p>
+<p>A client never trusts a watcher. It re-verifies anything it reads from a cache through the T1 proxy: commitment roots against <code>rootHistory</code>, and any claimed log against a receipt-trie rebuild. The watcher/watchtower/keeper/relay terminology distinction holds: a watcher serves and caches; a watchtower (T6.3) additionally responds to a stale-state challenge; this tier covers only the read-and-cache half, and no implementation of any of the three exists outside <code>armada-nitro</code>'s own test harness watchtower.</p>
 <h2 id="sources">Sources</h2>
 <ul>
 <li><code>armada-relayer</code> <code>origin/main</code> — <code>relayer-v2/watcher/ponder.config.ts</code>, <code>fee-calculator.ts</code>.</li>

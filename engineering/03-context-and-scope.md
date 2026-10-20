@@ -57,8 +57,8 @@ Direction is stated relative to Armada's system.
 
 - Amount privacy in-play beyond the shield/unshield boundary (T0.6, optional, not built).
 - A venue, a matcher, or market-making (T3, T4): no code exists in `armada-poc`.
-- A Railgun onboarding bridge or any cross-pool membership proof: rejected, because a spend hides only among the notes it could consume (`labbook/2026-10-19-docs-versus-code.md` decision 2).
-- Proofs of Innocence as an entry gate: replaced by voluntary, off-chain selective disclosure (ADR-0020).
+- A Railgun onboarding bridge or any cross-pool membership proof: a spend hides only among the notes it could consume, so no code builds one (`labbook/2026-10-19-docs-versus-code.md` decision 2).
+- No Proofs of Innocence as an entry gate; selective disclosure (ADR-0020) is voluntary and off-chain.
 
 ---
 

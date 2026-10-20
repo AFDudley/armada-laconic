@@ -9,10 +9,9 @@ Armada holds value as shielded **notes** in its pool: sender, recipient, and amo
 A **game** is a ForceMove application: a contract published on Ethereum that defines which state transitions are valid and how a finished game splits its stakes. Players exchange signed states off-chain. Ethereum sees a game only if a player refuses to follow its rules.
 
 **Status.** This page is a plan. No published game contracts or hub channel-opening
-code exist yet. The deposit/payout boundary it diagrams as a separate contract is, in
-the built code, merged into the Nitro adjudicator (`ArmadaNitroAdjudicator`,
-`depositFromNote` and its SHIELD payout path, T0.2) — there is no separate `T0.3`
-contract.
+code exist yet. The deposit/payout boundary it diagrams as a separate contract is built
+inside the Nitro adjudicator (`ArmadaNitroAdjudicator`, `depositFromNote` and its SHIELD
+payout path, T0.2).
 
 The structure in four steps:
 

@@ -98,7 +98,7 @@ key; no relayed/metered broadcast path exists for settlement. → **T6.5** (not 
 *Stimulus:* a large deposit or withdrawal would re-narrow the anonymity set when it
 crosses the boundary inside `ArmadaNitroAdjudicator`.
 *Response:* the anonymity set grows only with deposits into Armada's own pool
-(ruling 5); there is no cross-pool proof and no aggregation/dribble mechanism in the
+(ruling 5); no aggregation/dribble mechanism exists in the
 contracts today. In-pool amounts are already SNARK-opaque; only the boundary amount is
 public.
 *Measure:* an exit's boundary amount is visible on-chain; no mitigation beyond pool

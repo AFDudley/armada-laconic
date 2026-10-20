@@ -2,7 +2,7 @@
 
 UX description · 2026-10-20 · maps to the **T6 client tier** (§5)
 
-This describes what a person does and sees in `armada-interface`, the live Armada web app, and marks the surfaces the earlier docs described that do not exist yet. It replaces a browser-and-mobile description with a web-only one, because no mobile client exists.
+This describes what a person does and sees in `armada-interface`, the live Armada web app, the one shipped client today. Mobile is a spec only; no mobile client exists.
 
 ## 1. Platforms — one web app today
 
@@ -16,7 +16,7 @@ This describes what a person does and sees in `armada-interface`, the live Armad
 
 ## 2. Onboarding & custody (built)
 
-- **Create / import.** The wallet generates and holds keys in browser memory. This is not the BIP-39/HD/secure-enclave custody the earlier docs described for a mobile app; it is a web custody model.
+- **Create / import.** The wallet generates and holds keys in browser memory. This is a web custody model, not BIP-39/HD/secure-enclave device custody.
 - **No accounts, no server login.** The wallet talks to the pool and to the relayer's current indexer directly; there is no Armada account system.
 - **What the user sees:** a shielded balance per asset, a receive flow, and actions: shield, transfer (shielded send), unshield, and the cross-chain shield/unshield path over CCTP.
 
@@ -38,7 +38,7 @@ The balance is computed in-browser by `sync.ts` from note scanning and trial dec
 
 `armada-interface/src/features/unshield/handler.ts` unshields to a public address. There is no channel to force-close, because no settlement-client channel lifecycle exists yet (T6.2, [T6-client-apps.md](./T6-client-apps.md)); the only exit path today is a direct pool unshield.
 
-## 4. Surfaces the earlier docs described that are not built
+## 4. Surfaces that are not built
 
 - **Swap and earn over a venue.** No venue (T4) exists. There is no posted-price swap or in-pool yield routing UI beyond the Aave-v4 yield adapter's own shield/redeem flow, where one exists.
 - **Cross-chain swap through fronting hubs.** No code implements the hub-fronted instant-swap design (ADR-0015/0016 era). `armada-nitro`'s adjudicator and `HubCustodian` exist, but no client drives a channel through them.

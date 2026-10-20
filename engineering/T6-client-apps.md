@@ -4,11 +4,11 @@
 **Parent:** [`05-building-block-view.md`](./05-building-block-view.md) · **Tier:** T6
 **Depends on / Blocks:** depends on T0.0 (pool, circuit artifacts), T0.2 (adjudicator, the deposit/payout boundary), T1 (the proof path a verifying client would use).
 
-The earlier docs planned a fork of `laconic-wallet`, a React Native app. `armada-client`, the repo meant to host that fork, has no application code: 45 files, all docs and config, no `src/`. The live client is `armada-interface`, a React 19 + Vite web app wired to `armada-sdk`, independently written, not a fork of any Laconic repo. `armada-client` `docs/SPEC.md` (`origin/main`) records the plan for a unified TypeScript stack on four targets: Linux server, browser, iOS, Android (D1: Node 18.20.4 everywhere; D6: `ts-nitro` with a Waku transport; D7: a Waku light node; D8: LevelDB through `abstract-level`). None of that plan has shipped code yet.
+`armada-client`, the repo meant to host a React Native wallet, has no application code: 45 files, all docs and config, no `src/`. The live client is `armada-interface`, a React 19 + Vite web app wired to `armada-sdk`, independently written, not a fork of any Laconic repo. `armada-client` `docs/SPEC.md` (`origin/main`) records the plan for a unified TypeScript stack on four targets: Linux server, browser, iOS, Android (D1: Node 18.20.4 everywhere; D6: `ts-nitro` with a Waku transport; D7: a Waku light node; D8: LevelDB through `abstract-level`). None of that plan has shipped code yet.
 
 ## T6.0 Wallet base — built, web only
 
-`armada-interface` holds keys in browser memory (`src/lib/shielded/keyManager.ts`), not a BIP-39/HD custody chain in a device secure enclave. There is no React Native code, no `react-native-keychain`, and no mobile build. This is a real, working custody path for a web wallet; it is not what the earlier plan described.
+`armada-interface` holds keys in browser memory (`src/lib/shielded/keyManager.ts`), not a BIP-39/HD custody chain in a device secure enclave. There is no React Native code, no `react-native-keychain`, and no mobile build. This is a real, working custody path for a web wallet.
 
 ## T6.1 Note-scanner + prover — built, in the browser
 

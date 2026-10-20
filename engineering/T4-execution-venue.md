@@ -5,7 +5,7 @@
 
 No contract in `armada-poc` implements a venue. There is no posted-price contract, no quote/settle app, and no matcher. T4.4, the one item marked built in the registry, needs no venue at all: any non-blocklisted ERC-20, including wstETH, can already be shielded as a note, so ETH-denominated yield already works without a swap path.
 
-The design reasoning below is unchanged from the earlier docs, because no evidence contradicts it; it is simply unimplemented. It states the plan, not a build in progress.
+The design below states the plan, not a build in progress.
 
 ## T4.0 Posted-price contract — not built
 
@@ -17,7 +17,7 @@ The idea: a pure state machine (`propose-quote → accept → fill → settle/ab
 
 ## T4.2 Venue solver — not built
 
-The idea: an off-chain keeper that internalizes flow, hedges the residual on public liquidity, and rebalances Aave on a decorrelated schedule. The earlier docs routed the hedge leg through Railgun's RelayAdapt/Cookbook recipe; no RelayAdapt contract exists anywhere in `armada-poc`, so any future hedge leg would need a different mechanism, likely the pool's own `adaptContract`/`adaptParams` binding, the same pattern `ArmadaYieldAdapter` already uses.
+The idea: an off-chain keeper that internalizes flow, hedges the residual on public liquidity, and rebalances Aave on a decorrelated schedule. No RelayAdapt contract exists anywhere in `armada-poc`; any future hedge leg would need a different mechanism, likely the pool's own `adaptContract`/`adaptParams` binding, the same pattern `ArmadaYieldAdapter` already uses.
 
 ## T4.3 Fee-split allocation — not built
 

@@ -21,7 +21,7 @@ This chapter catalogs the material risks to the code as built, plus the shortcut
 ## Technical debt / known shortcuts
 
 - **The deployed shield fee is not zero.** `scripts/deploy_privacy_pool.ts` sets 50 bps against a 0-bps contract default. Any downstream integration that assumed fee = 0 is wrong. → ADR-0002.
-- **The live indexer is `armada-relayer`'s Ponder/Postgres watcher, not a verified feed.** It serves `/v2/quick-sync` with no proof, and is out of the plan (`labbook/2026-10-19-unified-stack-and-verified-note-sync.md`). It stays live until the proof path (T1) is integrated and a client stops depending on it as a trust boundary.
+- **The live indexer is `armada-relayer`'s Ponder/Postgres watcher, not a verified feed.** It serves `/v2/quick-sync` with no proof. It stays live until the proof path (T1) is integrated and a client stops depending on it as a trust boundary.
 - **The web client is the only client.** `armada-interface` covers shield, transfer, and unshield; it does not cover channel settlement, watchtower response, or mobile. This is a real capability gap, not a deferred nicety.
 - **Selective disclosure is unmerged.** `NullifierDisclosure.circom` and its SDK counterpart exist only on `disclosure-circuit`/`selective-disclosure` branches. → ADR-0020.
 

@@ -23,7 +23,7 @@
 
 <h1 id="wallet-user-experience-web-today-mobile-a-plan">Wallet User Experience — web today; mobile a plan</h1>
 <p>UX description · 2026-10-20 · maps to the <strong>T6 client tier</strong> (§5)</p>
-<p>This describes what a person does and sees in <code>armada-interface</code>, the live Armada web app, and marks the surfaces the earlier docs described that do not exist yet. It replaces a browser-and-mobile description with a web-only one, because no mobile client exists.</p>
+<p>This describes what a person does and sees in <code>armada-interface</code>, the live Armada web app, the one shipped client today. Mobile is a spec only; no mobile client exists.</p>
 <h2 id="1-platforms-one-web-app-today">1. Platforms — one web app today</h2>
 <table>
 <thead>
@@ -63,7 +63,7 @@
 </table>
 <h2 id="2-onboarding-custody-built">2. Onboarding &amp; custody (built)</h2>
 <ul>
-<li><strong>Create / import.</strong> The wallet generates and holds keys in browser memory. This is not the BIP-39/HD/secure-enclave custody the earlier docs described for a mobile app; it is a web custody model.</li>
+<li><strong>Create / import.</strong> The wallet generates and holds keys in browser memory. This is a web custody model, not BIP-39/HD/secure-enclave device custody.</li>
 <li><strong>No accounts, no server login.</strong> The wallet talks to the pool and to the relayer's current indexer directly; there is no Armada account system.</li>
 <li><strong>What the user sees:</strong> a shielded balance per asset, a receive flow, and actions: shield, transfer (shielded send), unshield, and the cross-chain shield/unshield path over CCTP.</li>
 </ul>
@@ -76,7 +76,7 @@
 <p><code>armada-interface/src/features/transfer-shielded/handler.ts</code> builds a <code>PrivacyPool.transact</code> call with <code>unshield == NONE</code>. Sender, recipient, and amount are hidden in-circuit; only nullifiers and output-commitment hashes are public. The wallet proves in-browser with the <code>snarkjs</code> Web Worker and submits. There is no submit-on-behalf relay for write-side origin privacy; the transaction is submitted from the user's own address.</p>
 <h3 id="34-unshield-exit-built">3.4 Unshield / exit — built</h3>
 <p><code>armada-interface/src/features/unshield/handler.ts</code> unshields to a public address. There is no channel to force-close, because no settlement-client channel lifecycle exists yet (T6.2, <a href="./T6-client-apps.html">T6-client-apps.md</a>); the only exit path today is a direct pool unshield.</p>
-<h2 id="4-surfaces-the-earlier-docs-described-that-are-not-built">4. Surfaces the earlier docs described that are not built</h2>
+<h2 id="4-surfaces-that-are-not-built">4. Surfaces that are not built</h2>
 <ul>
 <li><strong>Swap and earn over a venue.</strong> No venue (T4) exists. There is no posted-price swap or in-pool yield routing UI beyond the Aave-v4 yield adapter's own shield/redeem flow, where one exists.</li>
 <li><strong>Cross-chain swap through fronting hubs.</strong> No code implements the hub-fronted instant-swap design (ADR-0015/0016 era). <code>armada-nitro</code>'s adjudicator and <code>HubCustodian</code> exist, but no client drives a channel through them.</li>

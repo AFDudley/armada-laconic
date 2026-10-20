@@ -5,7 +5,7 @@
 
 T3 is a fair-ordering stack for a future matcher. No code exists for any item in this tier. It becomes necessary only if a venue upgrades to a matcher where price discovery runs across multiple parties with competitive quotes, so that a book exists to front-run. No venue of any kind exists yet (T4), so T3 has no near-term dependency to serve.
 
-The design below is unchanged in its reasoning from the earlier docs, with one correction: it no longer names `chain-signatures` as the threshold-signing library, because no threshold-signing choice has been made for this tier. `armada-nitro`'s `HubCustodian` uses FROST over secp256k1 for a different purpose (channel-participant signing, ADR-0016); whether a future T3 attestation layer would reuse FROST or choose something else is an open question, not a decision.
+No threshold-signing library has been chosen for this tier. `armada-nitro`'s `HubCustodian` uses FROST over secp256k1 for a different purpose (channel-participant signing, ADR-0016); whether a future T3 attestation layer would reuse FROST or choose something else is an open question, not a decision.
 
 ## T3.0 Commit-reveal sequencer + randomness beacon — not built
 

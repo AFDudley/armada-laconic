@@ -10,9 +10,8 @@ This document walks one scenario end to end: **Alice swaps shielded USDC for shi
 
 **Status.** This walkthrough is a plan. No quote/settle app, posted-price contract, or
 venue exists yet (T4.0, T4.1, not built). The deposit/payout boundary it diagrams as a
-separate contract is, in the built code, merged into the Nitro adjudicator itself
-(`ArmadaNitroAdjudicator.depositFromNote` and its SHIELD payout path, T0.2) — there is
-no separate `T0.3` contract.
+separate contract is built inside the Nitro adjudicator itself
+(`ArmadaNitroAdjudicator.depositFromNote` and its SHIELD payout path, T0.2).
 
 The flow follows one motto: **notes in → normal Nitro → notes out.** Both parties unshield notes into a shared settlement channel, they settle off-chain, and the outcome is re-shielded into fresh notes.
 

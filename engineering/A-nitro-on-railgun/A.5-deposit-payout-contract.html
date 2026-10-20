@@ -26,8 +26,8 @@
 <strong>Parent:</strong> <a href="./A.0-overview.html"><code>A.0</code></a>
 <strong>Owns:</strong> the boundary between the shielded pool and a <code>go-nitro</code> channel, built inside <code>ArmadaNitroAdjudicator</code></p>
 <hr />
-<h2 id="a51-there-is-no-separate-t03-contract">A.5.1 There is no separate T0.3 contract</h2>
-<p>The earlier docs planned a standalone deposit/payout contract (T0.3). <code>armada-nitro</code> built this boundary inside <code>ArmadaNitroAdjudicator</code> instead: <code>depositFromNote</code> and the <code>SHIELD</code>-type branch of <code>_executeSingleAssetExit</code>. There is no <code>fundChannel</code> function anywhere in the codebase (ruling 1, <code>labbook/2026-10-19-docs-versus-code.md</code>). This page describes that merged boundary; the adjudicator itself is <a href="./A.4-adjudicator-integration.html">A.4</a>.</p>
+<h2 id="a51-the-boundary-lives-inside-the-adjudicator">A.5.1 The boundary lives inside the adjudicator</h2>
+<p><code>armada-nitro</code> built the deposit/payout boundary inside <code>ArmadaNitroAdjudicator</code>: <code>depositFromNote</code> and the <code>SHIELD</code>-type branch of <code>_executeSingleAssetExit</code>. This page describes that boundary; the adjudicator itself is <a href="./A.4-adjudicator-integration.html">A.4</a>.</p>
 <h2 id="a52-deposit-in">A.5.2 Deposit-in</h2>
 <pre><code class="language-solidity">function depositFromNote(
     bytes32 channelId,
@@ -45,11 +45,11 @@
 <p><code>ArmadaNitroAdjudicator.t.sol</code> covers: crediting a channel from a shielded note (<code>test_depositFromNote_creditsChannelFromShieldedNote</code>), rejecting an unshield bound to another channel, rejecting a stale <code>expectedHeld</code>, rejecting a bound unshield submitted around the adjudicator, cooperative close with a shield payout to the custodian, force-close letting the user exit to a note when the hub stops responding, and a stale hub challenge overridden by the user's latest state.</p>
 <h2 id="a56-risks-open">A.5.6 Risks / open</h2>
 <ul>
-<li><strong>Spend-authorizing.</strong> This boundary moves user value across two trust domains in one flow, same as the earlier plan's T0.3 would have. It is the top audit target of the on-chain anchor.</li>
+<li><strong>Spend-authorizing.</strong> This boundary moves user value across two trust domains in one flow. It is the top audit target of the on-chain anchor.</li>
 <li><strong>No native ETH.</strong> The pool is ERC-20/ERC-721 only; <code>_executeSingleAssetExit</code> requires <code>asset != address(0)</code> before shielding ("Cannot shield ETH"). An ETH-denominated channel needs a WETH wrap.</li>
 </ul>
 <hr />
-<p>Cross-refs: the adjudicator and its six patches → <a href="./A.4-adjudicator-integration.html">A.4</a>; the pool's <code>shield</code>/<code>transact</code> entry points → <a href="./A.2-pool-deployment.html">A.2</a>; the operator ruling that there is no separate contract → <code>labbook/2026-10-19-docs-versus-code.md</code>.</p>
+<p>Cross-refs: the adjudicator and its six patches → <a href="./A.4-adjudicator-integration.html">A.4</a>; the pool's <code>shield</code>/<code>transact</code> entry points → <a href="./A.2-pool-deployment.html">A.2</a>; the boundary's design → <code>labbook/2026-10-19-docs-versus-code.md</code>.</p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/A-nitro-on-railgun/A.5-deposit-payout-contract.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

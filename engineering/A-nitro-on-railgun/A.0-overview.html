@@ -27,8 +27,8 @@
 <strong>Owns:</strong> T0.0 pool · T0.1 trusted setup · T0.2 adjudicator (with the deposit/payout boundary merged in) · T0.4–T0.6 (plan) · T0.7 anonymity-set strategy · governance and revenue contracts</p>
 <hr />
 <h2 id="a01-what-is-built">A.0.1 What is built</h2>
-<p>The settlement rail — <em>notes in, normal Nitro, notes out</em> — is built, not planned. <code>armada-poc</code> built the shielded pool and its governance contracts. <code>armada-circuits</code> built the <code>Transact</code> circuit. <code>armada-nitro</code> built <code>ArmadaNitroAdjudicator</code>, a patched <code>go-nitro</code> adjudicator that also carries the deposit/payout boundary: <code>depositFromNote</code> funds a channel from a note, and a <code>SHIELD</code>-type allocation pays a note back out. There is no separate deposit/payout contract and no <code>fundChannel</code> (ruling 1, <code>labbook/2026-10-19-docs-versus-code.md</code>).</p>
-<p>The hub principal, <code>HubCustodian</code>, signs with FROST over secp256k1 (<code>frost-secp256k1-evm</code>), not <code>chain-signatures</code>.</p>
+<p>The settlement rail — <em>notes in, normal Nitro, notes out</em> — is built, not planned. <code>armada-poc</code> built the shielded pool and its governance contracts. <code>armada-circuits</code> built the <code>Transact</code> circuit. <code>armada-nitro</code> built <code>ArmadaNitroAdjudicator</code>, a patched <code>go-nitro</code> adjudicator that also carries the deposit/payout boundary: <code>depositFromNote</code> funds a channel from a note, and a <code>SHIELD</code>-type allocation pays a note back out.</p>
+<p>The hub principal, <code>HubCustodian</code>, signs with FROST over secp256k1 (<code>frost-secp256k1-evm</code>).</p>
 <h2 id="a02-the-construction-as-built">A.0.2 The construction, as built</h2>
 <pre><code> shielded note ──depositFromNote──►  ArmadaNitroAdjudicator.deposit (holdings[asset][channelId])
                                                   │ off-chain ForceMove states / vouchers
@@ -79,7 +79,7 @@
 <tr>
 <td><a href="./A.7-anonymity-set.html">A.7</a></td>
 <td>T0.7</td>
-<td>The crowd-growth strategy; no cross-pool proof.</td>
+<td>The crowd-growth strategy.</td>
 </tr>
 <tr>
 <td><a href="./A.8-interfaces-acceptance.html">A.8</a></td>

@@ -6,9 +6,9 @@ work package A · **2026-10-20**
 
 ---
 
-## A.5.1 There is no separate T0.3 contract
+## A.5.1 The boundary lives inside the adjudicator
 
-The earlier docs planned a standalone deposit/payout contract (T0.3). `armada-nitro` built this boundary inside `ArmadaNitroAdjudicator` instead: `depositFromNote` and the `SHIELD`-type branch of `_executeSingleAssetExit`. There is no `fundChannel` function anywhere in the codebase (ruling 1, `labbook/2026-10-19-docs-versus-code.md`). This page describes that merged boundary; the adjudicator itself is [A.4](./A.4-adjudicator-integration.md).
+`armada-nitro` built the deposit/payout boundary inside `ArmadaNitroAdjudicator`: `depositFromNote` and the `SHIELD`-type branch of `_executeSingleAssetExit`. This page describes that boundary; the adjudicator itself is [A.4](./A.4-adjudicator-integration.md).
 
 ## A.5.2 Deposit-in
 
@@ -38,9 +38,9 @@ Checks, in order: not an external-destination channel; exactly one transaction; 
 
 ## A.5.6 Risks / open
 
-- **Spend-authorizing.** This boundary moves user value across two trust domains in one flow, same as the earlier plan's T0.3 would have. It is the top audit target of the on-chain anchor.
+- **Spend-authorizing.** This boundary moves user value across two trust domains in one flow. It is the top audit target of the on-chain anchor.
 - **No native ETH.** The pool is ERC-20/ERC-721 only; `_executeSingleAssetExit` requires `asset != address(0)` before shielding ("Cannot shield ETH"). An ETH-denominated channel needs a WETH wrap.
 
 ---
 
-Cross-refs: the adjudicator and its six patches → [A.4](./A.4-adjudicator-integration.md); the pool's `shield`/`transact` entry points → [A.2](./A.2-pool-deployment.md); the operator ruling that there is no separate contract → `labbook/2026-10-19-docs-versus-code.md`.
+Cross-refs: the adjudicator and its six patches → [A.4](./A.4-adjudicator-integration.md); the pool's `shield`/`transact` entry points → [A.2](./A.2-pool-deployment.md); the boundary's design → `labbook/2026-10-19-docs-versus-code.md`.

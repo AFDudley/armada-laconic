@@ -27,10 +27,9 @@
 <p>Armada holds value as shielded <strong>notes</strong> in its pool: sender, recipient, and amount are hidden in-circuit. This page shows how a user takes part of a note, opens a <strong>Nitro state channel to a hub</strong>, and plays <strong>games</strong> against the hub or other users, with every game enforceable on Ethereum and every exit landing back in the pool at unused addresses.</p>
 <p>A <strong>game</strong> is a ForceMove application: a contract published on Ethereum that defines which state transitions are valid and how a finished game splits its stakes. Players exchange signed states off-chain. Ethereum sees a game only if a player refuses to follow its rules.</p>
 <p><strong>Status.</strong> This page is a plan. No published game contracts or hub channel-opening
-code exist yet. The deposit/payout boundary it diagrams as a separate contract is, in
-the built code, merged into the Nitro adjudicator (<code>ArmadaNitroAdjudicator</code>,
-<code>depositFromNote</code> and its SHIELD payout path, T0.2) — there is no separate <code>T0.3</code>
-contract.</p>
+code exist yet. The deposit/payout boundary it diagrams as a separate contract is built
+inside the Nitro adjudicator (<code>ArmadaNitroAdjudicator</code>, <code>depositFromNote</code> and its SHIELD
+payout path, T0.2).</p>
 <p>The structure in four steps:</p>
 <ol>
 <li><strong>Shield.</strong> A user shields any asset into Armada as normal and receives a note.</li>

@@ -18,8 +18,8 @@ These are the fixed rules the architecture must obey, not decisions to revisit h
 - *Consequence:* Each circuit change, such as the selective-disclosure circuit (ADR-0020) or a future T0.6, re-runs Phase-2 and needs a fresh audit. On-chain verification and browser prover performance stay Groth16-cheap.
 - *Governs:* ADR-0003 · §5 T0.1, T0.6.
 
-**TC-4 — `go-nitro` is patched, not vanilla.** `armada-nitro` vendored `go-nitro` and then applied six commits: EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a per-channel reentrancy lock, and `SafeERC20` payout. The deposit/payout boundary is merged into `ArmadaNitroAdjudicator`, not a separate contract.
-- *Consequence:* Audit of the settlement rail covers the patches, not only the deposit/payout glue. No separate T0.3 contract exists.
+**TC-4 — `go-nitro` is patched, not vanilla.** `armada-nitro` vendored `go-nitro` and then applied six commits: EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a per-channel reentrancy lock, and `SafeERC20` payout. The deposit/payout boundary lives inside `ArmadaNitroAdjudicator`.
+- *Consequence:* Audit of the settlement rail covers the patches, not only the deposit/payout glue.
 - *Governs:* ADR-0004 · §5 T0.2.
 
 **TC-5 — The client stack targets servers, browsers, iOS and Android; no mobile code exists yet.** `armada-client` `docs/SPEC.md` names the four targets. `armada-client` has no application code; the live client, `armada-interface`, is a web app.
@@ -41,10 +41,10 @@ These are the fixed rules the architecture must obey, not decisions to revisit h
 - *Governs:* §5 T0 · quality scenarios in →§10.
 
 **OC-2 — Railgun's deployed protocol is untouched; Armada runs its own pool.** Armada's own pool and circuits (T0.0/T0.1) are built for its own fee policy and settlement boundary, and never fork, patch, or govern Railgun's deployed protocol or live pool (ADR-0002, ADR-0014).
-- *Consequence:* Blast radius splits cleanly — pool and audit changes never route through Railgun's deployment. The crowd grows only from Armada's own deposits; no cross-pool proof exists or is planned (T0.7).
+- *Consequence:* Blast radius splits cleanly — pool and audit changes never route through Railgun's deployment. The crowd grows only from Armada's own deposits (T0.7).
 - *Governs:* ADR-0002, ADR-0014 · §5 T0.0, T0.1.
 
-**OC-3 — One team; a reuse boundary, not an org split.** A single engineering team builds the whole Armada product, working from the ship-armada repos (ADR-0013). Only `go-nitro`, vendored and then patched, remains Laconic prior art in the build; `watcher-ts`, `ts-nitro`, `@cerc-io/peer`, `mobymask`, `laconic-wallet`, and `chain-signatures` are not in any of the seven repos.
+**OC-3 — One team; a reuse boundary, not an org split.** A single engineering team builds the whole Armada product, working from the ship-armada repos (ADR-0013). Only `go-nitro`, vendored and then patched, remains Laconic prior art in the build.
 - *Consequence:* The governance and revenue contracts (`ArmadaGovernor`, `ArmadaTreasuryGov`, `ArmadaToken`, `ArmadaCrowdfund`, and the rest) are in scope and built, alongside the pool and the adjudicator.
 - *Governs:* ADR-0013 · §0 · §5.
 

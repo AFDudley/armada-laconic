@@ -38,7 +38,7 @@
 <tr>
 <td><strong>A · on-chain anchor</strong></td>
 <td>Non-custodial settlement of shielded value: the pool, the circuits, the adjudicator, and governance.</td>
-<td>T0.0–T0.7; the deposit/payout boundary (merged into T0.2)</td>
+<td>T0.0–T0.7</td>
 <td>Mostly built</td>
 </tr>
 <tr>
@@ -85,8 +85,8 @@
 </ul>
 <h2 id="sequencing-revised">Sequencing, revised</h2>
 <ol>
-<li><strong>The on-chain anchor is already built</strong>, so it is no longer the first thing to land; it is the baseline everything else now targets.</li>
-<li><strong>The proof path is the next concrete target</strong>, not the long pole it used to be: operate the proxy, patch the fixturenet genesis, and run the first proof (<code>labbook/2026-10-19-nimbus-verified-proxy-proofs.md</code> §3.8).</li>
+<li><strong>The on-chain anchor is already built</strong>; it is the baseline everything else now targets.</li>
+<li><strong>The proof path is the next concrete target</strong>: operate the proxy, patch the fixturenet genesis, and run the first proof (<code>labbook/2026-10-19-nimbus-verified-proxy-proofs.md</code> §3.8).</li>
 <li><strong>The client's settlement lifecycle and watchtower</strong> are the next client-side gap, once a verified read path exists to build them against.</li>
 <li><strong>A venue</strong> has no code and no near-term dependency forcing it; it stays last.</li>
 </ol>

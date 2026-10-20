@@ -40,19 +40,18 @@ Facets: **status** (`built` · `partly built` · `not built` · `in progress` �
 
 ### T0 · Ethereum anchor
 
-The pool, the circuits, the adjudicator and the deposit/payout boundary already exist. There is no separate T0.3 contract and no `fundChannel`; `ArmadaNitroAdjudicator` carries the T0.2 and T0.3 roles together (ruling 1, `labbook/2026-10-19-docs-versus-code.md`).
+The pool, the circuits, the adjudicator and the deposit/payout boundary already exist. `ArmadaNitroAdjudicator` carries both the adjudication and the deposit/payout roles together (ruling 1, `labbook/2026-10-19-docs-versus-code.md`).
 
 | id | item | status | code |
 |---|---|---|---|
 | T0.0 | Shielded pool — `PrivacyPool`, routed by `delegatecall` to four modules (`ShieldModule`, `TransactModule`, `MerkleModule`, `VerifierModule`); no proxy; a 16-deep commitment tree per `treeNumber`; a token blocklist (USDC exempt); a shield fee (`MAX_SHIELD_FEE_BPS = 1000`, deployed at 50 bps) | built | `armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol:20,39,330-336`, `contracts/privacy-pool/modules/MerkleModule.sol:13` |
 | T0.1 | Circuits + trusted setup — one `Transact(N,M)` circom template, 19 `(nIn,nOut)` shapes; Groth16; Phase-1 reuses the community Perpetual Powers of Tau; the Phase-2 ceremony is open, not finished (`v1.0.0-ceremony` manifest lists every shape `"status": "open"`, no beacon) | partly built | `armada-circuits@ef2682f:src/operations/Transact.circom`; tag `v1.0.0-ceremony:ceremony/manifest.json` |
-| T0.2 | Nitro adjudicator — `ArmadaNitroAdjudicator` extends `go-nitro`'s `NitroAdjudicator`; six commits patch the vendored contracts (EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a per-channel reentrancy lock, `SafeERC20` payout), so this is a patched adjudicator, not a vanilla deploy | partly built | `armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol`; `git log --oneline -- src/nitro` |
-| — | Deposit/payout boundary — merged into T0.2. `depositFromNote` funds a channel from a shielded note; a `SHIELD`-type allocation pays a note back out in `_executeSingleAssetExit`. No `fundChannel` and no separate contract | built | `armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol:93-108,136-150` |
+| T0.2 | Nitro adjudicator — `ArmadaNitroAdjudicator` extends `go-nitro`'s `NitroAdjudicator`; six commits patch the vendored contracts (EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a per-channel reentrancy lock, `SafeERC20` payout), so this is a patched adjudicator, not a vanilla deploy. It also carries the deposit/payout boundary: `depositFromNote` funds a channel from a shielded note, and a `SHIELD`-type allocation pays a note back out in `_executeSingleAssetExit` | partly built | `armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol:93-108,136-150` |
 | T0.4 | Registry + bond contract — venue/party bonding | not built | — |
 | T0.5 | Sequencing-cert + fraud-proof verifier | not built | — |
 | T0.6 | Native channelized commitment — amount-privacy-in-play; a circuit change (optional) | not built | — |
-| T0.7 | Anonymity-set strategy — grow the crowd with the pool's own deposits; the wallet offers a move from Railgun, with its security costs shown before confirmation (ADR-0006, T6.7). No cross-pool proof and no onboarding bridge | strategy | — |
-| — | Governance and revenue contracts (not in the earlier registry) — `ArmadaGovernor` (UUPS, five proposal types, a Security Council veto), `ArmadaTreasuryGov`, `TreasurySteward`, `ArmadaToken` (ERC20Votes, 12M fixed supply), `ArmadaCrowdfund`, `ArmadaWindDown`, `ArmadaRedemption`, `AdapterRegistry`, `RevenueCounter`, `RevenueLock`, `RevenueReserveDistributor` | built | `armada-poc@102f17b8:contracts/governance/`, `contracts/crowdfund/` |
+| T0.7 | Anonymity-set strategy — grow the crowd with the pool's own deposits; the wallet offers a move from Railgun, with its security costs shown before confirmation (ADR-0006, T6.7) | strategy | — |
+| — | Governance and revenue contracts — `ArmadaGovernor` (UUPS, five proposal types, a Security Council veto), `ArmadaTreasuryGov`, `TreasurySteward`, `ArmadaToken` (ERC20Votes, 12M fixed supply), `ArmadaCrowdfund`, `ArmadaWindDown`, `ArmadaRedemption`, `AdapterRegistry`, `RevenueCounter`, `RevenueLock`, `RevenueReserveDistributor` | built | `armada-poc@102f17b8:contracts/governance/`, `contracts/crowdfund/` |
 
 ### T1 · Ingestion
 
@@ -70,9 +69,8 @@ The proof path is the nimbus verified proxy, not a nimbus-eth1 state-diff emitte
 
 | id | item | status | code |
 |---|---|---|---|
-| T2.0 | Verified feeds — superseded by T1 (the proxy verifies on the client side; no server-side proof-carrying feed is needed) | not built | — |
-| T2.1 | Relay fee — `armada-relayer`'s actor charges a flat USDC fee from a gas estimate; not Nitro payment vouchers | partly built (different mechanism) | `armada-relayer:relayer-v2/.../fee-calculator.ts` |
-| T2.2 | Indexer — `watcher-ts` on a Postgres backend, server-only; today's live indexer is `armada-relayer`'s Ponder/Postgres watcher, which is out of the plan (ruling 2, `labbook/2026-10-19-unified-stack-and-verified-note-sync.md`) | not built (watcher-ts); built (Ponder, to be replaced) | `watcher-ts@18ca4e1a:packages/util/src/database.ts:98` |
+| T2.1 | Relay fee — `armada-relayer`'s actor charges a flat USDC fee from a gas estimate | partly built (different mechanism) | `armada-relayer:relayer-v2/.../fee-calculator.ts` |
+| T2.2 | Indexer — `watcher-ts` on a Postgres backend, server-only; today's live indexer is `armada-relayer`'s Ponder/Postgres watcher | not built (watcher-ts); built (Ponder, to be replaced) | `watcher-ts@18ca4e1a:packages/util/src/database.ts:98` |
 | T2.3 | Transport — no Waku, no libp2p anywhere in the client/relayer/interface repos | not built | — |
 | T2.4 | Federation + bond — independent watchers sign a snapshot CID; a client accepts a CID that several of them sign | not built (design only) | — |
 

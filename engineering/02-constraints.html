@@ -34,8 +34,8 @@
 <p><strong>TC-3 — Groth16 over BN254 proving.</strong> The pool keeps Groth16: Phase-1 reuses the community Perpetual Powers of Tau, and Phase-2 is Armada's own MPC over its own circuits (T0.1). The production Phase-2 ceremony has not run.
 - <em>Consequence:</em> Each circuit change, such as the selective-disclosure circuit (ADR-0020) or a future T0.6, re-runs Phase-2 and needs a fresh audit. On-chain verification and browser prover performance stay Groth16-cheap.
 - <em>Governs:</em> ADR-0003 · §5 T0.1, T0.6.</p>
-<p><strong>TC-4 — <code>go-nitro</code> is patched, not vanilla.</strong> <code>armada-nitro</code> vendored <code>go-nitro</code> and then applied six commits: EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a per-channel reentrancy lock, and <code>SafeERC20</code> payout. The deposit/payout boundary is merged into <code>ArmadaNitroAdjudicator</code>, not a separate contract.
-- <em>Consequence:</em> Audit of the settlement rail covers the patches, not only the deposit/payout glue. No separate T0.3 contract exists.
+<p><strong>TC-4 — <code>go-nitro</code> is patched, not vanilla.</strong> <code>armada-nitro</code> vendored <code>go-nitro</code> and then applied six commits: EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a per-channel reentrancy lock, and <code>SafeERC20</code> payout. The deposit/payout boundary lives inside <code>ArmadaNitroAdjudicator</code>.
+- <em>Consequence:</em> Audit of the settlement rail covers the patches, not only the deposit/payout glue.
 - <em>Governs:</em> ADR-0004 · §5 T0.2.</p>
 <p><strong>TC-5 — The client stack targets servers, browsers, iOS and Android; no mobile code exists yet.</strong> <code>armada-client</code> <code>docs/SPEC.md</code> names the four targets. <code>armada-client</code> has no application code; the live client, <code>armada-interface</code>, is a web app.
 - <em>Consequence:</em> Key custody today is browser memory (<code>keyManager.ts</code>), not a device secure enclave. Mobile custody, a mobile prover, and <code>libverifproxy.a</code> for iOS/Android are unbuilt work (T6.5, T6.6).
@@ -51,9 +51,9 @@
 - <em>Consequence:</em> Watchers and any future venue (T4) operate only on user-signed channel state or transparent-boundary hops, never on discretionary custody.
 - <em>Governs:</em> §5 T0 · quality scenarios in →§10.</p>
 <p><strong>OC-2 — Railgun's deployed protocol is untouched; Armada runs its own pool.</strong> Armada's own pool and circuits (T0.0/T0.1) are built for its own fee policy and settlement boundary, and never fork, patch, or govern Railgun's deployed protocol or live pool (ADR-0002, ADR-0014).
-- <em>Consequence:</em> Blast radius splits cleanly — pool and audit changes never route through Railgun's deployment. The crowd grows only from Armada's own deposits; no cross-pool proof exists or is planned (T0.7).
+- <em>Consequence:</em> Blast radius splits cleanly — pool and audit changes never route through Railgun's deployment. The crowd grows only from Armada's own deposits (T0.7).
 - <em>Governs:</em> ADR-0002, ADR-0014 · §5 T0.0, T0.1.</p>
-<p><strong>OC-3 — One team; a reuse boundary, not an org split.</strong> A single engineering team builds the whole Armada product, working from the ship-armada repos (ADR-0013). Only <code>go-nitro</code>, vendored and then patched, remains Laconic prior art in the build; <code>watcher-ts</code>, <code>ts-nitro</code>, <code>@cerc-io/peer</code>, <code>mobymask</code>, <code>laconic-wallet</code>, and <code>chain-signatures</code> are not in any of the seven repos.
+<p><strong>OC-3 — One team; a reuse boundary, not an org split.</strong> A single engineering team builds the whole Armada product, working from the ship-armada repos (ADR-0013). Only <code>go-nitro</code>, vendored and then patched, remains Laconic prior art in the build.
 - <em>Consequence:</em> The governance and revenue contracts (<code>ArmadaGovernor</code>, <code>ArmadaTreasuryGov</code>, <code>ArmadaToken</code>, <code>ArmadaCrowdfund</code>, and the rest) are in scope and built, alongside the pool and the adjudicator.
 - <em>Governs:</em> ADR-0013 · §0 · §5.</p>
 <p><strong>OC-4 — No licensing discussion in these docs.</strong> Licensing is neither open nor a risk this product needs to focus on or discuss here (operator ruling, <code>labbook/2026-10-19-docs-versus-code.md</code>).

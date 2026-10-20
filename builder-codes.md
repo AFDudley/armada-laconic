@@ -12,6 +12,10 @@
 Standalone by design: it doesn't assume the rest of the site's direction. It summarizes each proposal on its own terms, then compares. Sources: TACEO, <a href="https://core.taceo.io/articles/privacy-preserving-builder-codes/">"Privacy-Preserving Builder Codes for Revenue Sharing"</a> (Mar 2026); the <a href="ex_net_whitepaper.pdf">ex_net whitepaper</a> (2017). "Armada" here = the Railgun shielded pool + Nitro clearing + ex_net-style venue described elsewhere on this site.
 </div>
 
+<div class="note">
+<strong>Status.</strong> This remains speculative. No execution venue, bonded watcher-party federation, or builder-code mechanism of either kind exists in any ship-armada repo. "Armada" in the ex_net mapping below means the pool and adjudicator that exist today (`PrivacyPool`, `ArmadaNitroAdjudicator`) plus a venue and watcher-party federation that do not (T4, T2.4). Read every "watcher party," fee-split, and "Railgun adapter" reference below as describing that plan, not shipped code.
+</div>
+
 ## 1. The TACEO proposal {#taceo}
 
 **The problem it solves.** Wallets and apps (MetaMask, Phantom, aggregators) route enormous volume to AMMs and want a verifiable revenue share for it — builder codes / payment for order flow, the on-chain analog of Robinhood→Citadel. Proving attribution by tagging transactions publicly (e.g. ERC-8021) exposes exactly what competitors would pay to see: which users trade where, how much, and when. Attribution destroys privacy.

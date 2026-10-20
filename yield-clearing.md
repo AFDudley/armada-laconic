@@ -1,6 +1,6 @@
 # Yield & clearing
 
-<p class="lede">The money side of the v1 venue — how value is priced, exchanged, cleared, and earns yield — kept non-custodial and private end-to-end, using Railgun for value privacy and Nitro for settlement. No service-provider marketplace; no custodial vault.</p>
+<p class="lede">The money side of a future v1 venue — how value would be priced, exchanged, cleared, and earn yield — kept non-custodial and private end-to-end, using Armada's own shielded pool for value privacy and Nitro for settlement. No service-provider marketplace; no custodial vault.</p>
 
 <p class="legend" style="margin-top:14px">
   Maturity:
@@ -13,12 +13,16 @@
 <strong>Scope.</strong> Everything here is v1, kept simple. Price <em>discovery</em> (an order book / matcher) is a separate v2 feature (see <a href="execution-platform.html">Execution platform</a>); v1 uses a posted price. Design B (hiding trade amounts from the venue) is v3. See the <a href="build-plan.html">Build plan</a> for the full version split.
 </div>
 
+<div class="panel">
+<strong>Status.</strong> No posted-price contract or venue exists (T4.0, not built). Clearing over Nitro vouchers is a plan; today's relay charges a flat USDC fee (T2.1). Armada's Aave-v4 yield adapter does not use a Railgun RelayAdapt recipe; it calls the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding, already built. ETH yield as a shielded wstETH note is already built, since any non-blocklisted ERC-20 can be shielded.
+</div>
+
 ## Contents {#contents}
 
 <div class="toc">
   <a href="#pricing">1. Pricing — posted price (v1)</a>
   <a href="#clearing">2. Clearing over Nitro</a>
-  <a href="#recipe">3. The "adapter" is a Railgun recipe</a>
+  <a href="#recipe">3. The Aave adapter's own binding, not a Railgun recipe</a>
   <a href="#amounts">4. Amount privacy</a>
   <a href="#yield">5. Yield — ETH vs USDC</a>
   <a href="#maturity">6. What's built vs net-new</a>
@@ -39,25 +43,25 @@ v1 has no price discovery. Armada posts a price on both sides of a pair (bid and
 
 The money side is clearing, not a marketplace: the running, multi-party accounting of who owes what, netted and settled non-custodially. It is entirely Nitro:
 
-- **Meter** — per-use vouchers<sup><a href="#r-vouchers">[2]</a></sup> (signed IOUs).
-- **Clear** — each metered payment updates a co-signed channel allocation that splits value among user / protocol / integrator (the integrator revenue-share is just a split in the allocation — no fee vault, no negotiation).
-- **Settle** — a channel checkpoint/close nets those allocations to L1 in USDC, non-custodially (force-closable).
+- **Meter** — per-use vouchers (a plan; today's relayer charges a flat USDC fee from a gas estimate instead, see [glossary](glossary.html)).
+- **Clear** — each metered payment would update a co-signed channel allocation that splits value among user / protocol / integrator. No venue or fee-split contract exists yet.
+- **Settle** — a channel checkpoint/close would net those allocations to L1 in USDC, non-custodially (force-closable). The adjudicator that would do this (`ArmadaNitroAdjudicator`) is built; no client drives a channel lifecycle yet.
 
-Both trades and fees clear the same way. Integrator revenue-sharing, one of Armada's stated goals, is delivered as a clearing allocation, using shipped go-nitro code (`MultiAssetHolder` / `virtualfund` / `payments`).
+Both trades and fees would clear the same way, once a venue exists. Integrator revenue-sharing, one of Armada's stated goals, is planned as a clearing allocation over `go-nitro`'s `MultiAssetHolder` / `virtualfund` / `payments` code (vendored and patched into `armada-nitro`), but no venue or fee-split contract exists yet to allocate anything.
 
-## 3. The "adapter" is a Railgun recipe {#recipe}
+## 3. The Aave adapter uses the pool's own binding, not a recipe {#recipe}
 
-"Adapter" is overloaded (see [glossary](glossary.html)). The value-moving adapter here is Railgun's RelayAdapt / Cookbook "recipe"<sup><a href="#r-cookbook">[5]</a></sup> — an atomic `unshield → external call → reshield` in one transaction. It is:
+"Adapter" is overloaded (see [glossary](glossary.html)). Armada's Aave-v4 yield adapter is built: `ArmadaYieldAdapter`/`ArmadaYieldVault` call the pool's own `adaptContract`/`adaptParams` binding, not Railgun's RelayAdapt/Cookbook "recipe" pattern — no RelayAdapt contract exists anywhere in `armada-poc`. The mechanism it uses:
 
-- **Not DSS.** The watcher-party threshold signature (`chain-signatures`) only attests (receipts/certs); it never holds or moves funds.
-- **Not a custodial vault.** The recipe reverts entirely if any step fails; the user holds a shielded note before and after. Custody never leaves the user.
-- **Origin-private.** A broadcaster submits it, so the on-chain origin is not the user's `0zk` address.
+- **Not a DSS.** No threshold-signature federation attests to anything here; the adapter is a pool contract, not a watcher-party construction.
+- **Not a custodial vault.** The call reverts entirely if any step fails; the user holds a shielded note before and after. Custody never leaves the user.
+- **Origin-private to the extent the pool already is.** No separate broadcaster exists yet; the adapter inherits the pool's existing privacy properties, not an added one.
 
-This is what turns a shielded USDC note into a shielded aUSDC ("aave") note, or wraps a CCTP mint into the shield, all atomically, in the user's custody.
+This is what turns a shielded USDC note into Aave-yield-bearing value, atomically, in the user's custody, built today.
 
 ## 4. Amount privacy {#amounts}
 
-Arbitrary-amount privacy is already solved inside the shield: Railgun's note commitments hide the amount and the zk-SNARK enforces value-conservation + range, so $50 and $5,000,000 are equally opaque for any shielded-to-shielded activity. No denomination buckets (that was Tornado's crutch for lacking amount-hiding commitments).
+Arbitrary-amount privacy is already solved inside the shield: Armada's own note commitments hide the amount and the zk-SNARK enforces value-conservation + range, so $50 and $5,000,000 are equally opaque for any shielded-to-shielded activity. No denomination buckets (that was Tornado's crutch for lacking amount-hiding commitments). This part is built (T0.0).
 
 The amount is only exposed at the transparent boundary (`shield`/`unshield`, the CCTP mint, an Aave deposit) because the counterparty must receive it in the clear. Mitigations there are aggregation, not buckets:
 
@@ -103,16 +107,18 @@ If a deposit exceeds LP inventory, the taker does not get pushed to a public Aav
 ## 6. What's built vs net-new {#maturity}
 
 <table>
-<tr><th>Piece</th><th>Code</th><th>Maturity</th></tr>
-<tr><td>Clearing (meter + settle)</td><td>go-nitro vouchers / virtualfund / MultiAssetHolder<sup><a href="#r-vouchers">[2]</a></sup></td><td class="ok">built</td></tr>
-<tr><td>Fee-split allocation (user/protocol/integrator)</td><td>on go-nitro channel state</td><td class="new">net-new</td></tr>
-<tr><td>Posted-price venue (priceSetter → governance)</td><td>small contract + poster</td><td class="new">net-new (small)</td></tr>
-<tr><td>Adapter = RelayAdapt recipe</td><td>Railgun Cookbook<sup><a href="#r-cookbook">[5]</a></sup></td><td class="part">Railgun built; our recipes net-new</td></tr>
-<tr><td>ETH yield = shielded wstETH note</td><td>Railgun multi-asset (holds wstETH<sup><a href="#r-wsteth">[6]</a></sup>)</td><td class="part">pool built; note config integration</td></tr>
-<tr><td>USDC yield = LP-buffered Aave</td><td>Railgun recipe + Aave<sup><a href="#r-aave">[7]</a></sup> + LP inventory</td><td class="new">net-new (LP + batched rebalance)</td></tr>
-<tr><td>Optional levered yield (looping)</td><td>Aave E-Mode<sup><a href="#r-aave">[7]</a></sup></td><td class="new">net-new + external (Aave v4 not live)</td></tr>
+<tr><th>Piece</th><th>Code</th><th>Status</th></tr>
+<tr><td>Shielded pool, amount privacy</td><td>`PrivacyPool` (T0.0)</td><td class="ok">built</td></tr>
+<tr><td>Clearing (meter + settle)</td><td>vouchers / virtualfund / MultiAssetHolder inside the merged adjudicator<sup><a href="#r-vouchers">[2]</a></sup></td><td class="new">not built — today's relay is a flat USDC fee, not vouchers</td></tr>
+<tr><td>Fee-split allocation (user/protocol/integrator)</td><td>on `go-nitro` channel state</td><td class="new">not built — no venue to split a fee for</td></tr>
+<tr><td>Posted-price venue (priceSetter → governance)</td><td>small contract + poster</td><td class="new">not built (T4.0)</td></tr>
+<tr><td>Aave-v4 yield adapter</td><td>`ArmadaYieldAdapter`/`ArmadaYieldVault`, the pool's own `adaptContract` binding</td><td class="ok">built</td></tr>
+<tr><td>CCTP cross-chain USDC</td><td>`PrivacyPool`/`PrivacyPoolClient`/`CCTPHookRouter`</td><td class="ok">built</td></tr>
+<tr><td>ETH yield = shielded wstETH note</td><td>any non-blocklisted ERC-20 note (T0.0)</td><td class="ok">built — no new contract needed</td></tr>
+<tr><td>USDC yield = LP-buffered Aave</td><td>LP inventory + rebalance</td><td class="new">not built (T4.5)</td></tr>
+<tr><td>Optional levered yield (looping)</td><td>Aave E-Mode<sup><a href="#r-aave">[7]</a></sup></td><td class="new">not built</td></tr>
 </table>
-<p class="small">No new cryptography for any of this — it is Railgun (value privacy) + Nitro (clearing/settlement) + a small posted-price contract + LP operations. Price discovery, fair-ordering, and ZK matching are explicitly out of v1.</p>
+<p class="small">No new cryptography for any of this. The pool, its circuits, and the Aave-v4/CCTP adapters are built; the venue, vouchers, and fee-split allocation are a plan with no code yet. Price discovery, fair-ordering, and ZK matching are explicitly out of v1.</p>
 
 <hr/>
 
@@ -122,8 +128,7 @@ If a deposit exceeds LP inventory, the taker does not get pushed to a public Aav
 <li id="r-exnet"><strong>ex_net whitepaper</strong>, Vulcanize (© 2017). <a href="ex_net_whitepaper.pdf">ex_net_whitepaper.pdf</a>.</li>
 <li id="r-vouchers"><strong>go-nitro</strong> — clearing/settlement: <a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/payments/vouchers.go">payments/vouchers.go</a>, <code>protocols/virtualfund</code>, <code>MultiAssetHolder.sol</code>, @ <code>435eb2b</code>.</li>
 <li id="r-forcemove"><strong>ForceMove.sol</strong> — non-custodial force-close. <a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/packages/nitro-protocol/contracts/ForceMove.sol">go-nitro · ForceMove.sol</a>.</li>
-<li id="r-railgun"><strong>Railgun</strong> — shielded pool (BN254; arbitrary amounts hidden in-circuit). <a href="https://github.com/Railgun-Privacy/contract">contract</a>, <a href="https://github.com/Railgun-Privacy/circuits-v2">circuits-v2</a>.</li>
-<li id="r-cookbook"><strong>Railgun Cookbook / RelayAdapt</strong> — atomic <code>unshield → cross-contract call → reshield</code> recipes (Aave deposit, swaps, combos). <a href="https://github.com/Railgun-Community/cookbook">github.com/Railgun-Community/cookbook</a>.</li>
+<li id="r-pool"><strong>Armada's shielded pool</strong> — the pool contracts and modules Armada's own circuits and this page describe (BN254; arbitrary amounts hidden in-circuit). <code>armada-poc@102f17b8:contracts/privacy-pool/</code>.</li>
 <li id="r-wsteth"><strong>wstETH / weETH</strong> — non-rebasing LSTs (value via rising exchange rate). <a href="https://docs.lido.fi/contracts/wsteth/">Lido wstETH</a>.</li>
 <li id="r-aave"><strong>Aave v3</strong> — WETH lending (aWETH) + wstETH/weETH supply &amp; E-Mode looping for leveraged staking yield. <a href="https://aave.com/blog/lido-aave-case-study">Aave · Lido case study</a>. (v4 not yet live.)</li>
 </ol>

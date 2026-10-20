@@ -13,6 +13,10 @@
 This is the price-discovery upgrade, kept out of Armada's v1 (v1 = posted price + clearing; see <a href="yield-clearing.html">Yield &amp; clearing</a>). It sits here because the code is the best-grounded part of the scope: the 2019–2020 <code>matcher</code> PoC was read in depth this cycle. See <a href="architecture.html#t4">Architecture · T4</a> and <a href="build-plan.html#versions">Build plan · versions</a>.
 </div>
 
+<div class="note">
+<strong>Status.</strong> No venue, matcher, or price-setter contract exists in `armada-poc` or `armada-nitro` for either v1 (posted price) or this v2 upgrade. "Settlement into Nitro" below describes `go-nitro` code vendored and patched into `armada-nitro`'s adjudicator; no code drives a channel lifecycle for a venue yet.
+</div>
+
 ## Contents
 
 <div class="toc">

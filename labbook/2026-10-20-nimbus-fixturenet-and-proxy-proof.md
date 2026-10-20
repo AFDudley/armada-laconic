@@ -152,3 +152,81 @@ either of them.
   after the operator approves the issue bodies.
 - The writer of `/tmp/dbg.json`.
 - The deployment `~/deployments/NimbusPair2` still runs.
+
+## 8. Addendum, 2026-10-20 (after commit `6c18941`)
+
+The text above stays as written.
+
+### Operator rulings, verbatim
+
+- 2026-10-20 — "we never need to use or worry about sepolia."
+- 2026-10-20 — "have a subagent figure out which client is off spec. don't file
+  anything upstream until we're done here."
+- 2026-10-20 — on merging `nimbus-fixturenet`: "1. yes, of course."
+- 2026-10-20 — "3. of course update the docs."
+- 2026-10-20 — "you sould tear it down." (the `NimbusPair2` deployment)
+
+### Lighthouse v8.2.2 departs from the spec; nimbus-eth2 conforms
+
+A Sonnet agent (`SpecCheck`) settled §4.3's open question. Its report is
+`.scratch/SpecCheck/REPORT.md`; its saved data is in the same directory. The
+lead checked the three central points:
+- The spec. consensus-specs tag `v1.7.0-beta.4`
+  (`aa16bb4c156184e9548a997d53efaf2a228a6304`),
+  `specs/altair/light-client/full-node.md` `create_light_client_update`: the
+  server sets `update.finalized_header` only `if finalized_block.message.slot
+  != GENESIS_SLOT`. Otherwise it asserts
+  `attested_state.finalized_checkpoint.root == Bytes32()` and leaves the header
+  empty. `sync-protocol.md` `validate_light_client_update` mirrors this on the
+  verifier side (agent: lines 437-453).
+- Lighthouse. `consensus/types/src/light_client/light_client_update.rs:286-298`
+  at `e423a66763bb1bd780492d635123f208d80c3538` builds the Fulu
+  `finalized_header` from any finalized block that has the same fork. It has no
+  genesis-slot check. The agent reports the same pattern for every fork back to
+  Altair.
+- The data. At slot 11, the attested state's `finalized_checkpoint` is epoch 0
+  with a zero root (`nb_state_slot11.json`). Lighthouse's period-0 update
+  carries a real header: slot 0, state root `0x52cb65c1…`
+  (`lh_update_p0.json`).
+
+The agent also reports that nimbus-eth2's own update (finalized slot 64)
+matches the slot-141 state's finalized root (`0x3defce2a75…`), and that
+nimbus-eth2 (`light_client_sync.nim:96-120` at `963756c`) rejects lighthouse's
+update with a check equivalent to the spec's.
+
+Consequence: the defect is in lighthouse, at genesis-finalized updates, on any
+chain that runs light-client-era forks from genesis. Together with lighthouse's
+"prefer older data" tiebreak, it pins a bad best update for the whole of
+period 0. Nothing is filed upstream, by order.
+
+### The merge
+
+`exophial apply nimbus-fixturenet` merged the branch into armada-nitro
+`integrated` as `990c9fa9d3526a459bfb374e10cfb7cf0c5b48b0`, pebble `arn-b58`,
+2026-10-20 08:12 UTC. Before the apply, the lead rebased the branch onto
+`integrated` `d064a536`, with no conflicts; the four commits became `412ed6f9`,
+`87fe5880`, `f479b2ea` and `990c9fa9`. The lead checked the tree:
+`origin/integrated` contains `990c9fa9`, the compose file has the nimbus
+services, and `docs/ENVIRONMENT.md:30` names the pair. `origin/main` was still
+`d064a536` at that check; the repo's fast-forward workflow moves it.
+
+### Teardown
+
+`laconic-so deployment --dir ~/deployments/NimbusPair2 stop --delete-volumes`
+removed the deployment (cluster `laconic-38bb3cec1850f7ae`), after `SpecCheck`
+had saved its data. The lead deleted the deployment directory.
+
+### Sepolia
+
+Sepolia is no longer a target or a test network. The Sepolia measurements in
+`2026-10-19-nimbus-verified-proxy-proofs.md` §7 (timings, demo3 receipt and
+snapshot sizes, historical reach) stay as recorded data. They do not drive
+sizing. A fixturenet or mainnet measurement replaces them.
+
+### Open items now
+
+- The lighthouse defect, the two proxy defects and the Android hashtree
+  selection: file upstream only when the operator says the work here is done.
+- The docs update runs on branch `docs-proof-path` (agent `DocsProofPath`).
+- The writer of `/tmp/dbg.json`.
+- armada-nitro `docs/ENVIRONMENT.md` still orders "fixturenet, then Sepolia".

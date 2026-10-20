@@ -230,3 +230,31 @@ sizing. A fixturenet or mainnet measurement replaces them.
 - The docs update runs on branch `docs-proof-path` (agent `DocsProofPath`).
 - The writer of `/tmp/dbg.json`.
 - armada-nitro `docs/ENVIRONMENT.md` still orders "fixturenet, then Sepolia".
+
+## 9. Addendum, 2026-10-20 (after commit `ae47f57`)
+
+The text above stays as written.
+
+### Operator rulings, verbatim
+
+- "3. just say sapolia is currently out of scope."
+- "4. don't upstream anything just leave a note in the lab books."
+- "8 it was another worker, ignore it." (the writer of `/tmp/dbg.json`)
+
+### Upstream defects: recorded here, not filed
+
+By order, nothing goes upstream. This list is the record.
+
+| Defect | Upstream | Evidence | Local state |
+|---|---|---|---|
+| `convHeader` drops `blockAccessListHash` and `slotNumber`, so header hashes never match on a chain that sets them | status-im/nimbus-eth1, `nimbus_verified_proxy/engine/blocks.nim:32-58` at `2c8eabf` | `2026-10-19-nimbus-verified-proxy-proofs.md` addendum | Fixed on github.com/AFDudley/nimbus-eth1 `armada/verified-proxy-fixes`, commit `827f95ff` |
+| The proxy accepts no custom network (its genesis-parameter loader knows only built-in networks such as `sepolia` and `hoodi`) | status-im/nimbus-eth1, verified proxy | §3 of this entry | Fixed on the same branch, commit `b0205d1d` |
+| `ssz_serialization/digest.nim:55-61` selects the hashtree assembly for `--os:android` with clang, and the Android link fails | status-im/nim-ssz-serialization | `2026-10-19-nimbus-verified-proxy-proofs.md` §7 | Worked around with `-d:PREFER_HASHTREE_SHA256=false`; no patch |
+| Lighthouse fills `finalized_header` in genesis-finalized light-client updates (§8) | sigp/lighthouse | §8 of this entry | Already known upstream: sigp/lighthouse#9865, "Fix: use empty finalized header when finalized_block_root is zero", open since 2026-08-19, mergeable, waiting for maintainers to run CI (read 2026-10-20). Not in v8.2.2. No filing needed |
+
+### Merges and cleanup
+
+- armada-laconic `858da68`: the docs now describe the proof path as proven by hand on the fixturenet, and the build plan has no Sepolia stage work. The lead removed the docs agent's new clause D9.4 from ADR-0009, because decisions go into lab book entries.
+- armada-nitro `6d9d46e3` (`exophial apply`, pebble `arn-d0a`): `docs/ENVIRONMENT.md` says Sepolia is currently out of scope.
+- The lead removed the scratch builds (`QWasm`, `QAndroid`, `SWasmBrowser/src`, `SFixturenetProof`, the lighthouse source copies) and marks `~/code/nimbus-eth1-ios`. The agent reports stay. The lead stopped `~/deployments/SFixturenetProof` with `--delete-volumes`, unmounted the 3 GB tmpfs of it and of `NimbusPair2`, and deleted both directories. The armada-nitro branch `nimbus-fixturenet` is deleted locally and on `origin`.
+- The WASM stall test page and report stay at `.scratch/SWasmBrowser/{REPORT.md,site2}` for the stall issue.

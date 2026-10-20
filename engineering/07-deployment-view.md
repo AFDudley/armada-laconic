@@ -1,86 +1,60 @@
 # 7. Deployment View
 
-arc42 §7 · 2026-09-04
+arc42 §7 · 2026-10-20
 
-This view describes where the §5 building blocks physically run, and on what
-hardware. The topology runs peer-to-peer rather than client-server: a watcher
-party is a bonded peer federation (T2.2) whose overwhelming majority is browser
-tabs and phones talking peer-to-peer. Only a handful of server-side emitters
-(T1) and a circuit-relay + STUN/TURN bootstrap (T2.3) exist as fixed transport
-infrastructure. The wallet, including its watchtower (T6.3), is phone-deployable
-by construction. Transport runs on Waku pub/sub + libp2p-noise per ADR-0008, and
-the state source is nimbus-eth1 per ADR-0009.
+This view describes where the §5 building blocks run today, and on what the plan would
+add. Today's deployment is a conventional server-client topology, not a peer-to-peer
+federation: `armada-interface` is a web app talking plain RPC/wagmi to Ethereum L1 and
+to `armada-relayer`, a conventional Express/Postgres service. The earlier plan's P2P
+watcher federation (bonded peers, Waku pub/sub, libp2p-noise) has no code anywhere in
+the client, relayer, interface, or SDK repos (ruling 7, brief §4).
 
 ## Infrastructure nodes — what runs where
 
 ### Ethereum L1 (on-chain)
-The settlement substrate. The T0 contracts are deployed here, and this is the
-one node no participant hosts: the net-new, Railgun-spec-compatible shielded pool (T0.0),
-the Nitro adjudicator (T0.2), the deposit/payout contract (T0.3), and, at
-v2, the registry + bond (T0.4). Everything else is a client or observer of
-these contracts. Fixturenet, testnet, and mainnet differ only in *which* L1 this
-set is deployed to (see Environments). → §5 T0.
 
-### State-diff emitter node — nimbus-eth1 → IPLD (T1, server-side)
-This is the only *heavy* server role on the v1 spine and its long pole
-(ADR-0009). A node runs the **nimbus-eth1 state-diff emitter** (T1.0) scoped to
-the watched address set (pool + rail contracts), maps its Aristo/witness output
-into **IPLD** proof-carrying diffs (T1.1), and indexes them with a **watcher-ts
-ingest config** (T1.2). It holds only the watched-contract subtrie rather than a
-full archive EL, and it publishes a per-contract **head cursor** (a liveness
-signal) that T6.3 gates on. A phone-scoped emitter remains a stretch goal, **not**
-a v1 node. Only a handful of these run; they are the servers in an otherwise P2P
-network. → §5 T1.
+The settlement substrate. The T0 contracts are deployed here: the shielded pool
+(T0.0, built), the merged Nitro adjudicator with the deposit/payout boundary
+(T0.2, built), and the governance/revenue contracts (built). No registry or bond
+contract exists yet (T0.4, not built). Fixturenet, testnet, and mainnet differ only in
+*which* L1 this set is deployed to (see Environments). → §5 T0.
 
-### Watcher-party peers — P2P federation (T2, browser / mobile / server)
-A **watcher party is a bonded federation of peers, not an RPC server** (T2.2).
-Browser, mobile, and headless-server peers all run the same libp2p base
-(`ts-nitro` over `@cerc-io/peer`) and are **first-class peers**: a phone is not
-a second-class client of a server. Each peer serves proof-carrying
-`getStorageAt → {value, proof}` feeds (T2.0) metered by Nitro vouchers (T2.1)
-over that ingested state. Because responses are proof-carrying and
-identical-bytes, a consumer trusts the math rather than the peer.
+### Relayer node — `armada-relayer` (server, today)
 
-**Fixed transport infra is minimal (ADR-0008, T2.3):**
-- **Waku pub/sub** — feed discovery, gossip, async note-streams; the transport
-  Railgun's broadcaster network already speaks. No privileged Waku node is ours
-  to run; peers subscribe by content-topic.
-- **libp2p-noise direct streams** — the 1:1 voucher/quote hot loop (tens-of-ms).
-- **circuit-relay + STUN/TURN bootstrap** — the *only* fixed transport infra, so
-  browser/mobile peers behind NAT can dial each other. Pure transport: no trust,
-  no on-chain role. → §5 T2.3.
+`armada-relayer` runs a Ponder-based indexer over Postgres (`relayer-v2/watcher`),
+reading `MessageTransmitter`/`PrivacyPool`/`PrivacyPoolClient` events by plain RPC, and
+an actor that submits transactions and charges a flat USDC fee from a gas estimate
+(`fee-calculator.ts`, T2.1). This is a conventional server, not a bonded P2P
+federation, and it is not the proof path: a client that reads from it is trusting the
+server, not verifying a proof (T2.2).
 
-At v2 the federation bonds against T0.4 and signs what it serves with a
-threshold Schnorr key (T2.4). These are the same peers with an added
-economic-security role.
+### Proof path — the nimbus verified proxy (upstream, unintegrated)
 
-### Venue node — posted price v1; solver keeper v2 (off-chain)
-In **v1** the venue node is minimal: it holds the on-chain posted-price authority through a single `priceSetter` wallet (T4.0, migratable to governance) and fills quotes at the posted price from a **pre-funded static inventory**. It is a service node, never custody — every fill is atomic against its own inventory over a channel. The full **maker keeper** — watching T2 feeds, internalizing flow, hedging the residual via Railgun's RelayAdapt recipe through a broadcaster, and rebalancing Aave — is the **v2** automated market-maker (T4.2, ADR-0011). → §5 T4.2.
+`status-im/nimbus-eth1` ships a verified proxy — native (`libverifproxy.a`), WASM, and
+a CLI — that anchors a header to a beacon light client and verifies storage and
+receipts client-side (T1.0, T1.1). No Armada repo runs or embeds it today: no server
+operates it against any Armada chain, no WASM bundle ships in `armada-interface`, and
+`libverifproxy.a` has no iOS or Android cross-compile target yet. Once integrated, this
+runs inside the client process, not as a separate server node (`client (T2 caches,
+re-verified through the proxy)` in [`T1-ingestion.md`](./T1-ingestion.md)). → §5 T1.
 
-### Mobile wallet + self-watchtower (T6, end-user device)
-The wallet is everything a real user runs on their own phone or browser: shield,
-trade, settle, and **scan their own notes locally** (T6.1), with keys never
-leaving the OS secure enclave (T6.0). The wallet is a **watcher-party (P2P)
-client**, not a client of a server; it talks peer-to-peer to bonded parties for
-feeds and to counterparties for the settlement hot loop.
+### Venue node — plan, not built
 
-The **self-hosted watchtower (T6.3) runs on the phone** as a lightweight reactive
-loop. It watches T0.2 `Challenge` events over the T2 feed and submits the user's
-higher-turn co-signed state within the challenge window, needing no prover and no
-heavy state. It is phone-deployable by construction and gated on T2 feed
-freshness. Users wanting stronger liveness may *additionally* delegate the
-identical loop to an always-on watcher party, but the default runs on-device.
+The earlier plan calls for an off-chain venue node holding a `priceSetter` authority
+and filling quotes from a pre-funded static inventory (T4.0, T4.1), with a later
+automated market-making keeper (T4.2, v2 plan). No venue node, no price-setter
+contract, and no quote/settle app exist in `armada-poc` or `armada-nitro`. → §5 T4.
 
-**Two mobile deployment forms (T6.5, ADR-0008):**
-- **Interim (spine demo):** the browser peer stack runs **inside a WebView** in
-  the RN shell — `@cerc-io/peer` + `ts-nitro` unmodified. RN owns keys + UI; the
-  WebView owns the Nitro node + p2p. Foreground-only, reuses production browser
-  code verbatim — the realistic v1 mobile client.
-- **Production (Phase-3, before mainnet):** the p2p/channel/messaging stack
-  becomes **one native gomobile module** (go-nitro + go-waku, `library/mobile`,
-  `.aar` / `.xcframework`), escaping the WebView background-execution constraint
-  and giving the phone a first-class native libp2p peer. The transport interface
-  T6.2/T6.3 bind to is identical across both forms. → §5 T6.5.
+### Client — `armada-interface` (end-user device, today)
+
+The live client is `armada-interface`, a React 19 + Vite web app that runs in a
+browser, not a phone-resident P2P peer. It holds keys in browser memory
+(`keyManager.ts`, T6.0), scans and trial-decrypts notes locally (`sync.ts`, T6.1), and
+drives the pool's shield/transact calls (`handler.ts`, T6.2). It talks to Ethereum L1
+and to `armada-relayer` over plain HTTP/RPC, not libp2p or Waku. No channel lifecycle
+code, no client-side watchtower (T6.3), and no mobile build exist. `armada-client`, the
+repo meant to host a unified TypeScript stack across Linux server, browser, iOS, and
+Android (`docs/SPEC.md`), has no application code (T6.5).
 
 ## Deployment diagram (blocks → nodes)
 
@@ -88,48 +62,39 @@ identical loop to an always-on watcher party, but the default runs on-device.
                      ┌──────────────────────────────────────────┐
                      │  ETHEREUM L1  (fixturenet | testnet |     │
                      │  mainnet)                                 │
-                     │  T0.0 pool · T0.2 adjudicator ·           │
-                     │  T0.3 deposit/payout · T0.4 registry(v2)  │
+                     │  T0.0 pool · T0.2 adjudicator (merged     │
+                     │  deposit/payout) · governance/revenue     │
                      └──────────────────────────────────────────┘
-                          ▲ settle / challenge      │ canonical head
-        RelayAdapt hedge  │                          ▼
-                          │        ┌───────────────────────────────┐
-   ┌──────────────────┐   │        │ EMITTER NODE (server, few)    │
-   │ VENUE SOLVER     │───┘        │ T1.0 nimbus-eth1 → T1.1 IPLD  │
-   │ KEEPER (T4.2)    │            │ → T1.2 watcher-ts ingest cfg  │
-   │ off-chain maker  │            └───────────────────────────────┘
-   │ priceSetter T4.0 │                     │ proof-carrying diffs
-   └──────────────────┘                     ▼  + head cursor
-                          ┌───────────────────────────────────────┐
-     fixed infra only:    │   WATCHER-PARTY  P2P FEDERATION (T2)   │
-   ┌───────────────────┐  │  proof-carrying feeds T2.0 · meter T2.1│
-   │ circuit-relay +   │◀─┤  bonded threshold-Schnorr (T2.4, v2)   │
-   │ STUN/TURN (T2.3)  │  └───────────────────────────────────────┘
-   └───────────────────┘   ▲ Waku pub/sub (gossip) · libp2p-noise (1:1)
-             │             │           T2.2 peers: browser/mobile/server
-             ▼             ▼
-   ┌───────────────────────────────────────────────────────────────┐
-   │  END-USER DEVICES — peers, NOT clients of a server             │
-   │  browser build   ·   MOBILE WALLET (T6): WebView(interim) /    │
-   │                      native gomobile(prod, T6.5)               │
-   │  local note-scan T6.1 · settlement client T6.2 ·               │
-   │  PHONE-RESIDENT self-watchtower T6.3 · Groth16 prover T6.6     │
-   └───────────────────────────────────────────────────────────────┘
+                          ▲ shield / deposit / settle / challenge
+                          │
+   ┌──────────────────────┴───────────────────────────────────┐
+   │  armada-relayer (server, today)                           │
+   │  Ponder/Postgres indexer · flat-fee actor (T2.1, T2.2)    │
+   │  not a proof path — a client trusts this server            │
+   └─────────────────────────────────────────────────────────┘
+                          │ plain RPC / HTTP
+                          ▼
+   ┌─────────────────────────────────────────────────────────┐
+   │  armada-interface (browser, today)                        │
+   │  keys in memory (T6.0) · note-scan + browser prover (T6.1)│
+   │  shield/transact handlers (T6.2) · no channel lifecycle    │
+   └─────────────────────────────────────────────────────────┘
+
+   ─────────────── plan, no code today ───────────────────────
+   nimbus verified proxy integration (T1) — would run inside the
+   client process, verifying reads instead of trusting the relayer
+   venue node (T4) — posted-price contract + quote/settle app
+   client watchtower (T6.3) — only a test-harness watchtower exists
+   mobile client (T6.5) — armada-client's docs/SPEC.md plan
 ```
 
 ## Environments
 
 | Environment | Purpose | L1 target |
 |---|---|---|
-| **fixturenet** (primary) | Deterministic E2E under the **laconic stack orchestrator**: shield → deposit → Nitro → challenge → payout, proofs against our keys. Every tier's inline tests run here (T0–T6). | orchestrated local L1 |
-| **public testnet** | Shared multi-party rehearsal — real network conditions, NAT traversal over the T2.3 bootstrap, broadcaster interop. | public test L1 |
-| **mainnet** (later) | Production. Gated: pool-spend authorization (T0.0/T0.3/T0.6), the T2.4/T3 DSS surface, and the T6.5 native gomobile port are all **Phase-3, audit-critical before mainnet**. | Ethereum L1 |
+| **fixturenet** | `armada-nitro`'s e2e gate harness runs deterministic tests here, including the test-only watchtower (`env/gates/watchtower/watch.ts`). | orchestrated local L1 (real `geth` + `lighthouse`, per `docs/ENVIRONMENT.md`) |
+| **Sepolia** | A real deploy exists: `armada-poc`'s `scripts/deploy_privacy_pool.ts` deploys `PrivacyPool` with a 50 bps shield fee. | Sepolia |
+| **mainnet `armada-1`** | Crowdfund, governance, and CCTP are live. The pool ships in a later launch; the Phase-2 ceremony is not finished (`v1.0.0-ceremony` tag, shapes "open", no beacon). | Ethereum L1 |
 
-The **fixturenet is the primary deterministic test environment** and the one on
-which the whole v1 spine is demonstrated: the end-to-end v1 deliverable, a
-private shielded wstETH → USDC swap, is a fixturenet run (T4). Testnet adds real
-P2P conditions, and mainnet follows the audit gates rather than a schedule.
-
-→ §6 for the runtime scenarios these nodes execute · §5 T1/T2/T4/T6 for
-building-block detail · §11 for the ingestion and mobile-transport long poles ·
-ADR-0008 (transport), ADR-0009 (ingestion).
+→ §6 for the runtime scenarios these nodes execute · §5 T0/T1/T2/T4/T6 for
+building-block detail · §11 for the proof-path-integration and mobile-client gaps.

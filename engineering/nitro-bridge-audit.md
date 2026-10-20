@@ -2,6 +2,13 @@
 
 audit · 2026-09-10 · read-only source review
 
+**Superseded.** This audits `cerc-io/go-nitro`'s bridge and `cerc-io/chain-signatures`'
+DSS, the earlier cerc-io cross-chain design. `armada-nitro`'s own adjudicator
+(`ArmadaNitroAdjudicator`) supersedes it: it is a different contract, on a different
+repo, and its hub custodian signs with FROST (`frost-secp256k1-evm`), not the
+`chain-signatures`/kyber DSS audited here. Kept as historical evidence for why that
+DSS was not reused (ruling 3, brief §4).
+
 **Repos & pins audited**
 
 | Component | Repo | Ref (SHA) | Notes |

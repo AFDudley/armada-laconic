@@ -2,6 +2,17 @@
 
 design draft · 2026-09-10 · builds on `nitro-bridge-audit.md`
 
+**Status.** This remains a draft for a multi-chain construction; no cross-chain
+adjudicator, custodian, or hub exists today. One piece described below has since
+shipped, with a different crypto scheme than planned here: `armada-nitro`'s
+`ArmadaNitroAdjudicator` already merges the deposit/payout boundary into the
+adjudicator (so the "T0.3 glue" contrast in §3 no longer applies — there is no
+separate T0.3 contract to contrast with), and its `HubCustodian` signs with **FROST**
+over secp256k1 (`frost-secp256k1-evm`), not the `chain-signatures`/kyber threshold
+Schnorr this draft specifies throughout. Read every `chain-signatures` reference below
+as superseded by FROST (ruling 3, brief §4). No cross-chain swap, hash-locked or
+otherwise, is built.
+
 ## 0. Purpose & posture
 
 A general cross-chain swap for Armada, with an Armada shielded pool deployed on **every** chain. Value crosses as armada-nitro notes on each side, cleared over Nitro state channels. Self-custodial; private; the hub is trusted for **liveness only, never custody**.
@@ -13,7 +24,7 @@ The privacy anchor is the shielded pool, not the channel. Value enters the bridg
 - **User** — holds shielded notes; wants to swap A@X for B@Y, or move an asset X→Y, privately and self-custodially.
 - **Hub** — a bonded, always-on cross-chain routing party holding inventory on both chains; the only entity that touches the on-chain boundary, and only via **aggregate** rebalancing. Every hub is a **DSS construction** (threshold key). Few, fat, well-connected.
 - **Maker / endpoint LP** — provides swap inventory and quotes at an endpoint, reached *through* a hub; needs one channel, no routing, no cross-chain capital, no bond. Many, permissionless. (**Hub ⊆ LP; LP ⊄ hub.**)
-- **DSS committee** — the threshold-key holders behind a hub. Single legal entity (pure key hygiene) or multiple entities (Byzantine trust + bond/slash). Same crypto either way (`chain-signatures` threshold Schnorr).
+- **DSS committee** — the threshold-key holders behind a hub. Single legal entity (pure key hygiene) or multiple entities (Byzantine trust + bond/slash). Armada's one deployed threshold scheme is FROST over secp256k1 (`frost-secp256k1-evm`), not the `chain-signatures` DSS this draft otherwise assumes.
 - **Custodian contract** (per hub, per chain) — the DSS-controlled on-chain principal that gates the hub's collateral, verifies the group signature, and issues/rotates the hub's hot delegate key.
 - **armada-nitro adjudicator** (per chain) — the net-new core, §3.
 - **Armada shielded pool** (per chain) — our Railgun-design pool + circuits (T0.0/T0.1), independent per chain; each chain's anonymity set is its own.

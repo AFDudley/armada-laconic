@@ -8,6 +8,12 @@ Armada is a shielded pool for private USDC and ETH. Value is held as encrypted *
 
 This document walks one scenario end to end: **Alice swaps shielded USDC for shielded ETH with a Provider who holds shielded ETH**, on a single chain, non-custodially. It is self-contained — the building blocks are defined inline, and the status table at the end separates what already exists from what is net-new.
 
+**Status.** This walkthrough is a plan. No quote/settle app, posted-price contract, or
+venue exists yet (T4.0, T4.1, not built). The deposit/payout boundary it diagrams as a
+separate contract is, in the built code, merged into the Nitro adjudicator itself
+(`ArmadaNitroAdjudicator.depositFromNote` and its SHIELD payout path, T0.2) — there is
+no separate `T0.3` contract.
+
 The flow follows one motto: **notes in → normal Nitro → notes out.** Both parties unshield notes into a shared settlement channel, they settle off-chain, and the outcome is re-shielded into fresh notes.
 
 ## The building blocks in play
@@ -15,8 +21,7 @@ The flow follows one motto: **notes in → normal Nitro → notes out.** Both pa
 Each is a `T#.#` item in the building-block registry:
 
 - **Shielded pool (T0.0)** — holds value as notes. `shield` mints a note, `unshield` releases the underlying ERC-20, and `transact` proves a private transfer. Alice's USDC and the Provider's ETH live here as notes.
-- **Deposit/payout contract (T0.3)** — the boundary between the pool and Nitro. It unshields a note into a channel (deposit) and re-shields a channel outcome into fresh notes (payout).
-- **Nitro adjudicator (T0.2)** — the reused `go-nitro` `NitroAdjudicator` (ForceMove + MultiAssetHolder). It escrows the channel's funds, finalizes outcomes, and enforces disputes.
+- **Nitro adjudicator (T0.2)** — `ArmadaNitroAdjudicator`, a patched `go-nitro` `NitroAdjudicator` (ForceMove + MultiAssetHolder). It escrows the channel's funds, finalizes outcomes, enforces disputes, and carries the deposit/payout boundary directly: `depositFromNote` unshields a note into a channel, and a `SHIELD`-type allocation re-shields a channel outcome into fresh notes. Built.
 - **Quote/settle app (T4.1)** — the ForceMove application the two parties co-sign to express the swapped outcome. For a two-asset trade it is the multi-asset ETH-in / USDC-out settlement app.
 - **Wallet (T6)** — Alice's and the Provider's client software. It proves on device, drives the channel, scans for new notes, and runs a watchtower.
 
@@ -133,21 +138,20 @@ A third facet, **scope**, keeps the difficulty honest. Almost everything this sw
 
 | Item | Status | Pts | Scope |
 |---|---|---:|---|
-| Shielded pool — shield / unshield / transact (T0.0) | net-new (ADR-0014) | 10 | shared |
-| JoinSplit circuits + ceremony (T0.1) | net-new (ADR-0014) | 9 | shared |
-| Deposit/payout contract (T0.3) | net-new | 5 | shared |
-| On-device Groth16 proving (T6.6) | reuse (constraint) | 5 | shared |
-| Settlement client (T6.2) | net-new | 5 | shared |
-| Self-watchtower (T6.3) | net-new | 5 | shared |
-| WASM note-scanner (T6.1) | net-new | 5 | shared |
-| Transport — Waku + libp2p-noise (T2.3) | reuse | 3 | shared |
-| Nitro adjudicator — ForceMove / MultiAssetHolder (T0.2) | reuse | 2 | shared |
-| Proof-carrying feeds (T2.0) | reuse+config | 2 | shared |
-| Metering vouchers (T2.1) | reuse+config | 2 | shared |
-| ↳ Channel machinery — virtualfund, payments, ExitFormat | reuse | incl. → T0.2 | shared |
-| Quote/settle ForceMove app (T4.1) | net-new | 4 | swap |
-| Posted-price contract (T4.0) | net-new (small) | 3 | swap |
-| ↳ Multi-asset outcome helper | net-new | incl. → T0.3 | swap |
+| Shielded pool — shield / unshield / transact (T0.0) | built | 10 | shared |
+| Circuits + ceremony (T0.1) | built pool code; Phase-2 ceremony open | 9 | shared |
+| On-device Groth16 proving (T6.6) | built, browser only | 5 | shared |
+| Settlement client (T6.2) | partly built — drives shield/transact, not a channel lifecycle | 5 | shared |
+| Self-watchtower (T6.3) | not built — test harness only | 5 | shared |
+| WASM note-scanner (T6.1) | built | 5 | shared |
+| Transport — Waku + libp2p-noise (T2.3) | not built | 3 | shared |
+| Nitro adjudicator, merged deposit/payout boundary (T0.2) | built, patched `go-nitro` | 2 | shared |
+| nimbus verified proxy read verification (T1) | in progress, unintegrated | 2 | shared |
+| Relay fee (T2.1) | built, different mechanism (flat USDC fee, not vouchers) | 2 | shared |
+| ↳ Channel machinery — virtualfund, payments, ExitFormat | reuse (within T0.2's patched `go-nitro`) | incl. → T0.2 | shared |
+| Quote/settle ForceMove app (T4.1) | not built | 4 | swap |
+| Posted-price contract (T4.0) | not built | 3 | swap |
+| ↳ Multi-asset outcome helper | not built | incl. → T4.1 | swap |
 
 | Bucket | Pts |
 |---|---:|
@@ -167,9 +171,9 @@ A third facet, **scope**, keeps the difficulty honest. Almost everything this sw
 | **Pts** | `1–10` | linear difficulty (1 = trivial config/reuse, 10 = large / audit-critical / novel) |
 | **incl.** | — | folded into the parent's points; not added to the total |
 
-The many small net-new rows are mostly this foundation, not swap cost. The swap rides about **53 points of shared substrate for a ~7-point swap-specific delta**: the posted-price contract (3) and the quote/settle app (4), with the multi-asset outcome shaping folded into the deposit/payout contract. The quote/settle app carries the real swap-specific risk. No shipped ForceMove app settles a two-asset ETH-in/USDC-out outcome atomically, so it is the go-nitro maturity gap the build plan tracks (§11 R2). The walking skeleton stands in a trivial single-asset app until it lands.
+The many small rows are mostly this foundation, not swap cost. The swap rides about **53 points of shared substrate for a ~7-point swap-specific delta**: the posted-price contract (3) and the quote/settle app (4), with the multi-asset outcome shaping folded into the quote/settle app. The quote/settle app carries the real swap-specific risk. No shipped ForceMove app settles a two-asset ETH-in/USDC-out outcome atomically, so it is the go-nitro maturity gap the build plan tracks (§11 R2). The walking skeleton stands in a trivial single-asset app until it lands.
 
-Within the 53, about **14 points are the base Nitro settlement rail**: the adjudicator (T0.2), the deposit/payout boundary (T0.3), the settlement client (T6.2), and voucher metering (T2.1). The remaining **~39 are the shielded-pool side**, dominated by the pool (10) and its circuits (9). Those two are the audit-critical core of the whole programme (§11), which is why they carry the highest scores. Everything reused — the adjudicator, feeds, metering, transport, and proving — sits at 2 to 5. The pool and circuits are our own implementation of the Railgun design ([ADR-0014](./09-architecture-decisions.md#adr-0014)), which is what makes them net-new rather than a redeploy.
+Within the 53, about **12 points are the base Nitro settlement rail**: the adjudicator with its merged deposit/payout boundary (T0.2), the settlement client (T6.2), and the relay fee mechanism (T2.1). The remaining **~41 are the shielded-pool side**, dominated by the pool (10) and its circuits (9). Those two are the audit-critical core of the whole programme (§11), which is why they carry the highest scores. The pool and circuits are Armada's own implementation of the Railgun design ([ADR-0014](./09-architecture-decisions.md#adr-0014)), which is what makes them net-new rather than a redeploy.
 
 Two boundaries keep the 53 from being read as more than it is:
 

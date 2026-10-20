@@ -23,6 +23,12 @@
 
 <h1 id="nitro-bridge-dss-code-audit">Nitro Bridge + DSS — Code Audit</h1>
 <p>audit · 2026-09-10 · read-only source review</p>
+<p><strong>Superseded.</strong> This audits <code>cerc-io/go-nitro</code>'s bridge and <code>cerc-io/chain-signatures</code>'
+DSS, the earlier cerc-io cross-chain design. <code>armada-nitro</code>'s own adjudicator
+(<code>ArmadaNitroAdjudicator</code>) supersedes it: it is a different contract, on a different
+repo, and its hub custodian signs with FROST (<code>frost-secp256k1-evm</code>), not the
+<code>chain-signatures</code>/kyber DSS audited here. Kept as historical evidence for why that
+DSS was not reused (ruling 3, brief §4).</p>
 <p><strong>Repos &amp; pins audited</strong></p>
 <table>
 <thead>

@@ -23,6 +23,16 @@
 
 <h1 id="shielded-armada-nitro-cross-chain-swap-construction-draft">Shielded Armada-Nitro Cross-Chain Swap — Construction Draft</h1>
 <p>design draft · 2026-09-10 · builds on <code>nitro-bridge-audit.md</code></p>
+<p><strong>Status.</strong> This remains a draft for a multi-chain construction; no cross-chain
+adjudicator, custodian, or hub exists today. One piece described below has since
+shipped, with a different crypto scheme than planned here: <code>armada-nitro</code>'s
+<code>ArmadaNitroAdjudicator</code> already merges the deposit/payout boundary into the
+adjudicator (so the "T0.3 glue" contrast in §3 no longer applies — there is no
+separate T0.3 contract to contrast with), and its <code>HubCustodian</code> signs with <strong>FROST</strong>
+over secp256k1 (<code>frost-secp256k1-evm</code>), not the <code>chain-signatures</code>/kyber threshold
+Schnorr this draft specifies throughout. Read every <code>chain-signatures</code> reference below
+as superseded by FROST (ruling 3, brief §4). No cross-chain swap, hash-locked or
+otherwise, is built.</p>
 <h2 id="0-purpose-posture">0. Purpose &amp; posture</h2>
 <p>A general cross-chain swap for Armada, with an Armada shielded pool deployed on <strong>every</strong> chain. Value crosses as armada-nitro notes on each side, cleared over Nitro state channels. Self-custodial; private; the hub is trusted for <strong>liveness only, never custody</strong>.</p>
 <p>The privacy anchor is the shielded pool, not the channel. Value enters the bridge already shielded (sender/recipient/amount hidden in-pool), funded through fresh rotating keys, carried over the shared Armada transport (optionally under a Nym mixnet). The channel and adjudicator machinery therefore operate on already-anonymous inputs and do not have to reproduce Lightning-style routing privacy: no onion routing, no PTLC. (Lightning needs those because there the channel graph <em>is</em> the privacy layer; here it is not.)</p>
@@ -31,7 +41,7 @@
 <li><strong>User</strong> — holds shielded notes; wants to swap A@X for B@Y, or move an asset X→Y, privately and self-custodially.</li>
 <li><strong>Hub</strong> — a bonded, always-on cross-chain routing party holding inventory on both chains; the only entity that touches the on-chain boundary, and only via <strong>aggregate</strong> rebalancing. Every hub is a <strong>DSS construction</strong> (threshold key). Few, fat, well-connected.</li>
 <li><strong>Maker / endpoint LP</strong> — provides swap inventory and quotes at an endpoint, reached <em>through</em> a hub; needs one channel, no routing, no cross-chain capital, no bond. Many, permissionless. (<strong>Hub ⊆ LP; LP ⊄ hub.</strong>)</li>
-<li><strong>DSS committee</strong> — the threshold-key holders behind a hub. Single legal entity (pure key hygiene) or multiple entities (Byzantine trust + bond/slash). Same crypto either way (<code>chain-signatures</code> threshold Schnorr).</li>
+<li><strong>DSS committee</strong> — the threshold-key holders behind a hub. Single legal entity (pure key hygiene) or multiple entities (Byzantine trust + bond/slash). Armada's one deployed threshold scheme is FROST over secp256k1 (<code>frost-secp256k1-evm</code>), not the <code>chain-signatures</code> DSS this draft otherwise assumes.</li>
 <li><strong>Custodian contract</strong> (per hub, per chain) — the DSS-controlled on-chain principal that gates the hub's collateral, verifies the group signature, and issues/rotates the hub's hot delegate key.</li>
 <li><strong>armada-nitro adjudicator</strong> (per chain) — the net-new core, §3.</li>
 <li><strong>Armada shielded pool</strong> (per chain) — our Railgun-design pool + circuits (T0.0/T0.1), independent per chain; each chain's anonymity set is its own.</li>

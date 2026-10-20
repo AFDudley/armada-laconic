@@ -26,13 +26,17 @@
 <h2 id="what-this-shows">What this shows</h2>
 <p>Armada is a shielded pool for private USDC and ETH. Value is held as encrypted <strong>notes</strong>, and every transfer is a zero-knowledge proof that hides sender, recipient, and amount. Payments and swaps settle off-chain over <strong>Nitro state channels</strong> instead of on-chain, so the pool exposes no per-transaction event to link against, and no party ever takes custody of another's funds.</p>
 <p>This document walks one scenario end to end: <strong>Alice swaps shielded USDC for shielded ETH with a Provider who holds shielded ETH</strong>, on a single chain, non-custodially. It is self-contained — the building blocks are defined inline, and the status table at the end separates what already exists from what is net-new.</p>
+<p><strong>Status.</strong> This walkthrough is a plan. No quote/settle app, posted-price contract, or
+venue exists yet (T4.0, T4.1, not built). The deposit/payout boundary it diagrams as a
+separate contract is, in the built code, merged into the Nitro adjudicator itself
+(<code>ArmadaNitroAdjudicator.depositFromNote</code> and its SHIELD payout path, T0.2) — there is
+no separate <code>T0.3</code> contract.</p>
 <p>The flow follows one motto: <strong>notes in → normal Nitro → notes out.</strong> Both parties unshield notes into a shared settlement channel, they settle off-chain, and the outcome is re-shielded into fresh notes.</p>
 <h2 id="the-building-blocks-in-play">The building blocks in play</h2>
 <p>Each is a <code>T#.#</code> item in the building-block registry:</p>
 <ul>
 <li><strong>Shielded pool (T0.0)</strong> — holds value as notes. <code>shield</code> mints a note, <code>unshield</code> releases the underlying ERC-20, and <code>transact</code> proves a private transfer. Alice's USDC and the Provider's ETH live here as notes.</li>
-<li><strong>Deposit/payout contract (T0.3)</strong> — the boundary between the pool and Nitro. It unshields a note into a channel (deposit) and re-shields a channel outcome into fresh notes (payout).</li>
-<li><strong>Nitro adjudicator (T0.2)</strong> — the reused <code>go-nitro</code> <code>NitroAdjudicator</code> (ForceMove + MultiAssetHolder). It escrows the channel's funds, finalizes outcomes, and enforces disputes.</li>
+<li><strong>Nitro adjudicator (T0.2)</strong> — <code>ArmadaNitroAdjudicator</code>, a patched <code>go-nitro</code> <code>NitroAdjudicator</code> (ForceMove + MultiAssetHolder). It escrows the channel's funds, finalizes outcomes, enforces disputes, and carries the deposit/payout boundary directly: <code>depositFromNote</code> unshields a note into a channel, and a <code>SHIELD</code>-type allocation re-shields a channel outcome into fresh notes. Built.</li>
 <li><strong>Quote/settle app (T4.1)</strong> — the ForceMove application the two parties co-sign to express the swapped outcome. For a two-asset trade it is the multi-asset ETH-in / USDC-out settlement app.</li>
 <li><strong>Wallet (T6)</strong> — Alice's and the Provider's client software. It proves on device, drives the channel, scans for new notes, and runs a watchtower.</li>
 </ul>
@@ -147,92 +151,86 @@
 <tbody>
 <tr>
 <td>Shielded pool — shield / unshield / transact (T0.0)</td>
-<td>net-new (ADR-0014)</td>
+<td>built</td>
 <td style="text-align: right;">10</td>
 <td>shared</td>
 </tr>
 <tr>
-<td>JoinSplit circuits + ceremony (T0.1)</td>
-<td>net-new (ADR-0014)</td>
+<td>Circuits + ceremony (T0.1)</td>
+<td>built pool code; Phase-2 ceremony open</td>
 <td style="text-align: right;">9</td>
 <td>shared</td>
 </tr>
 <tr>
-<td>Deposit/payout contract (T0.3)</td>
-<td>net-new</td>
-<td style="text-align: right;">5</td>
-<td>shared</td>
-</tr>
-<tr>
 <td>On-device Groth16 proving (T6.6)</td>
-<td>reuse (constraint)</td>
+<td>built, browser only</td>
 <td style="text-align: right;">5</td>
 <td>shared</td>
 </tr>
 <tr>
 <td>Settlement client (T6.2)</td>
-<td>net-new</td>
+<td>partly built — drives shield/transact, not a channel lifecycle</td>
 <td style="text-align: right;">5</td>
 <td>shared</td>
 </tr>
 <tr>
 <td>Self-watchtower (T6.3)</td>
-<td>net-new</td>
+<td>not built — test harness only</td>
 <td style="text-align: right;">5</td>
 <td>shared</td>
 </tr>
 <tr>
 <td>WASM note-scanner (T6.1)</td>
-<td>net-new</td>
+<td>built</td>
 <td style="text-align: right;">5</td>
 <td>shared</td>
 </tr>
 <tr>
 <td>Transport — Waku + libp2p-noise (T2.3)</td>
-<td>reuse</td>
+<td>not built</td>
 <td style="text-align: right;">3</td>
 <td>shared</td>
 </tr>
 <tr>
-<td>Nitro adjudicator — ForceMove / MultiAssetHolder (T0.2)</td>
-<td>reuse</td>
+<td>Nitro adjudicator, merged deposit/payout boundary (T0.2)</td>
+<td>built, patched <code>go-nitro</code></td>
 <td style="text-align: right;">2</td>
 <td>shared</td>
 </tr>
 <tr>
-<td>Proof-carrying feeds (T2.0)</td>
-<td>reuse+config</td>
+<td>nimbus verified proxy read verification (T1)</td>
+<td>in progress, unintegrated</td>
 <td style="text-align: right;">2</td>
 <td>shared</td>
 </tr>
 <tr>
-<td>Metering vouchers (T2.1)</td>
-<td>reuse+config</td>
+<td>Relay fee (T2.1)</td>
+<td>built, different mechanism (flat USDC fee, not vouchers)</td>
 <td style="text-align: right;">2</td>
 <td>shared</td>
 </tr>
 <tr>
 <td>↳ Channel machinery — virtualfund, payments, ExitFormat</td>
-<td>reuse</td>
+<td>reuse (within T0.2's patched <code>go-nitro</code>)</td>
 <td style="text-align: right;">incl. → T0.2</td>
 <td>shared</td>
 </tr>
 <tr>
 <td>Quote/settle ForceMove app (T4.1)</td>
-<td>net-new</td>
+<td>not built</td>
 <td style="text-align: right;">4</td>
 <td>swap</td>
 </tr>
 <tr>
 <td>Posted-price contract (T4.0)</td>
-<td>net-new (small)</td>
+<td>not built</td>
 <td style="text-align: right;">3</td>
 <td>swap</td>
 </tr>
 <tr>
 <td>↳ Multi-asset outcome helper</td>
-<td>net-new</td>
-<td style="text-align: right;">incl. → T0.3</td>
+<td>not built</td>
+<td style="text-align: right;">incl. → T4.1</td>
 <td>swap</td>
 </tr>
 </tbody>
@@ -306,8 +304,8 @@
 </tr>
 </tbody>
 </table>
-<p>The many small net-new rows are mostly this foundation, not swap cost. The swap rides about <strong>53 points of shared substrate for a ~7-point swap-specific delta</strong>: the posted-price contract (3) and the quote/settle app (4), with the multi-asset outcome shaping folded into the deposit/payout contract. The quote/settle app carries the real swap-specific risk. No shipped ForceMove app settles a two-asset ETH-in/USDC-out outcome atomically, so it is the go-nitro maturity gap the build plan tracks (§11 R2). The walking skeleton stands in a trivial single-asset app until it lands.</p>
-<p>Within the 53, about <strong>14 points are the base Nitro settlement rail</strong>: the adjudicator (T0.2), the deposit/payout boundary (T0.3), the settlement client (T6.2), and voucher metering (T2.1). The remaining <strong>~39 are the shielded-pool side</strong>, dominated by the pool (10) and its circuits (9). Those two are the audit-critical core of the whole programme (§11), which is why they carry the highest scores. Everything reused — the adjudicator, feeds, metering, transport, and proving — sits at 2 to 5. The pool and circuits are our own implementation of the Railgun design (<a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>), which is what makes them net-new rather than a redeploy.</p>
+<p>The many small rows are mostly this foundation, not swap cost. The swap rides about <strong>53 points of shared substrate for a ~7-point swap-specific delta</strong>: the posted-price contract (3) and the quote/settle app (4), with the multi-asset outcome shaping folded into the quote/settle app. The quote/settle app carries the real swap-specific risk. No shipped ForceMove app settles a two-asset ETH-in/USDC-out outcome atomically, so it is the go-nitro maturity gap the build plan tracks (§11 R2). The walking skeleton stands in a trivial single-asset app until it lands.</p>
+<p>Within the 53, about <strong>12 points are the base Nitro settlement rail</strong>: the adjudicator with its merged deposit/payout boundary (T0.2), the settlement client (T6.2), and the relay fee mechanism (T2.1). The remaining <strong>~41 are the shielded-pool side</strong>, dominated by the pool (10) and its circuits (9). Those two are the audit-critical core of the whole programme (§11), which is why they carry the highest scores. The pool and circuits are Armada's own implementation of the Railgun design (<a href="./09-architecture-decisions.html#adr-0014">ADR-0014</a>), which is what makes them net-new rather than a redeploy.</p>
 <p>Two boundaries keep the 53 from being read as more than it is:</p>
 <ul>
 <li><strong>It is a slice of v1, not all of it.</strong> The v1 build totals 110 points; the 53 counts only the items on this swap's path. State ingestion (T1), the anonymity-set strategy (T0.7), the Adapters (T5), the fee-split, and several wallet items belong to v1 but sit off this path.</li>

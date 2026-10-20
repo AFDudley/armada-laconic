@@ -14,16 +14,16 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
 - **D1.3** Decisions live here as ADRs, cross-cutting concerns in §8, and risks in §11.
 
 ### ADR-0002 — Deploy our own Railgun pool (don't rent Railgun's)
-- **D2.1** Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (**T0.0**), configured with **fee = 0**, our token allow-list, and a reserved deposit/payout hook.
+- **D2.1** Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (**T0.0**), with our own fee policy, our token allow-list, and a reserved deposit/payout hook. `armada-poc` built this pool: `PrivacyPool` routes to four modules by `delegatecall`, with no proxy. The deployed shield fee is 50 bps (`scripts/deploy_privacy_pool.ts:264-265`), not fee = 0; the contract default is 0 bps and the owner can raise it to the `MAX_SHIELD_FEE_BPS` cap of 1000 (10%).
 
 ### ADR-0003 — Keep Groth16; reuse Perpetual PoT Phase-1 + run our own Phase-2
 - **D3.1** Keep **Groth16**.
 - **D3.2** Reuse the community **Perpetual Powers of Tau** for Phase-1, and run **our own Phase-2 MPC** over our circuit set.
-- **D3.3** Security rests on a **1-of-N honest** assumption, backed by a published transcript and a final randomness beacon (**T0.1**).
-- **D3.4** Phase-2 is re-run **only** when circuits change — for example, the ADR-0005 fork-lite upgrade.
+- **D3.3** Security rests on a **1-of-N honest** assumption, backed by a published transcript and a final randomness beacon (**T0.1**). The Phase-2 ceremony is open, not finished: the `v1.0.0-ceremony` tag's manifest lists every shape `"status": "open"` with no beacon, and `main` has only `scripts/setup-dev.sh`, which the repo marks unsafe for anything but local testing.
+- **D3.4** Phase-2 is re-run **only** when circuits change — for example, the ADR-0005 fork-lite upgrade, or the selective-disclosure circuit (ADR-0020), which adds shapes to this same ceremony rather than starting a new one.
 
 ### ADR-0004 — Settle via nitro-on-railgun, not RelayAdapt
-- **D4.1** Build a **deposit/payout contract** (**T0.3**) that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**.
+- **D4.1** Build the deposit/payout boundary (**T0.3**) that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**.
 - **D4.2** The Nitro game analysis stays isolated from the Railgun privacy analysis; the two meet only at the allocation→note **boundary**.
 
 ### ADR-0005 — Amount privacy = Design A default; fork-lite deferred
@@ -45,9 +45,10 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
 - **D8.3** IP/metadata privacy is an **optional Nym mixnet underlay**: uniform, opt-in, off by default for latency and on for maximum privacy, sitting beneath the same transport everywhere.
 - **D8.4** Mobile production uses **native gomobile** modules — go-waku plus go-libp2p — with an interim WebView browser-stack (**T6.5**).
 
-### ADR-0009 — State ingestion targets nimbus-eth1; retire plugeth
-- **D9.1** Target **nimbus-eth1** — stateless/witness execution plus the Aristo state DB — as the state-diff source, mapped into IPLD for proof-carrying diffs (**T1**).
-- **D9.2** We build only enough local cache to compute what we consume, not a full archive EL.
+### ADR-0009 — The proof path is the nimbus verified proxy, not a state-diff emitter
+- **D9.1** Target the **nimbus verified proxy** as the proof path. It anchors headers to a beacon light client, verifies storage with EIP-1186 proofs, and proves a log by rebuilding the block's receipt trie (`eth_getBlockReceipts`), which also proves completeness of that block's logs. `eth_getLogs` ranges are not used for note sync, because an omitted log is undetectable in a range.
+- **D9.2** The proxy runs natively on servers, as WASM in browsers, and as `libverifproxy.a` on mobile once a cross-compile exists (none exists upstream yet). `watcher-ts` becomes an optional, unverified server-side cache; a client re-verifies anything it reads from the cache through the proxy.
+- **D9.3** The nimbus state-diff emitter, an IPLD mapper, and the cerc-io `ipld-eth-server` pipeline are not on the proof path. The pipeline is geth-only and dormant since August 2024, and its receipt data, in the current schema, carries no per-log proof to `receiptsRoot`.
 
 ### ADR-0010 — Terminology conventions
 - **D10.1** Enforce:
@@ -72,8 +73,8 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
 - **D13.2** The governing framing is **"build Armada on Railgun, reusing Laconic prior art,"** not "Laconic supplies a substrate to Armada."
 
 ### ADR-0014 — Pool + circuits are our own implementation (net-new, audit-critical)
-- **D14.1** Implement the **shielded-pool contracts** (T0.0) and the **JoinSplit circuits** (T0.1) ourselves — independently authored, spec-compatible with the Railgun design the deep dive documents (A.1.1/A.1.2). Our engineers own this build.
-- **D14.2** Everything else stands: reuse `go-nitro` (T0.2), `ts-nitro` (T6.2), and `engine`/`cookbook` as reference; reuse the community Perpetual PoT Phase-1 and run our own Phase-2 **over our own circuits** (ADR-0003 otherwise unchanged); keep Groth16.
+- **D14.1** The **shielded-pool contracts** (T0.0) and the **`Transact` circuit** (T0.1) are implemented by us — independently authored, spec-compatible with the Railgun design. Built: `PrivacyPool` and its four modules (`armada-poc`); `Transact.circom` and its 19 shapes (`armada-circuits`).
+- **D14.2** The settlement rail reuses `go-nitro`, patched by six commits (ADR-0004); Railgun's `engine`/`cookbook` served as a reference, not as reused code; the community Perpetual PoT Phase-1 is reused and our own Phase-2 runs **over our own circuits** (ADR-0003 otherwise unchanged); Groth16 stands.
 
 ### ADR-0015 — Cross-chain shielded swap = armada-nitro channels + fronting hubs
 - **D15.1** Clear cross-chain swaps as **Nitro state channels funded and settled from shielded notes, routed through a small set of bonded cross-chain hubs that *front* from standing inventory.** Key choices:
@@ -85,7 +86,7 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
 
 ### ADR-0016 — armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only)
 - **D16.1** Build an **armada-nitro adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains.
-- **D16.2** The DSS is **EVM + Nitro only, no laconicd**: reuse only `chain-signatures`' threshold-Schnorr crypto + kyber DKG/signing *logic*, verified on-chain by the custodian (`SchnorrSECP256K1.sol`); do **not** use laconicd's CometBFT vote-extension transport — signing coordination rides the unified transport (ADR-0008).
+- **D16.2** The DSS is **EVM + Nitro only, no laconicd**: the hub custodian (`HubCustodian.sol`) verifies a threshold signature on-chain with **FROST over secp256k1** (KECCAK-256), via the `frost-secp256k1-evm` library (`lib/frost-secp256k1-evm`, pinned `65d03d0`); signing coordination rides the unified transport (ADR-0008). This is not `chain-signatures`' Schnorr DSS or its kyber DKG: the built custodian verifies with `FROST.verifySignature`, and rotates its group key with `FROST.isValidPublicKey`, not a `SchnorrSECP256K1.sol` contract.
 - **D16.3** The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.
 
 ### ADR-0017 — Hub yield and swaps as channel state

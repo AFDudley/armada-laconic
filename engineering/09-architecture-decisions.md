@@ -53,9 +53,9 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Decision.**
 
-- **D2.1** Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (**T0.0**), configured with **fee = 0**, our token allow-list, and a reserved deposit/payout hook.
+- **D2.1** Stand up our own pool contracts and circuits, matching the Railgun design, under our own control (**T0.0**), with our own fee policy, our token allow-list, and a reserved deposit/payout hook. `armada-poc` built this pool: `PrivacyPool` routes to four modules by `delegatecall`, with no proxy. The deployed shield fee is 50 bps (`scripts/deploy_privacy_pool.ts:264-265`), not fee = 0; the contract default is 0 bps and the owner can raise it to the `MAX_SHIELD_FEE_BPS` cap of 1000 (10%).
 
-**Consequences.** We own upgrades and audit, and revenue comes from venue spread plus watcher metering rather than a pool skim. We do **not** modify Railgun's deployed protocol or touch their live pool. Railgun users move funds in through a wallet action (ADR-0006).
+**Consequences.** We own upgrades and audit, and revenue comes from the shield fee plus yield-adapter fees (`ArmadaFeeModule`) rather than a pool skim set to zero. We do **not** modify Railgun's deployed protocol or touch their live pool. Railgun users move funds in through a wallet action (ADR-0006).
 
 **Alternatives.** Renting Railgun's live pool — which carries their ~0.25% fee, no fee control, and no settlement hook — was rejected.
 
@@ -68,8 +68,8 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 - **D3.1** Keep **Groth16**.
 - **D3.2** Reuse the community **Perpetual Powers of Tau** for Phase-1, and run **our own Phase-2 MPC** over our circuit set.
-- **D3.3** Security rests on a **1-of-N honest** assumption, backed by a published transcript and a final randomness beacon (**T0.1**).
-- **D3.4** Phase-2 is re-run **only** when circuits change — for example, the ADR-0005 fork-lite upgrade.
+- **D3.3** Security rests on a **1-of-N honest** assumption, backed by a published transcript and a final randomness beacon (**T0.1**). The Phase-2 ceremony is open, not finished: the `v1.0.0-ceremony` tag's manifest lists every shape `"status": "open"` with no beacon, and `main` has only `scripts/setup-dev.sh`, which the repo marks unsafe for anything but local testing.
+- **D3.4** Phase-2 is re-run **only** when circuits change — for example, the ADR-0005 fork-lite upgrade, or the selective-disclosure circuit (ADR-0020), which adds shapes to this same ceremony rather than starting a new one.
 
 **Consequences.** There is no universal ceremony, since the expensive and risky part is inherited and vetted. Each circuit-set change costs a few days of MPC, and we take on no dependence on Railgun's specific ceremony instance. On-chain verification and mobile prover performance remain Groth16-cheap.
 
@@ -82,10 +82,10 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 
 **Decision.**
 
-- **D4.1** Build a **deposit/payout contract** (**T0.3**) that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**.
+- **D4.1** Build the deposit/payout boundary (**T0.3**) that funds a `go-nitro` channel from a shielded note and settles the channel outcome back into fresh notes: **notes in → normal Nitro → notes out**.
 - **D4.2** The Nitro game analysis stays isolated from the Railgun privacy analysis; the two meet only at the allocation→note **boundary**.
 
-**Consequences.** We gain optimistic exits and arbitrary ForceMove games with **no new cryptography** and without governance-gated adapters. RelayAdapt is used only for the venue's atomic hedge leg (T4.2), never for settlement. The go-nitro maturity gaps — multi-asset outcomes, dispute wiring, and watchtower response — become our long poles (§11).
+**Consequences.** We gain optimistic exits and arbitrary ForceMove games with **no new cryptography** and without governance-gated adapters. `armada-nitro` built this: `ArmadaNitroAdjudicator` carries the boundary inside the adjudicator contract itself, rather than as a second contract. `depositFromNote` funds a channel from a note, and a `SHIELD`-type allocation in `_executeSingleAssetExit` pays a note back out. There is no separate T0.3 contract and no `fundChannel`. RelayAdapt is not used anywhere in this codebase; no venue hedge leg (T4.2) exists yet.
 
 **Alternatives.** RelayAdapt-only settlement was rejected: it is governance-gated, less expressive, and offers no channel exits.
 
@@ -149,18 +149,19 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Alternatives.** gossipsub-only is worse for 1:1 latency. js-libp2p on React Native is not RN-compatible, which is why the native port exists.
 
 ## ADR-0009
-**State ingestion targets nimbus-eth1; retire plugeth** · accepted · 2026-09-04
+**The proof path is the nimbus verified proxy, not a state-diff emitter** · accepted · 2026-09-04; revised 2026-10-19
 
-**Context.** Watchers need fresh, proof-carrying Ethereum state. Our historical plugeth state-diff fork is badly out of date, and EIP-1186 alone is insufficient for what we emit.
+**Context.** A client on every target must verify Ethereum state against a header that a beacon light client checks: the execution header, storage values (`rootHistory`, `nullifiers`, the adjudicator's slots), the inclusion of one pool or armada-nitro log, and the completeness of a block's pool logs. The docs planned a nimbus-eth1 state-diff emitter mapped into IPLD, served by `watcher-ts`. `status-im/nimbus-eth1` already ships a verified proxy for this purpose (`labbook/2026-10-19-nimbus-verified-proxy-proofs.md`).
 
 **Decision.**
 
-- **D9.1** Target **nimbus-eth1** — stateless/witness execution plus the Aristo state DB — as the state-diff source, mapped into IPLD for proof-carrying diffs (**T1**).
-- **D9.2** We build only enough local cache to compute what we consume, not a full archive EL.
+- **D9.1** Target the **nimbus verified proxy** as the proof path. It anchors headers to a beacon light client, verifies storage with EIP-1186 proofs, and proves a log by rebuilding the block's receipt trie (`eth_getBlockReceipts`), which also proves completeness of that block's logs. `eth_getLogs` ranges are not used for note sync, because an omitted log is undetectable in a range.
+- **D9.2** The proxy runs natively on servers, as WASM in browsers, and as `libverifproxy.a` on mobile once a cross-compile exists (none exists upstream yet). `watcher-ts` becomes an optional, unverified server-side cache; a client re-verifies anything it reads from the cache through the proxy.
+- **D9.3** The nimbus state-diff emitter, an IPLD mapper, and the cerc-io `ipld-eth-server` pipeline are not on the proof path. The pipeline is geth-only and dormant since August 2024, and its receipt data, in the current schema, carries no per-log proof to `receiptsRoot`.
 
-**Consequences.** T1 is the v1 long pole, since the nimbus stateless path is upstream-in-progress. It reuses the cerc-io ipld-eth lineage for codecs and backfill.
+**Consequences.** T1 shrinks from a state-diff emitter build to operating the proxy and patching it for the fixturenet's custom genesis. The client tier gains the WASM and mobile build cost instead. Historical `eth_getProof` still needs an archive execution node behind the proxy.
 
-**Alternatives.** Reviving plugeth was rejected as stale. Bare JSON-RPC offers no proofs. Third-party state-diff services and ExEx were evaluated but not chosen for v1.
+**Alternatives.** The nimbus-eth1 state-diff emitter with IPLD and a `watcher-ts` proof feed (rejected for the proof path: the proxy does the same verification upstream, with less new code). Reviving plugeth (rejected as stale). Bare JSON-RPC offers no proofs.
 
 ## ADR-0010
 **Terminology conventions** · accepted · 2026-09-04
@@ -215,7 +216,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 ## ADR-0013
 **Single engineering team; scope spans the whole Armada product; Laconic is prior art** · accepted · 2026-09-05
 
-**Context.** Earlier docs drew an *Armada-builds-vs-Laconic-builds* ownership boundary (§3; T5 marked "out of Laconic build scope"; the ADR-0012 / §0 WBS treated Armada's Adapters as external). That boundary no longer holds. This is **one engineering team** building **Armada — a Railgun-based privacy product for USDC** (confirmed by Armada's own thesis and docs: Railgun ZK circuits (BN254/Groth16), a shielded USDC pool, non-custodial). **Laconic's existing work — nitro integration, watchers, wallet, chain-signatures, ingestion — is prior art the team reuses**, not a separate vendor's deliverable.
+**Context.** Earlier docs drew an *Armada-builds-vs-Laconic-builds* ownership boundary (§3; T5 marked "out of Laconic build scope"; the ADR-0012 / §0 WBS treated Armada's Adapters as external). That boundary no longer holds. This is **one engineering team** building **Armada — a Railgun-based privacy product for USDC** (confirmed by Armada's own thesis and docs: Railgun ZK circuits (BN254/Groth16), a shielded USDC pool, non-custodial). The team works from the **ship-armada repos** (`armada-poc`, `armada-circuits`, `armada-nitro`, `armada-sdk`, `armada-client`, `armada-relayer`, `armada-interface`), which already carry the pool, the circuits, the adjudicator, and the client SDK. Only `go-nitro`, vendored and then patched, is Laconic prior art still in the build; `watcher-ts`, `ts-nitro`, `@cerc-io/peer`, `mobymask`, `laconic-wallet`, and `chain-signatures` are not in any of the seven repos.
 
 **Decision.**
 
@@ -229,14 +230,14 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 ## ADR-0014
 **Pool + circuits are our own implementation (net-new, audit-critical)** · accepted · 2026-09-05
 
-**Context.** The A deep dive ([A.1](A-nitro-on-railgun/A.1-reuse-inventory.md)) established that the shielded pool and JoinSplit circuits must be authored by us rather than reused as third-party binaries: they carry our fee=0 configuration and the settlement/deposit-payout hook, and we own their upgrade and audit. So ADR-0002 (own pool) and ADR-0003 (own Phase-2) are executed as **our own implementation of the Railgun design**, not a binary reuse. `go-nitro`/`ts-nitro` remain reused as-is; Railgun's `engine`/`cookbook` serve as a behavioral reference.
+**Context.** The shielded pool and the Groth16 circuits are authored by the team rather than reused as third-party binaries: they carry our fee policy and the deposit/payout boundary, and we own their upgrade and audit. ADR-0002 (own pool) and ADR-0003 (own Phase-2) are executed as **our own implementation of the Railgun design**, not a binary reuse. `armada-poc` built the pool; `armada-circuits` built the `Transact(N,M)` circuit. `go-nitro` is reused, then patched (ADR-0004); Railgun's `engine`/`cookbook` served as a behavioral reference during the build.
 
 **Decision.**
 
-- **D14.1** Implement the **shielded-pool contracts** (T0.0) and the **JoinSplit circuits** (T0.1) ourselves — independently authored, spec-compatible with the Railgun design the deep dive documents (A.1.1/A.1.2). Our engineers own this build.
-- **D14.2** Everything else stands: reuse `go-nitro` (T0.2), `ts-nitro` (T6.2), and `engine`/`cookbook` as reference; reuse the community Perpetual PoT Phase-1 and run our own Phase-2 **over our own circuits** (ADR-0003 otherwise unchanged); keep Groth16.
+- **D14.1** The **shielded-pool contracts** (T0.0) and the **`Transact` circuit** (T0.1) are implemented by us — independently authored, spec-compatible with the Railgun design. Built: `PrivacyPool` and its four modules (`armada-poc`); `Transact.circom` and its 19 shapes (`armada-circuits`).
+- **D14.2** The settlement rail reuses `go-nitro`, patched by six commits (ADR-0004); Railgun's `engine`/`cookbook` served as a reference, not as reused code; the community Perpetual PoT Phase-1 is reused and our own Phase-2 runs **over our own circuits** (ADR-0003 otherwise unchanged); Groth16 stands.
 
-**Consequences.** T0.0 and T0.1 are **net-new, audit-critical crypto-engineering** — of a well-understood design that the deep dive de-risks by pinning the exact behavior and format to match. The "integration, not new cryptography" thesis (ADR-0012, §4) holds for the **settlement rail** (T0.2 adjudicator + T0.3 deposit/payout + T6.x) but **not** for the pool/circuits. **A.1 (the reuse inventory) doubles as the reference spec** the implementation follows. T0.6 (native commitment) is a change to our own circuits. Note format may match Railgun, so that one wallet can hold both and the T6.7 move from Railgun is simpler, or diverge — our choice; our anonymity set is separate regardless.
+**Consequences.** T0.0 and T0.1 are **net-new, audit-critical crypto-engineering** — of a well-understood design, now built and tested (`armada-poc`, `armada-circuits` test suites). The "integration, not new cryptography" thesis (ADR-0012, §4) holds for the **settlement rail** (T0.2 adjudicator, which also carries the T0.3 deposit/payout boundary, plus T6.x) but **not** for the pool/circuits. T0.6 (native commitment) is a change to our own circuits, still not built. Note format may match Railgun, so that one wallet can hold both and the T6.7 move from Railgun is simpler, or diverge — our choice; our anonymity set is separate regardless.
 
 **Alternatives.** Use Railgun's live deployed pool directly (rejected — no fee=0, no settlement hook; contradicts ADR-0002's rationale).
 
@@ -266,7 +267,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Decision.**
 
 - **D16.1** Build an **armada-nitro adjudicator** on each Armada chain — ForceMove's dispute machine plus: (a) **note-native custody** (funded by unshield-in, settled by shield-out; folds the T0.3 deposit/payout boundary in); (b) **EIP-1271 contract-signature participants** so a hub's stable **custodian contract** is the channel participant, with the custodian verifying its **hot delegate ECDSA key** internally and **rotating it without changing the channel's `FixedPart`**; (c) **unilateral exit → re-shield** on both chains.
-- **D16.2** The DSS is **EVM + Nitro only, no laconicd**: reuse only `chain-signatures`' threshold-Schnorr crypto + kyber DKG/signing *logic*, verified on-chain by the custodian (`SchnorrSECP256K1.sol`); do **not** use laconicd's CometBFT vote-extension transport — signing coordination rides the unified transport (ADR-0008).
+- **D16.2** The DSS is **EVM + Nitro only, no laconicd**: the hub custodian (`HubCustodian.sol`) verifies a threshold signature on-chain with **FROST over secp256k1** (KECCAK-256), via the `frost-secp256k1-evm` library (`lib/frost-secp256k1-evm`, pinned `65d03d0`); signing coordination rides the unified transport (ADR-0008). This is not `chain-signatures`' Schnorr DSS or its kyber DKG: the built custodian verifies with `FROST.verifySignature`, and rotates its group key with `FROST.isValidPublicKey`, not a `SchnorrSECP256K1.sol` contract.
 - **D16.3** The cold DSS group key gates funds, rotates the delegate, and (multi-entity) slashes; the hot delegate signs states.
 
 **Consequences.** Two small net-new contracts (the adjudicator delta and the custodian) on top of reused ForceMove, threshold-Schnorr, and our own pool implementation — the weight is **audit, not code**. Deploying the adjudicator per chain gives each leg of the hash-locked swap real enforcement (fixing the audited L2-stub gap) and makes unilateral exit real, so hub trust stays liveness-only. Bonding/slashing (T0.4/T2.4) is the multi-entity economic layer (v2). Both DSS codebases are self-declared **unaudited**. Post-v1; depends on ADR-0015. Detail: `shielded-nitro-bridge-design.md`, `nitro-bridge-audit.md`.

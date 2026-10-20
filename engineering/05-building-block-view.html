@@ -22,21 +22,22 @@
 </nav>
 
 <h1 id="5-building-block-view">5. Building Block View</h1>
-<p>arc42 §5 · <strong>2026-09-06</strong></p>
-<p>This section gives the static decomposition of the system. <strong>Level 1</strong> is the seven <strong>tiers</strong> (T0–T6) — horizontal building-block layers running from the on-chain anchor up to the client — and each tier's whitebox detail lives in its own doc (<code>T0-ethereum-anchor.md</code> … <code>T6-client-apps.md</code>). The four <strong>subsystems</strong> — work packages A/B/C/D (<a href="./00-work-packages.html">§0</a>) — are the <strong>vertical slices</strong>: each owns <code>T#.#</code> items across several tiers and consumes the rest across ICDs. Tiers and subsystems are two axes over one item set — the familiar layered view with feature slices crossing it — and the <strong>item registry</strong> below is the single model of record, every buildable item carrying one <code>T#.#</code> id with its <code>status</code> and <code>release</code> facets. (The "lines" of §4/§8 are a third grouping of those same items.)</p>
+<p>arc42 §5 · <strong>2026-10-20</strong></p>
+<p>This section gives the static decomposition of the system. <strong>Level 1</strong> is the seven <strong>tiers</strong> (T0–T6) — horizontal building-block layers running from the on-chain anchor up to the client — and each tier's whitebox detail lives in its own doc (<code>T0-ethereum-anchor.md</code> … <code>T6-client-apps.md</code>). The four <strong>subsystems</strong> — work packages A/B/C/D (<a href="./00-work-packages.html">§0</a>) — are the <strong>vertical slices</strong>: each owns <code>T#.#</code> items across several tiers and consumes the rest across ICDs. Tiers and subsystems are two axes over one item set, and the <strong>item registry</strong> below is the single model of record. Every buildable item carries one <code>T#.#</code> id with its <strong>status</strong>, read from the code, not from a plan.</p>
+<p>The ship-armada repos — <code>armada-poc</code>, <code>armada-circuits</code>, <code>armada-deployments</code>, <code>armada-nitro</code>, <code>armada-sdk</code>, <code>armada-client</code>, <code>armada-relayer</code>, <code>armada-interface</code> — already carry the pool, the circuits, the adjudicator, the client SDK and the web app. This registry states what each item is, cites the code, and marks what remains as a plan. See <code>labbook/2026-10-19-docs-versus-code.md</code> for the audit and the operator rulings that this section follows.</p>
 <h2 id="level-1-the-tier-stack">Level 1 — the tier stack</h2>
-<pre><code> tier                    building blocks                                    owner    release
+<pre><code> tier                    building blocks                                    owner    status
  ------------------------------------------------------------------------------------------
- T6  CLIENT / apps       wallet · light client · self-watchtower · SDK      A·B·D    v1
- T5  ADAPTERS            Swaps · Aave-v4 yield · CCTP                        C        v1
- T4  EXECUTION / venue   posted-price venue + clearing                       C        v1  (matcher v2)
- T3  ORDERING            commit-reveal + beacon · epoch set-agreement · DA   C        v2
- T2  WATCHER substrate   proof-carrying feeds · metering · relay             B        v1  (federation v2)
- T1  INGESTION           nimbus-eth1 state-diff → IPLD → watcher ingest      B        v1
- T0  ETHEREUM anchor     pool · circuits · adjudicator · deposit/payout      A        v1  (econ-security v2)
+ T6  CLIENT / apps       web app (built) · note-scanner · prover · wallet   A·B·D    partly built
+ T5  ADAPTERS            CCTP (built) · Aave-v4 yield (built) · Swaps        C        partly built
+ T4  EXECUTION / venue   posted-price venue + clearing                       C        not built
+ T3  ORDERING            commit-reveal + beacon · epoch set-agreement · DA   C        not built
+ T2  WATCHER substrate   proof verification (nimbus proxy) · relay fee       B        in progress
+ T1  INGESTION           nimbus verified proxy over execution + beacon data  B        in progress
+ T0  ETHEREUM anchor     pool · circuits · adjudicator · governance          A        built/partly built
 </code></pre>
-<p>Read this as a layered building-block view: the tiers are horizontal layers, and the subsystems (A/B/C/D) are vertical slices that cross them — the standard shape of a layered architecture with feature slices. The <code>owner</code> column is each tier's primary subsystem; <strong>T6 is shared</strong> (A owns the settlement client and watchtower, B the note-scanner, D the host, transport, proving, and app). Vertical position is on-chain-to-client proximity and <code>release</code> marks v1/v2 phasing; neither is a strict call-dependency order — for example the ordering tier (T3) is v2-only, and some v2 items (T0.4/T0.5 economic-security, T2.4 federation) light up later inside otherwise-v1 tiers.</p>
-<p><img src="./tiers.svg" alt="Armada tiers and subsystems: T0–T6 horizontal building-block layers crossed by A/B/C/D subsystem slices, coloured by owner with v1/v2 phasing" style="width:100%;height:auto;border:1px solid #223047;border-radius:10px;margin:16px 0"/></p>
+<p>Read this as a layered building-block view: the tiers are horizontal layers, and the subsystems (A/B/C/D) are vertical slices that cross them. The <code>owner</code> column is each tier's primary subsystem; <strong>T6 is shared</strong>. Vertical position is on-chain-to-client proximity. The <code>status</code> column reports what the code holds today, and each item in the registry below carries its own status.</p>
+<p><img src="./tiers.svg" alt="Armada tiers and subsystems: T0–T6 horizontal building-block layers crossed by A/B/C/D subsystem slices" style="width:100%;height:auto;border:1px solid #223047;border-radius:10px;margin:16px 0"/></p>
 
 <table>
 <thead>
@@ -50,268 +51,278 @@
 <tbody>
 <tr>
 <td><strong>T0</strong> Ethereum anchor</td>
-<td>On-chain pool, adjudicator, the deposit/payout settlement boundary, trusted setup, economic-security contracts</td>
-<td>A (T0.4/T0.5 v2)</td>
+<td>On-chain pool, circuits, adjudicator, governance and revenue contracts</td>
+<td>A</td>
 <td><a href="./T0-ethereum-anchor.html"><code>T0-ethereum-anchor.md</code></a></td>
 </tr>
 <tr>
 <td><strong>T1</strong> Ingestion</td>
-<td>Proof-carrying Ethereum state feed (nimbus-eth1 → IPLD → watcher ingest)</td>
+<td>The proof path: the nimbus verified proxy over execution and beacon data</td>
 <td>B</td>
 <td><a href="./T1-ingestion.html"><code>T1-ingestion.md</code></a></td>
 </tr>
 <tr>
 <td><strong>T2</strong> Watcher substrate</td>
-<td>Private, metered, P2P proof-carrying feeds + federation</td>
+<td>A cache the proxy re-verifies, with relay fee and federation attestation</td>
 <td>B</td>
 <td><a href="./T2-watcher-substrate.html"><code>T2-watcher-substrate.md</code></a></td>
 </tr>
 <tr>
-<td><strong>T3</strong> Ordering (v2)</td>
-<td>Provably-fair sequencing for the matcher</td>
-<td>C (v2)</td>
+<td><strong>T3</strong> Ordering (plan)</td>
+<td>Provably-fair sequencing for a future matcher</td>
+<td>C (plan)</td>
 <td><a href="./T3-ordering.html"><code>T3-ordering.md</code></a></td>
 </tr>
 <tr>
-<td><strong>T4</strong> Execution / venue</td>
-<td>Posted-price RFQ clearing + yield rails; v2 matcher</td>
-<td>C</td>
+<td><strong>T4</strong> Execution / venue (plan)</td>
+<td>Posted-price RFQ clearing</td>
+<td>C (plan)</td>
 <td><a href="./T4-execution-venue.html"><code>T4-execution-venue.md</code></a></td>
 </tr>
 <tr>
 <td><strong>T5</strong> Adapters</td>
-<td>Swaps, Aave-v4 yield, CCTP + the routing interface</td>
+<td>CCTP, Aave-v4 yield, and a routing interface; no Swaps contract</td>
 <td>C</td>
 <td><a href="./T5-adapters.html"><code>T5-adapters.md</code></a></td>
 </tr>
 <tr>
 <td><strong>T6</strong> Client / apps</td>
-<td>Wallet, mobile light client, self-watchtower, app</td>
+<td>The <code>armada-interface</code> web app, note-scanner, prover, and SDK</td>
 <td>A · B · D</td>
 <td><a href="./T6-client-apps.html"><code>T6-client-apps.md</code></a></td>
 </tr>
 </tbody>
 </table>
 <h2 id="item-registry-the-single-model">Item registry (the single model)</h2>
-<p>Facets: <strong>status</strong> (<code>net-new</code> · <code>reuse</code> / <code>built/reuse</code> · <code>partial</code>) · <strong>release</strong> (<code>v1</code> ship first · <code>v2</code> later · <code>opt</code>).</p>
+<p>Facets: <strong>status</strong> (<code>built</code> · <code>partly built</code> · <code>not built</code> · <code>in progress</code> — on an unmerged branch) and the code location that proves it. A <code>release</code> of <code>v1</code> was the shipping plan when an item had no code; where the code already stands, the registry drops the plan label and states the fact.</p>
 <h3 id="t0-ethereum-anchor">T0 · Ethereum anchor</h3>
+<p>The pool, the circuits, the adjudicator and the deposit/payout boundary already exist. There is no separate T0.3 contract and no <code>fundChannel</code>; <code>ArmadaNitroAdjudicator</code> carries the T0.2 and T0.3 roles together (ruling 1, <code>labbook/2026-10-19-docs-versus-code.md</code>).</p>
 <table>
 <thead>
 <tr>
 <th>id</th>
 <th>item</th>
 <th>status</th>
-<th>release</th>
+<th>code</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>T0.0</td>
-<td>Shielded pool — our own implementation of the Railgun design (spec-compatible); fee=0 (ADR-0014)</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Shielded pool — <code>PrivacyPool</code>, routed by <code>delegatecall</code> to four modules (<code>ShieldModule</code>, <code>TransactModule</code>, <code>MerkleModule</code>, <code>VerifierModule</code>); no proxy; a 16-deep commitment tree per <code>treeNumber</code>; a token blocklist (USDC exempt); a shield fee (<code>MAX_SHIELD_FEE_BPS = 1000</code>, deployed at 50 bps)</td>
+<td>built</td>
+<td><code>armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol:31,38,46-49</code></td>
 </tr>
 <tr>
 <td>T0.1</td>
-<td>Circuits + trusted setup — our own JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N) (ADR-0014)</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Circuits + trusted setup — one <code>Transact(N,M)</code> circom template, 19 <code>(nIn,nOut)</code> shapes; Groth16; Phase-1 reuses the community Perpetual Powers of Tau; the Phase-2 ceremony is open, not finished (<code>v1.0.0-ceremony</code> manifest lists every shape <code>"status": "open"</code>, no beacon)</td>
+<td>partly built</td>
+<td><code>armada-circuits@ef2682f:src/operations/Transact.circom</code>; tag <code>v1.0.0-ceremony:ceremony/manifest.json</code></td>
 </tr>
 <tr>
 <td>T0.2</td>
-<td>Nitro adjudicator — <code>go-nitro</code> NitroAdjudicator / ForceMove / MultiAssetHolder</td>
-<td>built/reuse</td>
-<td>v1</td>
+<td>Nitro adjudicator — <code>ArmadaNitroAdjudicator</code> extends <code>go-nitro</code>'s <code>NitroAdjudicator</code>; six commits patch the vendored contracts (EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a per-channel reentrancy lock, <code>SafeERC20</code> payout), so this is a patched adjudicator, not a vanilla deploy</td>
+<td>partly built</td>
+<td><code>armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol</code>; <code>git log --oneline -- src/nitro</code></td>
 </tr>
 <tr>
-<td>T0.3</td>
-<td>Deposit/payout contract — the Nitro↔Railgun boundary (notes in / notes out)</td>
-<td>net-new</td>
-<td>v1</td>
+<td>—</td>
+<td>Deposit/payout boundary — merged into T0.2. <code>depositFromNote</code> funds a channel from a shielded note; a <code>SHIELD</code>-type allocation pays a note back out in <code>_executeSingleAssetExit</code>. No <code>fundChannel</code> and no separate contract</td>
+<td>built</td>
+<td><code>armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol:36-50</code></td>
 </tr>
 <tr>
 <td>T0.4</td>
 <td>Registry + bond contract — venue/party bonding</td>
-<td>net-new</td>
-<td>v2</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T0.5</td>
 <td>Sequencing-cert + fraud-proof verifier</td>
-<td>net-new</td>
-<td>v2</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T0.6</td>
-<td>Native channelized commitment — amount-privacy-in-play (change to our own circuits ⇒ re-run T0.1)</td>
-<td>net-new</td>
-<td>opt</td>
+<td>Native channelized commitment — amount-privacy-in-play; a circuit change (optional)</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T0.7</td>
-<td>Anonymity-set strategy — bootstrap the crowd with new users</td>
+<td>Anonymity-set strategy — grow the crowd with the pool's own deposits; the wallet offers a move from Railgun, with its security costs shown before confirmation (ADR-0006, T6.7). No cross-pool proof and no onboarding bridge</td>
 <td>strategy</td>
-<td>v1</td>
+<td>—</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Governance and revenue contracts (not in the earlier registry) — <code>ArmadaGovernor</code> (UUPS, five proposal types, a Security Council veto), <code>ArmadaTreasuryGov</code>, <code>TreasurySteward</code>, <code>ArmadaToken</code> (ERC20Votes, 12M fixed supply), <code>ArmadaCrowdfund</code>, <code>ArmadaWindDown</code>, <code>ArmadaRedemption</code>, <code>AdapterRegistry</code>, <code>RevenueCounter</code>, <code>RevenueLock</code>, <code>RevenueReserveDistributor</code></td>
+<td>built</td>
+<td><code>armada-poc@102f17b8:contracts/governance/</code>, <code>contracts/crowdfund/</code></td>
 </tr>
 </tbody>
 </table>
 <h3 id="t1-ingestion">T1 · Ingestion</h3>
+<p>The proof path is the nimbus verified proxy, not a nimbus-eth1 state-diff emitter into IPLD (ruling 8, brief §4). <code>armada-nitro</code>'s vendored <code>go-nitro</code> and <code>PrivacyPool</code> need no change for this path; the proxy verifies RPC answers upstream of the client.</p>
 <table>
 <thead>
 <tr>
 <th>id</th>
 <th>item</th>
 <th>status</th>
-<th>release</th>
+<th>code</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>T1.0</td>
-<td>State-diff source — nimbus-eth1 stateless/witness + Aristo emitter</td>
-<td>partial</td>
-<td>v1</td>
+<td>Proof source — the nimbus verified proxy (<code>status-im/nimbus-eth1</code>): a native binary, <code>libverifproxy.a</code> with C/Go bindings, and a WASM build; it anchors headers to a beacon light client and verifies storage with EIP-1186 proofs</td>
+<td>in progress (upstream, unintegrated)</td>
+<td><code>nimbus-eth1:engine/blocks.nim:105-128</code>, <code>engine/accounts.nim:26-125</code>, <code>Makefile:346-398</code></td>
 </tr>
 <tr>
 <td>T1.1</td>
-<td>IPLD proof-carrying state diffs</td>
-<td>partial</td>
-<td>v1</td>
+<td>Inclusion and completeness — the proxy fetches <code>eth_getBlockReceipts</code> for a block, rebuilds the receipt trie, and rejects the block if the root disagrees with the header; this proves one log and the completeness of the block's logs. <code>eth_getLogs</code> ranges are not used, because an omitted log is undetectable in a range</td>
+<td>in progress (upstream, unintegrated)</td>
+<td><code>nimbus-eth1:engine/receipts.nim:53-57,132-173</code></td>
 </tr>
 <tr>
 <td>T1.2</td>
-<td>Watcher ingest config — index T0.0 commitments/nullifiers + T0.2/T0.3 events</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Fixturenet patch — the proxy's genesis-parameter loader hard-codes <code>sepolia</code>/<code>hoodi</code>; a custom-network patch is needed to point it at the armada-nitro fixturenet's lighthouse genesis</td>
+<td>not built</td>
+<td><code>nimbus-eth1:engine/genesis_params.nim:48-70</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="t2-watcher-party-substrate">T2 · Watcher-party substrate</h3>
+<h3 id="t2-watcher-substrate">T2 · Watcher substrate</h3>
+<p><code>watcher-ts</code> is the indexer, not a proof-carrying feed; it runs server-side only, on Postgres, and serves an optional, unverified cache. A client re-verifies anything it reads from the cache through the proxy (ruling 7, brief §4).</p>
 <table>
 <thead>
 <tr>
 <th>id</th>
 <th>item</th>
 <th>status</th>
-<th>release</th>
+<th>code</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>T2.0</td>
-<td>Proof-carrying feeds — watcher-ts <code>getStorageAt → {value, proof}</code> GraphQL</td>
-<td>reuse+config</td>
-<td>v1</td>
+<td>Verified feeds — superseded by T1 (the proxy verifies on the client side; no server-side proof-carrying feed is needed)</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T2.1</td>
-<td>Nitro voucher metering — <code>payments.ts</code>; funded at note creation</td>
-<td>reuse+config</td>
-<td>v1</td>
+<td>Relay fee — <code>armada-relayer</code>'s actor charges a flat USDC fee from a gas estimate; not Nitro payment vouchers</td>
+<td>partly built (different mechanism)</td>
+<td><code>armada-relayer:relayer-v2/.../fee-calculator.ts</code></td>
 </tr>
 <tr>
 <td>T2.2</td>
-<td>P2P peer substrate — <code>ts-nitro</code> / <code>@cerc-io/peer</code> (browser/mobile/server)</td>
-<td>reuse</td>
-<td>v1</td>
+<td>Indexer — <code>watcher-ts</code> on a Postgres backend, server-only; today's live indexer is <code>armada-relayer</code>'s Ponder/Postgres watcher, which is out of the plan (ruling 2, <code>labbook/2026-10-19-unified-stack-and-verified-note-sync.md</code>)</td>
+<td>not built (watcher-ts); built (Ponder, to be replaced)</td>
+<td><code>watcher-ts@18ca4e1a:packages/util/src/database.ts:98</code></td>
 </tr>
 <tr>
 <td>T2.3</td>
-<td>Transport — Waku pub/sub + libp2p-noise 1:1; circuit-relay + STUN/TURN; <strong>optional Nym IP-privacy underlay</strong> (opt-in)</td>
-<td>reuse</td>
-<td>v1</td>
+<td>Transport — no Waku, no libp2p anywhere in the client/relayer/interface repos</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T2.4</td>
-<td>Federation + bond + threshold DKG signing — <code>chain-signatures</code> DSS (bond = T0.4)</td>
-<td>partial</td>
-<td>v2</td>
+<td>Federation + bond — independent watchers sign a snapshot CID; a client accepts a CID that several of them sign</td>
+<td>not built (design only)</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<h3 id="t3-ordering-v2">T3 · Ordering (v2)</h3>
+<h3 id="t3-ordering-plan">T3 · Ordering (plan)</h3>
 <table>
 <thead>
 <tr>
 <th>id</th>
 <th>item</th>
 <th>status</th>
-<th>release</th>
+<th>code</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>T3.0</td>
 <td>Commit-reveal sequencer + randomness beacon</td>
-<td>net-new</td>
-<td>v2</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T3.1</td>
 <td>Epoch set-agreement / DA</td>
-<td>net-new</td>
-<td>v2</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T3.2</td>
-<td>DSS attestation — sequencing certs / inclusion receipts (slashing via T0.4/T0.5)</td>
-<td>net-new</td>
-<td>v2</td>
+<td>Attestation — sequencing certs / inclusion receipts</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<h3 id="t4-execution-venue">T4 · Execution / venue</h3>
+<h3 id="t4-execution-venue-plan">T4 · Execution / venue (plan)</h3>
+<p>No venue contract and no matcher exist in <code>armada-poc</code>. These items stay a plan.</p>
 <table>
 <thead>
 <tr>
 <th>id</th>
 <th>item</th>
 <th>status</th>
-<th>release</th>
+<th>code</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>T4.0</td>
-<td>Posted-price contract — <code>priceSetter</code> → governance</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Posted-price contract</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T4.1</td>
-<td>Quote/settle ForceMove app — registered in the T0.3 app registry</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Quote/settle ForceMove app</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T4.2</td>
-<td>Venue solver — automated market-making (internalization, flash-loan hedge, Aave rebalance); <em>v1 fills from static inventory instead</em></td>
-<td>net-new</td>
-<td>v2</td>
+<td>Venue solver</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T4.3</td>
-<td>Fee-split allocation — user / protocol / integrator on channel state</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Fee-split allocation</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T4.4</td>
-<td>ETH yield — shielded wstETH note (intrinsic, non-rebasing)</td>
-<td>config</td>
-<td>v1</td>
+<td>ETH yield — shielded wstETH note; any non-blocklisted ERC-20 can already be shielded, so no new contract is needed</td>
+<td>built (as a consequence of T0.0's design)</td>
+<td><code>armada-poc@102f17b8:contracts/privacy-pool/modules/ShieldModule.sol:261-271</code></td>
 </tr>
 <tr>
 <td>T4.5</td>
-<td>USDC yield — LP-buffered batched Aave rail; saturation → dribble / become-LP</td>
-<td>net-new</td>
-<td>v2</td>
+<td>USDC yield — LP-buffered Aave rail</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T4.6</td>
-<td>ex_net matcher + LP vault (= T4 venue + T3 ordering)</td>
-<td>net-new</td>
-<td>v2</td>
+<td>ex_net matcher + LP vault</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
@@ -322,92 +333,105 @@
 <th>id</th>
 <th>item</th>
 <th>status</th>
-<th>release</th>
+<th>code</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>T5.0</td>
-<td>Adapters — CCTP (built) · Aave-v4 yield · Swaps; build or reuse Railgun Cookbook recipe</td>
-<td>reuse/net-new</td>
-<td>v1</td>
+<td>T5.0a</td>
+<td>CCTP — <code>PrivacyPool</code>/<code>PrivacyPoolClient</code>/<code>CCTPHookRouter</code> implement cross-chain shield/unshield over CCTP v2</td>
+<td>built</td>
+<td><code>armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol:166,196,224</code></td>
+</tr>
+<tr>
+<td>T5.0b</td>
+<td>Aave-v4 yield — <code>ArmadaYieldAdapter</code>/<code>ArmadaYieldVault</code>, through the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding; not a Railgun RelayAdapt/Cookbook recipe, because no RelayAdapt contract exists in this codebase</td>
+<td>built</td>
+<td><code>armada-poc@102f17b8:contracts/yield/ArmadaYieldAdapter.sol:27-40</code></td>
+</tr>
+<tr>
+<td>T5.0c</td>
+<td>Swaps</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T5.1</td>
-<td>Routing interface — how the T4 venue routes to/from the adapters</td>
-<td>interface</td>
-<td>v1</td>
+<td>Routing interface — how a future T4 venue would route to the adapters</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
 <h3 id="t6-client-apps">T6 · Client / apps</h3>
+<p><code>armada-client</code>, meant to host a React Native wallet, has no application code. The live client is <code>armada-interface</code>, a React 19 + Vite web app, wired to <code>armada-sdk</code>.</p>
 <table>
 <thead>
 <tr>
 <th>id</th>
 <th>item</th>
 <th>status</th>
-<th>release</th>
+<th>code</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>T6.0</td>
-<td>Wallet base — laconic-wallet fork; BIP-39/HD/secure-enclave custody</td>
-<td>partial/reuse</td>
-<td>v1</td>
+<td>Wallet base — <code>armada-interface</code> holds keys in browser memory (<code>keyManager.ts</code>); no BIP-39/HD custody, no secure enclave, no React Native code</td>
+<td>built, web only</td>
+<td><code>armada-interface:src/lib/shielded/keyManager.ts</code></td>
 </tr>
 <tr>
 <td>T6.1</td>
-<td>WASM note-scanner + WebView↔RN key bridge</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Note-scanner + prover — browser note scanning and a <code>snarkjs</code> Web Worker Groth16 prover</td>
+<td>built</td>
+<td><code>armada-interface:src/lib/shielded/sync.ts,sdk-prover.ts</code>; <code>armada-sdk@db5757f:src/prover/index.ts</code></td>
 </tr>
 <tr>
 <td>T6.2</td>
-<td>Settlement client — drive T0.3 deposit/payout; channel lifecycle</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Settlement client — drives <code>PrivacyPool</code> shield/transact calls; no code drives an armada-nitro channel lifecycle yet</td>
+<td>partly built</td>
+<td><code>armada-interface:src/features/{shield,transfer-shielded,unshield}/handler.ts</code></td>
 </tr>
 <tr>
 <td>T6.3</td>
-<td>Self-hosted watchtower — challenge response (with T0.2); gated on T2 feed freshness</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Self-hosted watchtower — <code>armada-nitro</code>'s e2e gate harness has a watchtower (<code>env/gates/watchtower/watch.ts</code>); no client watchtower exists</td>
+<td>not built (client); built (test harness only)</td>
+<td><code>armada-nitro@55939ef:env/gates/watchtower/watch.ts</code></td>
 </tr>
 <tr>
 <td>T6.4</td>
-<td>Address rotation + per-venue loyalty keys</td>
-<td>net-new</td>
-<td>v1</td>
+<td>Address rotation + loyalty keys</td>
+<td>not checked</td>
+<td>—</td>
 </tr>
 <tr>
 <td>T6.5</td>
-<td>Mobile transport — native gomobile (go-waku, go-libp2p-noise); interim WebView</td>
-<td>net-new (crux)</td>
-<td>v1</td>
+<td>Mobile transport — one TypeScript client stack on four targets: Linux server, browser, iOS, Android (<code>armada-client</code> <code>docs/SPEC.md</code>); <code>libverifproxy.a</code> has no upstream iOS/Android build yet</td>
+<td>not built</td>
+<td><code>armada-client@78a8fdc:docs/SPEC.md</code></td>
 </tr>
 <tr>
 <td>T6.6</td>
-<td>Groth16 mobile proving — snarkjs-WASM / rapidsnark; artifacts from T0.0/T0.1</td>
-<td>reuse (constraint)</td>
-<td>v1</td>
+<td>Groth16 mobile proving — a browser Web Worker prover exists (T6.1); no native mobile (rapidsnark/mopro) prover</td>
+<td>partly built</td>
+<td>see T6.1</td>
 </tr>
 <tr>
 <td>T6.7</td>
-<td>Armada-branded app + SDK wiring; wallet move from Railgun</td>
-<td>product</td>
-<td>v1</td>
+<td>Armada-branded app + SDK wiring; wallet move from Railgun (the security costs are in T6.7 and §8.2)</td>
+<td>built (app); move from Railgun not built</td>
+<td><code>armada-interface</code></td>
 </tr>
 <tr>
 <td>T6.8</td>
 <td>Identity — optional Self zk-passport attestation</td>
-<td>opt</td>
-<td>opt</td>
+<td>not built</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<p><em>Decisions that shaped these items: <a href="./09-architecture-decisions.html">§9 ADRs</a>. Recurring concerns spanning tiers: <a href="./08-crosscutting-concepts.html">§8 cross-cutting concepts</a>.</em></p>
+<p><em>Decisions that shaped these items: <a href="./09-architecture-decisions.html">§9 ADRs</a>. Recurring concerns spanning tiers: <a href="./08-crosscutting-concepts.html">§8 cross-cutting concepts</a>. Status audit: <code>labbook/2026-10-19-docs-versus-code.md</code>, <code>labbook/2026-10-19-unified-stack-and-verified-note-sync.md</code>, <code>labbook/2026-10-19-nimbus-verified-proxy-proofs.md</code>.</em></p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/05-building-block-view.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

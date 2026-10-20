@@ -114,6 +114,12 @@ Adjudication reveals the stakes of the disputed game, not the user's balance in 
 
 **How the first games are built.** [ADR-0017](./09-architecture-decisions.md#adr-0017): no app per game. Each game is one co-signed reallocation of a multi-asset channel state under `ConsensusApp`. Invariants and contract requirements: [15](./15-hub-yield-and-swaps.md).
 
+## Games with hidden state
+
+A second kind of game keeps its state hidden even in a dispute. `ZkForceMoveApp` (armada-nitro `src/apps/`) accepts a channel state only when the state carries a valid Groth16 proof, checked by the pool's `Snark` library against a verifying key fixed at deployment. `LedgerForceMoveApp` builds on it: each state commits to the parties' balances, and each move proves that the new balances keep the old total without revealing either balance (circuit `Ledger`, armada-circuits `src/operations/Ledger.circom`). It also requires each state's previous commitment to equal the next commitment of the state before it. `BattleshipForceMoveApp` uses the same base for a game whose board stays hidden: the defender proves each hit or miss against its own committed board.
+
+**Two parties per ledger.** The ledger is two-party, which matches the hub topology: every user's channel is with a hub, and user-to-user play runs over virtual channels built from those two-party channels. A ledger commitment hashes every party's balance and one salt with one circomlib `Poseidon(n)`. circomlib 2.0.5 defines Poseidon for state widths up to 17 (`poseidon.circom`), that is at most 16 inputs, so a single-hash commitment covers at most 15 parties. A ledger for more parties needs a tree of Poseidon hashes, which adds constraints to every move. Multi-party ledgers are out of scope.
+
 ## Where this fits
 
 - **Two-party swap walkthrough** (same rail, one direct channel): [13](./13-shielded-swap-walkthrough.md).

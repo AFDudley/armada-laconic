@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Governance audits compared — Armada × Laconic</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="index.html">Overview</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="build-plan.html">Build plan</a>
+  <a href="execution-platform.html">Execution platform</a>
+  <a href="yield-clearing.html">Yield &amp; clearing</a>
+  <a href="mobile-privacy.html">Mobile privacy</a>
+  <a href="glossary.html">Glossary</a>
+  <a href="laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="builder-codes.html">Builder codes</a>
+  <a href="engineering/README.html">Engineering</a>
+</nav>
+
+<h1 id="governance-audits-compared-threat-model-and-coverage">Governance audits compared: threat model and coverage</h1>
+<p class="lede">Two audits examined the Armada governance contracts: the Armada external audit and the Laconic audit. This page compares what each audit assumed, what each audit examined, and how each audit proved its results. It does not describe individual open findings.</p>
+
+<p>
+  <span class="tag">governance</span>
+  <span class="tag">coverage comparison</span>
+  <span class="tag">no finding details</span>
+</p>
+
+<div class="note">
+<strong>Scope of this page.</strong> This page compares coverage and method only. It does not give attack steps, function names, line references, or timelines for findings that are open. The governance code and its specification changed after both audits, so each result needs a new check against the current code.
+</div>
+
+<h2 id="audits">1. The two audits</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Armada external audit</th>
+<th>Laconic audit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Contracts</td>
+<td>Crowdfund, token, governor, treasury, steward, wind-down, redemption, revenue counter, revenue lock, adapter registry, pause controller</td>
+<td>Governor, timelock, token delegation, treasury, revenue counter, wind-down, pause controller, monitoring specification</td>
+</tr>
+<tr>
+<td>Question</td>
+<td>Does the code do what the specification says, and is the code safe?</td>
+<td>Can a voting bloc take the treasury, and what can honest holders do to stop it?</td>
+</tr>
+<tr>
+<td>Threat model</td>
+<td>A bloc that can pass governance proposals is a trusted party</td>
+<td>A bloc that can pass governance proposals is the attacker</td>
+</tr>
+<tr>
+<td>Proof</td>
+<td>Executable tests for each finding. The auditors also checked the fixes. Formal verification of selected invariants.</td>
+<td>Code reading with cited lines. The findings are candidates. No fork tests yet.</td>
+</tr>
+<tr>
+<td>Severity scale</td>
+<td>Impact × likelihood matrix</td>
+<td>Severity and difficulty scales, applied to each candidate</td>
+</tr>
+</tbody>
+</table>
+<h2 id="threat-model">2. The main difference: who is the attacker</h2>
+<p>The Armada external audit lists governance majority power as a centralization risk. In that model, the timelock delays, the Security Council veto, and the delay on outflow increases make sure that no single role can take value alone.</p>
+<p>The Laconic audit starts from the opposite assumption. It asks what happens when a bloc controls enough votes to pass one proposal of the highest tier. It then asks whether each check in the list above still holds against that bloc.</p>
+<p>The two conclusions do not contradict each other. They answer different questions. The external audit result is valid only while the governance majority stays honest. The Laconic audit examines the case where the majority does not stay honest.</p>
+<h2 id="coverage">3. Coverage by area</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Armada external audit</th>
+<th>Laconic audit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capture of governance by a voting bloc</td>
+<td>Recorded as a trust assumption</td>
+<td>Primary subject</td>
+</tr>
+<tr>
+<td>What the execution layer can reach</td>
+<td>Not examined as a separate area</td>
+<td>Examined</td>
+</tr>
+<tr>
+<td>Security Council veto and ratification</td>
+<td>Correctness of the proposal state machine</td>
+<td>Whether the veto holds against a bloc with quorum</td>
+</tr>
+<tr>
+<td>Vote delegation</td>
+<td>Agreement with the specification</td>
+<td>Misuse of the delegation authority</td>
+</tr>
+<tr>
+<td>Proposal classification</td>
+<td>Bypasses of the classification rules, consistency of the registries</td>
+<td>Changes that governance can make to its own rules</td>
+</tr>
+<tr>
+<td>Wind-down</td>
+<td>Correctness of the trigger, risk that governance delays it</td>
+<td>Availability of the holder exit during a capture</td>
+</tr>
+<tr>
+<td>Ownership of governance-owned contracts</td>
+<td>Initialization checks, storage layout</td>
+<td>Access control after deployment</td>
+</tr>
+<tr>
+<td>Monitoring</td>
+<td>Event and function names in the specification that do not match the code</td>
+<td>Absence of governance alerts</td>
+</tr>
+<tr>
+<td>Completeness of the specification</td>
+<td>Item-by-item comparison of the specification and the code</td>
+<td>Missing list of the powers that governance holds</td>
+</tr>
+<tr>
+<td>Steward spending channel</td>
+<td>Examined</td>
+<td>Examined as part of the capture model</td>
+</tr>
+<tr>
+<td>Revenue accounting</td>
+<td>Examined</td>
+<td>Out of scope</td>
+</tr>
+<tr>
+<td>Redemption arithmetic</td>
+<td>Examined</td>
+<td>Out of scope</td>
+</tr>
+<tr>
+<td>Crowdfund</td>
+<td>Examined</td>
+<td>Out of scope</td>
+</tr>
+</tbody>
+</table>
+<h2 id="agreement">4. Where the audits agree</h2>
+<p>Both audits identified the proposal classification rules and the wind-down parameters as areas of concern. The external audit recorded them as centralization risks. The Laconic audit recorded them as findings. An executable test from the external audit shows that each of these code paths exists.</p>
+<h2 id="method">5. Where the audits differ in method</h2>
+<ul>
+<li><strong>Proof.</strong> The external audit gives a test for each finding. The Laconic audit gives cited code lines and lists the fork test that each candidate needs.</li>
+<li><strong>Fix status.</strong> The external audit records the response of the Armada team to each finding and checks the fixes. The Laconic audit has no fix cycle yet.</li>
+<li><strong>Use of the specification.</strong> The external audit measures the code against the specification. The Laconic audit also asks whether the specification states the requirements that the code must meet.</li>
+</ul>
+<h2 id="next">6. What follows from the comparison</h2>
+<ol>
+<li>The external audit conclusion depends on an honest governance majority. A reader must not read it as proof that the treasury is safe against a captured majority.</li>
+<li>The Laconic findings are candidates. Each one needs a fork test before it is reported as confirmed.</li>
+<li>The governance code and its specification changed after both audits. The changes include the quorum floor, the quiet period, the veto ratification period, the Security Council pause, and the outflow floors. Both sets of results need a new check against the current code.</li>
+<li>The two audits together cover more than either audit alone. The external audit covers revenue, redemption, and the crowdfund. The Laconic audit covers the governance capture case.</li>
+</ol>
+
+<hr/>
+<p class="small">Generated from <code>governance-audit-comparison.md</code> by <code>tools/render.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+for (const code of document.querySelectorAll("code.language-mermaid")) {
+  const div = document.createElement("div");
+  div.className = "mermaid";
+  div.textContent = code.textContent;
+  (code.closest("pre") || code).replaceWith(div);
+}
+mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+mermaid.run();
+</script>
+
+</body>
+</html>

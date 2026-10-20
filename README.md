@@ -37,6 +37,9 @@ Armada builds the crypto core; Laconic provides the substrate around it and the 
 - **[glossary.html](./glossary.html)** — *Glossary.* Terms and word-collisions across the
   three worlds — Vulcanize/Laconic/cerc-io, Nitro state channels, and Railgun/Armada —
   disambiguating overloaded words (relay, watcher/watchtower, swap, adapter, layer/tier).
+- **[governance-audit-comparison.html](./governance-audit-comparison.html)** — *Governance
+  audits compared.* The threat model, the coverage, and the method of the Armada external
+  audit and the Laconic audit. It gives no details of open findings.
 
 ## Code
 

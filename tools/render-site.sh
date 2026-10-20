@@ -25,6 +25,7 @@ PAGES=(
   "builder-codes.md|builder-codes.html|Builder codes, attribution & liquidity — Armada × Laconic"
   "mobile-proving-research.md|mobile-proving-research.html|Mobile ZK proving — research note — Armada × Laconic"
   "armada-metalex-plan.md|armada-metalex-plan.html|armada-metalex: plan — Armada × MetaLeX"
+  "governance-audit-comparison.md|governance-audit-comparison.html|Governance audits compared — Armada × Laconic"
 )
 
 for page in "${PAGES[@]}"; do

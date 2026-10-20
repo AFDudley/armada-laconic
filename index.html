@@ -35,7 +35,7 @@ Armada is asset-privacy infrastructure for USDC: a shielded pool, spec-compatibl
 </div>
 
 <h2 id="settlement-over-nitro-built">Settlement over Nitro — built</h2>
-<p><code>ArmadaNitroAdjudicator</code> carries the deposit/payout boundary inside itself: a shielded note funds a Nitro channel (<code>depositFromNote</code>), the channel runs off-chain, and a <code>SHIELD</code>-type allocation shields the outcome back into fresh notes on payout. There is no separate boundary contract and no <code>fundChannel</code>. Because the movement happens off-chain, there is no per-transaction event on the pool to link against.</p>
+<p><code>ArmadaNitroAdjudicator</code> carries the deposit/payout boundary inside itself: a shielded note funds a Nitro channel (<code>depositFromNote</code>), the channel runs off-chain, and a <code>SHIELD</code>-type allocation shields the outcome back into fresh notes on payout. Because the movement happens off-chain, there is no per-transaction event on the pool to link against.</p>
 <ul>
 <li><strong>Clears the exchange.</strong> Not built. No posted-price venue or matcher exists yet; swaps and yield that clear through a venue remain a plan.</li>
 <li><strong>Moves value across chains.</strong> CCTP is built: <code>PrivacyPool</code>/<code>PrivacyPoolClient</code>/<code>CCTPHookRouter</code> shield and unshield across chains, USDC-only. The hub-fronted cross-chain-swap design over Nitro channels (see <code>shielded-nitro-bridge-design.html</code>) is not built; <code>HubCustodian</code> exists and signs with FROST, but no client drives a channel through it yet.</li>

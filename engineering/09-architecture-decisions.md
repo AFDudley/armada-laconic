@@ -262,7 +262,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 ## ADR-0016
 **armada-nitro adjudicator + DSS custodian/delegate (EVM + Nitro only)** · accepted · 2026-09-10 · v1.5 capability
 
-**Context.** Cross-chain shielded swaps (ADR-0015) need on-chain enforcement of channel outcomes on **every** participating chain, and each hub must be a threshold-key (DSS) principal, not a single EOA. Two audited facts constrain the design: `go-nitro`'s ForceMove verifies state signatures by hard ECDSA `ecrecover` against fixed participant addresses — **no pluggable verifier**; and `chain-signatures` is a threshold **Schnorr** DSS. The laconic integration that would bind the DSS to Nitro is declared-but-unbuilt and CometBFT-coupled.
+**Context.** Cross-chain shielded swaps (ADR-0015) need on-chain enforcement of channel outcomes on **every** participating chain, and each hub must be a threshold-key (DSS) principal. `go-nitro`'s ForceMove verifies state signatures by hard ECDSA `ecrecover` against fixed participant addresses — **no pluggable verifier**.
 
 **Decision.**
 

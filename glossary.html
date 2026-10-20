@@ -167,10 +167,6 @@
 <td>the threshold-signature scheme <code>armada-nitro</code>'s <code>HubCustodian</code> actually verifies: FROST over secp256k1 (KECCAK-256), via the <code>frost-secp256k1-evm</code> library.</td>
 </tr>
 <tr>
-<td><strong>chain-signatures</strong></td>
-<td>library: <code>ethschnorr</code> + <code>ethdss</code> (Distributed Schnorr, Stinson–Strobl <em>(t,n)</em>) on a <code>kyber</code> DKG. <strong>Not used anywhere in the ship-armada repos.</strong> <code>HubCustodian</code> uses FROST instead (see above). Gitea.</td>
-</tr>
-<tr>
 <td><strong>nimbus-eth1</strong></td>
 <td>Nim Ethereum L1 execution client. Its stateless/witness execution path and its verified proxy (<code>libverifproxy</code>) are the proof path Armada's docs now target (ADR-0009); <strong>unintegrated</strong>: no Armada repo runs it yet. GitHub.</td>
 </tr>
@@ -189,10 +185,6 @@
 <tr>
 <td><strong>Laconic Matchmaker</strong></td>
 <td>"Laconic Matchmaking Services" (2022): privacy-preserving, broker-dealer-compliant matching via encrypted set-intersection / range matching (FHE).</td>
-</tr>
-<tr>
-<td><strong>DSS</strong></td>
-<td>Distributed Schnorr Signature over a <code>kyber</code> DKG, as <code>chain-signatures</code> would provide it. <strong>Not built; not used anywhere in the ship-armada repos.</strong> <code>HubCustodian</code> uses FROST instead (see above).</td>
 </tr>
 <tr>
 <td><strong>Deepstack</strong></td>
@@ -248,8 +240,7 @@
 <li><strong>Filler-filtered order</strong> — an order carrying an allowlist of who may fill it; empty ⇒ open (lit/CLOB), non-empty ⇒ private/RFQ.</li>
 <li><strong>CLOB / RFQ</strong> — Central Limit Order Book (public, lit) / Request-for-Quote (bilateral, private). The matcher unifies both in one order type.</li>
 <li><strong>LP vault</strong> — pooled market-making capital run by a keeper (lets passive LPs participate).</li>
-<li><strong>Threshold Schnorr / DKG / t-of-n</strong> — a design for a future federation signature; no threshold scheme is chosen for T3. <code>HubCustodian</code> uses FROST for a different purpose (channel-participant signing, ADR-0016).</li>
-<li><strong>DSS</strong> — Distributed Schnorr Signature, a Stinson–Strobl <em>(t,n)</em> design over a <code>kyber</code> DKG. <strong>Not built and not used anywhere in the ship-armada repos.</strong></li>
+<li><strong>Threshold Schnorr / DKG / t-of-n</strong> — a design for a future federation signature; no threshold scheme is chosen for T3.</li>
 <li><strong>Perpetual PoT (Phase-1)</strong> — Community Perpetual Powers of Tau: the universal, inherited and vetted Groth16 trusted-setup phase. Reused as-is (<strong>T0.1</strong>, ADR-0003).</li>
 <li><strong>Phase-2</strong> — per-circuit MPC over our circuit set; security is <strong>1-of-N honest</strong>, with a published transcript plus a final randomness beacon. Re-run only when circuits change (our own, <strong>T0.1</strong>, ADR-0003).</li>
 <li><strong>Design A / Design B</strong> — <strong>A</strong> (this project, default v1): boundary privacy via a Railgun-style shielded pool + deposit/payout contract; the venue is a blind matcher but sees trade amounts/terms. Amounts are public only at the transparent boundary (ADR-0005). <strong>B</strong> (deferred, v3): ZK matching + "shielded ForceMove" to hide amounts/terms from the venue itself.</li>

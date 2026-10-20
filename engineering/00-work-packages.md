@@ -22,7 +22,7 @@ This is the work breakdown: the deliverable-oriented decomposition of the progra
 
 ## What remains
 
-The full ordered sequence, with chunks, points and hours, is [`build-plan.md`](./build-plan.md). In short: the Phase-2 ceremony (no shape has a published, multi-party transcript yet); the proof path (operate the nimbus proxy, patch the fixturenet genesis, ship a WASM build and mobile cross-compiles); a non-upgradeable contract-owned-notes pool deploy; a Baal treasury governance migration; hidden-balance ZK channel apps on armada-nitro; a settlement-client channel lifecycle and watchtower (`armada-client` Phases 1–3); a venue (the least mature part of the plan, with no code and no near-term dependency forcing it).
+The full ordered sequence, with chunks, points and hours, is [`build-plan.md`](./build-plan.md). In short: a non-upgradeable contract-owned-notes pool deploy and hidden-balance ZK channel apps on armada-nitro (in progress, briefs already written); a Baal treasury governance migration and the armada-nitro side of contract-owned collateral, once the pool's owner-auth path lands; a settlement-client channel lifecycle and watchtower (`armada-client` Phases 1–3) and the proof path (operate the nimbus proxy, patch the fixturenet genesis, ship a WASM build and mobile cross-compiles); the Phase-2 ceremony (no shape has a published, multi-party transcript yet); a venue (the least mature part of the plan, with no code and no near-term dependency forcing it).
 
 ## Interface contracts, as built
 
@@ -33,7 +33,7 @@ The full ordered sequence, with chunks, points and hours, is [`build-plan.md`](.
 
 ## Sequencing
 
-The one ordered sequence of stages is [`build-plan.md`](./build-plan.md). At a high level: the on-chain anchor is already built, so it is the baseline everything else targets; the `armada-client` daemon and the proof path run next, in parallel, because they unblock the most later work; the contract-owned-notes pool deploy and the hidden-balance ZK channel apps follow, feeding the Baal treasury governance migration, the client's channel/watchtower phase, and client support for the new artifacts; a venue, the watcher federation, and the v2/deferred backlog come last.
+The one ordered sequence of stages is [`build-plan.md`](./build-plan.md). At a high level: the on-chain anchor is already built, so it is the baseline everything else targets; the contract-owned-notes pool deploy and the hidden-balance ZK channel apps are in progress now; the Baal treasury governance migration and the armada-nitro side of contract-owned collateral follow, once the pool's owner-auth path lands; the `armada-client` daemon, the proof path, and client verified reads come next; the client's channel/watchtower phase and client support for the new artifacts follow that; a venue, the watcher federation, and the v2/deferred backlog come last.
 
 ## Relationship to the arc42 docs
 

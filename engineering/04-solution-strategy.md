@@ -125,24 +125,23 @@ The full stage-by-stage sequence, with chunks, points and 5090 hours, is
    (adjudicator with the merged deposit/payout boundary), the CCTP and Aave-v4
    adapters, the v1 governance/revenue contracts, the FROST hub custodian core, and
    the web wallet. Nothing later needed to wait for these; they already exist.
-- **Next.** Two independent tracks run first: the `armada-client` daemon (Phase 1)
-  and the proof path (patch the fixturenet genesis, operate the nimbus verified
-  proxy, run the first proof). Both unblock the most later work — client reads and
-  every later client phase depend on them.
-- **Then, in parallel.** A non-upgradeable, contract-owned-notes pool deploy and a
-  generic ZK `IForceMoveApp` for hidden-balance channels (209-point list families
-  F1 and F2). Both feed a Baal treasury governance migration and the
-  armada-nitro side of contract-owned collateral (F3 and F4), which in turn feed
-  client support for the new artifacts (F5) and the `armada-client` channel/
-  watchtower phase (Phase 2).
+- **In progress.** A non-upgradeable, contract-owned-notes pool deploy and a generic
+  ZK `IForceMoveApp` for hidden-balance channels (209-point list families F1 and F2).
+  Briefs for both are written and workers start on them first (operator ruling,
+  2026-10-20).
+- **Next.** A Baal treasury governance migration and the armada-nitro side of
+  contract-owned collateral (F3 and F4), both once the contract-owned-notes pool's
+  owner-auth path (P2) lands. Then the `armada-client` daemon (Phase 1), the proof
+  path, and client verified reads. Then the `armada-client` channel/watchtower phase
+  (Phase 2) and client support for the new artifacts (F5).
 - **Later.** Mobile (`armada-client` Phase 3), the watcher federation, the
   production Phase-2 ceremony, venue v1, the v2/deferred backlog, and the
   Sepolia-then-mainnet cutover, in that rough order — everything proven on the
   fixturenet before Sepolia, and on Sepolia before mainnet.
 
 The walking skeleton above is the first integration target inside this sequence,
-not a separate track: it becomes concrete once the proof path (next) and the
-contract-owned-notes pool (then) exist.
+not a separate track: it becomes concrete once the contract-owned-notes pool and
+the proof path exist.
 
 ---
 

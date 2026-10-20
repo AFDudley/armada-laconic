@@ -26,9 +26,10 @@
 <p>The <a href="./05-building-block-view.html">Building Block View (§5)</a> is the structure and the <a href="./09-architecture-decisions.html">ADRs (§9)</a> are the decisions; this page is the <strong>one ordered sequence of stages</strong> that gets the system from what is built today to what remains. Every stage states its goal, the items it delivers, what it depends on, its status, and its acceptance check. Done stages come first.</p>
 <p>Points and hours use <a href="./estimation-method.html"><code>estimation-method.md</code></a>: one point is 10,000 tokens of peak context; a chunk is one worker's one-session unit of work; one 30-minute session completes about 10 points, or two small (≤5-point) chunks. A stage's hours are its session count × 0.5. Built items have no chunks.</p>
 <p><strong>Live state.</strong> <a href="../notes/handoff-2026-10-20.html"><code>notes/handoff-2026-10-20.md</code></a>, section 0, records the status of every stage and chunk, updated whenever one changes. This page keeps stage status at the level done / in progress / next / later; the handoff note carries the day-to-day detail.</p>
-<p><strong>Review.</strong> The family's husband reviews every chunk before it merges, with extra care on the audit-critical chunks P1, P2, N1, N2 and G3. There is no separate reviewer step (operator ruling, CHUNK-RULES.md rule 2).</p>
-<p><strong>Acceptance.</strong> Every chunk's acceptance reuses the armada-nitro environment — the laconic-so fixturenet and reconciler, and the gates under <code>armada-nitro/env/gates/</code>: <code>nitro-e2e</code>, <code>pool-e2e</code>, <code>watchtower</code>, <code>hub-custodian-frost</code>. A chunk that changes the pool, the circuits, governance or the SDK extends one of these gates (a new step, or a new gate directory beside them) rather than building a separate harness (operator ruling, CHUNK-RULES.md rule 3). The gate chunks G7, N7, N8 and C5 are extensions of these gates. Everything is proven on the fixturenet before Sepolia, and on Sepolia before mainnet (CHUNK-RULES.md rule 4).</p>
-<p><strong>Routing.</strong> A chunk's route is <code>5090</code> at up to 9 points; above 9 points it splits or starts on Sonnet (<code>estimation-method.md</code> §2, §4). Every pebble is filed starting on the 5090 regardless of route; a worker that outgrows the window escalates to Sonnet through <code>contextPromotion</code> (CHUNK-RULES.md rule 1). Circuit chunks carry extra routing risk because circom on the 27B model is unmeasured; P1 and N5 are flagged below.</p>
+<p><strong>Review.</strong> The family's husband reviews every chunk before it merges, with extra care on the audit-critical chunks P1, P2a, P2b, N1, N2 and G3. There is no separate reviewer step (operator ruling, CHUNK-RULES.md rule 2).</p>
+<p><strong>Acceptance.</strong> Every chunk's acceptance reuses the armada-nitro environment — the laconic-so fixturenet and reconciler, and the gates under <code>armada-nitro/env/gates/</code>: <code>nitro-e2e</code>, <code>pool-e2e</code>, <code>watchtower</code>, <code>hub-custodian-frost</code>. A chunk that changes the pool, the circuits, governance or the SDK extends one of these gates (a new step, or a new gate directory beside them) rather than building a separate harness (operator ruling, CHUNK-RULES.md rule 3). The gate chunks G7a/G7b, N7, N8 and C5 are extensions of these gates. Everything is proven on the fixturenet before Sepolia, and on Sepolia before mainnet (CHUNK-RULES.md rule 4).</p>
+<p><strong>Routing.</strong> A chunk's route is <code>5090</code> at up to 9 points; above 9 points it splits or starts on Sonnet (<code>estimation-method.md</code> §2, §4). P2 and G7 are split below because they exceeded 9 points. Every pebble is filed starting on the 5090 regardless of route; a worker that outgrows the window escalates to Sonnet through <code>contextPromotion</code> (CHUNK-RULES.md rule 1). Circuit chunks carry extra routing risk because circom on the 27B model is unmeasured; P1 and N5 are flagged below.</p>
+<p><strong>Decisions.</strong> Lab book entries, not ADRs, record decisions for now (operator ruling, 2026-10-19/20). This plan does not schedule new ADR writing.</p>
 <h2 id="stage-list">Stage list</h2>
 <table>
 <thead>
@@ -46,37 +47,37 @@
 </tr>
 <tr>
 <td>S2</td>
-<td>armada-client Phase 1: daemon with wallet and relayer, e2e on the fixturenet</td>
-<td>next</td>
+<td>Contract-owned notes: a non-upgradeable pool deploy with owner-authorized spends</td>
+<td>in progress</td>
 </tr>
 <tr>
 <td>S3</td>
-<td>Proof path: patch the fixturenet genesis, operate the nimbus verified proxy, run the first proof</td>
-<td>next</td>
+<td>Hidden-balance ZK channel apps on armada-nitro: the generic <code>IForceMoveApp</code></td>
+<td>in progress</td>
 </tr>
 <tr>
 <td>S4</td>
-<td>Client verified reads: the Armada verification library, the browser WASM proxy, the mobile <code>libverifproxy.a</code> cross-compiles</td>
-<td>next</td>
-</tr>
-<tr>
-<td>S5</td>
-<td>Contract-owned notes: a non-upgradeable pool deploy with owner-authorized spends</td>
-<td>next</td>
-</tr>
-<tr>
-<td>S6</td>
-<td>Hidden-balance ZK channel apps on armada-nitro: the generic <code>IForceMoveApp</code></td>
-<td>next</td>
-</tr>
-<tr>
-<td>S7</td>
 <td>Baal treasury governance: a Safe-owned treasury replaces the v1 custom governor</td>
 <td>next</td>
 </tr>
 <tr>
-<td>S8</td>
+<td>S5</td>
 <td>armada-nitro side of contract-owned collateral: commitments as channel collateral</td>
+<td>next</td>
+</tr>
+<tr>
+<td>S6</td>
+<td>armada-client Phase 1: daemon with wallet and relayer, e2e on the fixturenet</td>
+<td>next</td>
+</tr>
+<tr>
+<td>S7</td>
+<td>Proof path: patch the fixturenet genesis, operate the nimbus verified proxy, run the first proof</td>
+<td>next</td>
+</tr>
+<tr>
+<td>S8</td>
+<td>Client verified reads: the Armada verification library, the browser WASM proxy, the mobile <code>libverifproxy.a</code> cross-compiles</td>
 <td>next</td>
 </tr>
 <tr>
@@ -91,46 +92,268 @@
 </tr>
 <tr>
 <td>S11</td>
-<td>Document the governance, contract-owned-notes and channel-app decisions</td>
-<td>next</td>
-</tr>
-<tr>
-<td>S12</td>
 <td>armada-client Phase 3: mobile (React Native, mobile prover, Android compliance, UI)</td>
 <td>later</td>
 </tr>
 <tr>
-<td>S13</td>
+<td>S12</td>
 <td>Watcher federation and the optional <code>watcher-ts</code> cache</td>
 <td>later</td>
 </tr>
 <tr>
-<td>S14</td>
+<td>S13</td>
 <td>The production Phase-2 ceremony over the final shape set</td>
 <td>later</td>
 </tr>
 <tr>
-<td>S15</td>
+<td>S14</td>
 <td>Venue v1: posted-price RFQ, quote/settle app, fee-split</td>
 <td>later</td>
 </tr>
 <tr>
-<td>S16</td>
+<td>S15</td>
 <td>v2 / deferred backlog: ordering, venue solver, LP-buffered USDC yield, ex_net matcher, Swaps, routing interface, registry + bond, fraud-proof verifier, native commitment, address-rotation audit, optional identity</td>
 <td>later</td>
 </tr>
 <tr>
-<td>S17</td>
+<td>S16</td>
 <td>Sepolia proof, external audit, mainnet cutover</td>
 <td>later</td>
 </tr>
 </tbody>
 </table>
+<p>Order (operator ruling, 2026-10-20): the next work dispatched is, in this order of waves — S2 and S3 in wave 1; S4 and S5 in wave 2, both after P2b. Briefs for all four families (P, N-zk-app, G, N-collateral) are already written and workers start on them first, so S2–S5 sit directly after S1, ahead of the client and proof-path stages.</p>
 <h2 id="s1-foundation-done">S1 — Foundation (done)</h2>
-<p><strong>Delivers:</strong> T0.0, T0.1 (circuits compiled; Phase-2 open), T0.2, T5.0a, T5.0b, T6.0, T6.1, T6.2 (partly); the governance/revenue row of §5 T0 (<code>ArmadaGovernor</code>, <code>ArmadaTreasuryGov</code>, <code>TreasurySteward</code>, <code>ArmadaToken</code>, <code>ArmadaCrowdfund</code>, <code>ArmadaWindDown</code>, <code>ArmadaRedemption</code>, <code>AdapterRegistry</code>, <code>RevenueCounter</code>, <code>RevenueLock</code>, <code>RevenueReserveDistributor</code>); <code>HubCustodian.sol</code> (FROST over secp256k1, <code>frost-secp256k1-evm</code>) — built but not yet a registered <code>T#.#</code> id.</p>
+<p><strong>Delivers:</strong> T0.0, T0.1 (circuits compiled; Phase-2 open), T0.2, T5.0a, T5.0b, T6.0, T6.1, T6.2 (partly); the governance/revenue row of §5 T0 (<code>ArmadaGovernor</code>, <code>ArmadaTreasuryGov</code>, <code>TreasurySteward</code>, <code>ArmadaToken</code>, <code>ArmadaCrowdfund</code>, <code>ArmadaWindDown</code>, <code>ArmadaRedemption</code>, <code>AdapterRegistry</code>, <code>RevenueCounter</code>, <code>RevenueLock</code>, <code>RevenueReserveDistributor</code>); <code>HubCustodian.sol</code> — built but not yet a registered <code>T#.#</code> id.</p>
 <p><strong>Depends on:</strong> nothing.</p>
 <p><strong>Acceptance (already true):</strong> <code>armada-poc</code>'s and <code>armada-circuits</code>' Hardhat/TS and Foundry (fuzz, invariant, Halmos) suites pass; <code>armada-nitro</code>'s <code>pool-e2e</code>, <code>nitro-e2e</code> and <code>hub-custodian-frost</code> gates are green against the armada-nitro environment's fixturenet.</p>
-<h2 id="s2-armada-client-phase-1-next">S2 — armada-client Phase 1 (next)</h2>
+<h2 id="s2-contract-owned-notes-in-progress">S2 — Contract-owned notes (in progress)</h2>
+<p><strong>Goal:</strong> the pool deploys non-upgradeable, with owner-authorized contract-owned spends, so a Safe treasury can hold notes directly.</p>
+<p><strong>Delivers:</strong> a hardened T0.0 deploy; new T0.1 circuit shapes.</p>
+<p><strong>Depends on:</strong> S1.</p>
+<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7); P2 is split into P2a and P2b, each at or under the 9-point cap.</p>
+<table>
+<thead>
+<tr>
+<th>Chunk</th>
+<th>Deliverable</th>
+<th>Depends on</th>
+<th style="text-align: right;">Pts</th>
+<th>Route</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1</td>
+<td>Contract-owned <code>Transact</code> variant, differential tests, manifest shapes</td>
+<td>—</td>
+<td style="text-align: right;">9</td>
+<td>5090 (circom; unmeasured, flagged for escalation)</td>
+</tr>
+<tr>
+<td>P2a</td>
+<td>Owner auth path, preimage registry</td>
+<td>P1</td>
+<td style="text-align: right;">6</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>P2b</td>
+<td>Fee-tagged outputs, pool-level <code>cumulativeFees</code>, <code>ShieldModule</code> fee note, tests</td>
+<td>P2a</td>
+<td style="text-align: right;">5</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>P4</td>
+<td>Phase-2 run for the new shapes</td>
+<td>P1</td>
+<td style="text-align: right;">4</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>Non-upgradeable deployment: constructor keys, no proxy, deploy script</td>
+<td>P2b, P4</td>
+<td style="text-align: right;">6</td>
+<td>5090</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Stage total:</strong> 30 points, 4 sessions, 2.0 h.</p>
+<p><strong>Acceptance:</strong> P1 — a differential test of the variant against captured vectors, extends <code>armada-circuits</code>' own suite; P2a/P2b — <code>forge test</code> for the owner path and the fee registry, extends <code>pool-e2e</code>'s coverage; P3 — the non-upgradeable deploy script, checked by the reconciler's <code>armada</code> module <code>verify</code> step; P4 — <code>snarkjs zkey verify</code> over the new shapes.</p>
+<h2 id="s3-hidden-balance-zk-channel-apps-in-progress">S3 — Hidden-balance ZK channel apps (in progress)</h2>
+<p><strong>Goal:</strong> a generic ZK <code>IForceMoveApp</code> lets a channel hide its balances, proven once at finalization.</p>
+<p><strong>Delivers:</strong> a net-new capability on T0.2 (no <code>T#.#</code> id yet; the lab book records the decision).</p>
+<p><strong>Depends on:</strong> S1 (independent of S2).</p>
+<table>
+<thead>
+<tr>
+<th>Chunk</th>
+<th>Deliverable</th>
+<th>Depends on</th>
+<th style="text-align: right;">Pts</th>
+<th>Route</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>N4</td>
+<td>Generic ZK <code>IForceMoveApp</code>, verifier wiring, tests with a trivial circuit</td>
+<td>—</td>
+<td style="text-align: right;">7</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>N5</td>
+<td>Hidden-balance ledger circuit, vectors, ceremony, integration with N4</td>
+<td>N4</td>
+<td style="text-align: right;">9</td>
+<td>5090 (circom; unmeasured, flagged for escalation)</td>
+</tr>
+<tr>
+<td>N6</td>
+<td>Game template circuit and one example game</td>
+<td>N4</td>
+<td style="text-align: right;">7</td>
+<td>5090</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Stage total:</strong> 23 points, 3 sessions, 1.5 h.</p>
+<p><strong>Acceptance:</strong> N4 — <code>forge test</code> with a trivial circuit through the ZK app, extends <code>nitro-e2e</code>; N5 — ledger-circuit vectors and the Phase-2 shapes they add; N6 — the game template exercised by one example game, extends <code>nitro-e2e</code>.</p>
+<h2 id="s4-baal-treasury-governance-next">S4 — Baal treasury governance (next)</h2>
+<p><strong>Goal:</strong> a Baal (Moloch v3) treasury on a Safe replaces the v1 custom governor; any ARM holder can exit at any time.</p>
+<p><strong>Delivers:</strong> supersedes the governance/revenue row of §5 T0 built in S1.</p>
+<p><strong>Depends on:</strong> S2 (needs P2b).</p>
+<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-treasury-governance-baal-safe-shielded.md</code> §7); G7 is split into G7a and G7b, each at or under the 9-point cap.</p>
+<table>
+<thead>
+<tr>
+<th>Chunk</th>
+<th>Deliverable</th>
+<th>Depends on</th>
+<th style="text-align: right;">Pts</th>
+<th>Route</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1</td>
+<td>ARM shares token, non-upgradeable, transfer allowlist, with tests</td>
+<td>—</td>
+<td style="text-align: right;">6</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>Baal + Safe summon script, module wiring, fixturenet deploy</td>
+<td>G1</td>
+<td style="text-align: right;">8</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>G3</td>
+<td><code>ShieldedRagequit</code> contract with tests, including the exit proof built with the SDK</td>
+<td>G2, P2b (S2)</td>
+<td style="text-align: right;">9</td>
+<td>5090 (audit-critical)</td>
+</tr>
+<tr>
+<td>G4</td>
+<td>RevenueLock rewrite on <code>cumulativeFees</code>, with tests</td>
+<td>G1, P2b (S2)</td>
+<td style="text-align: right;">6</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>G5</td>
+<td>Hedgey lockup, crowdfund delivers ARM shares, crowdfund proceeds shielded to the Safe</td>
+<td>G1, P2b (S2)</td>
+<td style="text-align: right;">8</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>G6</td>
+<td>Remove old stack, deploy scripts, <code>GOVERNANCE.md</code> and <code>ARM_TOKEN.md</code> rewrite</td>
+<td>G2, G5</td>
+<td style="text-align: right;">8</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>G7a</td>
+<td>Gate: crowdfund → claim → vote, shield fees only</td>
+<td>G3–G6</td>
+<td style="text-align: right;">6</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>G7b</td>
+<td>Gate: spend → ragequit, shield fees only</td>
+<td>G7a</td>
+<td style="text-align: right;">4</td>
+<td>5090</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Stage total:</strong> 55 points, 8 sessions, 4.0 h.</p>
+<p><strong>Acceptance:</strong> G7a/G7b extend the armada-nitro environment's <code>pool-e2e</code>/<code>nitro-e2e</code> gates with the crowdfund → claim → vote → spend → ragequit scenario, shield fees only, on the fixturenet; a run where a captured majority blocks an exit, or where a holder cannot exit at any time, must fail. No new harness.</p>
+<h2 id="s5-armada-nitro-side-of-contract-owned-collateral-next">S5 — armada-nitro side of contract-owned collateral (next)</h2>
+<p><strong>Goal:</strong> <code>ArmadaNitroAdjudicator</code> holds its channel collateral as contract-owned notes, so collateral never leaves the pool.</p>
+<p><strong>Delivers:</strong> a hardening delta on T0.2.</p>
+<p><strong>Depends on:</strong> S2 (needs P2b).</p>
+<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7); N8 also depends on S4's G4.</p>
+<table>
+<thead>
+<tr>
+<th>Chunk</th>
+<th>Deliverable</th>
+<th>Depends on</th>
+<th style="text-align: right;">Pts</th>
+<th>Route</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>N1</td>
+<td><code>MultiAssetHolder</code> on commitments</td>
+<td>P2b (S2)</td>
+<td style="text-align: right;">11</td>
+<td>Sonnet (audit-critical)</td>
+</tr>
+<tr>
+<td>N2</td>
+<td><code>depositFromNote</code> as in-pool spend, payout as spend including fee-tagged outputs to the Safe, tests</td>
+<td>N1</td>
+<td style="text-align: right;">10</td>
+<td>Sonnet (audit-critical)</td>
+</tr>
+<tr>
+<td>N3</td>
+<td>Commitment-outcome finalization branch, tests</td>
+<td>N2</td>
+<td style="text-align: right;">8</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>N7</td>
+<td>E11 and E16 gates updated for in-pool collateral</td>
+<td>N2, N3</td>
+<td style="text-align: right;">8</td>
+<td>5090</td>
+</tr>
+<tr>
+<td>N8</td>
+<td>Gate: in-channel swap fee → Safe-owned note → <code>cumulativeFees</code> → RevenueLock release</td>
+<td>N2, N7, G4 (S4)</td>
+<td style="text-align: right;">6</td>
+<td>5090</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Stage total:</strong> 43 points, 5 sessions, 2.5 h.</p>
+<p><strong>Acceptance:</strong> N7 extends <code>nitro-e2e</code> with in-pool-collateral coverage of E11/E16; N8 extends <code>pool-e2e</code>/<code>nitro-e2e</code> with the in-channel-swap-fee-to-RevenueLock scenario. No new harness.</p>
+<h2 id="s6-armada-client-phase-1-next">S6 — armada-client Phase 1 (next)</h2>
 <p><strong>Goal:</strong> one daemon runs the wallet and the relayer against the armada-nitro environment, end to end.</p>
 <p><strong>Delivers:</strong> the client's <code>config</code>, <code>contracts</code>, <code>wallet</code>, <code>relay</code> packages and its daemon/CLI (armada-client <code>docs/SPEC.md</code> §7 Phase 1, tasks P1-01 to P1-10).</p>
 <p><strong>Depends on:</strong> S1 (the armada-nitro environment's deployment manifest).</p>
@@ -170,7 +393,7 @@
 </table>
 <p><strong>Stage total:</strong> 25 points, 3 sessions, 1.5 h.</p>
 <p><strong>Acceptance:</strong> armada-client's own E2E relay gate (P1-09) against the armada-nitro environment's fixturenet; this reuses the reconciler's deployment manifest (P1-05), not a new chain setup.</p>
-<h2 id="s3-proof-path-next">S3 — Proof path (next)</h2>
+<h2 id="s7-proof-path-next">S7 — Proof path (next)</h2>
 <p><strong>Goal:</strong> operate the nimbus verified proxy against the armada-nitro fixturenet and run the first proof.</p>
 <p><strong>Delivers:</strong> T1.0, T1.1, T1.2.</p>
 <p><strong>Depends on:</strong> S1.</p>
@@ -203,10 +426,10 @@
 </table>
 <p><strong>Stage total:</strong> 14 points, 2 sessions, 1.0 h.</p>
 <p><strong>Acceptance:</strong> the fixturenet proof script (<code>labbook/2026-10-19-nimbus-verified-proxy-proofs.md</code> §3.8) — shield on the fixturenet, <code>eth_getBlockReceipts</code> through the patched proxy finds the <code>Shield</code> log, <code>eth_getStorageAt</code> on the <code>rootHistory[tree][root]</code> slot returns non-zero, all against lighthouse's beacon REST API. Runs against the armada-nitro environment's fixturenet (geth + lighthouse, via the reconciler); this becomes a new verification step alongside the existing gates, not a separate harness.</p>
-<h2 id="s4-client-verified-reads-next">S4 — Client verified reads (next)</h2>
+<h2 id="s8-client-verified-reads-next">S8 — Client verified reads (next)</h2>
 <p><strong>Goal:</strong> a client reads chain state through the proxy on every target, not a trusted RPC.</p>
 <p><strong>Delivers:</strong> T1.0 (client targets), T6.1 (verified reads).</p>
-<p><strong>Depends on:</strong> S3.</p>
+<p><strong>Depends on:</strong> S7.</p>
 <table>
 <thead>
 <tr>
@@ -250,222 +473,10 @@
 </table>
 <p><strong>Stage total:</strong> 32 points, 4 sessions, 2.0 h.</p>
 <p><strong>Acceptance:</strong> <code>armada-interface</code>'s note-scanner verifies a read through the WASM proxy in a browser test; <code>libverifproxy.a</code> links into a minimal iOS/Android test harness. No armada-nitro gate covers client-library builds; this is new verification alongside the existing gates.</p>
-<h2 id="s5-contract-owned-notes-next">S5 — Contract-owned notes (next)</h2>
-<p><strong>Goal:</strong> the pool deploys non-upgradeable, with owner-authorized contract-owned spends, so a Safe treasury can hold notes directly.</p>
-<p><strong>Delivers:</strong> a hardened T0.0 deploy; new T0.1 circuit shapes.</p>
-<p><strong>Depends on:</strong> S1.</p>
-<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7).</p>
-<table>
-<thead>
-<tr>
-<th>Chunk</th>
-<th>Deliverable</th>
-<th>Depends on</th>
-<th style="text-align: right;">Pts</th>
-<th>Route</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>P1</td>
-<td>Contract-owned <code>Transact</code> variant, differential tests, manifest shapes</td>
-<td>—</td>
-<td style="text-align: right;">9</td>
-<td>5090 (circom; unmeasured, flagged for escalation)</td>
-</tr>
-<tr>
-<td>P2</td>
-<td>Owner auth path, preimage registry, fee-tagged outputs, pool-level <code>cumulativeFees</code>, <code>ShieldModule</code> fee note, tests</td>
-<td>P1</td>
-<td style="text-align: right;">11</td>
-<td>Sonnet</td>
-</tr>
-<tr>
-<td>P4</td>
-<td>Phase-2 run for the new shapes</td>
-<td>P1</td>
-<td style="text-align: right;">4</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>P3</td>
-<td>Non-upgradeable deployment: constructor keys, no proxy, deploy script</td>
-<td>P2, P4</td>
-<td style="text-align: right;">6</td>
-<td>5090</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Stage total:</strong> 30 points, 4 sessions, 2.0 h.</p>
-<p><strong>Acceptance:</strong> P1 — a differential test of the variant against captured vectors, extends <code>armada-circuits</code>' own suite; P2 — <code>forge test</code> for the owner path and the fee registry, extends <code>pool-e2e</code>'s coverage; P3 — the non-upgradeable deploy script, checked by the reconciler's <code>armada</code> module <code>verify</code> step; P4 — <code>snarkjs zkey verify</code> over the new shapes.</p>
-<h2 id="s6-hidden-balance-zk-channel-apps-next">S6 — Hidden-balance ZK channel apps (next)</h2>
-<p><strong>Goal:</strong> a generic ZK <code>IForceMoveApp</code> lets a channel hide its balances, proven once at finalization.</p>
-<p><strong>Delivers:</strong> a net-new capability on T0.2 (no <code>T#.#</code> id yet; cited by the lab book until D1/D2 write it up, S11).</p>
-<p><strong>Depends on:</strong> S1 (independent of S5).</p>
-<table>
-<thead>
-<tr>
-<th>Chunk</th>
-<th>Deliverable</th>
-<th>Depends on</th>
-<th style="text-align: right;">Pts</th>
-<th>Route</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>N4</td>
-<td>Generic ZK <code>IForceMoveApp</code>, verifier wiring, tests with a trivial circuit</td>
-<td>—</td>
-<td style="text-align: right;">7</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>N5</td>
-<td>Hidden-balance ledger circuit, vectors, ceremony, integration with N4</td>
-<td>N4</td>
-<td style="text-align: right;">9</td>
-<td>5090 (circom; unmeasured, flagged for escalation)</td>
-</tr>
-<tr>
-<td>N6</td>
-<td>Game template circuit and one example game</td>
-<td>N4</td>
-<td style="text-align: right;">7</td>
-<td>5090</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Stage total:</strong> 23 points, 3 sessions, 1.5 h.</p>
-<p><strong>Acceptance:</strong> N4 — <code>forge test</code> with a trivial circuit through the ZK app, extends <code>nitro-e2e</code>; N5 — ledger-circuit vectors and the Phase-2 shapes they add; N6 — the game template exercised by one example game, extends <code>nitro-e2e</code>.</p>
-<h2 id="s7-baal-treasury-governance-next">S7 — Baal treasury governance (next)</h2>
-<p><strong>Goal:</strong> a Baal (Moloch v3) treasury on a Safe replaces the v1 custom governor; any ARM holder can exit at any time.</p>
-<p><strong>Delivers:</strong> supersedes the governance/revenue row of §5 T0 built in S1.</p>
-<p><strong>Depends on:</strong> S5 (needs P2).</p>
-<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-treasury-governance-baal-safe-shielded.md</code> §7).</p>
-<table>
-<thead>
-<tr>
-<th>Chunk</th>
-<th>Deliverable</th>
-<th>Depends on</th>
-<th style="text-align: right;">Pts</th>
-<th>Route</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>G1</td>
-<td>ARM shares token, non-upgradeable, transfer allowlist, with tests</td>
-<td>—</td>
-<td style="text-align: right;">6</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>G2</td>
-<td>Baal + Safe summon script, module wiring, fixturenet deploy</td>
-<td>G1</td>
-<td style="text-align: right;">8</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>G3</td>
-<td><code>ShieldedRagequit</code> contract with tests, including the exit proof built with the SDK</td>
-<td>G2, P2</td>
-<td style="text-align: right;">9</td>
-<td>5090 (audit-critical)</td>
-</tr>
-<tr>
-<td>G4</td>
-<td>RevenueLock rewrite on <code>cumulativeFees</code>, with tests</td>
-<td>G1, P2</td>
-<td style="text-align: right;">6</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>G5</td>
-<td>Hedgey lockup, crowdfund delivers ARM shares, crowdfund proceeds shielded to the Safe</td>
-<td>G1, P2</td>
-<td style="text-align: right;">8</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>G6</td>
-<td>Remove old stack, deploy scripts, <code>GOVERNANCE.md</code> and <code>ARM_TOKEN.md</code> rewrite</td>
-<td>G2, G5</td>
-<td style="text-align: right;">8</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>G7</td>
-<td>Gate: crowdfund → claim → vote → spend → ragequit on the fixturenet, shield fees only</td>
-<td>G3–G6</td>
-<td style="text-align: right;">10</td>
-<td>Sonnet</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Stage total:</strong> 55 points, 7 sessions, 3.5 h.</p>
-<p><strong>Acceptance:</strong> G7 extends the armada-nitro environment's <code>pool-e2e</code>/<code>nitro-e2e</code> gates with the crowdfund → claim → vote → spend → ragequit scenario, shield fees only, on the fixturenet; a run where a captured majority blocks an exit, or where a holder cannot exit at any time, must fail. No new harness.</p>
-<h2 id="s8-armada-nitro-side-of-contract-owned-collateral-next">S8 — armada-nitro side of contract-owned collateral (next)</h2>
-<p><strong>Goal:</strong> <code>ArmadaNitroAdjudicator</code> holds its channel collateral as contract-owned notes, so collateral never leaves the pool.</p>
-<p><strong>Delivers:</strong> a hardening delta on T0.2.</p>
-<p><strong>Depends on:</strong> S5 (needs P2).</p>
-<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7); N8 also depends on S7's G4.</p>
-<table>
-<thead>
-<tr>
-<th>Chunk</th>
-<th>Deliverable</th>
-<th>Depends on</th>
-<th style="text-align: right;">Pts</th>
-<th>Route</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>N1</td>
-<td><code>MultiAssetHolder</code> on commitments</td>
-<td>P2</td>
-<td style="text-align: right;">11</td>
-<td>Sonnet (audit-critical)</td>
-</tr>
-<tr>
-<td>N2</td>
-<td><code>depositFromNote</code> as in-pool spend, payout as spend including fee-tagged outputs to the Safe, tests</td>
-<td>N1</td>
-<td style="text-align: right;">10</td>
-<td>Sonnet (audit-critical)</td>
-</tr>
-<tr>
-<td>N3</td>
-<td>Commitment-outcome finalization branch, tests</td>
-<td>N2</td>
-<td style="text-align: right;">8</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>N7</td>
-<td>E11 and E16 gates updated for in-pool collateral</td>
-<td>N2, N3</td>
-<td style="text-align: right;">8</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>N8</td>
-<td>Gate: in-channel swap fee → Safe-owned note → <code>cumulativeFees</code> → RevenueLock release</td>
-<td>N2, N7, G4 (S7)</td>
-<td style="text-align: right;">6</td>
-<td>5090</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Stage total:</strong> 43 points, 5 sessions, 2.5 h.</p>
-<p><strong>Acceptance:</strong> N7 extends <code>nitro-e2e</code> with in-pool-collateral coverage of E11/E16; N8 extends <code>pool-e2e</code>/<code>nitro-e2e</code> with the in-channel-swap-fee-to-RevenueLock scenario. No new harness.</p>
 <h2 id="s9-armada-client-phase-2-next">S9 — armada-client Phase 2 (next)</h2>
 <p><strong>Goal:</strong> the client opens and settles armada-nitro channels over Waku, with a watchtower and a hub role.</p>
 <p><strong>Delivers:</strong> T6.2 (channel lifecycle), T6.3 (client watchtower), T2.3 (transport).</p>
-<p><strong>Depends on:</strong> S2 (the daemon).</p>
+<p><strong>Depends on:</strong> S6 (the daemon).</p>
 <table>
 <thead>
 <tr>
@@ -512,8 +523,8 @@
 <h2 id="s10-client-support-for-contract-owned-notes-and-zk-channel-apps-next">S10 — Client support for contract-owned notes and ZK channel apps (next)</h2>
 <p><strong>Goal:</strong> the wallet proves, attaches and watches the new contract-owned and hidden-balance artifacts.</p>
 <p><strong>Delivers:</strong> T6.1 (prover), T6.2 (state updates), T6.3 (watchtower proofs).</p>
-<p><strong>Depends on:</strong> S5 (P4), S6 (N5), S8 (N3), S9 (ts-nitro vendored).</p>
-<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7); C6 also depends on S7's G3.</p>
+<p><strong>Depends on:</strong> S2 (P4), S3 (N5), S5 (N3), S9 (ts-nitro vendored).</p>
+<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7); C6 also depends on S4's G3.</p>
 <table>
 <thead>
 <tr>
@@ -528,7 +539,7 @@
 <tr>
 <td>C1</td>
 <td>Prover integration for the new artifacts: contract-owned variant, ledger, game</td>
-<td>P4 (S5), N5 (S6)</td>
+<td>P4 (S2), N5 (S3)</td>
 <td style="text-align: right;">7</td>
 <td>5090</td>
 </tr>
@@ -549,21 +560,21 @@
 <tr>
 <td>C4</td>
 <td>ts-nitro: ZK app and commitment-outcome finalization</td>
-<td>N3 (S8), N4 (S6)</td>
+<td>N3 (S5), N4 (S3)</td>
 <td style="text-align: right;">9</td>
 <td>5090</td>
 </tr>
 <tr>
 <td>C5</td>
 <td>Gate: hidden-balance <code>waUSDC</code> swap through the mobile client on the fixturenet</td>
-<td>C2–C4, N7 (S8)</td>
+<td>C2–C4, N7 (S5)</td>
 <td style="text-align: right;">10</td>
 <td>Sonnet</td>
 </tr>
 <tr>
 <td>C6</td>
 <td>Wallet: <code>ShieldedRagequit</code> flow with on-device proof</td>
-<td>G3 (S7), C1</td>
+<td>G3 (S4), C1</td>
 <td style="text-align: right;">6</td>
 <td>5090</td>
 </tr>
@@ -571,40 +582,7 @@
 </table>
 <p><strong>Stage total:</strong> 47 points, 6 sessions, 3.0 h.</p>
 <p><strong>Acceptance:</strong> C5 extends <code>nitro-e2e</code> with the hidden-balance <code>waUSDC</code> swap through the mobile client on the fixturenet.</p>
-<h2 id="s11-document-the-decisions-next">S11 — Document the decisions (next)</h2>
-<p><strong>Goal:</strong> the governance, contract-owned-notes and channel-app decisions this plan builds are written up.</p>
-<p><strong>Delivers:</strong> updated A.2, A.3, A.5; a governance ADR; a contract-owned-notes ADR; an ADR-0005 note; a page 16 note; a ZK-app page with prior art.</p>
-<p><strong>Depends on:</strong> S7, S8 (so the write-up reflects the shipped shape, not the plan).</p>
-<table>
-<thead>
-<tr>
-<th>Chunk</th>
-<th>Deliverable</th>
-<th>Depends on</th>
-<th style="text-align: right;">Pts</th>
-<th>Route</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>D1</td>
-<td>Governance ADR, contract-owned-notes ADR</td>
-<td>—</td>
-<td style="text-align: right;">5</td>
-<td>5090</td>
-</tr>
-<tr>
-<td>D2</td>
-<td>A.2, A.3, A.5, ADR-0005 note, page 16 note, ZK-app page with prior art</td>
-<td>—</td>
-<td style="text-align: right;">6</td>
-<td>5090</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Stage total:</strong> 11 points, 2 sessions, 1.0 h.</p>
-<p><strong>Acceptance:</strong> <code>python3 tools/compile-decisions.py --check</code> passes on the new ADR text; no e2e gate (documentation).</p>
-<h2 id="s12-armada-client-phase-3-mobile-later">S12 — armada-client Phase 3: mobile (later)</h2>
+<h2 id="s11-armada-client-phase-3-mobile-later">S11 — armada-client Phase 3: mobile (later)</h2>
 <p><strong>Goal:</strong> the wallet runs on iOS and Android, inside the daemon's Node runtime.</p>
 <p><strong>Delivers:</strong> T6.5 (mobile transport), T6.6 (native mobile proving).</p>
 <p><strong>Depends on:</strong> S9.</p>
@@ -658,10 +636,10 @@
 </table>
 <p><strong>Stage total:</strong> 33 points, 4 sessions, 2.0 h.</p>
 <p><strong>Acceptance:</strong> [INFERENCE] armada-client's own mobile acceptance path against the armada-nitro environment; no named gate covers the mobile build in the sources this plan cites.</p>
-<h2 id="s13-watcher-federation-and-the-optional-cache-later">S13 — Watcher federation and the optional cache (later)</h2>
+<h2 id="s12-watcher-federation-and-the-optional-cache-later">S12 — Watcher federation and the optional cache (later)</h2>
 <p><strong>Goal:</strong> a client accepts a snapshot a quorum of watchers signs, as an optional cache, never a trust boundary.</p>
 <p><strong>Delivers:</strong> T2.4, T2.2 (optional).</p>
-<p><strong>Depends on:</strong> S3.</p>
+<p><strong>Depends on:</strong> S7.</p>
 <table>
 <thead>
 <tr>
@@ -676,14 +654,14 @@
 <tr>
 <td>T2-1</td>
 <td>Watcher-signed snapshot cache; federation attestation (T2.4)</td>
-<td>T1-3 (S4)</td>
+<td>T1-3 (S8)</td>
 <td style="text-align: right;">9</td>
 <td>5090</td>
 </tr>
 <tr>
 <td>T2-2</td>
 <td><code>watcher-ts</code> as an optional unverified server cache (T2.2); optional, deferred</td>
-<td>T1-1 (S3)</td>
+<td>T1-1 (S7)</td>
 <td style="text-align: right;">4</td>
 <td>5090</td>
 </tr>
@@ -691,10 +669,10 @@
 </table>
 <p><strong>Stage total:</strong> 13 points, 2 sessions, 1.0 h.</p>
 <p><strong>Acceptance:</strong> [INFERENCE] no existing gate covers federation; a client accepts a snapshot CID signed by a quorum of watchers, then checks the commitment part against <code>rootHistory</code> through the T1 proxy.</p>
-<h2 id="s14-the-production-phase-2-ceremony-later">S14 — The production Phase-2 ceremony (later)</h2>
+<h2 id="s13-the-production-phase-2-ceremony-later">S13 — The production Phase-2 ceremony (later)</h2>
 <p><strong>Goal:</strong> every deployed verifying key traces to a published, multi-party transcript and a final randomness beacon.</p>
 <p><strong>Delivers:</strong> completes T0.1.</p>
-<p><strong>Depends on:</strong> S5 (P4), S6 (N5) — the ceremony runs once over the final shape set, including the new shapes these stages add, so it is not re-run per shape (ADR-0003 D3.4).</p>
+<p><strong>Depends on:</strong> S2 (P4), S3 (N5) — the ceremony runs once over the final shape set, including the new shapes these stages add, so it is not re-run per shape (ADR-0003 D3.4).</p>
 <table>
 <thead>
 <tr>
@@ -709,7 +687,7 @@
 <tr>
 <td>CER-1</td>
 <td>Coordinate and run the multi-party Phase-2 ceremony over the final shape set; publish the transcript and the beacon</td>
-<td>P4 (S5), N5 (S6)</td>
+<td>P4 (S2), N5 (S3)</td>
 <td style="text-align: right;">10</td>
 <td>Sonnet — [INFERENCE] sizes the tooling/verification half only; the ceremony's real duration is external-participant-bound and is not covered by these worker-hour rules (<code>estimation-method.md</code> §5)</td>
 </tr>
@@ -717,10 +695,10 @@
 </table>
 <p><strong>Stage total:</strong> 10 points, 1 session, 0.5 h (engineering half only).</p>
 <p><strong>Acceptance:</strong> a published, multi-party transcript and a final randomness beacon (ADR-0003 D3.3); <code>snarkjs zkey verify</code> over every shape.</p>
-<h2 id="s15-venue-v1-later">S15 — Venue v1 (later)</h2>
+<h2 id="s14-venue-v1-later">S14 — Venue v1 (later)</h2>
 <p><strong>Goal:</strong> a posted-price dealer market clears trades over the existing settlement rail; a posted price has nothing to front-run.</p>
 <p><strong>Delivers:</strong> T4.0, T4.1, T4.3.</p>
-<p><strong>Depends on:</strong> S4 (verified reads), S10 (the ForceMove-app client pattern).</p>
+<p><strong>Depends on:</strong> S8 (verified reads), S10 (the ForceMove-app client pattern).</p>
 <table>
 <thead>
 <tr>
@@ -764,10 +742,10 @@
 </table>
 <p><strong>Stage total:</strong> 29 points, 4 sessions, 2.0 h.</p>
 <p><strong>Acceptance:</strong> T4-4 extends <code>nitro-e2e</code> with the venue scenario; no new harness.</p>
-<h2 id="s16-v2-deferred-backlog-later">S16 — v2 / deferred backlog (later)</h2>
+<h2 id="s15-v2-deferred-backlog-later">S15 — v2 / deferred backlog (later)</h2>
 <p><strong>Goal:</strong> the items ADR-0007/0011 defer to v2, plus items the registry marks not built with no near-term dependency.</p>
 <p><strong>Delivers:</strong> T3.0–T3.2, T4.2, T4.5, T4.6, T5.0c, T5.1, T0.4, T0.5, T0.6, T6.4 (audit), T6.8 (optional).</p>
-<p><strong>Depends on:</strong> S15 for the venue-adjacent items (T4.2, T4.5, T4.6, T3); S1 for the rest.</p>
+<p><strong>Depends on:</strong> S14 for the venue-adjacent items (T4.2, T4.5, T4.6, T3); S1 for the rest.</p>
 <p>Every chunk below is self-sized from <code>estimation-method.md</code> §2's anchors; none comes from the 209-point list. [INFERENCE] throughout — these are not scheduled, and a real brief would re-estimate from the code at hand.</p>
 <table>
 <thead>
@@ -804,21 +782,21 @@
 <tr>
 <td>T4-5</td>
 <td>Venue solver: cross-venue internalization, flash-loan hedge, Aave rebalance (T4.2)</td>
-<td>S15</td>
+<td>S14</td>
 <td style="text-align: right;">10</td>
 <td>Sonnet</td>
 </tr>
 <tr>
 <td>T4-6</td>
 <td>LP-buffered USDC yield rail (T4.5)</td>
-<td>S15</td>
+<td>S14</td>
 <td style="text-align: right;">9</td>
 <td>5090</td>
 </tr>
 <tr>
 <td>T4-7</td>
 <td>ex_net matcher + LP vault (T4.6)</td>
-<td>T3-1–T3-3, S15</td>
+<td>T3-1–T3-3, S14</td>
 <td style="text-align: right;">10</td>
 <td>Sonnet</td>
 </tr>
@@ -832,7 +810,7 @@
 <tr>
 <td>T5-2</td>
 <td>Routing interface for a future T4 venue (T5.1)</td>
-<td>S15</td>
+<td>S14</td>
 <td style="text-align: right;">4</td>
 <td>5090</td>
 </tr>
@@ -875,10 +853,10 @@
 </table>
 <p><strong>Stage total:</strong> 107 points, 12 sessions, 6.0 h.</p>
 <p><strong>Acceptance:</strong> each item's own eventual scenario on the armada-nitro environment, per its tier doc; none is scheduled, so no gate extension is named yet.</p>
-<h2 id="s17-sepolia-proof-external-audit-mainnet-cutover-later">S17 — Sepolia proof, external audit, mainnet cutover (later)</h2>
+<h2 id="s16-sepolia-proof-external-audit-mainnet-cutover-later">S16 — Sepolia proof, external audit, mainnet cutover (later)</h2>
 <p><strong>Goal:</strong> the proof path and the finished v1 rail run on Sepolia, pass external audit, and replace the existing armada-1 mainnet deployment.</p>
 <p><strong>Delivers:</strong> the fixturenet-before-Sepolia-before-mainnet rule, for every tier this plan touches.</p>
-<p><strong>Depends on:</strong> S3 (fixturenet proof proven), S14 (ceremony, for audit scope); [INFERENCE] realistically also S7, S8, S10, since mainnet should carry the new governance and collateral design, not the superseded one.</p>
+<p><strong>Depends on:</strong> S7 (fixturenet proof proven), S13 (ceremony, for audit scope); [INFERENCE] realistically also S4, S5, S10, since mainnet should carry the new governance and collateral design, not the superseded one.</p>
 <table>
 <thead>
 <tr>
@@ -893,7 +871,7 @@
 <tr>
 <td>SEP-1</td>
 <td>Re-run the fixturenet proof script against Sepolia (the patched proxy already supports Sepolia natively; no genesis patch needed)</td>
-<td>S3</td>
+<td>S7</td>
 <td style="text-align: right;">5</td>
 <td>5090</td>
 </tr>
@@ -914,45 +892,45 @@
 <tbody>
 <tr>
 <td>S2</td>
-<td style="text-align: right;">25</td>
-<td style="text-align: right;">3</td>
-<td style="text-align: right;">1.5</td>
-</tr>
-<tr>
-<td>S3</td>
-<td style="text-align: right;">14</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">1.0</td>
-</tr>
-<tr>
-<td>S4</td>
-<td style="text-align: right;">32</td>
-<td style="text-align: right;">4</td>
-<td style="text-align: right;">2.0</td>
-</tr>
-<tr>
-<td>S5</td>
 <td style="text-align: right;">30</td>
 <td style="text-align: right;">4</td>
 <td style="text-align: right;">2.0</td>
 </tr>
 <tr>
-<td>S6</td>
+<td>S3</td>
 <td style="text-align: right;">23</td>
 <td style="text-align: right;">3</td>
 <td style="text-align: right;">1.5</td>
 </tr>
 <tr>
-<td>S7</td>
+<td>S4</td>
 <td style="text-align: right;">55</td>
-<td style="text-align: right;">7</td>
-<td style="text-align: right;">3.5</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">4.0</td>
 </tr>
 <tr>
-<td>S8</td>
+<td>S5</td>
 <td style="text-align: right;">43</td>
 <td style="text-align: right;">5</td>
 <td style="text-align: right;">2.5</td>
+</tr>
+<tr>
+<td>S6</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1.5</td>
+</tr>
+<tr>
+<td>S7</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0</td>
+</tr>
+<tr>
+<td>S8</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2.0</td>
 </tr>
 <tr>
 <td>S9</td>
@@ -968,56 +946,50 @@
 </tr>
 <tr>
 <td>S11</td>
-<td style="text-align: right;">11</td>
-<td style="text-align: right;">2</td>
-<td style="text-align: right;">1.0</td>
-</tr>
-<tr>
-<td>S12</td>
 <td style="text-align: right;">33</td>
 <td style="text-align: right;">4</td>
 <td style="text-align: right;">2.0</td>
 </tr>
 <tr>
-<td>S13</td>
+<td>S12</td>
 <td style="text-align: right;">13</td>
 <td style="text-align: right;">2</td>
 <td style="text-align: right;">1.0</td>
 </tr>
 <tr>
-<td>S14</td>
+<td>S13</td>
 <td style="text-align: right;">10</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0.5</td>
 </tr>
 <tr>
-<td>S15</td>
+<td>S14</td>
 <td style="text-align: right;">29</td>
 <td style="text-align: right;">4</td>
 <td style="text-align: right;">2.0</td>
 </tr>
 <tr>
-<td>S16</td>
+<td>S15</td>
 <td style="text-align: right;">107</td>
 <td style="text-align: right;">12</td>
 <td style="text-align: right;">6.0</td>
 </tr>
 <tr>
-<td>S17</td>
+<td>S16</td>
 <td style="text-align: right;">5</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: right;">0.5</td>
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td style="text-align: right;"><strong>509</strong></td>
-<td style="text-align: right;"><strong>64</strong></td>
-<td style="text-align: right;"><strong>32.0</strong></td>
+<td style="text-align: right;"><strong>498</strong></td>
+<td style="text-align: right;"><strong>63</strong></td>
+<td style="text-align: right;"><strong>31.5</strong></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Critical path, 209-point programme (from the source, <code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §8 and <code>labbook/2026-10-18-treasury-governance-baal-safe-shielded.md</code> §7):</strong> P1 → P2 → G3 → G7 — 4 chunks, each over 5 points, 4 sessions, 2.0 h.</p>
-<p><strong>Critical path, this plan [INFERENCE, the longest stage chain]:</strong> S5 (contract-owned notes) → S8 (armada-nitro collateral) → S10 (client support) — 4 + 5 + 6 = 15 sessions, 7.5 h, before the venue (S15) and the v2 backlog (S16). S7 (governance) runs in parallel off the same S5 fork and finishes sooner (4 + 7 = 11 sessions), so it does not extend the critical path.</p>
+<p><strong>Critical path, 209-point programme chunks (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §8, <code>labbook/2026-10-18-treasury-governance-baal-safe-shielded.md</code> §7, as split in S2 and S4):</strong> P1 → P2a → P2b → G3 → G7a → G7b — 6 chunks, 6 sessions, 3.0 h, before rework.</p>
+<p><strong>Critical path, this plan [INFERENCE, the longest stage chain]:</strong> S2 (contract-owned notes) → S5 (armada-nitro collateral) → S10 (client support) — 4 + 5 + 6 = 15 sessions, 7.5 h, before the venue (S14) and the v2 backlog (S15). S4 (governance) runs off the same S2 fork and finishes sooner (4 + 8 = 12 sessions), so it does not extend the critical path.</p>
 <h2 id="pinned-refs">Pinned refs</h2>
 <p><code>armada-poc</code> <code>origin/main@102f17b8</code> · <code>armada-circuits</code> <code>ship-armada.github.com/main@ef2682f</code> · <code>armada-deployments</code> <code>ship-armada.github.com/main@bac3639</code> · <code>armada-sdk</code> <code>origin/main@db5757f</code> · <code>armada-client</code> <code>origin/main@78a8fdc</code> · <code>armada-relayer</code> <code>origin/main@bbf5e62</code> · <code>armada-interface</code> <code>origin/main@6968cd7</code> · <code>armada-nitro</code> <code>origin/integrated@55939ef</code> · <code>status-im/nimbus-eth1</code> <code>master</code> (clone <code>4df52ef</code>, 2026-10-19).</p>
 <hr />

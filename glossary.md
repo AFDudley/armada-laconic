@@ -52,13 +52,11 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 | **ts-nitro** | TypeScript port of Nitro for in-browser/mobile use. Not used by `armada-sdk`; `armada-client`'s plan (`docs/SPEC.md` D6) vendors it for the client's channel package. |
 | **go-nitro** | cerc-io fork of the (statechannels) Nitro Go impl. **Reused, then patched**: `armada-nitro` vendors it and applies six commits (EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a reentrancy lock, SafeERC20 payout). |
 | **FROST** | the threshold-signature scheme `armada-nitro`'s `HubCustodian` actually verifies: FROST over secp256k1 (KECCAK-256), via the `frost-secp256k1-evm` library. |
-| **chain-signatures** | library: `ethschnorr` + `ethdss` (Distributed Schnorr, Stinson–Strobl *(t,n)*) on a `kyber` DKG. **Not used anywhere in the ship-armada repos.** `HubCustodian` uses FROST instead (see above). Gitea. |
 | **nimbus-eth1** | Nim Ethereum L1 execution client. Its stateless/witness execution path and its verified proxy (`libverifproxy`) are the proof path Armada's docs now target (ADR-0009); **unintegrated**: no Armada repo runs it yet. GitHub. |
 | **ipld-eth-server** / ipld-eth-state-snapshot | index and serve Ethereum state as IPLD. **Not on the proof path**: geth-only, dormant since August 2024, and its current schema carries no per-log proof to `receiptsRoot`. GitHub. |
 | **laconic-so** | "stack orchestrator": deploys stacks (ops tool, not a library). |
 | **Clearing (Nitro)** | Netting + non-custodial settlement of trades and fees over Nitro channels: per-request vouchers meter, co-signed channel allocations split fees (user / protocol / integrator), an L1 close settles in USDC. What the watcher party provides on the money side — *not* a service-provider marketplace or fee vault. |
 | **Laconic Matchmaker** | "Laconic Matchmaking Services" (2022): privacy-preserving, broker-dealer-compliant matching via encrypted set-intersection / range matching (FHE). |
-| **DSS** | Distributed Schnorr Signature over a `kyber` DKG, as `chain-signatures` would provide it. **Not built; not used anywhere in the ship-armada repos.** `HubCustodian` uses FROST instead (see above). |
 | **Deepstack** | the `deep-stack` project; authored go-nitro's swap protocol. Distinct from the older statechannels HashLockedSwap. |
 
 ## 3. Nitro / state-channel terms
@@ -109,8 +107,7 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **Filler-filtered order** — an order carrying an allowlist of who may fill it; empty ⇒ open (lit/CLOB), non-empty ⇒ private/RFQ.
 - **CLOB / RFQ** — Central Limit Order Book (public, lit) / Request-for-Quote (bilateral, private). The matcher unifies both in one order type.
 - **LP vault** — pooled market-making capital run by a keeper (lets passive LPs participate).
-- **Threshold Schnorr / DKG / t-of-n** — a design for a future federation signature; no threshold scheme is chosen for T3. `HubCustodian` uses FROST for a different purpose (channel-participant signing, ADR-0016).
-- **DSS** — Distributed Schnorr Signature, a Stinson–Strobl *(t,n)* design over a `kyber` DKG. **Not built and not used anywhere in the ship-armada repos.**
+- **Threshold Schnorr / DKG / t-of-n** — a design for a future federation signature; no threshold scheme is chosen for T3.
 - **Perpetual PoT (Phase-1)** — Community Perpetual Powers of Tau: the universal, inherited and vetted Groth16 trusted-setup phase. Reused as-is (**T0.1**, ADR-0003).
 - **Phase-2** — per-circuit MPC over our circuit set; security is **1-of-N honest**, with a published transcript plus a final randomness beacon. Re-run only when circuits change (our own, **T0.1**, ADR-0003).
 - **Design A / Design B** — **A** (this project, default v1): boundary privacy via a Railgun-style shielded pool + deposit/payout contract; the venue is a blind matcher but sees trade amounts/terms. Amounts are public only at the transparent boundary (ADR-0005). **B** (deferred, v3): ZK matching + "shielded ForceMove" to hide amounts/terms from the venue itself.

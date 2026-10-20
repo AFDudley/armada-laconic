@@ -68,7 +68,7 @@ Clients hold their own keys and funds today (`armada-interface`'s browser key ma
 
 Every flow resolves to one motion. Value leaves Armada's shielded pool as a note, funds a Nitro channel, and returns to a shielded note at the end. `ArmadaNitroAdjudicator` does the settling and holds the deposit/payout boundary in the same contract as the ForceMove dispute logic — there is no separate boundary contract. This is built: `depositFromNote` unshields a note into a channel, and a `SHIELD`-type allocation in `_executeSingleAssetExit` re-shields a channel's outcome.
 
-No cross-chain swap is built. A multi-chain construction, with a shielded pool deployed on each chain and legs settling through mirrored channels, remains a draft (<a href="engineering/shielded-nitro-bridge-design.html">cross-chain swap design</a>); it has no deployed custodian, no cross-chain adjudicator, and the hub-signing scheme it was drafted against (`chain-signatures`) is not the scheme Armada's one deployed hub custodian uses (FROST, see T2 below).
+No cross-chain swap is built. A multi-chain construction, with a shielded pool deployed on each chain and legs settling through mirrored channels, remains a draft (<a href="engineering/shielded-nitro-bridge-design.html">cross-chain swap design</a>); it has no deployed custodian and no cross-chain adjudicator. Armada's one deployed hub custodian signs with FROST (see T2 below).
 
 ## T0 · Ethereum anchor — settlement & shielded custody {#t0}
 
@@ -91,7 +91,7 @@ The earlier plan called for a `nimbus-eth1` state-diff emitter mapping into IPLD
 
 ## T2 · Watcher substrate {#t2}
 
-The earlier plan called for a bonded federation of watcher parties serving proof-carrying feeds over `watcher-ts`, `ts-nitro`, `@cerc-io/peer`, and a threshold-signed attestation (`chain-signatures`' DSS). None of that exists in any ship-armada repo.
+The earlier plan called for a bonded federation of watcher parties serving proof-carrying feeds over `watcher-ts`, `ts-nitro`, `@cerc-io/peer`, and a threshold-signed attestation. None of that exists in any ship-armada repo.
 
 With the nimbus verified proxy as the trust boundary (T1), a server-side watcher becomes optional: a cache a client may read from, then re-verify through the proxy. It is never itself a trust boundary. Today's live cache is `armada-relayer`'s Ponder/Postgres indexer (`relayer-v2/watcher`), a conventional server out of the earlier plan, serving `/v2/quick-sync` over plain REST with no proof attached. `armada-relayer`'s actor charges a flat USDC fee computed from a gas estimate, not go-nitro payment vouchers.
 
@@ -104,9 +104,9 @@ With the nimbus verified proxy as the trust boundary (T1), a server-side watcher
 <tr><td>Membership / bonding</td><td>an on-L1 registry + bond</td><td>not built (T0.4)</td></tr>
 </table>
 
-### The one deployed threshold signature — FROST, not DSS
+### The one deployed threshold signature — FROST
 
-`armada-nitro`'s `HubCustodian` signs with **FROST** over secp256k1 (KECCAK-256), via the pinned `frost-secp256k1-evm` library, not the `chain-signatures` Stinson–Strobl DSS or its `kyber` DKG that the earlier plan specified (ruling 3). FROST secures one contract's hub-delegate signing, not a watcher federation's attestation; no federation, bond, or attestation substrate exists to apply either scheme to.
+`armada-nitro`'s `HubCustodian` signs with **FROST** over secp256k1 (KECCAK-256), via the pinned `frost-secp256k1-evm` library. FROST secures one contract's hub-delegate signing, not a watcher federation's attestation; no federation, bond, or attestation substrate exists to apply it to.
 
 ## T3 · Ordering & fault model (plan) {#t3}
 
@@ -171,4 +171,4 @@ Caveats: identity privacy is only as strong as the pool's anonymity set, which g
 <li id="r-railgun"><strong>Railgun</strong> — the shielded-pool design Armada's own pool and circuits implement. <a href="https://github.com/Railgun-Privacy/contract">contract</a>, <a href="https://github.com/Railgun-Privacy/circuits-v2">circuits-v2</a>.</li>
 </ol>
 
-<p class="small" style="margin-top:26px">Earlier references to <code>watcher-ts</code>, <code>ts-nitro</code>, <code>@cerc-io/peer</code>, <code>mobymask</code>, <code>laconic-wallet</code>, <code>chain-signatures</code>, and <code>ipld-eth-*</code> are removed: none of them are reused in any ship-armada repo (ruling 3, 7, brief §4).</p>
+<p class="small" style="margin-top:26px">`watcher-ts`, `ts-nitro`, `@cerc-io/peer`, `mobymask`, `laconic-wallet`, and `ipld-eth-*` have no code anywhere in a ship-armada repo (ruling 3, 7, brief §4).</p>

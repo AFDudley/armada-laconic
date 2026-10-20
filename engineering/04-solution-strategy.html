@@ -191,24 +191,23 @@ proxy (T6.1 over a T1.0/T1.1 proof, once integrated). This exercises the
    (adjudicator with the merged deposit/payout boundary), the CCTP and Aave-v4
    adapters, the v1 governance/revenue contracts, the FROST hub custodian core, and
    the web wallet. Nothing later needed to wait for these; they already exist.</li>
-<li><strong>Next.</strong> Two independent tracks run first: the <code>armada-client</code> daemon (Phase 1)
-  and the proof path (patch the fixturenet genesis, operate the nimbus verified
-  proxy, run the first proof). Both unblock the most later work — client reads and
-  every later client phase depend on them.</li>
-<li><strong>Then, in parallel.</strong> A non-upgradeable, contract-owned-notes pool deploy and a
-  generic ZK <code>IForceMoveApp</code> for hidden-balance channels (209-point list families
-  F1 and F2). Both feed a Baal treasury governance migration and the
-  armada-nitro side of contract-owned collateral (F3 and F4), which in turn feed
-  client support for the new artifacts (F5) and the <code>armada-client</code> channel/
-  watchtower phase (Phase 2).</li>
+<li><strong>In progress.</strong> A non-upgradeable, contract-owned-notes pool deploy and a generic
+  ZK <code>IForceMoveApp</code> for hidden-balance channels (209-point list families F1 and F2).
+  Briefs for both are written and workers start on them first (operator ruling,
+  2026-10-20).</li>
+<li><strong>Next.</strong> A Baal treasury governance migration and the armada-nitro side of
+  contract-owned collateral (F3 and F4), both once the contract-owned-notes pool's
+  owner-auth path (P2) lands. Then the <code>armada-client</code> daemon (Phase 1), the proof
+  path, and client verified reads. Then the <code>armada-client</code> channel/watchtower phase
+  (Phase 2) and client support for the new artifacts (F5).</li>
 <li><strong>Later.</strong> Mobile (<code>armada-client</code> Phase 3), the watcher federation, the
   production Phase-2 ceremony, venue v1, the v2/deferred backlog, and the
   Sepolia-then-mainnet cutover, in that rough order — everything proven on the
   fixturenet before Sepolia, and on Sepolia before mainnet.</li>
 </ul>
 <p>The walking skeleton above is the first integration target inside this sequence,
-not a separate track: it becomes concrete once the proof path (next) and the
-contract-owned-notes pool (then) exist.</p>
+not a separate track: it becomes concrete once the contract-owned-notes pool and
+the proof path exist.</p>
 <hr />
 <p>Cross-refs: quality goals → §10; runtime flows for these slices → §6; deployment of the
 fixturenet + peers → §7; recurring concepts (privacy, settlement, transport, metering)

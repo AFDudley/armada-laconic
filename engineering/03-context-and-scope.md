@@ -27,7 +27,7 @@ Cited at pinned commits.
 |---|---|
 | Shielded pool (`armada-poc`) and `Transact` circuit (`armada-circuits`) | Own implementation, spec-compatible with the Railgun design (ADR-0014). Railgun's `contract`/`circuits-v2`/`engine`/`cookbook` served only as a behavioral reference during the build. |
 | Governance and revenue contracts (`armada-poc`) | `ArmadaGovernor`, `ArmadaTreasuryGov`, `TreasurySteward`, `ArmadaToken`, `ArmadaCrowdfund`, `ArmadaWindDown`, `ArmadaRedemption`, `AdapterRegistry`, `RevenueCounter`, `RevenueLock`, `RevenueReserveDistributor`. |
-| `ArmadaNitroAdjudicator`, `HubCustodian` (`armada-nitro`) | A patched `go-nitro` (ADR-0004) plus a FROST-gated hub custodian (ADR-0016), built, not the vendored original and not `chain-signatures`. |
+| `ArmadaNitroAdjudicator`, `HubCustodian` (`armada-nitro`) | A patched `go-nitro` (ADR-0004) plus a FROST-gated hub custodian (ADR-0016), built. |
 | `armada-interface`, `armada-sdk` | The live web client and its SDK: shield/transact calls, note scanning, and an in-browser Groth16 prover. |
 
 ## Reused, not built (prior art & reference)

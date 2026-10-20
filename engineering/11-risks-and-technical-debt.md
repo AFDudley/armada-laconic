@@ -1,54 +1,28 @@
 # 11. Risks & Technical Debt
 
-arc42 §11 · 2026-09-04
+arc42 §11 · 2026-10-20
 
-This chapter catalogs the material risks to the v1 spine and its Phase-3 hardening,
-together with the shortcuts we ship on purpose. Every row owns a `T#.#` item (§5
-registry) and, where a decision has already scoped it, an `ADR-####` (§9). All ratings
-are v1-relative: **impact** measures the consequence if a risk bites, and **likelihood**
-measures the odds it bites before we mitigate.
+This chapter catalogs the material risks to the code as built, plus the shortcuts accepted on purpose. Every row owns a `T#.#` item (§5 registry) and, where a decision has already scoped it, an `ADR-####` (§9).
 
 ## Risk register
 
-| # | Risk | Impact | Likelihood | Mitigation | Owner |
-|---|---|---|---|---|---|
-| R1 | **Anonymity-set cold-start** — a fresh pool's k-anonymity starts near zero, and privacy only compounds with volume. This is the biggest **non-engineering** risk: no code fixes it, it needs a crowd. | High (the product's core promise degrades to k≈1) | High at launch, decaying with volume | Bootstrap own crowd with new users (incentives, own market-making capital, LP flywheel); a wallet move from Railgun (T6.7) brings value, which then counts like any other deposit; aggregation-window / dribble discipline at the boundary; instrument effective-k. | T0.7 · ADR-0006 |
-| R2 | **go-nitro maturity gaps** — a **multi-asset ForceMove *app*** is net-new: the holder/outcome machinery (`MultiAssetHolder` / `transferAllAssets` / `protocols/swap/swap.go`) **already supports** multi-asset ETH-in/USDC-out, but no shipped *app* does (`HashLockedSwap` is single-asset/2-party); **dispute wiring** exists in the adjudicator but is not driven end-to-end in the node; and **watchtower response** plus **persistent connections/liveness** are unproven for our flow. go-nitro is documented pre-production. | High (settlement is spend-authorizing; a gap = stuck or lost funds) | Medium — primitives exist, our wiring/app does not | Treat all four as **pre-mainnet blockers, not spine-demo blockers**; author the multi-asset settlement *app* first (the swap-demo pull) on top of the existing holder; drive challenge/response E2E on fixturenet; watchtower response is T6.3 gated on T2 freshness; liveness ties to transport. Check the vendored contracts against the published statechannels specification (docs.statechannels.org and the 2022 SATP paper) clause by clause: armada-nitro task E17 (`docs/tasks/E17-nitro-spec-conformance.md`), later work. | T0.2 / T0.3 / T6.3 · ADR-0004 |
-| R3 | **T1 ingestion long pole** — the nimbus-eth1 **stateless/witness path is upstream-in-progress**, and the state-diff **emitter module** wired to our watched set is server-side net-new. A lagging or stalled emitter is a **safety** problem (a missed nullifier or missed adjudicator `Challenge`), not just latency. | High (stale feed breaks watchtower safety, T6.3) | Medium–High — the one genuinely unbuilt v1-spine tier | Scope to just-enough local state (watched-address subtrie via Aristo), reuse cerc-io ipld-eth codecs/backfill; T1.2 exposes a **head cursor**; T6.3 **gates on feed freshness** and treats staleness as a liveness alarm with redundant-party fallback. | T1.0 · ADR-0009 |
-| R4 | **Mobile transport crux** — native **libp2p/waku on React Native is unbuilt**, since `@waku/sdk` / js-libp2p is not RN-compatible (no WebCrypto/WebRTC/Node built-ins in Hermes). The interim **WebRTC-over-tunnel** path is the least-proven part of the combination and may not traverse a network underlay cleanly. | High (no first-class mobile peer → foreground-only, fragile connectivity) | Medium — the proven `status-go` gomobile pattern de-risks it | Sequenced, not competing: ship interim **WebView** stack (`@cerc-io/peer` + `ts-nitro`) as the realistic v1 client, then port the p2p/channel/messaging layer to **one go-nitro + go-waku gomobile module** behind the same transport interface T6.2/T6.3 bind to. Native E2E is a Phase-3 gate. | T6.5 · ADR-0008 |
-| R5 | **Audit surface** — anything **spend-authorizing** is audit-critical before mainnet: the T0.3 deposit/payout contract (the notes-in/notes-out boundary), the net-new T0.0 pool + T0.1 circuits (see R9), and the T6.1 WebView↔RN key bridge / T6.0 enclave custody. | Critical (a leak here = drained funds or leaked keys) | Low if audited, catastrophic if skipped | Freeze spend-authorizing surface early; audit the net-new pool/circuits for spec-compatibility and soundness (R9); narrow, audited bridge with raw key material never crossing into the WebView; **external audit gates mainnet**, not the demo. | T0.0 / T0.1 / T0.3 / T0.6 / T6.0 / T6.1 · ADR-0014 |
-| R6 | **Trusted-setup ceremony logistics** — Phase-2 MPC security is **1-of-N honest**, so the assumption is only credible if contributors are genuinely independent. Coordinating ≥5 organizationally-distinct participants, publishing transcript + beacon, and regenerating/redeploying verifiers is a process risk, not a code risk. | Medium (a botched ceremony undermines soundness of every proof) | Low — snarkjs path is standard, Phase-1 is inherited | Reuse vetted **Perpetual PoT** Phase-1 (never re-run); target **≥5 independent contributors**; publish `.zkey`/`.vkey` hashes + verification transcript in-repo; CI fails on `zkey` hash mismatch. Re-run **only** on a circuit change (T0.6). | T0.1 · ADR-0003 |
-| R7 | **Venue market-making — hedge MEV / liquidity fragmentation (v2)** — the automated solver's residual hedge is a **public** tx: front-runnable / MEV-able and dependent on public-venue liquidity; per-venue shielded inventory also **splinters liquidity**. **This is a v2 risk** — v1 fills from a static inventory and neither hedges nor rebalances (ADR-0011). | Medium (worse fills, thin depth — never lost custody) | N/A in v1 (deferred with T4.2/T4.5) | When built: internalize deep inventory, **batch + decorrelate** the residual, route the RelayAdapt hedge through a broadcaster; an **opt-in shared hub / pooled-maker vault** deepens depth without forcing consolidation. | T4.2 · ADR-0011 |
-| R8 | **Price-setter trust until governance** — v1 posts prices from a **single privileged `priceSetter` wallet**, so a wrong or malicious price yields bad fills. | Low–Medium (bad fills, **not** lost custody — fills are take-it-or-leave-it and force-closable) | Medium while single-key | Fills are take-it-or-leave-it and force-closable via T0.3; **migrate `priceSetter` → governance** (same admin-key→governance path as the T0.3 app allow-list); trust is **removed entirely** only by the T4.6 CLOB upgrade. | T4.0 · ADR-0007 |
-| R9 | **Own pool + circuits (net-new crypto-engineering)** — T0.0/T0.1 are our own implementation of the Railgun design (ADR-0014): independently authored, spec-compatible shielded-pool contracts + JoinSplit circuits + our own Phase-2. This is real, audit-critical crypto-engineering — a subtle spec deviation (note/commitment format, nullifier semantics, `snarkSafetyVector`, verifier wiring) is a soundness or fund-safety bug. | High (a soundness/format bug = unprovable spend or value creation) | Medium — a well-understood, de-risked design (A.1 pins exact behavior/format), but net-new code | Treat A.1 as the reference spec and behavioral oracle; author our own conformance suite (spec-compatibility + fee=0); freeze the circuit subset early; **external crypto audit gates mainnet**. | T0.0 / T0.1 · ADR-0014 |
+| # | Risk | Impact | Owner |
+|---|---|---|---|
+| R1 | **Anonymity-set cold-start** — the pool's k-anonymity starts near zero and compounds only with volume. No code fixes this; it needs a crowd, and no cross-pool proof exists or is planned to shortcut it. | High (the product's core promise degrades to k≈1) | T0.7 · ADR-0006 |
+| R2 | **No production Phase-2 ceremony.** `v1.0.0-ceremony`'s manifest lists every shape `"status": "open"`, with no beacon. Only the explicitly unsafe `scripts/setup-dev.sh` exists. Any deployed verifying key today traces to it, not a published transcript. | Critical before mainnet (an unaudited, uncontributed ceremony undermines soundness of every proof) | T0.1 · ADR-0003 |
+| R3 | **Proof path unintegrated.** The nimbus verified proxy exists upstream but runs nowhere in Armada's stack. A client today reads chain state over RPC or an unverified cache (`armada-relayer`'s Ponder indexer), not a verified proof. | High (today's reads are trust-the-RPC, not trust-math) | T1, T2 · ADR-0009 |
+| R4 | **No mobile client.** `armada-client` has no application code; `libverifproxy.a` has no upstream iOS/Android target. | High (no mobile product exists) | T6.5 |
+| R5 | **No settlement-client channel lifecycle or watchtower.** The adjudicator side is built and tested; no client drives `depositFromNote`, channel state, or dispute response. A user cannot today use a Nitro channel from `armada-interface`. | High (settlement over channels is unreachable from any shipped client) | T6.2, T6.3 |
+| R6 | **The six `go-nitro` patches are the audit surface, not only `ArmadaNitroAdjudicator`'s own code.** EIP-1271 participants, a guarantee-check fix, measured-balance crediting, an asset allow-list, a reentrancy lock, and `SafeERC20` payout all sit on top of a vendored base. | High (settlement is spend-authorizing; a patch bug is a fund-safety bug) | T0.2 · ADR-0004 |
+| R7 | **No venue exists.** T3 and T4 are entirely unbuilt. This is a real gap against the product's exchange ambitions, not a sequencing choice to defer. | Medium (no exchange/clearing capability today) | T3, T4 |
+| R8 | **`HubCustodian`'s FROST scheme has no Armada-specific audit cited in these docs.** `frost-secp256k1-evm` is a third-party library, pinned by commit. | Medium–High before any hub goes live | ADR-0016 |
+| R9 | **Own pool and circuits are real, audit-critical crypto-engineering, now built and tested, but not yet externally audited** in anything cited here. A subtle spec deviation (note/commitment format, nullifier semantics, verifier wiring) is a soundness or fund-safety bug. | High (a soundness/format bug = unprovable spend or value creation) | T0.0, T0.1 · ADR-0014 |
 
 ## Technical debt / known shortcuts
 
-Each of the following is accepted for v1: a scoped, reversible interim
-rather than an unbounded liability. We list them here so they stay tracked rather than
-forgotten.
+- **The deployed shield fee is not zero.** `scripts/deploy_privacy_pool.ts` sets 50 bps against a 0-bps contract default. Any downstream integration that assumed fee = 0 is wrong. → ADR-0002.
+- **The live indexer is `armada-relayer`'s Ponder/Postgres watcher, not a verified feed.** It serves `/v2/quick-sync` with no proof, and is out of the plan (`labbook/2026-10-19-unified-stack-and-verified-note-sync.md`). It stays live until the proof path (T1) is integrated and a client stops depending on it as a trust boundary.
+- **The web client is the only client.** `armada-interface` covers shield, transfer, and unshield; it does not cover channel settlement, watchtower response, or mobile. This is a real capability gap, not a deferred nicety.
+- **Selective disclosure is unmerged.** `NullifierDisclosure.circom` and its SDK counterpart exist only on `disclosure-circuit`/`selective-disclosure` branches. → ADR-0020.
 
-- **Interim WebView transport (T6.5).** v1 mobile hosts the browser peer stack
-  (`@cerc-io/peer` + `ts-nitro`) inside a WebView, giving foreground-only,
-  WebRTC-over-tunnel connectivity. This reuses production browser code verbatim and
-  validates the whole flow, but the native **go-nitro + go-waku gomobile** module remains
-  the production target — a Phase-3 hardening gate before mainnet. The debt retires once
-  the native module lands behind the same transport interface. → R4, ADR-0008.
-- **Single `priceSetter` (T4.0).** One privileged wallet holds the posted bid/ask in v1.
-  Interim trust is reduced by the **governance migration** and removed only by the T4.6
-  provably-fair CLOB (T4.6 + T3), which is months of work deferred to v2. → R8, ADR-0007.
-- **v1 Design-A boundary leak accepted (T0.3).** Amounts are **public at the deposit/payout
-  boundary** and on force-close, which is inherent to Design A; we ship it as the default
-  because it needs **zero new crypto**. Hiding amounts in-play is the **optional** fork-lite
-  upgrade (T0.6), which changes circuits and therefore re-runs the T0.1 Phase-2 ceremony,
-  requires a fresh audit, and imposes heavier mobile proving; it is greenlit only on a
-  concrete requirement. In the meantime the leak is mitigated by aggregation-window /
-  dribble / quantization at the boundary (T0.7), not eliminated. → R1, ADR-0005.
-- **Static venue inventory, no market-making (T4.0/T4.1).** v1 fills exchange from a
-  pre-funded inventory topped up out-of-band; the automated market-making solver (T4.2)
-  and the LP-buffered USDC-yield rail (T4.5) — and USDC yield itself — are deferred to v2.
-  Capacity is bounded and refilled manually; running dry withdraws quotes, never a custody
-  risk. → ADR-0011.
-
-Cross-refs: risk mitigations are realized in §6 (runtime) and §8 (cross-cutting concepts);
-quality targets these risks defend are in §10; ownership and status per §5 registry.
+Cross-refs: ownership and status per the [§5 registry](./05-building-block-view.md); decisions in [§9](./09-architecture-decisions.md); the audit that produced this register is `labbook/2026-10-19-docs-versus-code.md`.

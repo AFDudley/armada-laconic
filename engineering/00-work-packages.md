@@ -1,47 +1,47 @@
 # 0. Work Packages (WBS)
 
-delivery frame · **2026-09-05** · operating model: [ADR-0012](./09-architecture-decisions.md#adr-0012)
+delivery frame · **2026-10-20** · operating model: [ADR-0012](./09-architecture-decisions.md#adr-0012)
 
-This is the **work breakdown**: the deliverable-oriented decomposition of the programme, sitting above the arc42 architecture description. It is MECE and obeys the 100% rule — the four work packages together are the whole programme's scope (the entire Armada product; [ADR-0013](./09-architecture-decisions.md#adr-0013)), and none overlaps another. Each work package is a **system with a boundary**: it *owns* a set of `T#.#` items from the [§5 registry](./05-building-block-view.md) (the shared building-block vocabulary — the tiers are **not** re-partitioned) and *consumes* everything else across a named interface (ICD). A work package may only touch its own boundary and its own deltas; everything else is a cited [baseline decision](./09-architecture-decisions.md) or an external interface. That constraint is what keeps each scope from drifting into the others.
+This is the work breakdown: the deliverable-oriented decomposition of the programme. The four work packages are MECE over the whole Armada product ([ADR-0013](./09-architecture-decisions.md#adr-0013)). Each owns a set of `T#.#` items from the [§5 registry](./05-building-block-view.md); most of work package A's items, and parts of C's, are already built.
 
 ## The work packages
 
-| WP | Mission | Owns (`T#.#`) | Consumes (ICD from) |
+| WP | Mission | Owns (`T#.#`) | Status |
 |---|---|---|---|
-| **A · nitro-on-railgun** | Non-custodial private **settlement of shielded value** over Nitro — *notes in → normal Nitro → notes out* — delivering **shielded payments** and the rail the others build on. | T0.0, T0.1, T0.2, **T0.3**, T0.6 *(opt)*, T0.7; settlement client T6.2, watchtower T6.3 | B (feeds), D (host) |
-| **B · watcher parties** | Private, metered, proof-carrying **sync** so browser/mobile/server peers discover & verify pool/adjudicator state without leaking the anonymity set. | T1.0, T1.1, T1.2, T2.0, T2.1, T2.2, T2.3, T2.4 *(v2)*; note-scanner T6.1 | A (contract event ABIs to index) |
-| **C · yield & exchange** | Let users **earn yield (USDC first) and swap privately**, cleared over A's rail; owns the venue **and the adapters**. | T4.0, T4.1, T4.3, T4.4; T4.2 *(v2)*, T4.5 *(v2)*, T3.\* *(v2)*, T4.6 *(v2)*; **T5.0 adapters (CCTP built · Aave-v4 yield · Swaps), T5.1 routing** | A (settlement), B (feeds); Aave · Circle-CCTP (external protocols) |
-| **D · client** | The **wallet/app** that hosts A/B/C on a phone with almost no fixed infra. | T6.0, T6.4, T6.5, T6.6, T6.7, T6.8 *(opt)* | A, B, C (their client edges) |
+| **A · on-chain anchor** | Non-custodial settlement of shielded value: the pool, the circuits, the adjudicator, and governance. | T0.0–T0.7; the deposit/payout boundary (merged into T0.2) | Mostly built |
+| **B · proof path** | A client verifies Ethereum state against a header a beacon light client checks, through the nimbus verified proxy. | T1.0–T1.2, T2.0–T2.4; note-scanner T6.1 | In progress, upstream, unintegrated |
+| **C · venue and adapters** | Let users earn yield and swap, over a future venue; the adapters are already live. | T3.\*, T4.\* (plan); T5.0, T5.1 | Adapters partly built; venue not built |
+| **D · client** | The wallet/app. | T6.0, T6.2–T6.8 | The web app is built; mobile is a spec only |
 
-Note the split of the T6 client tier: **A** owns the settlement client (T6.2) and watchtower (T6.3), **B** owns the note-scanner (T6.1), and **D** owns the host, transport, proving, and app shell — because each of those pieces is a client edge of a different scope, hosted by D.
+## What is built, per work package
 
-## Interface contracts (ICDs)
+- **A.** `armada-poc` built the pool and its governance and revenue contracts. `armada-circuits` built the `Transact` circuit. `armada-nitro` built the patched adjudicator and the merged deposit/payout boundary. The Phase-2 ceremony has not run.
+- **B.** The nimbus verified proxy exists upstream, unintegrated. No server runs it against any Armada chain; no WASM bundle ships; no mobile build exists.
+- **C.** CCTP and the Aave-v4 yield adapter are built (`armada-poc`). No venue, no matcher, and no Swaps contract exist.
+- **D.** `armada-interface` (web) is built and wired to `armada-sdk`. `armada-client`, meant to host a mobile client, has no application code; its `docs/SPEC.md` is a plan for four targets (Linux server, browser, iOS, Android).
 
-Each work package binds to its siblings only through these; the interface *is* the boundary.
+## What remains
 
-- **A exposes:** deposit/payout contract address + ABI + events (`Deposit`/`Payout`, adjudicator `Challenge`/`Checkpoint`/`Finalized`); the channel-lifecycle API; the ForceMove app registry; the voucher format; the pool commitment/nullifier event ABI; circuit `wasm`/`zkey` artifacts.
-- **B exposes:** the proof-carrying feed schema (`getStorageAt → {value, proof}`); the Nitro voucher metering interface; the per-contract head-cursor freshness signal (which T6.3 gates on).
-- **C exposes:** the quote RPC; the posted price + `priceSetter` authority; the quote/settle app id; the per-venue loyalty-key scheme; the capacity hint.
-- **D exposes:** the Armada-branded app + SDK surface over A/B/C.
+1. **The Phase-2 ceremony.** No shape has a published, multi-party transcript yet.
+2. **The proof path.** Operate the nimbus proxy on a server; patch it for the fixturenet's genesis; ship a WASM build in the browser client; cross-compile for mobile.
+3. **A settlement-client channel lifecycle and a client watchtower.** Neither exists in `armada-interface` or `armada-sdk`.
+4. **Mobile.** `armada-client`'s four-target plan has no code yet.
+5. **A venue.** No code exists for T3 or T4; this is the least mature part of the plan.
 
-## Sequencing (risk-first, one walking skeleton)
+## Interface contracts, as built
 
-Per [ADR-0012](./09-architecture-decisions.md#adr-0012) rule 5:
+- **The adjudicator exposes:** `IArmadaPool` (`shield`, `transact`), `depositFromNote`, the `SHIELD`-type payout path, go-nitro's standard challenge/checkpoint/conclude.
+- **The pool exposes:** `shield`, `transact`, `atomicCrossChainUnshield`, the commitment-insert and nullifier-spend events, `rootHistory`.
+- **The proof path, once integrated, exposes:** verified `{value, proof}` reads and verified receipts, through the nimbus proxy, to any client.
+- **The client exposes:** `armada-interface`'s shield/transfer/unshield handlers, over `@armada/sdk`.
 
-1. **A is work package #1** — it lands the deposit/payout interface every other WP binds to; nothing above it can integrate until that interface exists.
-2. **Walking skeleton** — a thin slice spanning A + B + D (shield → deposit → trivial ForceMove settle → payout → scan on a fixturenet) retires integration risk before any tier is deepened (see §4).
-3. **B's T1 ingestion is the long pole** — the nimbus-eth1 emitter is the one genuinely-unbuilt v1 item; spike it first (§11 R3, ADR-0009).
-4. **C builds on A + B** once their interfaces are real; **D** proceeds in parallel against the same interfaces.
+## Sequencing, revised
 
-## Open decisions, by owning work package
-
-Kept with their owner so they no longer contaminate the core scope:
-
-- **A:** native amount-privacy (T0.6, opt, ADR-0005).
-- **B:** federation bonding + threshold DKG (T2.4, v2); the T1 nimbus long pole (ADR-0009).
-- **C:** **USDC yield is the priority and in scope** via the Aave-v4 adapter (ADR-0013); the open decision is the **v1 mechanism** — direct adapter recipe (public Design-A boundary) vs the private **LP-buffered rail** (T4.5, which needs v2 market-making, ADR-0011) — and may amend ADR-0011. **Adapter source** (build vs reuse Railgun's Cookbook Aave/Swaps recipes) is an open decision. ETH/wstETH yield (T4.4) is the trivial path; market-making stays v2 (ADR-0011).
-- **D:** mobile transport crux (T6.5, ADR-0008); optional identity (T6.8).
+1. **The on-chain anchor is already built**, so it is no longer the first thing to land; it is the baseline everything else now targets.
+2. **The proof path is the next concrete target**, not the long pole it used to be: operate the proxy, patch the fixturenet genesis, and run the first proof (`labbook/2026-10-19-nimbus-verified-proxy-proofs.md` §3.8).
+3. **The client's settlement lifecycle and watchtower** are the next client-side gap, once a verified read path exists to build them against.
+4. **A venue** has no code and no near-term dependency forcing it; it stays last.
 
 ## Relationship to the arc42 docs
 
-The arc42 set is the **architecture description**; this WBS is the **delivery frame** around it. The tier docs (`T0`–`T6`) are the building-block detail each work package points into — A → T0/T6.2/T6.3, B → T1/T2/T6.1, C → T3/T4/T5, D → T6.0/T6.4–T6.8. When a work package is picked up for delivery, its scope is written to the six-part reuse-spec bar (goal + boundary + reuse inventory + delta + ICD + acceptance) defined in ADR-0012, against the frozen baseline.
+The arc42 set is the architecture description; this WBS is the delivery frame around it. The tier docs (`T0`–`T6`) carry the building-block detail and the real status for each item.

@@ -37,10 +37,10 @@
 </thead>
 <tbody>
 <tr>
-<td>T0.3 boundary contract funding/settling a Nitro channel from shielded notes</td>
-<td><strong>deposit/payout contract</strong></td>
-<td>"adapter"</td>
-<td>"adapter" is overloaded (see the three rows below)</td>
+<td>The deposit/payout boundary, merged into <code>ArmadaNitroAdjudicator</code> (<code>depositFromNote</code>, the <code>SHIELD</code> payout branch)</td>
+<td><strong>deposit/payout boundary</strong></td>
+<td>"adapter", "T0.3 contract", "fundChannel"</td>
+<td>there is no separate contract; see T0.2</td>
 </tr>
 <tr>
 <td>Railgun's own value-moving recipe (<code>unshield → call → reshield</code>)</td>
@@ -140,39 +140,43 @@
 </tr>
 <tr>
 <td><strong>laconic-wallet</strong></td>
-<td>React Native (Android/iOS) wallet: keys + Cosmos/EIP-155 signing over WalletConnect. Bare-bones today. Gitea.</td>
+<td>React Native (Android/iOS) wallet. <strong>Not reused</strong>: <code>armada-client</code>, the repo meant to host a fork, has no application code. The live client is <code>armada-interface</code>, an independently written web app. Gitea.</td>
 </tr>
 <tr>
 <td><strong>laconic-wallet-web</strong></td>
-<td>browser build of the wallet. Gitea.</td>
+<td>browser build of the wallet. <strong>Not reused</strong> for the same reason. Gitea.</td>
 </tr>
 <tr>
 <td><strong>watcher-ts</strong></td>
-<td>the generic <strong>watcher</strong> framework (proof-carrying, metered state indexing). GitHub.</td>
+<td>the generic watcher framework. <strong>Not reused</strong>: the live indexer is <code>armada-relayer</code>'s Ponder/Postgres watcher, a different framework. <code>watcher-ts</code> remains a plan for an optional server cache. GitHub.</td>
 </tr>
 <tr>
 <td><strong>mobymask</strong> / v2 / v3</td>
-<td>reference p2p <strong>demo</strong> app (snap + in-browser Nitro + libp2p relay + keeper). A demo, not a product; proves the mobile-first shape.</td>
+<td>reference p2p demo app. <strong>Not reused</strong>: no mobymask code exists in any ship-armada repo.</td>
 </tr>
 <tr>
 <td><strong>ts-nitro</strong></td>
-<td>TypeScript port of Nitro running a state-channel node <strong>in-browser / on mobile</strong>. GitHub.</td>
+<td>TypeScript port of Nitro for in-browser/mobile use. <strong>Not reused</strong>: <code>armada-sdk</code>'s <code>src/</code> has no <code>nitro</code> reference anywhere.</td>
 </tr>
 <tr>
 <td><strong>go-nitro</strong></td>
-<td>cerc-io fork of the (statechannels) <strong>Nitro</strong> Go impl: adjudicator, ForceMove, vouchers, virtual channels, swap protocol, Bridge. Live on Ethereum.</td>
+<td>cerc-io fork of the (statechannels) Nitro Go impl. <strong>Reused, then patched</strong>: <code>armada-nitro</code> vendors it and applies six commits (EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a reentrancy lock, SafeERC20 payout).</td>
+</tr>
+<tr>
+<td><strong>FROST</strong></td>
+<td>the threshold-signature scheme <code>armada-nitro</code>'s <code>HubCustodian</code> actually verifies: FROST over secp256k1 (KECCAK-256), via the <code>frost-secp256k1-evm</code> library. Not <code>chain-signatures</code>.</td>
 </tr>
 <tr>
 <td><strong>chain-signatures</strong></td>
-<td>library: <code>ethschnorr</code> (Ethereum-compatible Schnorr) + <code>ethdss</code> (Distributed Schnorr, Stinson–Strobl <em>(t,n)</em>) on a <code>kyber</code> DKG. Gitea.</td>
+<td>library: <code>ethschnorr</code> + <code>ethdss</code> (Distributed Schnorr, Stinson–Strobl <em>(t,n)</em>) on a <code>kyber</code> DKG. <strong>Not used anywhere in the ship-armada repos.</strong> <code>HubCustodian</code> uses FROST instead (see above). Gitea.</td>
 </tr>
 <tr>
 <td><strong>nimbus-eth1</strong></td>
-<td>Nim Ethereum L1 execution client with stateless/witness execution + the Aristo state DB — emits canonical, proof-carrying MPT-node state diffs. GitHub.</td>
+<td>Nim Ethereum L1 execution client. Its stateless/witness execution path and its verified proxy (<code>libverifproxy</code>) are the proof path Armada's docs now target (ADR-0009); <strong>unintegrated</strong>: no Armada repo runs it yet. GitHub.</td>
 </tr>
 <tr>
 <td><strong>ipld-eth-server</strong> / ipld-eth-state-snapshot</td>
-<td>index and serve Ethereum state as IPLD. GitHub.</td>
+<td>index and serve Ethereum state as IPLD. <strong>Not on the proof path</strong>: geth-only, dormant since August 2024, and its current schema carries no per-log proof to <code>receiptsRoot</code>. GitHub.</td>
 </tr>
 <tr>
 <td><strong>laconic-so</strong></td>
@@ -188,7 +192,7 @@
 </tr>
 <tr>
 <td><strong>DSS</strong></td>
-<td>Distributed Schnorr Signature (see chain-signatures); the federation's threshold signature. Realized by <strong>T2.4</strong> (attestation <strong>T3.2</strong>).</td>
+<td>Distributed Schnorr Signature over a <code>kyber</code> DKG, as <code>chain-signatures</code> would provide it. <strong>Not built; not used anywhere in the ship-armada repos.</strong> <code>HubCustodian</code> uses FROST instead (see above).</td>
 </tr>
 <tr>
 <td><strong>Deepstack</strong></td>
@@ -223,9 +227,9 @@
 <li><strong>Broadcaster / Relayer</strong> — see §1 ("Relay", Railgun); the <strong>keeper</strong>'s Railgun analog.</li>
 <li><strong>Waku</strong> — decentralized libp2p-based p2p messaging (filter / lightpush / store), carrying broadcaster↔user comms and gossip/discovery. Transport <strong>T2.3</strong> (ADR-0008).</li>
 <li><strong>CCTP</strong> — Circle's Cross-Chain Transfer Protocol (burn-and-mint native USDC); Armada's cross-chain Adapter, used as <em>mint-and-shield</em>. <strong>T5</strong> (Armada Adapters).</li>
-<li><strong>Aave-yield adapter</strong> — USDC shielded yield via an <strong>LP-buffered</strong>, batched Aave rail (no per-user public deposit); ETH yield instead uses a shielded wstETH note. Armada's adapter tier (<strong>T5</strong>).</li>
+<li><strong>Aave-yield adapter</strong> — built: <code>ArmadaYieldAdapter</code>/<code>ArmadaYieldVault</code>, a direct recipe through the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding, with the amount public at the transparent supply boundary. The LP-buffered private rail the earlier docs described is not built. ETH yield instead uses a shielded wstETH note, which needs no adapter at all. Armada's adapter tier (<strong>T5</strong>).</li>
 <li><strong>MASP</strong> — Namada's Multi-Asset Shielded Pool note primitive — a note primitive, <strong>not</strong> a state channel (contrast Design B). Reference only.</li>
-<li><strong>RelayAdapt / recipe</strong> — Railgun's cross-contract module: an atomic <code>unshield → external call → reshield</code> (Cookbook "recipes", e.g. an Aave deposit). The value-moving "adapter" — <em>not</em> a custodial vault, <em>not</em> DSS.</li>
+<li><strong>RelayAdapt / recipe</strong> — Railgun's cross-contract module: an atomic <code>unshield → external call → reshield</code>. <strong>Not used anywhere in this codebase.</strong> Armada's Aave-v4 yield adapter uses the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding instead.</li>
 <li><strong>wstETH / weETH</strong> — non-rebasing LSTs (value accrues via a rising exchange rate). Held as a shielded note they earn ETH staking yield intrinsically, with no Aave/LP rail needed. ETH yield <strong>T4.4</strong>.</li>
 <li><strong>Selective disclosure</strong> — a voluntary, off-chain proof of a chain of custody for chosen value, from a shielding address through notes and channels to a payout or withdrawal, that reveals nothing else about the wallet. It never gates a pool action (ADR-0020; <a href="engineering/16-selective-disclosure.html">16</a>).</li>
 </ul>
@@ -234,6 +238,7 @@
 <li><strong>Tier (T0–T6)</strong> — the stack: <strong>T0</strong> Ethereum anchor · <strong>T1</strong> ingestion · <strong>T2</strong> watcher-party substrate · <strong>T3</strong> ordering · <strong>T4</strong> execution platform (ex_net) · <strong>T5</strong> adapters · <strong>T6</strong> client/apps. Software-architecture tiers — not blockchain layers.</li>
 <li><strong>Watcher party</strong> — a bonded federation of service providers serving one data need, and here also the execution venue. A sequencing-and-attestation role, <strong>not</strong> a BFT chain (<strong>T2</strong>, federation <strong>T2.4</strong>).</li>
 <li><strong>Proof-carrying feed</strong> — a watcher feed whose query results ship with verifiable proofs (nimbus-eth1 state-diff → IPLD), so consumers verify rather than trust (<strong>T1.1</strong>, served over <strong>T2</strong>).</li>
+<li><strong>Nimbus verified proxy</strong> — <code>status-im/nimbus-eth1</code>'s proof client: anchors headers to a beacon light client, verifies storage via EIP-1186, and proves log inclusion/completeness by rebuilding a block's receipt trie. The proof path (<strong>T1</strong>, ADR-0009); upstream, unintegrated into any Armada repo.</li>
 <li><strong>Commit-reveal</strong> — fair ordering: <code>commit = H(order‖salt)</code> → seal epoch + inclusion receipts → post-seal beacon fixes positions → reveal → matcher runs. Blocks operator front-running without client-side ZK (ordering <strong>T3</strong> v2, ADR-0007).</li>
 <li><strong>Post-seal randomness beacon</strong> — randomness revealed <em>after</em> the epoch is sealed, fixing order positions.</li>
 <li><strong>Epoch set-agreement</strong> — the watcher party agreeing <em>which</em> commits belong to an epoch and in what order (leader-propose + threshold-attest + censorship fraud proofs). The core net-new, highest-risk piece (<strong>T3.1</strong>, v2).</li>
@@ -243,8 +248,8 @@
 <li><strong>Filler-filtered order</strong> — an order carrying an allowlist of who may fill it; empty ⇒ open (lit/CLOB), non-empty ⇒ private/RFQ.</li>
 <li><strong>CLOB / RFQ</strong> — Central Limit Order Book (public, lit) / Request-for-Quote (bilateral, private). The matcher unifies both in one order type.</li>
 <li><strong>LP vault</strong> — pooled market-making capital run by a keeper (lets passive LPs participate).</li>
-<li><strong>Threshold Schnorr / DKG / t-of-n</strong> — the federation signature (via chain-signatures); we pick <strong>t high</strong> (e.g. 4-of-7) so liveness failure = halt, not loss.</li>
-<li><strong>DSS</strong> — Distributed Schnorr Signature: a Stinson–Strobl <em>(t,n)</em> threshold Schnorr over a <code>kyber</code> DKG (<code>chain-signatures</code>); the federation's threshold signature (<strong>T2.4</strong>, attestation <strong>T3.2</strong>).</li>
+<li><strong>Threshold Schnorr / DKG / t-of-n</strong> — a design for a future federation signature; no threshold scheme is chosen for T3. <code>HubCustodian</code> uses FROST, not a <code>chain-signatures</code>-style DSS, for a different purpose (channel-participant signing, ADR-0016).</li>
+<li><strong>DSS</strong> — Distributed Schnorr Signature, a Stinson–Strobl <em>(t,n)</em> design over a <code>kyber</code> DKG. <strong>Not built and not used anywhere in the ship-armada repos.</strong></li>
 <li><strong>Perpetual PoT (Phase-1)</strong> — Community Perpetual Powers of Tau: the universal, inherited and vetted Groth16 trusted-setup phase. Reused as-is (<strong>T0.1</strong>, ADR-0003).</li>
 <li><strong>Phase-2</strong> — per-circuit MPC over our circuit set; security is <strong>1-of-N honest</strong>, with a published transcript plus a final randomness beacon. Re-run only when circuits change (our own, <strong>T0.1</strong>, ADR-0003).</li>
 <li><strong>Design A / Design B</strong> — <strong>A</strong> (this project, default v1): boundary privacy via a Railgun-style shielded pool + deposit/payout contract; the venue is a blind matcher but sees trade amounts/terms. Amounts are public only at the transparent boundary (ADR-0005). <strong>B</strong> (deferred, v3): ZK matching + "shielded ForceMove" to hide amounts/terms from the venue itself.</li>

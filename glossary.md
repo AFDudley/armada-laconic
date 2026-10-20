@@ -10,7 +10,7 @@ The choices below are fixed, and the documentation is kept grep-clean of the ban
 
 | Concept | Use this | Never this | Why / who owns the other name |
 |---|---|---|---|
-| T0.3 boundary contract funding/settling a Nitro channel from shielded notes | **deposit/payout contract** | "adapter" | "adapter" is overloaded (see the three rows below) |
+| The deposit/payout boundary, merged into `ArmadaNitroAdjudicator` (`depositFromNote`, the `SHIELD` payout branch) | **deposit/payout boundary** | "adapter", "T0.3 contract", "fundChannel" | there is no separate contract; see T0.2 |
 | Railgun's own value-moving recipe (`unshield → call → reshield`) | **RelayAdapt / Adapt modules / Cookbook** | — | Railgun-only; never used to name our T0.3 or T5 |
 | Armada's governance-added modules (CCTP, Aave-yield, Swaps) | **Adapters** (capital-A, tier **T5**) | "deposit/payout contract", "RelayAdapt" | Armada's app tier only (→ §5 T5) |
 | Off-chain state indexer that ingests chain state and serves verifiable results | **watcher** (Laconic; **T2**) | watchtower, keeper | protects the **read** side of pool privacy |
@@ -45,19 +45,20 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 | **ex_net** | Vulcanize's 2017 whitepaper: a bonded, federated, privacy-preserving cross-chain exchange venue — the design ancestor of the v2 matcher ([PDF](./ex_net_whitepaper.pdf)). Realized by **T4.6 + T3** (v2). |
 | **matcher** | private Vulcanize repo (2019–20): curve-order, frequent-batch-auction matching-engine PoC — the engine behind ex_net. (Branches `master` / `ian_branch` / `xsleonard_branch`.) |
 | **laconicd** | the Laconic Cosmos-SDK chain daemon; embeds a go-nitro server + onboarding module (`role` / `kyc_id`). Gitea. |
-| **laconic-wallet** | React Native (Android/iOS) wallet: keys + Cosmos/EIP-155 signing over WalletConnect. Bare-bones today. Gitea. |
-| **laconic-wallet-web** | browser build of the wallet. Gitea. |
-| **watcher-ts** | the generic **watcher** framework (proof-carrying, metered state indexing). GitHub. |
-| **mobymask** / v2 / v3 | reference p2p **demo** app (snap + in-browser Nitro + libp2p relay + keeper). A demo, not a product; proves the mobile-first shape. |
-| **ts-nitro** | TypeScript port of Nitro running a state-channel node **in-browser / on mobile**. GitHub. |
-| **go-nitro** | cerc-io fork of the (statechannels) **Nitro** Go impl: adjudicator, ForceMove, vouchers, virtual channels, swap protocol, Bridge. Live on Ethereum. |
-| **chain-signatures** | library: `ethschnorr` (Ethereum-compatible Schnorr) + `ethdss` (Distributed Schnorr, Stinson–Strobl *(t,n)*) on a `kyber` DKG. Gitea. |
-| **nimbus-eth1** | Nim Ethereum L1 execution client with stateless/witness execution + the Aristo state DB — emits canonical, proof-carrying MPT-node state diffs. GitHub. |
-| **ipld-eth-server** / ipld-eth-state-snapshot | index and serve Ethereum state as IPLD. GitHub. |
+| **laconic-wallet** | React Native (Android/iOS) wallet. **Not reused**: `armada-client`, the repo meant to host a fork, has no application code. The live client is `armada-interface`, an independently written web app. Gitea. |
+| **laconic-wallet-web** | browser build of the wallet. **Not reused** for the same reason. Gitea. |
+| **watcher-ts** | the generic watcher framework. **Not reused**: the live indexer is `armada-relayer`'s Ponder/Postgres watcher, a different framework. `watcher-ts` remains a plan for an optional server cache. GitHub. |
+| **mobymask** / v2 / v3 | reference p2p demo app. **Not reused**: no mobymask code exists in any ship-armada repo. |
+| **ts-nitro** | TypeScript port of Nitro for in-browser/mobile use. **Not reused**: `armada-sdk`'s `src/` has no `nitro` reference anywhere. |
+| **go-nitro** | cerc-io fork of the (statechannels) Nitro Go impl. **Reused, then patched**: `armada-nitro` vendors it and applies six commits (EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a reentrancy lock, SafeERC20 payout). |
+| **FROST** | the threshold-signature scheme `armada-nitro`'s `HubCustodian` actually verifies: FROST over secp256k1 (KECCAK-256), via the `frost-secp256k1-evm` library. Not `chain-signatures`. |
+| **chain-signatures** | library: `ethschnorr` + `ethdss` (Distributed Schnorr, Stinson–Strobl *(t,n)*) on a `kyber` DKG. **Not used anywhere in the ship-armada repos.** `HubCustodian` uses FROST instead (see above). Gitea. |
+| **nimbus-eth1** | Nim Ethereum L1 execution client. Its stateless/witness execution path and its verified proxy (`libverifproxy`) are the proof path Armada's docs now target (ADR-0009); **unintegrated**: no Armada repo runs it yet. GitHub. |
+| **ipld-eth-server** / ipld-eth-state-snapshot | index and serve Ethereum state as IPLD. **Not on the proof path**: geth-only, dormant since August 2024, and its current schema carries no per-log proof to `receiptsRoot`. GitHub. |
 | **laconic-so** | "stack orchestrator": deploys stacks (ops tool, not a library). |
 | **Clearing (Nitro)** | Netting + non-custodial settlement of trades and fees over Nitro channels: per-request vouchers meter, co-signed channel allocations split fees (user / protocol / integrator), an L1 close settles in USDC. What the watcher party provides on the money side — *not* a service-provider marketplace or fee vault. |
 | **Laconic Matchmaker** | "Laconic Matchmaking Services" (2022): privacy-preserving, broker-dealer-compliant matching via encrypted set-intersection / range matching (FHE). |
-| **DSS** | Distributed Schnorr Signature (see chain-signatures); the federation's threshold signature. Realized by **T2.4** (attestation **T3.2**). |
+| **DSS** | Distributed Schnorr Signature over a `kyber` DKG, as `chain-signatures` would provide it. **Not built; not used anywhere in the ship-armada repos.** `HubCustodian` uses FROST instead (see above). |
 | **Deepstack** | the `deep-stack` project; authored go-nitro's swap protocol. Distinct from the older statechannels HashLockedSwap. |
 
 ## 3. Nitro / state-channel terms
@@ -87,9 +88,9 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **Broadcaster / Relayer** — see §1 ("Relay", Railgun); the **keeper**'s Railgun analog.
 - **Waku** — decentralized libp2p-based p2p messaging (filter / lightpush / store), carrying broadcaster↔user comms and gossip/discovery. Transport **T2.3** (ADR-0008).
 - **CCTP** — Circle's Cross-Chain Transfer Protocol (burn-and-mint native USDC); Armada's cross-chain Adapter, used as *mint-and-shield*. **T5** (Armada Adapters).
-- **Aave-yield adapter** — USDC shielded yield via an **LP-buffered**, batched Aave rail (no per-user public deposit); ETH yield instead uses a shielded wstETH note. Armada's adapter tier (**T5**).
+- **Aave-yield adapter** — built: `ArmadaYieldAdapter`/`ArmadaYieldVault`, a direct recipe through the pool's own `adaptContract`/`adaptParams` binding, with the amount public at the transparent supply boundary. The LP-buffered private rail the earlier docs described is not built. ETH yield instead uses a shielded wstETH note, which needs no adapter at all. Armada's adapter tier (**T5**).
 - **MASP** — Namada's Multi-Asset Shielded Pool note primitive — a note primitive, **not** a state channel (contrast Design B). Reference only.
-- **RelayAdapt / recipe** — Railgun's cross-contract module: an atomic `unshield → external call → reshield` (Cookbook "recipes", e.g. an Aave deposit). The value-moving "adapter" — *not* a custodial vault, *not* DSS.
+- **RelayAdapt / recipe** — Railgun's cross-contract module: an atomic `unshield → external call → reshield`. **Not used anywhere in this codebase.** Armada's Aave-v4 yield adapter uses the pool's own `adaptContract`/`adaptParams` binding instead.
 - **wstETH / weETH** — non-rebasing LSTs (value accrues via a rising exchange rate). Held as a shielded note they earn ETH staking yield intrinsically, with no Aave/LP rail needed. ETH yield **T4.4**.
 - **Selective disclosure** — a voluntary, off-chain proof of a chain of custody for chosen value, from a shielding address through notes and channels to a payout or withdrawal, that reveals nothing else about the wallet. It never gates a pool action (ADR-0020; [16](engineering/16-selective-disclosure.html)).
 
@@ -98,6 +99,7 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **Tier (T0–T6)** — the stack: **T0** Ethereum anchor · **T1** ingestion · **T2** watcher-party substrate · **T3** ordering · **T4** execution platform (ex_net) · **T5** adapters · **T6** client/apps. Software-architecture tiers — not blockchain layers.
 - **Watcher party** — a bonded federation of service providers serving one data need, and here also the execution venue. A sequencing-and-attestation role, **not** a BFT chain (**T2**, federation **T2.4**).
 - **Proof-carrying feed** — a watcher feed whose query results ship with verifiable proofs (nimbus-eth1 state-diff → IPLD), so consumers verify rather than trust (**T1.1**, served over **T2**).
+- **Nimbus verified proxy** — `status-im/nimbus-eth1`'s proof client: anchors headers to a beacon light client, verifies storage via EIP-1186, and proves log inclusion/completeness by rebuilding a block's receipt trie. The proof path (**T1**, ADR-0009); upstream, unintegrated into any Armada repo.
 - **Commit-reveal** — fair ordering: `commit = H(order‖salt)` → seal epoch + inclusion receipts → post-seal beacon fixes positions → reveal → matcher runs. Blocks operator front-running without client-side ZK (ordering **T3** v2, ADR-0007).
 - **Post-seal randomness beacon** — randomness revealed *after* the epoch is sealed, fixing order positions.
 - **Epoch set-agreement** — the watcher party agreeing *which* commits belong to an epoch and in what order (leader-propose + threshold-attest + censorship fraud proofs). The core net-new, highest-risk piece (**T3.1**, v2).
@@ -107,8 +109,8 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **Filler-filtered order** — an order carrying an allowlist of who may fill it; empty ⇒ open (lit/CLOB), non-empty ⇒ private/RFQ.
 - **CLOB / RFQ** — Central Limit Order Book (public, lit) / Request-for-Quote (bilateral, private). The matcher unifies both in one order type.
 - **LP vault** — pooled market-making capital run by a keeper (lets passive LPs participate).
-- **Threshold Schnorr / DKG / t-of-n** — the federation signature (via chain-signatures); we pick **t high** (e.g. 4-of-7) so liveness failure = halt, not loss.
-- **DSS** — Distributed Schnorr Signature: a Stinson–Strobl *(t,n)* threshold Schnorr over a `kyber` DKG (`chain-signatures`); the federation's threshold signature (**T2.4**, attestation **T3.2**).
+- **Threshold Schnorr / DKG / t-of-n** — a design for a future federation signature; no threshold scheme is chosen for T3. `HubCustodian` uses FROST, not a `chain-signatures`-style DSS, for a different purpose (channel-participant signing, ADR-0016).
+- **DSS** — Distributed Schnorr Signature, a Stinson–Strobl *(t,n)* design over a `kyber` DKG. **Not built and not used anywhere in the ship-armada repos.**
 - **Perpetual PoT (Phase-1)** — Community Perpetual Powers of Tau: the universal, inherited and vetted Groth16 trusted-setup phase. Reused as-is (**T0.1**, ADR-0003).
 - **Phase-2** — per-circuit MPC over our circuit set; security is **1-of-N honest**, with a published transcript plus a final randomness beacon. Re-run only when circuits change (our own, **T0.1**, ADR-0003).
 - **Design A / Design B** — **A** (this project, default v1): boundary privacy via a Railgun-style shielded pool + deposit/payout contract; the venue is a blind matcher but sees trade amounts/terms. Amounts are public only at the transparent boundary (ADR-0005). **B** (deferred, v3): ZK matching + "shielded ForceMove" to hide amounts/terms from the venue itself.

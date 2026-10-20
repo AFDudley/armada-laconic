@@ -35,7 +35,7 @@ payout path, T0.2).</p>
 <li><strong>Shield.</strong> A user shields any asset into Armada as normal and receives a note.</li>
 <li><strong>Open a channel to a hub.</strong> Using a fresh address and a relayer, the user takes a split of that note and opens a Nitro channel to a <strong>hub</strong>. The hub is a liquidity provider whose identity is private. It can deny service but cannot steal: every balance is enforceable on-chain without its cooperation.</li>
 <li><strong>Play games.</strong> The user plays any published game with the hub, or with other users routed through the hub. A player who breaks a game's rules loses on Ethereum under that game's rules. Games that end cooperatively net back into the hub channel off-chain, and funds are shielded into Armada at otherwise unused addresses when the user exits.</li>
-<li><strong>First games:</strong> Aave USDC lending and borrowing, and swapping shielded WETH for wstETH.</li>
+<li><strong>First games:</strong> Aave USDC yield, and swapping shielded WETH for wstETH.</li>
 </ol>
 <h2 id="the-happy-path">The happy path</h2>
 <pre><code class="language-mermaid">sequenceDiagram
@@ -154,12 +154,9 @@ payout path, T0.2).</p>
 </table>
 <p>Adjudication reveals the stakes of the disputed game, not the user's balance in the pool. The hub-channel deposit is different. It is public from the moment the channel opens, as the split amount of the funding unshield (Design A, <a href="./09-architecture-decisions.html#adr-0005">ADR-0005</a>). A dispute against an uncooperative hub also forces the hub channel on-chain, because Nitro releases a game's guarantee only from a finalized hub channel (<code>reclaim</code> in go-nitro's <code>MultiAssetHolder</code>). None of these amounts is linked to the user's identity. Hiding the amounts themselves is the T0.6 fork-lite upgrade (<a href="./A-nitro-on-railgun/A.9-native-commitment.html">A.9</a>).</p>
 <h2 id="the-first-games">The first games</h2>
-<p><strong>Swapping shielded WETH for wstETH.</strong> The hub quotes a price, and the game moves the agreed WETH and wstETH between the two players inside the channel, atomically. Both assets live in the channel's escrow, so this needs a two-asset settlement game, the multi-asset ForceMove app the build plan tracks as net-new (<a href="./11-risks-and-technical-debt.html">§11 R2</a>).</p>
-<p><strong>Aave USDC lending and borrowing.</strong> The hub runs the Aave position; the game settles the user's side of it in-channel.
-- <strong>Lending:</strong> the user stakes USDC into the game, and the game's rules pay principal plus accrued interest at close.
-- <strong>Borrowing:</strong> the user stakes collateral, receives USDC, and the game's rules repay principal plus interest or liquidate the collateral.</p>
-<p>The Aave interaction is the hub's own public activity and is not linked to the user. For a dispute to enforce interest, the game needs an on-chain rate reference, such as Aave's reserve index. That rate reference and the liquidation rules for borrowing are open design points.</p>
-<p><strong>How the first games are built.</strong> <a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a> takes a simpler route than a separate app per game: the swap is one co-signed reallocation of the channel state, and lending is holding Aave's non-rebasing share token <code>waUSDC</code> in the channel, so interest accrues to the holder with no rate reference. Invariants and contract requirements: <a href="./15-hub-yield-and-swaps.html">15</a>.</p>
+<p><strong>Swapping shielded WETH for wstETH.</strong> The hub quotes a price. The user signs one channel state that moves the agreed WETH to the hub and the agreed wstETH to the user. The hub countersigns. Both assets live in the channel's escrow, so the swap is atomic: ForceMove accepts or rejects whole states.</p>
+<p><strong>Aave USDC yield.</strong> The hub holds the Aave position and provides liquidity. The user swaps USDC for Aave's non-rebasing share token <code>waUSDC</code> inside the channel, by the same co-signed reallocation. Interest accrues to the holder of <code>waUSDC</code>, so no rate reference reaches the chain. The Aave interaction is the hub's own public activity and is not linked to the user.</p>
+<p><strong>How the first games are built.</strong> <a href="./09-architecture-decisions.html#adr-0017">ADR-0017</a>: no app per game. Each game is one co-signed reallocation of a multi-asset channel state under <code>ConsensusApp</code>. Invariants and contract requirements: <a href="./15-hub-yield-and-swaps.html">15</a>.</p>
 <h2 id="where-this-fits">Where this fits</h2>
 <ul>
 <li><strong>Two-party swap walkthrough</strong> (same rail, one direct channel): <a href="./13-shielded-swap-walkthrough.html">13</a>.</li>

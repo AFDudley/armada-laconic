@@ -88,7 +88,6 @@
 <p>One design choice belongs here rather than there: the asset allow-list is <strong>immutable</strong>, so adding an asset is a new adjudicator deployment. With four assets and channels that are short-lived relative to deployments, that is acceptable and keeps governance off the settlement path. A governed list is a later decision.</p>
 <h2 id="what-this-does-not-cover">What this does not cover</h2>
 <ul>
-<li><strong>Borrowing.</strong> A borrow needs liquidation rules and an on-chain price, which makes it a real ForceMove app (option 1). It stays v2.</li>
 <li><strong>Unilateral swap enforcement.</strong> Option 2 swaps need both signatures. A swap routed across hubs through virtual channels needs the hash-locked swap pattern of <a href="./09-architecture-decisions.html#adr-0015">ADR-0015</a>.</li>
 <li><strong>Protocol fees on swaps.</strong> The fee split (T4.3) is an allocation on the same state and needs no further mechanism.</li>
 </ul>

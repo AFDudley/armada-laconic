@@ -98,7 +98,6 @@ One design choice belongs here rather than there: the asset allow-list is **immu
 
 ## What this does not cover
 
-- **Borrowing.** A borrow needs liquidation rules and an on-chain price, which makes it a real ForceMove app (option 1). It stays v2.
 - **Unilateral swap enforcement.** Option 2 swaps need both signatures. A swap routed across hubs through virtual channels needs the hash-locked swap pattern of [ADR-0015](./09-architecture-decisions.md#adr-0015).
 - **Protocol fees on swaps.** The fee split (T4.3) is an allocation on the same state and needs no further mechanism.
 

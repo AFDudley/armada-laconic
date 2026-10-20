@@ -1,120 +1,32 @@
 # A.6 — Settlement client & self-watchtower
 
-work package A · reuse-oriented spec · **2026-09-05**
+work package A · **2026-10-20**
 **Parent:** [`A.0`](./A.0-overview.md)
-**Owns:** T6.2 settlement client · T6.3 self-watchtower
+**Owns:** T6.2 settlement client (partly built) · T6.3 self-watchtower (not built)
 
 ---
 
-## A.6.1 Goal
+## A.6.1 Status
 
-This document defines the client edge of A: the software a party runs to drive a settlement channel through its whole life and to keep that channel safe while it is open. On the T6.2 side, the client funds a channel from a deposit, exchanges off-chain ForceMove states and vouchers, and defunds it back to a payout. On the T6.3 side, it automatically defeats a counterparty who force-closes on a stale state. Both are client-side; neither touches pool or adjudicator internals, only their ABIs (see A.5).
+**T6.2, the settlement client, is partly built.** `armada-interface/src/features/{shield,transfer-shielded,unshield}/handler.ts` drives `PrivacyPool` shield and transact calls. No code anywhere in `armada-interface` or `armada-sdk` drives an `armada-nitro` channel lifecycle: no fund-from-note, propose/accept state, cooperative close, or force-close. `armada-sdk`'s own search for `nitro`/`Nitro`/`HubCustodian` across its `src/` returns nothing.
 
-Per [ADR-0012](../09-architecture-decisions.md#adr-0012), this is integration plus glue. The channel engine, the P2P substrate, the voucher primitive, and the chain event and transaction machinery are all reused at pinned commits (A.1.5, A.1.6, A.1.3). T6.3's automatic challenge-response logic is itself trivial to write, because the primitives already exist: `ForceMove.checkpoint`, the `ChallengeRegistered` feed, and the Checkpoint transaction build (A.1.6, A.1.3). The real net-new work is the tooling and liveness that make that logic runnable in a browser. That work is a thin in-browser dispute API on the ts-nitro node, which stock ts-nitro omits, and an always-on watch and relay so a challenge is seen inside its window (A.1.6, A.1.9). This client is hosted by D (T6.0/T6.5) and consumes B's feeds (T2) for state freshness.
+**T6.3, the self-watchtower, is not built.** `armada-nitro`'s e2e gate harness has a watchtower (`env/gates/watchtower/watch.ts`), run by the `armada-watchtower-e2e` and `armada-watchtower-discrimination-e2e` jobs, but it is test-harness infrastructure, not a client the wallet ships. No client-side watchtower exists.
 
-## A.6.2 Boundary
+## A.6.2 What exists to build on
 
-**In scope (T6.2):**
-- Run the ts-nitro in-browser node as the channel engine (fund/defund/pay) over `@cerc-io/peer` (A.1.5).
-- Drive the A.5 deposit/payout lifecycle from the client: request deposit-in, build/sign ForceMove `VariablePart`s, exchange vouchers, request payout-out.
-- **Submit-on-behalf** path for write-side origin privacy: on-chain transactions (deposit escrow, conclude, challenge, checkpoint) are relayed by a funded submitter so the signing party stays origin-private (A.1.5 keeper shape).
-- The **net-new dispute API** surfaced on the node: `challenge`, `checkpoint`, `getSupportedState` — absent from stock ts-nitro (A.1.9 delta 6).
+The adjudicator side of this boundary is built and tested ([A.4](./A.4-adjudicator-integration.md), [A.5](./A.5-deposit-payout-contract.md)): `depositFromNote`, the `SHIELD`-type payout branch, `go-nitro`'s `challenge`/`checkpoint`/`conclude`, and the per-channel reentrancy lock. `armada-nitro`'s own Forge tests already exercise the watchtower-relevant cases from the contract side: a stale hub challenge overridden by the user's latest state, a revoked delegate's states settling during the revocation delay, a hostile contract participant unable to exhaust a counterparty's challenge, and per-asset payout checks under combined-versus-per-asset settlement (`WatchtowerPerAssetPayoutCheck.t.sol`). What is missing is the client: a channel-lifecycle driver and a watch loop that calls these primitives from `armada-interface` or a future mobile client.
 
-**In scope (T6.3):**
-- The automatic watchtower loop: subscribe to `ChallengeRegistered`, compare turnNums, and `checkpoint` before `FinalizesAt`, or else fall back to `directdefund` (A.1.6).
-- Always-on liveness: a persistent relay connection and background watch so the challenge is *seen* inside its window.
+## A.6.3 What a client would need to build
 
-**Out of scope / consumed:** the deposit/payout contract, outcome encoding, and the app registry are A.5 (T0.3); the adjudicator (`ForceMove`/`MultiAssetHolder`) and its dispute primitives are reused from A.4 (T0.2); note-scanning of the pool is B (T6.1); the freshness signal the watchtower gates on is B's per-contract head-cursor (T2; see A.6.5); the wallet host, transport, and mobile proving are D (T6.0/T6.5/T6.6). Terminology per [ADR-0010](../09-architecture-decisions.md#adr-0010): this is the deposit/payout lifecycle, a boundary with B, and a client of tier T6.
+**The lifecycle driver (T6.2).** A caller that funds a channel from a note (`depositFromNote`), exchanges off-chain `ForceMove` states, and drives cooperative close or force-close. None of `armada-interface`'s shield/transact handlers touch this; it is new client code, not a config change.
 
-## A.6.3 Reuse inventory (cite A.1 + pinned commits)
+**The watchtower loop (T6.3).** Subscribe to the adjudicator's challenge events, compare the locally held state's turn number against the challenger's, and submit `checkpoint` with a higher-turn state before `finalizesAt`. The contract-side primitive is reused unchanged (`go-nitro`'s `ForceMove.checkpoint`); the loop and its always-on liveness are the net-new client work. A client that cannot stay connected for the full challenge window would need to delegate to an always-on operator running the same loop; no such delegation mechanism exists today.
 
-Pinned: ts-nitro **@884d616**, go-nitro **@435eb2b**, mobymask **@2329198**. Railgun is **unpinned — pin before build** (A.1.10). Cites resolve to A.1; do not re-document.
+**Reading chain state.** Neither piece has a verified read path yet. T1's nimbus verified proxy is the intended trust boundary (ADR-0009); `armada-interface` does not use it today.
 
-| Reused piece | Citation (via A.1) | What it gives T6.2/T6.3 |
-|---|---|---|
-| In-browser Nitro node (fund/defund/pay) | A.1.5 · ts-nitro @884d616 `packages/nitro-node/src/node/node.ts` L69–190 | The channel engine T6.2 wraps. **Dispute surface is thin — no `challenge`/`checkpoint`** (A.1.9 → net-new, A.6.4). |
-| Browser P2P over `@cerc-io/peer` | A.1.5 · ts-nitro `…/p2p-message-service/service.ts` L16–120, 453–527 | `/nitro/msg/1.0.0` + `/nitro/peerinfo/1.0.0`; relay/WebRTC dial (no inbound listen) — the transport the always-on liveness (A.6.4) keeps warm. |
-| Submit-on-behalf keeper | A.1.5 · mobymask @2329198 `packages/server/index.ts` L48–58; `Delegatable.sol` `execute`/`_msgSender` | The **broadcaster analog**: a funded relayer submits on behalf of a signer who stays origin-private — reusable *shape* for T6.2 write-side privacy. |
-| Vouchers | A.1.3 · go-nitro @435eb2b `payments/vouchers.go` L23–52 | Incremental in-channel micropayment primitive — the in-channel payment T6.2 sends/redeems (shared with C metering & settlement). |
-| Event source `ChallengeRegistered`/`ChallengeCleared` | A.1.6 · go-nitro `node/engine/chainservice/eth_chainservice.go` L494–539; `chainservice.go` L86–160 (`ChallengeRegisteredEvent{candidate,sigs,FinalizesAt,IsInitiatedByMe}`) | The feed T6.3 subscribes to; `FinalizesAt` is the deadline, `candidate` carries the challenger's turnNum. |
-| Tx submit `Challenge`/`Checkpoint` | A.1.6 · `eth_chainservice.go` L376–386; payloads `protocols/interfaces.go` L59–114 | The tx builders T6.3 invokes to push a higher-turn state on-chain. |
-| `checkpoint` (higher-turn, no finalize) / `challenge` / `conclude` | A.1.3 · go-nitro `ForceMove.sol` L88–119 / L39–80 / L126–172 | **`checkpoint` is the exact primitive T6.3 uses** to reset `FinalizesAt` with a later supported state and defeat a stale close. |
-| `recoverVariablePart` signing domain | A.1.3 · `ForceMove.sol` L236–268 | State sigs = `NitroUtils.hashState(fixedPart, variablePart)` — the dispute API (A.6.4) must reproduce this exactly, same as T0.3/A.5. |
-| Manual counter-challenge (pattern, not the loop) | A.1.6 · go-nitro `engine.go` L882–915 (`handleCounterChallengeRequest`) | Shows how a checkpoint payload is assembled once triggered — T6.3 automates the *trigger*. |
+## A.6.4 Risks / open
 
-**A.1.8 corrections honored.** mobymask @2329198 gives the submit-on-behalf keeper only; it is classic delegatable MobyMask (hardhat, react-app, and OpenRPC server), not a browser-peer or watcher. The P2P substrate here is ts-nitro and `@cerc-io/peer`; the browser-peer and watcher lineage lives in `mobymask-v2` and `mobymask-v2-watcher-ts`, and is not this commit. Multi-asset settlement is supported by the adjudicator (A.1.8 §2 / A.4), so the client's lifecycle is multi-asset-capable even though the ETH-in/USDC-out ForceMove app is net-new (A.5).
+- **No client-side evidence that the dispute path works end-to-end from a browser or phone.** The contract-side tests prove the adjudicator behaves correctly when poked the right way; no client pokes it that way yet.
+- **Liveness is unaddressed.** A design for always-on delegation, if the client cannot stay connected through a challenge window, has not been specified for this codebase.
 
-## A.6.4 Net-new delta (what A actually builds)
-
-Two deltas, both from A.1.9 (items 3 and 6):
-
-**D1 — In-browser dispute API (T6.2).** Stock ts-nitro `node.ts` (L69–190) exposes only `fund`/`defund`/`pay`; the dispute path is not surfaced (A.1.5 / A.1.9 delta 6). Add, on the node:
-- `getSupportedState(channelId) → {variablePart, sigs, turnNum}` — the highest-turn state the local store holds with a complete support proof.
-- `challenge(channelId)` and `checkpoint(channelId, supportedState)` — build the payload (`protocols/interfaces.go` shape, A.1.6), sign in the `recoverVariablePart` domain (A.1.3), and hand the tx to the submit-on-behalf relayer (A.6.3).
-This is a surface over reused primitives, not new cryptography. Signing and hashing reuse `NitroUtils.hashState`. It exists so the browser client can dispute, which today only the go-nitro server engine can do.
-
-**D2 — Automatic watchtower loop and always-on liveness (T6.3).** go-nitro has no automatic watchtower (A.1.6). A non-initiator engine auto-creates a `directdefund` (conclude and withdraw) on an adversarial `ChallengeRegistered`, not a higher-turn `checkpoint`; only a manual `CounterChallengeRequest` reaches checkpoint (`engine.go` L540–612, L882–915). The loop itself is small and trivial once the tooling (D1) and liveness are correct, because the checkpoint primitive, the `ChallengeRegistered` feed, and the Checkpoint transaction build all already exist (A.1.6/A.1.3). What is missing is only the automatic trigger wired over them:
-
-```
-on ChallengeRegistered(channelId, candidate, FinalizesAt, IsInitiatedByMe):
-  if IsInitiatedByMe: return                       # our own close, nothing to defend
-  local  = getSupportedState(channelId)            # D1
-  onchain = candidate.turnNum
-  if local.turnNum > onchain:                      # we hold a strictly later supported state
-      checkpoint(channelId, local)                 # D1 → resets FinalizesAt, no finalize (ForceMove L88–119)
-  else:                                            # counterparty's state is current/ahead: no fraud
-      directdefund(channelId)                      # let the exit proceed correctly (reused engine path)
-  # all of the above MUST land before FinalizesAt
-```
-
-- **Freshness gate.** The "highest locally-held supported state" is only trustworthy if the client is synced. T6.3 gates the loop on B's per-contract head-cursor freshness signal (T2; see A.6.5). If the feed is stale, the client cannot assert that `local.turnNum` is authoritative, and it MUST prefer the safe `directdefund` exit rather than a checkpoint that could itself be stale.
-- **Always-on liveness (net-new).** The browser node has no background watch loop and no guaranteed relay connection (A.1.6). T6.3 adds a persistent `@cerc-io/peer` relay connection and a background subscriber so `ChallengeRegistered` is observed within its window. A missed challenge means a lost channel; this is the A.0.5 gate 4 liveness requirement. Where a phone cannot stay connected for the full challenge window, the loop MUST be delegable to an always-on submit-on-behalf relayer (A.6.3 keeper shape) that watches and checkpoints for the offline party. That delegation is the primary reason the keeper is reused write-side.
-
-Choosing `checkpoint` over `directdefund` matters here. A `directdefund` still exits, but at the challenger's possibly stale, adversarial outcome. A `checkpoint` re-establishes the true latest state, so the channel finalizes correctly or stays open. The response logic above is small given the tooling: a turnNum compare plus a `checkpoint` call over primitives that already exist. The net-new work is therefore the tooling of D1's in-browser dispute API and the always-on liveness that let it run at all; the primitive and the branch logic already exist.
-
-## A.6.5 Interfaces (ICD)
-
-**Consumed from A.5 (T0.3, sibling in this package):**
-- Channel-lifecycle API: `requestDeposit(channelId, asset, amount)` drives `RailgunSmartWallet.transact` unshield-in, then `MultiAssetHolder.deposit`; `requestPayout(channelId, outcome)` calls `concludeAndTransferAllAssets` to the payout external destination that re-shields (A.5 · A.1.4).
-- `channelId = NitroUtils.getChannelId(fixedPart)`, plus the ForceMove app registry (`appDefinition`) that T6.2 selects the settlement app from (A.5 · A.1.4). The walking skeleton uses the trivial app (see A.0.4/A.8); C's quote/settle app registers later.
-- Outcome / exit-format encoding (`SingleAssetExit`, `Allocation`) the client assembles for defund (A.5 · A.1.3).
-
-**Consumed from B (feeds, cross-package boundary):**
-- The proof-carrying feed `getStorageAt → {value, proof}` (T2.0) reads on-chain channel and holdings state with a proof rather than trusting a bare RPC.
-- The per-contract head-cursor freshness signal (T2, "which T6.3 gates on" per `00-work-packages.md`), which is the input to the A.6.4 freshness gate. T6.3 depends on B (T2 feeds) for freshness.
-- The Nitro voucher metering interface (T2.1): the same voucher primitive (A.6.3) funds B's watcher metering, and T6.2 issues and redeems these in-channel.
-
-**Consumed from A.4 (T0.2, sibling):** the adjudicator address and the `ForceMove`/`MultiAssetHolder` ABIs. The dispute API (A.6.4 D1) and watch loop (D2) bind to `challenge`/`checkpoint`/`conclude` and the `ChallengeRegistered`/`ChallengeCleared` events there.
-
-**Exposed to D (host) and up through A's ICD (A.8):** the settlement-client channel-lifecycle API (fund, pay, and defund, plus the net-new challenge, checkpoint, and getSupportedState); and the watchtower as a background service D hosts, or delegates to a keeper. A.8 aggregates what A exposes to B/C/D.
-
-**Exposed to C:** the same lifecycle and voucher surface is what C's yield/exchange clearing drives over A's rail (A.8).
-
-## A.6.6 Acceptance / verification
-
-Verified on a laconic fixturenet (see A.8), reusing the walking-skeleton channel (A.0.4). Two adversarial scenarios plus the happy path follow:
-
-1. **Watchtower defeats a stale force-close (T6.3, the headline test).**
-   - Open a channel, advance it to a supported state at `turnNum = N` (both parties signed).
-   - Counterparty issues `challenge` with an earlier state `turnNum = M < N` (a stale/adversarial close).
-   - **Expected:** the watchtower observes `ChallengeRegistered` over its persistent relay connection, computes `local.turnNum = N > M`, submits a `checkpoint` with the `N` state before `FinalizesAt`, and the challenge is cleared (`ChallengeCleared`); the stale outcome never finalizes. Funds settle at the true latest state.
-2. **Unresponsive counterparty still exits correctly (T6.2/T6.3 fallback).**
-   - Counterparty goes silent (no newer state exists; we legitimately want to close).
-   - We `challenge` with our latest supported state; counterparty never responds.
-   - **Expected:** no higher-turn state appears; after `FinalizesAt` the channel concludes at our state and `concludeAndTransferAllAssets` routes the payout to A.5's payout destination which re-shields. The exit completes without counterparty cooperation. (When *we* are the offline party, the delegated keeper performs this.)
-3. **Freshness-gated safety.**
-   - Force B's head-cursor stale (feed lag). A `ChallengeRegistered` arrives.
-   - **Expected:** the loop refuses to assert authority on a possibly-stale `local`; it takes the safe `directdefund` path (exit, not checkpoint) rather than risk checkpointing an outdated state. Exit is correct-if-conservative.
-4. **Lifecycle happy path (T6.2).** fund (deposit-in), then exchange states plus at least one voucher, then cooperative defund (payout-out), then a fresh notes scan (B/T6.1). This proves the client drives the full A.5 boundary once.
-
-**Verification tactics:** drive scenarios from a test harness against the fixturenet adjudicator; assert on emitted `ChallengeRegistered`/`ChallengeCleared` and final `holdings`/payout; assert the checkpoint tx lands strictly before `FinalizesAt` (timing is the failure mode). Reuse go-nitro's dispute test fixtures as oracles for turnNum comparison. No project-wide suite runs here; scoped scenario tests only, since the main integration lands in A.8.
-
-## A.6.7 Risks / open
-
-- **Liveness is the dominant risk (A.0.5 gate 4).** A phone that sleeps through the full challenge window loses the channel. The mitigation is the persistent-relay and delegated-keeper path (A.6.4); the residual risk is trusting and funding that keeper. The keeper sees that a party disputes but stays origin-private on submission (A.6.3); it does not learn channel contents beyond what it relays.
-- **ts-nitro dispute-API maturity.** The net-new `challenge`/`checkpoint` surface (D1) must exactly reproduce go-nitro's signing and support-proof semantics (`ForceMove` L88–119, L236–268). Divergence produces an invalid checkpoint that the adjudicator rejects, silently losing the defense. Cross-test the browser payload against the go-nitro server engine.
-- **Freshness dependency on B.** T6.3 correctness is only as good as B's freshness signal (T2). If B under-reports staleness, the loop could checkpoint a stale state; the conservative `directdefund` fallback (A.6.4) bounds the blast radius to a correct-but-suboptimal exit.
-- **Railgun unpinned** (A.1.10): the payout re-shield that the lifecycle drives crosses into unpinned Railgun code, so pin a Railgun commit before build (A.5/A.2).
-- **Multi-asset app gap (A.1.8 §2 / A.1.9 delta 2):** the client lifecycle is multi-asset-ready, but until C's multi-asset ForceMove app ships, T6.2 exercises only the single-asset trivial app (A.4/A.5). Not a client-side blocker.
-
-See also — siblings: [`A.1`](./A.1-reuse-inventory.md) (§A.1.5, A.1.6, A.1.3, A.1.8, A.1.9) · [`A.4`](./A.4-adjudicator-integration.md) (adjudicator/dispute primitives) · [`A.5`](./A.5-deposit-payout-contract.md) (channel-lifecycle API, outcome encoding, app registry) · [`A.8`](./A.8-interfaces-acceptance.md) (aggregate ICD and fixturenet). Baseline: [ADR-0004](../09-architecture-decisions.md#adr-0004), [ADR-0010](../09-architecture-decisions.md#adr-0010), [ADR-0012](../09-architecture-decisions.md#adr-0012).
+See also — siblings: [A.1](./A.1-reuse-inventory.md) · [A.4](./A.4-adjudicator-integration.md) (adjudicator and dispute primitives) · [A.5](./A.5-deposit-payout-contract.md) (the boundary a client would drive) · [T6-client-apps.md](../T6-client-apps.md) (T6.2/T6.3 status in the full client tier).

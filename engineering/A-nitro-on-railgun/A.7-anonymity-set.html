@@ -22,71 +22,27 @@
 </nav>
 
 <h1 id="a7-anonymity-set-strategy">A.7 — Anonymity-Set Strategy</h1>
-<p>work package A · reuse-oriented spec · <strong>2026-09-05</strong>
+<p>work package A · <strong>2026-10-20</strong>
 <strong>Parent:</strong> <a href="./A.0-overview.html"><code>A.0</code></a>
-<strong>Owns:</strong> T0.7 (anonymity-set strategy — bootstrap the crowd with new users)</p>
+<strong>Owns:</strong> T0.7 — strategy, not code</p>
 <hr />
 <h2 id="a71-goal">A.7.1 Goal</h2>
-<p>Make the shielded value that A settles actually private in practice, not merely private in principle. The base construction (A.0.1) hides sender, recipient, and amount in-circuit; what it cannot manufacture is the <strong>crowd</strong> those hidden transactions blend into. A fresh pool starts with an anonymity set near zero, which <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a> records as <em>the biggest non-engineering risk</em> to A. T0.7 is therefore a <strong>strategy item</strong> (per <a href="../05-building-block-view.html">§5</a>, status "strategy", not net-new crypto). It specifies the base shielded-payments primitive A delivers, the cold-start bootstrap plan, and the privacy metrics that show whether the crowd grows.</p>
-<p>The crowd grows only from deposits into our own pool. Every note a spend can hide among is a note in our tree, so the only lever is to bring in users and volume.</p>
-<h2 id="a72-boundary">A.7.2 Boundary</h2>
+<p>A shielded pool's privacy is k-anonymity against the set of unspent, indistinguishable notes. The pool already hides sender, recipient, and amount in-circuit (<code>TransactModule</code>, <code>PrivacyPool.transact</code>); what it cannot manufacture is the crowd those hidden transactions blend into. A fresh pool starts near zero, which ADR-0006 records as the biggest non-engineering risk. T0.7 is a strategy item, not a contract, same as the earlier plan's framing, but the pool it strategizes around is built, not planned.</p>
+<h2 id="a72-the-crowd-grows-only-from-the-pools-own-deposits">A.7.2 The crowd grows only from the pool's own deposits</h2>
+<p>Every note a spend can hide among is a note in this pool's tree. No cross-pool proof and no Railgun onboarding bridge exist or are planned: a spend hides only among the notes it could consume, so a Railgun note that this pool accepted would let its owner spend the same value twice, and the pool would pay out tokens it never received (<code>labbook/2026-10-19-docs-versus-code.md</code> decision 2). The only lever is bringing in users and volume to this pool directly.</p>
+<h2 id="a73-the-shielded-payments-primitive-built">A.7.3 The shielded-payments primitive — built</h2>
+<p><code>PrivacyPool.transact</code> with <code>boundParams.unshield == NONE</code> is a native shielded transfer: inputs nullified, outputs created, value conservation checked in-circuit, with only <code>merkleRoot</code>, <code>boundParamsHash</code>, <code>nullifiers[]</code>, and output-commitment hashes public. No sender, recipient, or amount is exposed. The privacy set is the set of commitments in <code>PrivacyPool</code>'s accumulator (16-deep tree per <code>treeNumber</code>, <code>rootHistory</code>).</p>
+<h2 id="a74-bootstrap-strategy-not-built">A.7.4 Bootstrap — strategy, not built</h2>
+<p>Per ADR-0006, the crowd grows from the pool's own deposits, through incentivized early volume and, over time, a market-making or LP flywheel. This is program and economic policy, not contract code, and no bootstrap mechanism is built or specified in detail here.</p>
+<p><strong>Moving from Railgun is a wallet feature (T6.7), not built yet.</strong> It is a Railgun unshield followed by a shield into this pool. No contract of ours reads or touches Railgun's pool. Moved value counts towards this crowd only from the moment it is shielded here, like any other deposit. <code>armada-interface</code> has no Railgun-unshield code today; see <a href="../T6-client-apps.html">T6-client-apps.md</a>.</p>
+<h2 id="a75-metrics-not-instrumented">A.7.5 Metrics — not instrumented</h2>
+<p>The earlier plan named three metrics: anonymity-set size (live commitment count), effective-k (the realistic crowd a spend hides in after correlation), and boundary-exposure rate (value transiting the shield/unshield and channel deposit/payout hops versus staying shielded). None of the three is instrumented in any repo checked. They remain a design target, computable from the pool's own events (<code>Shield</code>, <code>Transact</code>, <code>Nullified</code>, <code>rootHistory</code>) once a client reads them.</p>
+<h2 id="a76-risks-open">A.7.6 Risks / open</h2>
 <ul>
-<li><strong>In scope.</strong> The shielded-payments primitive as a <em>capability statement</em> (it is inherited, not built, per A.7.3); bootstrap incentive and flywheel policy; and privacy metrics.</li>
-<li><strong>Out of scope.</strong> The pool contract itself and the <code>changeFee</code>/vkey levers; see <a href="./A.2-pool-deployment.html">A.2</a>. The wallet move from Railgun, which is a wallet feature (T6.7, <a href="../T6-client-apps.html"><code>T6-client-apps.md</code></a>). Native amount-privacy-in-play; see <a href="./A.9-native-commitment.html">A.9</a>. Selective disclosure, which is off-chain and gates nothing (<a href="../09-architecture-decisions.html#adr-0020">ADR-0020</a>, <a href="../16-selective-disclosure.html">16</a>).</li>
-<li><strong>Phase-0 assumption.</strong> T0.7's bootstrap presumes a live pool (T0.0, <a href="./A.2-pool-deployment.html">A.2</a>) and ceremony (T0.1, <a href="./A.3-trusted-setup.html">A.3</a>). The residual dependency is that those builds ship before the crowd carries real value. Until they do, A.7 is a design and fixturenet exercise only.</li>
+<li><strong>Cold-start weakness window.</strong> Until the pool's own volume grows, early users have a small crowd, and large or oddly denominated transactions are self-deanonymizing. There is no engineering fix; it is a bootstrap policy problem.</li>
+<li><strong>Boundary exposure versus liquidity.</strong> Each shield, unshield, and channel deposit/payout is a transparent-amount event. More deposits raise set size and boundary-exposure together. No instrumented trade-off view exists yet.</li>
 </ul>
-<h2 id="a73-reuse-inventory-cite-a1-pinned-commits">A.7.3 Reuse inventory (cite A.1 + pinned commits)</h2>
-<p>Everything T0.7 leans on already exists; T0.7 adds no cryptography. Cite, don't re-document.</p>
-<table>
-<thead>
-<tr>
-<th>Piece</th>
-<th>Source (see A.1)</th>
-<th>What it gives T0.7</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Shielded-payments primitive</strong> = <code>transact()</code> with <code>unshield=NONE</code></td>
-<td><a href="./A.1-reuse-inventory.html">A.1.7</a> (primitive); <code>transact</code> in <a href="./A.1-reuse-inventory.html">A.1.1</a>, <code>RailgunSmartWallet.sol</code> L102–224</td>
-<td>The base capability A delivers <strong>for free</strong>: inputs nullified, outputs created, <code>sumIn==sumOut</code> in-circuit; <strong>sender/recipient/amount hidden</strong> — only <code>merkleRoot</code>, <code>boundParamsHash</code>, <code>nullifiers[]</code>, output-commitment hashes are public. This is a native transfer inside our pool, with no deposit/payout contract and no channel.</td>
-</tr>
-<tr>
-<td>JoinSplit circuit (defines the primitive)</td>
-<td><a href="./A.1-reuse-inventory.html">A.1.2</a>, <code>src/library/joinsplit.circom</code> L11–118</td>
-<td>Fixes note/commitment/nullifier format; proves EdDSA ownership + Merkle membership + range + value conservation. The privacy set = the commitments in the accumulator this circuit proves membership of.</td>
-</tr>
-<tr>
-<td>Merkle accumulator + nullifier set (<code>TREE_DEPTH=16</code>, <code>rootHistory</code>)</td>
-<td><a href="./A.1-reuse-inventory.html">A.1.1</a>, <code>Commitments.sol</code> L28–55, L108–252</td>
-<td><strong>The anonymity set, concretely</strong>: every shielded commitment ever inserted. Its cardinality (and recent activity) is what T0.7 metrics measure.</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Pins.</strong> Railgun repos (pool, <code>circuits-v2</code>, engine) are <strong>UNPINNED</strong> — read at <code>master</code>/<code>main</code> HEAD 2026-09-05; <strong>pin a commit before build</strong> (<a href="./A.1-reuse-inventory.html">A.1</a>, A.0.6).</p>
-<h2 id="a74-net-new-delta-what-a-actually-builds">A.7.4 Net-new delta (what A actually builds)</h2>
-<p>T0.7 is policy, not contract code. One delta:</p>
-<ol>
-<li><strong>Bootstrap incentives and LP flywheel.</strong> Per <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a>, seed our own crowd with new users, through incentives, our own market-making capital, and an LP flywheel, so that shield and transact volume compounds the effective anonymity set. Early transactions have a small, weak set; the strategy's job is to grow it fast enough that effective-k crosses a usable threshold before real value depends on it. This is program and economic policy, not contract code, and A.7 owns the <em>specification</em>, not the treasury.</li>
-</ol>
-<p>Value that a user moves in from Railgun through the wallet (T6.7) is an ordinary deposit. It counts towards the crowd only from the moment it is shielded here, like any other deposit.</p>
-<h2 id="a75-interfaces-icd">A.7.5 Interfaces (ICD)</h2>
-<p>T0.7 exposes no on-chain interface. It consumes the pool's commitment and nullifier events (<a href="./A.1-reuse-inventory.html">A.1.1</a> events, indexed by T1.2) to compute its metrics.</p>
-<h2 id="a76-acceptance-verification">A.7.6 Acceptance / verification</h2>
-<ol>
-<li><strong>Shielded-payments primitive (inherited-capability check).</strong> On the fixturenet, a <code>transact()</code> with <code>unshield=NONE</code> moves value between two of our notes; assert the public transcript exposes only <code>merkleRoot</code>/<code>boundParamsHash</code>/<code>nullifiers[]</code>/output-commitment hashes, and no sender, recipient, or amount (<a href="./A.1-reuse-inventory.html">A.1.7</a>). This confirms A delivers shielded payments without any A-net-new code.</li>
-<li><strong>Privacy metrics (the strategy's real KPI).</strong> Instrument and report:
-   - <strong>Anonymity-set size</strong> — cardinality of live commitments in our accumulator (<a href="./A.1-reuse-inventory.html">A.1.1</a> <code>Commitments.sol</code>).
-   - <strong>Effective-k</strong> — the realistic same-denomination/recent-activity crowd a given transaction blends into (not raw set size; volume-weighted per <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a> "grows only with our own volume").
-   - <strong>Boundary-exposure</strong> — count and volume of public boundary steps (shield, unshield, and deposit/payout per <a href="../09-architecture-decisions.html#adr-0005">ADR-0005</a>), since these are where amounts are transparent and are what the bootstrap trades against.</li>
-</ol>
-<p>Acceptance means these three are computed and trend-visible on the fixturenet; the bootstrap target is effective-k rising with volume, not a fixed one-shot number.</p>
-<h2 id="a77-risks-open">A.7.7 Risks / open</h2>
-<ul>
-<li><strong>Cold-start weakness window.</strong> Until the bootstrap flywheel lifts effective-k, early users have a small crowd, and large or oddly-denominated transactions are self-deanonymizing. The mitigation is policy: incentivize volume and encourage common amounts. There is no engineering fix in v1.</li>
-<li><strong>Boundary-exposure versus liquidity tension.</strong> Each shield, unshield, and deposit/payout is a transparent-amount event (<a href="../09-architecture-decisions.html#adr-0005">ADR-0005</a>); more deposits raise boundary-exposure even as they raise set size. The metric suite (A.7.6.2) exists to keep this trade visible.</li>
-</ul>
-<p>See also: relates to <a href="./A.8-interfaces-acceptance.html">A.8</a> (roll-up acceptance) and to T6.7 (the wallet move from Railgun). Grounded in <a href="./A.1-reuse-inventory.html">A.1.7</a> and <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a>.</p>
+<p>See also: <a href="../T0-ethereum-anchor.html">T0-ethereum-anchor.md</a>, <a href="../T6-client-apps.html">T6-client-apps.md</a> (T6.7, the move from Railgun), <a href="../09-architecture-decisions.html#adr-0006">ADR-0006</a>, <code>labbook/2026-10-19-docs-versus-code.md</code>.</p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/A-nitro-on-railgun/A.7-anonymity-set.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

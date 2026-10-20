@@ -22,132 +22,35 @@
 </nav>
 
 <h1 id="a2-pool-deployment">A.2 — Pool Deployment</h1>
-<p>work package A · reuse-oriented spec · <strong>2026-09-05</strong>
-<strong>Parent:</strong> <a href="A.0-overview.html"><code>A.0</code></a>
-<strong>Owns:</strong> T0.0 — author our own shielded pool (spec-compatible with Railgun) and deploy it under our control</p>
+<p>work package A · <strong>2026-10-20</strong>
+<strong>Parent:</strong> <a href="./A.0-overview.html"><code>A.0</code></a>
+<strong>Owns:</strong> T0.0 — the built shielded pool</p>
 <hr />
-<h2 id="a21-goal">A.2.1 Goal</h2>
-<p>Stand up our own shielded pool, the settlement substrate every other A item binds to. It is our own implementation, spec-compatible with Railgun's design (<a href="../09-architecture-decisions.html#adr-0002">ADR-0002</a>, <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>), and owned by us rather than rented from Railgun's live deployment. T0.0 delivers a running pool on the laconic fixturenet configured with fee = 0, a token allow-list that admits USDC, a preserved SNARK-safety configuration, and a Groth16 verifier registry populated with our own verification keys from the T0.1 ceremony (see <a href="A.3-trusted-setup.html">A.3</a>). The end-state proof is a shield then transact-unshield roundtrip that verifies against our registered vkeys (A.2.6).</p>
-<p>The pool is our own implementation of the Railgun design (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>), not reused as-deployed OSS. T0.0 authors spec-compatible protocol contracts, matching A.1.1, along with the deploy and governance around them. This is an <strong>audit-critical</strong> crypto-engineering artifact, not config-only. The net-new artifacts are the pool contract stack itself, the governance transactions for fee and vkeys, and ownership of the upgradeable-proxy admin (A.2.4). The ICD in A.2.5 describes what the pool exposes downstream: addresses, event ABI, shield/unshield entrypoints, and the reserved deposit/payout hook.</p>
-<h2 id="a22-boundary">A.2.2 Boundary</h2>
-<p><strong>In scope (T0.0):</strong>
-- Author and deploy the upgradeable proxy to <code>RailgunSmartWallet</code> (is <code>RailgunLogic</code> is <code>{Commitments, TokenBlocklist, Verifier}</code>), spec-compatible with the stack cited in A.1.1.
-- Own the proxy admin / owner keys (A.2.4).
-- Governance config: <code>changeFee(0,0,0)</code>; leave USDC off <code>TokenBlocklist</code>; preserve <code>snarkSafetyVector</code> / <code>checkSafetyVectors</code> magic constants.
-- Register one verification key per chosen <code>(nIn,nOut)</code> circuit combo via <code>Verifier.setVerificationKey</code>, consuming T0.1 ceremony output (see A.3).
-- Pin a Railgun commit before any of the above (A.1.10 / A.2.7).</p>
-<p><strong>Out of scope (elsewhere):</strong>
-- The ceremony that <em>produces</em> the vkeys, and the 91-vs-54 combo-subset reconciliation, belong to <a href="A.3-trusted-setup.html">A.3</a> (T0.1). T0.0 only <em>registers</em> what A.3 hands over.
-- The deposit/payout contract itself belongs to <a href="A.5-deposit-payout-contract.html">A.5</a> (T0.3). T0.0 exposes the shield/unshield entrypoints it binds to; it does not build T0.3.
-- Consumers that index and scan pool events belong to B (T1.2) and T6.1; T0.0 only publishes the event ABI (A.2.5).</p>
-<h2 id="a23-reuse-inventory-cite-a1-pinned-commit">A.2.3 Reuse inventory (cite A.1 + pinned commit)</h2>
-<p>Everything below is the <strong>reference spec</strong> T0.0 implements, spec-compatible with <code>Railgun-Privacy/contract</code>, not reused-as-deployed OSS (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>); cite <a href="A.1-reuse-inventory.html#a11-shielded-pool-t00-reference-spec">A.1.1</a> for pinned file/line citations. The Railgun reference is UNPINNED, read at <code>master</code>/<code>main</code> HEAD 2026-09-05, so T0.0 MUST pin the reference commit before build (A.1.10, A.0.6).</p>
-<table>
-<thead>
-<tr>
-<th>Spec-referenced piece</th>
-<th>A.1.1 citation</th>
-<th>Role in T0.0</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Proxy → <code>RailgunSmartWallet</code> (<code>RailgunLogic</code> ⊇ <code>{Commitments, TokenBlocklist, Verifier}</code>)</td>
-<td><code>RailgunSmartWallet.sol</code> L23–224</td>
-<td>The full stack we deploy and own.</td>
-</tr>
-<tr>
-<td><code>shield(ShieldRequest[])</code></td>
-<td><code>RailgunSmartWallet.sol</code> L23–97</td>
-<td>Payout-out entrypoint (→ A.5 / T0.3); emits <code>Shield</code>.</td>
-</tr>
-<tr>
-<td><code>transact(Transaction[])</code></td>
-<td><code>RailgunSmartWallet.sol</code> L102–224</td>
-<td>Unshield-in entrypoint; <code>boundParams.unshield=NORMAL</code>; emits <code>Transact</code>, <code>Nullified</code>.</td>
-</tr>
-<tr>
-<td><code>changeFee(shield,unshield,nft)</code></td>
-<td><code>RailgunLogic.sol</code> L146–161</td>
-<td>fee=0 lever: <code>changeFee(0,0,0)</code> (A.2.4).</td>
-</tr>
-<tr>
-<td><code>snarkSafetyVector</code> / <code>checkSafetyVectors</code></td>
-<td><code>RailgunLogic.sol</code> L111–127</td>
-<td>Magic-constant guard; MUST be preserved (A.2.4) or <code>transact</code> reverts.</td>
-</tr>
-<tr>
-<td><code>Verifier.verificationKeys[nIn][nOut]</code>, <code>setVerificationKey</code></td>
-<td><code>Verifier.sol</code> L27, L36–45; <code>Snark.sol</code> L157–188</td>
-<td>Registry T0.0 populates with T0.1 vkeys (→ A.3).</td>
-</tr>
-<tr>
-<td>Events <code>Action/Transact/Shield/Unshield/Nullified</code></td>
-<td><code>RailgunLogic.sol</code> L57–77</td>
-<td>Commitment-insert + nullifier-spend feed (A.2.5).</td>
-</tr>
-<tr>
-<td>Merkle accumulator + nullifier set (<code>TREE_DEPTH=16</code>, <code>rootHistory</code>)</td>
-<td><code>Commitments.sol</code> L28–55, L108–252</td>
-<td>The tree T6.1 rebuilds; T0.3 proofs reference a historical root of it.</td>
-</tr>
-<tr>
-<td><code>TokenBlocklist</code></td>
-<td><code>TokenBlocklist.sol</code> L33–73</td>
-<td>Leave USDC unblocked; unshield always allowed (A.2.4).</td>
-</tr>
-<tr>
-<td>ABI structs (<code>ShieldRequest</code>, <code>CommitmentPreimage</code>, <code>TokenData</code>, <code>Transaction</code>, <code>BoundParams</code>, <code>SnarkProof</code>)</td>
-<td><code>Globals.sol</code> L21–122</td>
-<td>The encode surface exported to T0.3 + T6.2 (A.2.5).</td>
-</tr>
-</tbody>
-</table>
-<p>RelayAdapt and Cookbook (Railgun's own recipe layer) are not part of T0.0; Armada settles via nitro-on-railgun, not RelayAdapt (<a href="../09-architecture-decisions.html#adr-0004">ADR-0004</a>). They are named here only to disambiguate: the "deposit/payout hook" T0.0 reserves is the T0.3 contract binding (A.5), never a RelayAdapt recipe.</p>
-<h2 id="a24-net-new-delta-what-t00-actually-authors">A.2.4 Net-new delta (what T0.0 actually authors)</h2>
-<p>Per <a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a> (and <a href="A.1-reuse-inventory.html#a19-net-new-deltas-what-a-actually-builds">A.1.9 item 4</a>), T0.0's net-new surface is the <strong>pool contracts</strong> together with their deployment and governance, an audit-critical build, not config-only:</p>
-<ol>
-<li><strong>Author and own the pool contract stack.</strong> Implement the proxy to <code>RailgunSmartWallet</code> / <code>RailgunLogic</code> / <code>{Commitments, TokenBlocklist, Verifier}</code> stack, spec-compatible with A.1.1 (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>); deploy it under keys we control; and hold upgrade and owner authority. This is the whole point of ADR-0002: own upgrades, audit, and fee policy. This contract set is the <strong>audit-critical</strong> net-new artifact of T0.0, and downstream items assume the proxy address is stable and admin-owned.</li>
-<li><strong><code>changeFee(0,0,0)</code> governance action.</strong> Call <code>changeFee(shieldFee, unshieldFee, nftFee)</code> with <code>(0,0,0)</code> (<code>RailgunLogic.sol</code> L146–161) so shield, unshield, and NFT fees are zero; Armada earns from venue spread and watcher metering, not a pool skim (ADR-0002). This is an owner-gated transaction, part of the deploy runbook.</li>
-<li><strong>Vkey registration.</strong> For each chosen <code>(nIn,nOut)</code> combo (the subset reconciled in A.3, with 91 generated, not 54; A.1.8), call <code>Verifier.setVerificationKey(nIn, nOut, vkey)</code> with the Phase-2 output of our ceremony (see A.3). Until this is done, <code>transact</code>/<code>shield</code> proofs have no key to verify against.</li>
-<li><strong>Token allow-list posture.</strong> Deploy <code>TokenBlocklist</code> empty of USDC (and of any asset A/C settles) so shield admits it; unshield is always allowed regardless of blocklist (<code>TokenBlocklist.sol</code> L33–73).</li>
-<li><strong>Reproduce SNARK-safety config.</strong> Carry <code>snarkSafetyVector</code> and the <code>checkSafetyVectors</code> magic constants (matching the reference <code>RailgunLogic.sol</code> L111–127) verbatim into our implementation; a mismatch makes every <code>transact</code> revert. This is a must-match delta, noted because a build that regenerates or drops these constants breaks the pool.</li>
-</ol>
-<p><strong>What T0.0 does not author:</strong> no fee-taking logic, and no entry gate. Selective disclosure (<a href="../09-architecture-decisions.html#adr-0020">ADR-0020</a>) is off-chain and needs no pool setting.</p>
-<h2 id="a25-interfaces-icd">A.2.5 Interfaces (ICD)</h2>
-<p>What T0.0 exposes to sibling items and downstream work packages. Struct shapes are Railgun's <code>Globals.sol</code> L21–122 (A.1.1); they are cited, not restated.</p>
-<p><strong>(a) Deployment addresses</strong>, published to the registry (<a href="../05-building-block-view.html"><code>../05-building-block-view.md</code></a>) once deployed:
-- Pool proxy address (the <code>RailgunSmartWallet</code> behind it), consumed by T0.3 (A.5), T6.1/T6.2 (A.6), and B/T1.2 indexers.
-- <code>Verifier</code> address, for audit and re-registration; owner-gated.</p>
-<p><strong>(b) Commitment-insert / nullifier-spend event ABI</strong>, which B (T1.2) indexes and T6.1 scans (A.1.1, <code>RailgunLogic.sol</code> L57–77):
-- <code>Shield</code> — new commitment leaves minted (payout / shielded receive).
-- <code>Transact</code> — commitment outputs of a spend.
-- <code>Nullified</code> — nullifiers consumed (spend / unshield-in).
-- <code>Unshield</code> — ERC20 leaving the pool (the deposit-in leg observed publicly).
-- <code>Action</code> — the umbrella accumulator event.
-The Merkle root each event advances lives in <code>Commitments</code> (<code>rootHistory</code>, <code>TREE_DEPTH=16</code>); T6.1 rebuilds the tree, and T0.3 proofs must reference a historical root in that window (A.1.1).</p>
-<p><strong>(c) Shield / unshield entrypoints plus reserved deposit/payout hook</strong>, for A.5 (T0.3):
-- <code>shield(ShieldRequest[])</code> is the payout-out entrypoint T0.3 calls to mint fresh notes to beneficiaries (A.1.4, A.5).
-- <code>transact(Transaction[])</code> with <code>boundParams.unshield=NORMAL</code> and <code>unshieldPreimage.npk = bytes32(uint160(T0.3 address))</code> is the deposit-in entrypoint. <code>transferTokenOut</code> (<code>RailgunLogic.sol</code> L318–364) lands the ERC20 in T0.3, which then escrows via <code>MultiAssetHolder.deposit</code> (A.1.4). The "reserved deposit/payout hook" is precisely this address-as-recipient convention, not a code hook inside the pool; T0.0 reserves nothing beyond a stable, allow-listed asset path and the pool's normal unshield-recipient semantics.</p>
-<h2 id="a26-acceptance-verification">A.2.6 Acceptance / verification</h2>
-<p><strong>Primary acceptance (the roundtrip):</strong> on the laconic fixturenet, drive a full shield then transact-unshield roundtrip and confirm each leg proves against our own registered vkeys. That is, <code>Verifier</code> verifies the Groth16 proof using keys set by our T0.1 ceremony, not Railgun's:</p>
-<ol>
-<li><strong>Deploy and govern.</strong> Proxy deployed under our admin; <code>changeFee(0,0,0)</code> mined and read back as zero; <code>snarkSafetyVector</code>/<code>checkSafetyVectors</code> match the pinned source; USDC absent from <code>TokenBlocklist</code>; one vkey per chosen combo registered in <code>Verifier</code> (A.2.4).</li>
-<li><strong>Shield.</strong> <code>shield([ShieldRequest…])</code> for USDC emits the <code>Shield</code> event; a new commitment leaf appears; <code>rootHistory</code> advances (<code>Commitments.sol</code> L108–252).</li>
-<li><strong>Transact-unshield.</strong> <code>transact([...])</code> spending that note with <code>boundParams.unshield=NORMAL</code> produces a proof that <code>Verifier</code> accepts against our registered vkey for that <code>(nIn,nOut)</code>; <code>Transact</code> and <code>Nullified</code> are emitted; the ERC20 exits to the recipient. A tampered or wrong-key proof MUST revert; this is the discriminating check that we register and enforce our keys.</li>
-<li><strong>Event/ABI conformance.</strong> The emitted <code>Shield/Transact/Nullified/Unshield</code> decode against the A.2.5(b) ABI, the contract exported to B/T1.2 and T6.1.</li>
-</ol>
-<p><strong>Fixturenet integration hook (walking skeleton, <a href="A.0-overview.html#a04-walking-skeleton-as-first-integration-target">A.0.4</a>):</strong> this roundtrip is the pool half of <code>shield → unshield-in → deposit → settle → conclude → shield</code>. T0.0 acceptance is the shield/unshield legs proving against our vkeys; the deposit/settle/conclude legs are A.4/A.5. Full end-to-end acceptance is owned by <a href="A.8-interfaces-acceptance.html">A.8</a>.</p>
-<p><strong>Explicitly not acceptance for T0.0:</strong> ceremony soundness (A.3), deposit escrow / channel settle (A.4/A.5). Registering vkeys is T0.0; <em>producing</em> them is T0.1.</p>
-<h2 id="a27-risks-open">A.2.7 Risks / open</h2>
+<h2 id="a21-what-is-built">A.2.1 What is built</h2>
+<p><code>PrivacyPool</code> (<code>armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol</code>) is deployed and tested, not a plan. It is not a proxy: it holds all state and routes by <code>delegatecall</code> to four modules (<code>ShieldModule</code>, <code>TransactModule</code>, <code>MerkleModule</code>, <code>VerifierModule</code>), each set once at <code>initialize()</code> with no setter. This matches Railgun's note/commitment/nullifier shape, under Armada's own control (ADR-0002, ADR-0014).</p>
+<h2 id="a22-what-was-configured-as-deployed">A.2.2 What was configured, as deployed</h2>
 <ul>
-<li><strong>Own pool build is audit-critical.</strong> T0.0 authors the pool (<a href="../09-architecture-decisions.html#adr-0014">ADR-0014</a>), spec-compatible with A.1.1; the residual work is that this build is audit-critical (A.2.4), not that any grant is outstanding.</li>
-<li><strong>Unpinned Railgun commit.</strong> Contracts and circuits were read at HEAD, with no SHA pinned. Pin a Railgun commit before build (A.0.6); the pinned SHA drives which <code>snarkSafetyVector</code> constants and struct layouts T0.0 carries. (go-nitro @435eb2b, ts-nitro @884d616, mobymask @2329198 are already pinned; Railgun is the outstanding one.)</li>
-<li><strong>Combo-subset dependency on A.3.</strong> T0.0 can only register the vkeys A.3 reconciles (91 generated vs the cited ~54 registered subset; A.1.8). Registering the wrong subset means some <code>(nIn,nOut)</code> <code>transact</code>/<code>shield</code> shapes have no key and revert. Sequence T0.0 vkey registration after A.3 fixes the subset.</li>
-<li><strong>Safety-vector regression.</strong> A build that regenerates rather than reproduces <code>snarkSafetyVector</code>/<code>checkSafetyVectors</code> (matching the reference <code>RailgunLogic.sol</code> L111–127) silently breaks <code>transact</code>. Treat these as pinned constants, and cover them in A.2.6 step 1.</li>
-<li><strong>Proxy-admin key custody.</strong> Owning the upgrade admin (A.2.4) concentrates upgrade, fee, and vkey authority; key management and governance for the admin is an operational risk to flag to the settlement client and watcher operators (A.6), out of T0.0 code scope.</li>
+<li><strong>Fee.</strong> <code>shieldFee</code> defaults to 0 bps, owner-settable, capped at <code>MAX_SHIELD_FEE_BPS = 1000</code>. The Sepolia deploy script sets it to 50 bps (<code>scripts/deploy_privacy_pool.ts:264-265</code>). This is not the fee = 0 design the earlier docs assumed.</li>
+<li><strong>Token policy.</strong> A blocklist, not an allow-list: any ERC-20 not blocklisted can be shielded, and USDC can never be blocked.</li>
+<li><strong>No admin proxy.</strong> <code>PrivacyPool</code> has no upgrade admin to own; <code>owner</code> is a plain address wired to a timelock by the deploy scripts, and the four module addresses are immutable after <code>initialize()</code>.</li>
+<li><strong>Verifier registry.</strong> <code>VerifierModule</code> holds <code>verificationKeys[nullifierCount][commitmentCount]</code>, owner-set via <code>PrivacyPool.setVerificationKey</code>, with no deletion path. 19 shapes from <code>armada-circuits</code> are registered, <code>(1,1)</code> through <code>(8,4)</code>.</li>
+<li><strong>No entry gate.</strong> Reading every file under <code>contracts/privacy-pool/</code> finds no POI or disclosure-proof check. Selective disclosure (ADR-0020) is voluntary, off-chain, and needs no pool setting.</li>
 </ul>
-<p>See also: Ceremony that feeds A.2.4 vkey registration: <a href="A.3-trusted-setup.html">A.3</a>. Contract that binds A.2.5(c): <a href="A.5-deposit-payout-contract.html">A.5</a>. Deep-dive citations: <a href="A.1-reuse-inventory.html#a11-shielded-pool-t00-reference-spec">A.1.1</a>, <a href="A.1-reuse-inventory.html#a110-risks">A.1.10</a>.</p>
+<h2 id="a23-cross-chain">A.2.3 Cross-chain</h2>
+<p><code>PrivacyPool</code>/<code>PrivacyPoolClient</code>/<code>CCTPHookRouter</code> shield and unshield across chains over CCTP v2. <code>atomicCrossChainUnshield</code> is USDC-only; <code>handleReceiveFinalizedMessage</code>/<code>handleReceiveUnfinalizedMessage</code> route incoming messages by minimum finality.</p>
+<h2 id="a24-interfaces-what-the-pool-exposes">A.2.4 Interfaces (what the pool exposes)</h2>
+<p><strong>Addresses.</strong> The pool and <code>VerifierModule</code> addresses per network, consumed by <code>ArmadaNitroAdjudicator</code> (<code>IArmadaPool</code>), by <code>armada-relayer</code>'s indexer, and by <code>armada-interface</code>/<code>armada-sdk</code>.</p>
+<p><strong>Events.</strong> <code>Shield</code>, <code>Transact</code>, the per-module events <code>ShieldModule</code>/<code>TransactModule</code> emit for commitment inserts and nullifier spends, and <code>rootHistory[treeNumber][root]</code> for Merkle-root membership.</p>
+<p><strong>Entry points.</strong> <code>shield(ShieldRequest[], address integrator)</code>, <code>transact(Transaction[])</code>, <code>atomicCrossChainUnshield(...)</code>. <code>ArmadaNitroAdjudicator.depositFromNote</code> calls <code>pool.transact</code> with an <code>adaptContract</code>/<code>adaptParams</code> binding to a specific channel and holding; <code>_executeSingleAssetExit</code>'s <code>SHIELD</code> branch calls <code>pool.shield</code> for payout.</p>
+<h2 id="a25-testing">A.2.5 Testing</h2>
+<p><code>armada-poc</code>'s Hardhat/TS suites (<code>privacy_pool_integration.ts</code>, <code>privacy_pool_adversarial.ts</code>, <code>privacy_pool_gas.ts</code>, <code>privacy_pool_hardening.ts</code>) and Foundry suites (<code>PrivacyPoolFuzz.t.sol</code>, <code>PrivacyPoolInvariant.t.sol</code>, <code>PrivacyPoolFullInvariant.t.sol</code>, <code>PrivacyPoolSolvencyInvariant.t.sol</code>, <code>SnarkVerifier.t.sol</code>, Halmos symbolic tests) already run against the pool.</p>
+<h2 id="a26-risks-open">A.2.6 Risks / open</h2>
+<ul>
+<li><strong>Phase-2 ceremony not finished (A.3).</strong> The pool can only register vkeys the ceremony has produced; today's registered keys trace to the unsafe dev script, not a production ceremony.</li>
+<li><strong>The deployed fee is not zero.</strong> Any doc or integration that assumes fee = 0 is wrong; it is 50 bps on the Sepolia deployment, and the owner can raise it to 1000 bps.</li>
+<li><strong><code>setVerificationKey</code> has no structural validation and silently overwrites.</strong> The authority that can call it (today the deploying owner, later governance) is a real key-management risk, same as the earlier plan flagged for a proxy admin.</li>
+</ul>
+<p>See also: <a href="./A.3-trusted-setup.html">A.3</a> (the ceremony that feeds the verifier registry), <a href="./A.5-deposit-payout-contract.html">A.5</a> (the adjudicator that calls <code>shield</code>/<code>transact</code>), <a href="../T0-ethereum-anchor.html">T0-ethereum-anchor.md</a>.</p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/A-nitro-on-railgun/A.2-pool-deployment.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

@@ -22,12 +22,12 @@
 </nav>
 
 <h1 id="3-context-scope">3. Context &amp; Scope</h1>
-<p>arc42 §3 · <strong>2026-09-05</strong></p>
-<p>This section draws the system boundary and catalogues the external systems the build touches. Per <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a>, this is <strong>one engineering team building the whole Armada product</strong> — a Railgun-based privacy layer for USDC — reusing Laconic's prior work as the substrate. The boundary is therefore <strong>reuse vs net-new</strong>, not an Armada-vs-Laconic org split. The static decomposition of the in-scope side is the <a href="./05-building-block-view.html">§5 registry</a>; here we fix only the perimeter. Terminology follows <a href="./09-architecture-decisions.html#adr-0010">ADR-0010</a>.</p>
+<p>arc42 §3 · <strong>2026-10-20</strong></p>
+<p>This section draws the system boundary and catalogues the external systems the build touches. Per <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a>, this is <strong>one engineering team building the whole Armada product</strong> — a Railgun-based privacy layer for USDC. The team works from the ship-armada repos: <code>armada-poc</code>, <code>armada-circuits</code>, <code>armada-deployments</code>, <code>armada-nitro</code>, <code>armada-sdk</code>, <code>armada-client</code>, <code>armada-relayer</code>, <code>armada-interface</code>. The static decomposition of the in-scope side is the <a href="./05-building-block-view.html">§5 registry</a>; here we fix only the perimeter. Terminology follows <a href="./09-architecture-decisions.html#adr-0010">ADR-0010</a>.</p>
 <h2 id="the-product">The product</h2>
-<p>Armada is pluggable asset-privacy infrastructure for USDC: routine flows (payments, payroll, treasury, yield) route through a single <strong>immutable Railgun shielded pool</strong> (one anonymity set), and privacy compounds as more flows join (<code>index.html</code>; Armada thesis, blog.armada.blue). The team builds this whole product — the Railgun-based settlement core (nitro-on-railgun), the watcher-party sync substrate, the yield &amp; exchange venue and its adapters, and the mobile client — <strong>reusing Laconic prior art</strong> (nitro integration, watchers, wallet, chain-signatures, ingestion) throughout. There is no internal org boundary; the whole product is in scope.</p>
+<p>Armada is pluggable asset-privacy infrastructure for USDC: routine flows (payments, payroll, treasury, yield) route through a single immutable shielded pool (one anonymity set), and privacy compounds as more flows join. The pool, its governance contracts, the circuits, the adjudicator, and the web client are built. The proof path, the mobile client, and any future venue remain a plan.</p>
 <h2 id="in-scope-the-whole-product-by-work-package">In scope — the whole product (by work package)</h2>
-<p>The four <a href="./00-work-packages.html">work packages (§0)</a> are the entire scope; each owns a set of <code>T#.#</code> items.</p>
+<p>The four <a href="./00-work-packages.html">work packages (§0)</a> are the entire scope; each owns a set of <code>T#.#</code> items, per the real status in <a href="./05-building-block-view.html">§5</a>.</p>
 <table>
 <thead>
 <tr>
@@ -38,29 +38,29 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>A · nitro-on-railgun</strong></td>
-<td>T0.0–T0.3, T0.6 <em>(opt)</em>, T0.7; T6.2, T6.3</td>
-<td>Our own pool + circuits + own Phase-2 (ADR-0014); the deposit/payout boundary is the net-new integration contract (ADR-0002/0003/0004).</td>
+<td><strong>A · on-chain anchor</strong></td>
+<td>T0.0–T0.7; governance and revenue contracts</td>
+<td>The pool, circuits, adjudicator and governance are built. T0.4–T0.6 remain a plan.</td>
 </tr>
 <tr>
-<td><strong>B · watcher parties</strong></td>
+<td><strong>B · proof path</strong></td>
 <td>T1.0–T1.2, T2.0–T2.4; T6.1</td>
-<td>Proof-carrying ingest + metered private feeds; reuse the cerc-io watcher / ipld / nimbus lineage (ADR-0008/0009).</td>
+<td>The nimbus verified proxy, not a state-diff emitter (ADR-0009); <code>watcher-ts</code> is an optional server cache.</td>
 </tr>
 <tr>
-<td><strong>C · yield &amp; exchange</strong></td>
-<td>T4.0–T4.6, T3.* <em>(v2)</em>; <strong>T5.0 adapters (CCTP built · Aave-v4 yield · Swaps), T5.1 routing</strong></td>
-<td>Posted-price venue v1; adapters build or reuse Railgun's Cookbook recipe. <strong>USDC yield is the priority</strong> (ADR-0007/0011/0013).</td>
+<td><strong>C · venue and adapters</strong></td>
+<td>T3.*, T4.* (plan); T5.0, T5.1</td>
+<td>CCTP and Aave-v4 yield are built; Swaps and the venue have no code.</td>
 </tr>
 <tr>
 <td><strong>D · client</strong></td>
-<td>T6.0, T6.4–T6.8</td>
-<td>Wallet/app, mobile transport, on-device proving (ADR-0008).</td>
+<td>T6.0, T6.2–T6.8</td>
+<td><code>armada-interface</code> (web) is built; the mobile stack is a spec (<code>armada-client</code> <code>docs/SPEC.md</code>).</td>
 </tr>
 </tbody>
 </table>
-<h2 id="reused-not-built-prior-art-reference">Reused, not built (prior art &amp; reference)</h2>
-<p>Cited at pinned commits; never re-documented (ADR-0012 reuse-spec discipline).</p>
+<h2 id="built-not-reused-own-implementation">Built, not reused (own implementation)</h2>
+<p>Cited at pinned commits.</p>
 <table>
 <thead>
 <tr>
@@ -70,25 +70,56 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>Railgun design</strong> (<code>contract</code> / <code>circuits-v2</code> spec; <code>engine</code> / <code>cookbook</code> as reference)</td>
-<td><strong>Reference spec only</strong> — the shielded pool + JoinSplit circuits are our own implementation (T0.0/T0.1, spec-compatible with the Railgun design), not reused OSS (ADR-0014).</td>
+<td>Shielded pool (<code>armada-poc</code>) and <code>Transact</code> circuit (<code>armada-circuits</code>)</td>
+<td>Own implementation, spec-compatible with the Railgun design (ADR-0014). Railgun's <code>contract</code>/<code>circuits-v2</code>/<code>engine</code>/<code>cookbook</code> served only as a behavioral reference during the build.</td>
 </tr>
 <tr>
-<td><code>go-nitro</code>, <code>watcher-ts</code>, <code>ts-nitro</code>, <code>@cerc-io/peer</code>, <code>mobymask</code>, <code>laconic-wallet</code>, <code>chain-signatures</code>, <code>ipld-eth-*</code></td>
-<td>Laconic / cerc-io prior art, reused at pinned commits.</td>
+<td>Governance and revenue contracts (<code>armada-poc</code>)</td>
+<td><code>ArmadaGovernor</code>, <code>ArmadaTreasuryGov</code>, <code>TreasurySteward</code>, <code>ArmadaToken</code>, <code>ArmadaCrowdfund</code>, <code>ArmadaWindDown</code>, <code>ArmadaRedemption</code>, <code>AdapterRegistry</code>, <code>RevenueCounter</code>, <code>RevenueLock</code>, <code>RevenueReserveDistributor</code>.</td>
 </tr>
 <tr>
-<td><strong>Perpetual Powers of Tau</strong> Phase-1</td>
-<td>Inherited universal ceremony; we run only our own Phase-2 (ADR-0003).</td>
+<td><code>ArmadaNitroAdjudicator</code>, <code>HubCustodian</code> (<code>armada-nitro</code>)</td>
+<td>A patched <code>go-nitro</code> (ADR-0004) plus a FROST-gated hub custodian (ADR-0016), built, not the vendored original and not <code>chain-signatures</code>.</td>
 </tr>
 <tr>
-<td>Railgun <strong>RelayAdapt / Cookbook</strong> recipe</td>
-<td>Railgun's own value-moving recipe; the C adapters may reuse it, distinct from our T0.3 deposit/payout contract (ADR-0010).</td>
+<td><code>armada-interface</code>, <code>armada-sdk</code></td>
+<td>The live web client and its SDK: shield/transact calls, note scanning, and an in-browser Groth16 prover.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="reused-not-built-prior-art-reference">Reused, not built (prior art &amp; reference)</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>go-nitro</code></td>
+<td>Vendored, then patched by six commits (ADR-0004). The only Laconic prior art still in the build.</td>
+</tr>
+<tr>
+<td>Railgun design (<code>contract</code> / <code>circuits-v2</code> spec; <code>engine</code> / <code>cookbook</code> as reference)</td>
+<td>Reference spec only — the pool and circuits are Armada's own implementation (ADR-0014).</td>
+</tr>
+<tr>
+<td>Perpetual Powers of Tau Phase-1</td>
+<td>Inherited universal ceremony; Armada's own Phase-2 has not run yet (ADR-0003).</td>
+</tr>
+<tr>
+<td>Circle CCTP</td>
+<td>The cross-chain USDC rail the pool's CCTP path wraps.</td>
+</tr>
+<tr>
+<td>Aave v4 (mock in the current build)</td>
+<td>The yield protocol <code>ArmadaYieldAdapter</code> reaches, through the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding, not Railgun's RelayAdapt/Cookbook.</td>
 </tr>
 </tbody>
 </table>
 <h2 id="external-systems-interfaces-genuine-third-parties">External systems &amp; interfaces (genuine third parties)</h2>
-<p>Direction is stated relative to our system.</p>
+<p>Direction is stated relative to Armada's system.</p>
 <table>
 <thead>
 <tr>
@@ -101,49 +132,51 @@
 <tbody>
 <tr>
 <td><strong>Ethereum L1</strong></td>
-<td>Settlement root: our own pool, <code>go-nitro</code> adjudicator, and deposit/payout contract live here. Bidirectional — write channel state, read commitment/nullifier/adjudicator events.</td>
-<td>T0.0, T0.2, T0.3 (read at T1.2)</td>
-<td>ADR-0002/0004/0014</td>
+<td>Settlement root: the pool, the patched adjudicator, and governance contracts live here. Bidirectional — write channel and pool state, read commitment/nullifier/adjudicator events.</td>
+<td>T0.0, T0.2 (read at T1)</td>
+<td>ADR-0002, ADR-0004, ADR-0014</td>
 </tr>
 <tr>
 <td><strong>Railgun deployed pool</strong> (live)</td>
-<td>Wallet move: the user <strong>unshields from Railgun, then shields into our pool</strong> — one public step that shows token, amount and time. No contract of ours reads or touches Railgun's pool. Inbound.</td>
+<td>Wallet move (not yet built): a user would unshield from Railgun, then shield into Armada's pool — one public step that shows token, amount and time. No contract of Armada's reads or touches Railgun's pool. Inbound.</td>
 <td>T6.7</td>
 <td>ADR-0006</td>
 </tr>
 <tr>
 <td><strong>Aave v4</strong></td>
-<td>The yield protocol the USDC-yield rail reaches through, via our Aave-v4 adapter's recipe (<code>unshield USDC → supply → reshield aUSDC</code>). Amounts public only at the transparent supply boundary (Design A).</td>
+<td>The yield protocol the Aave-v4 adapter reaches (<code>unshield USDC → supply → reshield aUSDC</code>), through the pool's own adapt-contract binding. Amounts public only at the transparent supply boundary.</td>
 <td>T5.0 (C)</td>
-<td>ADR-0005</td>
-</tr>
-<tr>
-<td><strong>Circle CCTP</strong></td>
-<td>Cross-chain USDC mint wrapped into the shield by our CCTP adapter — arrives as a fresh shielded USDC note. Inbound; adapter already built.</td>
-<td>T5.0 (C), enters via T0.3</td>
 <td>—</td>
 </tr>
 <tr>
-<td><strong>Public Waku network</strong></td>
-<td>Transport underlay: pub/sub for feed/quote gossip + discovery; libp2p-noise direct streams for the 1:1 hot loop. Bidirectional P2P. Noise gives peer-auth, <strong>not</strong> IP privacy.</td>
-<td>T2.3 (T6.5 mobile)</td>
-<td>ADR-0008</td>
+<td><strong>Circle CCTP</strong></td>
+<td>Cross-chain USDC mint wrapped into a shield by <code>CCTPHookRouter</code> — arrives as a fresh shielded USDC note. Bidirectional; built.</td>
+<td>T5.0 (C), via T0.0</td>
+<td>—</td>
 </tr>
 <tr>
-<td><strong>nimbus-eth1</strong> (upstream)</td>
-<td>State-diff source: stateless/witness + Aristo, mapped into IPLD for proof-carrying diffs. Inbound; we build only enough local cache to serve, not a full archive EL. Upstream path in-progress (§11).</td>
-<td>T1.0, T1.1</td>
+<td><strong>Beacon chain light client</strong></td>
+<td>The proof anchor the nimbus verified proxy checks every header against. Inbound.</td>
+<td>T1</td>
 <td>ADR-0009</td>
+</tr>
+<tr>
+<td><strong>The armada-nitro fixturenet</strong></td>
+<td>Real <code>geth</code> + <code>lighthouse</code> consensus, used for testing the adjudicator and, once patched, the first nimbus-proxy proof.</td>
+<td>T0.2, T1</td>
+<td>ADR-0009, <code>labbook/2026-10-19-nimbus-verified-proxy-proofs.md</code></td>
 </tr>
 </tbody>
 </table>
-<h2 id="not-in-v1-excluded">Not in v1 / excluded</h2>
+<h2 id="not-built-excluded">Not built / excluded</h2>
 <ul>
-<li>Amount privacy in-play beyond Design A: <strong>T0.6 fork-lite</strong> is optional (Phase-4); <strong>fork-full</strong> is excluded unless separately greenlit (ADR-0005).</li>
-<li><strong>Market-making</strong> (venue solver T4.2) and the <strong>LP-buffered private USDC-yield rail</strong> (T4.5) are <strong>v2</strong> (ADR-0011); v1 fills from a static inventory and does basic USDC yield via the direct adapter recipe.</li>
+<li>Amount privacy in-play beyond the shield/unshield boundary (T0.6, optional, not built).</li>
+<li>A venue, a matcher, or market-making (T3, T4): no code exists in <code>armada-poc</code>.</li>
+<li>A Railgun onboarding bridge or any cross-pool membership proof: rejected, because a spend hides only among the notes it could consume (<code>labbook/2026-10-19-docs-versus-code.md</code> decision 2).</li>
+<li>Proofs of Innocence as an entry gate: replaced by voluntary, off-chain selective disclosure (ADR-0020).</li>
 </ul>
 <hr />
-<p>→ Building-block detail and every <code>T#.#</code> id: <a href="./05-building-block-view.html">§5</a>. Scope decision: <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a> (whole-product scope; reuse boundary). Adapter detail: <a href="./T5-adapters.html"><code>T5-adapters.md</code></a>.</p>
+<p>→ Building-block detail and every <code>T#.#</code> id: <a href="./05-building-block-view.html">§5</a>. Scope decision: <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a>. Adapter detail: <a href="./T5-adapters.html"><code>T5-adapters.md</code></a>.</p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/03-context-and-scope.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

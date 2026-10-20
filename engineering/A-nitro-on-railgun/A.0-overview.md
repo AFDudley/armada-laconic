@@ -1,70 +1,53 @@
-# A.0 — nitro-on-railgun · Overview & Scope
+# A.0 — The on-chain settlement rail · Overview
 
-work package A · reuse-oriented spec · **2026-09-05**
+work package A · **2026-10-20**
 **Parent:** [`../00-work-packages.md`](../00-work-packages.md) · [`../05-building-block-view.md`](../05-building-block-view.md)
-**Owns:** T0.0 pool · T0.1 trusted setup · T0.2 adjudicator · **T0.3 deposit/payout contract (net-new)** · T0.6 native commitment *(opt)* · T0.7 anonymity-set strategy · T6.2 settlement client · T6.3 self-watchtower
-**Baseline (frozen):** ADRs 0002–0011 · **operating model:** [ADR-0012](../09-architecture-decisions.md#adr-0012) · **scope:** [ADR-0013](../09-architecture-decisions.md#adr-0013)
+**Owns:** T0.0 pool · T0.1 trusted setup · T0.2 adjudicator (with the deposit/payout boundary merged in) · T0.4–T0.6 (plan) · T0.7 anonymity-set strategy · governance and revenue contracts
 
 ---
 
-## A.0.1 Goal
+## A.0.1 What is built
 
-Deliver the settlement substrate of Armada: the Railgun-based rail on which payments, yield, and exchange all clear, following the motto *notes in, normal Nitro, notes out*. A shielded Railgun note is unshielded into a net-new deposit/payout contract that escrows the value into a `go-nitro` state channel. Parties settle off-chain via ForceMove, and the channel outcome is re-shielded into fresh notes. A also delivers three supporting pieces: the base shielded-payments primitive (a native Railgun transfer), the client that drives settlement, and a self-watchtower.
+The settlement rail — *notes in, normal Nitro, notes out* — is built, not planned. `armada-poc` built the shielded pool and its governance contracts. `armada-circuits` built the `Transact` circuit. `armada-nitro` built `ArmadaNitroAdjudicator`, a patched `go-nitro` adjudicator that also carries the deposit/payout boundary: `depositFromNote` funds a channel from a note, and a `SHIELD`-type allocation pays a note back out. There is no separate deposit/payout contract and no `fundChannel` (ruling 1, `labbook/2026-10-19-docs-versus-code.md`).
 
-Per [ADR-0012](../09-architecture-decisions.md#adr-0012), the settlement rail is integration work over existing cryptography. The adjudicator is reused as-is (T0.2); the net-new settlement code is the deposit/payout contract (T0.3), the T6.3 auto-watchtower loop, and a multi-asset ForceMove settlement app. The pool (T0.0) and the JoinSplit circuits (T0.1) are not reuse: we author our own implementation of the Railgun design ([ADR-0014](../09-architecture-decisions.md#adr-0014)), spec-compatible with the behavior and format the deep dive pins (A.1.1/A.1.2). That pool-and-circuits work is **audit-critical** crypto-engineering over a well-understood design. The integration thesis therefore holds for the settlement rail, but not for the pool and circuits, which we build ourselves.
+The hub principal, `HubCustodian`, signs with FROST over secp256k1 (`frost-secp256k1-evm`), not `chain-signatures`.
 
-## A.0.2 The construction, concretely
-
-The deep dive (A.1) pins the exact binding surface:
+## A.0.2 The construction, as built
 
 ```
- shielded note ──transact() unshield-in──►  DEPOSIT (T0.3)
-   RailgunSmartWallet.transact([...])           │ MultiAssetHolder.deposit(asset, channelId, expectedHeld, amount)
-   unshieldPreimage.npk = T0.3 address           ▼
-                                            go-nitro channel (holdings[asset][channelId])
+ shielded note ──depositFromNote──►  ArmadaNitroAdjudicator.deposit (holdings[asset][channelId])
                                                   │ off-chain ForceMove states / vouchers
                                                   ▼
- fresh notes ◄──shield() shield-out── PAYOUT (T0.3) ◄── concludeAndTransferAllAssets(...) → external destination
-   RailgunSmartWallet.shield([ShieldRequest...])
+ fresh notes ◄──pool.shield()── _executeSingleAssetExit (SHIELD allocation) ◄── conclude / force-close
 ```
 
-On deposit, a Railgun `transact()` sets `unshieldPreimage.npk` to the T0.3 address; `transferTokenOut` then lands the ERC20 in T0.3, which forwards it to `MultiAssetHolder.deposit`. On payout, the channel's `concludeAndTransferAllAssets` routes the outcome to T0.3 as an external destination, and T0.3 `shield()`s fresh notes to each beneficiary. **T0.3 never touches pool or adjudicator internals**: it is a public-side ERC20 counterparty — to the pool across unshield and shield, and to the channel across deposit and conclude. Full citations: [A.1](./A.1-reuse-inventory.md).
+`depositFromNote(channelId, expectedHeld, transactions)` requires a single `UnshieldType.NORMAL` transaction whose `adaptContract`/`adaptParams` are bound to the channel and holding, and whose note pays the adjudicator (`npk == address(this)`). It measures the ERC-20 balance delta and credits `holdings[asset][channelId]`. On payout, `_executeSingleAssetExit` builds a `ShieldRequest` for every `SHIELD`-type allocation and calls `pool.shield(requests, address(0))` once per asset exit. `IArmadaPool` is the two-function interface the adjudicator calls against the pool: `shield` and `transact`.
 
 ## A.0.3 Document map
 
 | Doc | Item(s) | Contents |
 |---|---|---|
-| [A.1](./A.1-reuse-inventory.md) | all | The deep dive: reuse inventory with pinned file/line citations (Railgun, go-nitro/ts-nitro, mobymask), corrections, net-new deltas, risks |
-| [A.2](./A.2-pool-deployment.md) | T0.0 | Our own pool implementation (spec-compatible with Railgun, [ADR-0014](../09-architecture-decisions.md#adr-0014)); fee=0; token allow-list; vkey registration |
-| [A.3](./A.3-trusted-setup.md) | T0.1 | Our own JoinSplit circuits ([ADR-0014](../09-architecture-decisions.md#adr-0014)); Phase-1 reuse + own Phase-2; circuit-set reconciliation (91 generated vs registered subset); artifacts |
-| [A.4](./A.4-adjudicator-integration.md) | T0.2 | go-nitro adjudicator reuse; the ForceMove app choice; maturity gaps |
-| [A.5](./A.5-deposit-payout-contract.md) | T0.3 | The net-new contract: deposit-in, payout-out, outcome encoding, app registry |
-| [A.6](./A.6-settlement-client-watchtower.md) | T6.2, T6.3 | ts-nitro client + submit-on-behalf keeper; the net-new auto-watchtower loop |
-| [A.7](./A.7-anonymity-set.md) | T0.7 | Bootstrap the crowd with new users; shielded-payments primitive |
-| [A.8](./A.8-interfaces-acceptance.md) | ICD | What A exposes to B/C/D; the walking skeleton; acceptance/verification |
-| [A.9](./A.9-native-commitment.md) | T0.6 *(opt)* | Amount-privacy-in-play; circuit delta ⇒ re-run T0.1 |
+| [A.1](./A.1-reuse-inventory.md) | all | What is reused (`go-nitro`, patched) versus built (the pool, the circuit, the adjudicator, the custodian), with citations. |
+| [A.2](./A.2-pool-deployment.md) | T0.0 | The built pool: `PrivacyPool` and its four modules. |
+| [A.3](./A.3-trusted-setup.md) | T0.1 | The built circuit and the open Phase-2 ceremony. |
+| [A.4](./A.4-adjudicator-integration.md) | T0.2 | The patched adjudicator and its six post-vendor commits. |
+| [A.5](./A.5-deposit-payout-contract.md) | T0.2 | The deposit/payout boundary, merged into the adjudicator. |
+| [A.6](./A.6-settlement-client-watchtower.md) | T6.2, T6.3 | The web client's settlement calls; the watchtower that exists only in the test harness. |
+| [A.7](./A.7-anonymity-set.md) | T0.7 | The crowd-growth strategy; no cross-pool proof. |
+| [A.8](./A.8-interfaces-acceptance.md) | ICD | What the rail exposes; the test suites that already run against it. |
+| [A.9](./A.9-native-commitment.md) | T0.6 *(not built)* | Amount-privacy-in-play, still a deferred circuit change. |
 
-Each doc is written to the six-part reuse-spec bar ([ADR-0012](../09-architecture-decisions.md#adr-0012)): goal · boundary · reuse inventory · delta · ICD · acceptance.
+## A.0.4 Testing
 
-## A.0.4 Walking skeleton (A's first integration target)
+`armada-poc` ships Hardhat/TS and Foundry suites (fuzz, invariant, Halmos) for the pool, crowdfund, governance and yield paths. `armada-nitro` ships Forge suites for the adjudicator, the custodian, the asset allow-list, the reentrancy guard, and fixturenet e2e jobs that shield, deposit from a note, and run against a real `geth` + `lighthouse` chain. There is no separate "walking skeleton" to build; the equivalent flow already runs in `armada-nitro`'s `env/gates/nitro-e2e`.
 
-A thin end-to-end slice on a laconic fixturenet, exercising every A boundary once:
+## A.0.5 What remains
 
-```
-shield → transact()/unshield-in → MultiAssetHolder.deposit → trivial ForceMove settle
-       → concludeAndTransferAllAssets → shield()/payout → scan
-  T0.0        T0.3                         T0.2                T0.2/T0.3
-```
-
-Use a trivial single-asset ForceMove app (HashLockedSwap-grade) as a stand-in for C's real quote/settle app. This proves *notes in, Nitro, notes out* before deepening any item. Detail: [A.8](./A.8-interfaces-acceptance.md).
-
-## A.0.5 Open items (resolve before or during A)
-
-1. **Register a circuit subset.** The source generates 91 `(nInputs,nOutputs)` combos; the widely-cited "~54" is a registered subset. Decide which subset to ceremony and register (T0.1/T0.0; A.3).
-2. **Compliance posture: resolved.** Selective disclosure ([ADR-0020](../09-architecture-decisions.md#adr-0020), [16](../16-selective-disclosure.md)) is voluntary and off-chain. No gate blocks a deposit, a transfer, a withdrawal, or channel funding, so A builds no gate.
-3. **Build the multi-asset settlement app.** `MultiAssetHolder` supports multiple assets, but no shipped ForceMove app settles ETH-in/USDC-out atomically; HashLockedSwap is single-asset and two-party (A.5/A.4).
-4. **Build the auto-watchtower.** T6.3's auto challenge-response is net-new and needs an always-on node for the full challenge window (A.6).
+1. **T0.1's Phase-2 ceremony.** The shapes are open, with no beacon and no published transcript.
+2. **The selective-disclosure circuit.** In progress on unmerged branches (`armada-circuits` `disclosure-circuit`, `armada-sdk` `selective-disclosure`).
+3. **T0.4, T0.5, T0.6.** No code exists for the registry/bond contract, the fraud-proof verifier, or native channelized commitment.
+4. **A client watchtower.** `armada-nitro`'s e2e gate harness has one; no client-side watchtower exists.
 
 ## A.0.6 Provenance
 
-Pinned commits for the deep dive: go-nitro @435eb2b, ts-nitro @884d616, mobymask @2329198. Railgun repos were read at `master`/`main` HEAD (2026-09-05). **No SHA was pinned; A.2/A.3/A.5 must pin a Railgun commit before build.** Full citations: [A.1](./A.1-reuse-inventory.md).
+`armada-poc@102f17b8` · `armada-circuits@ef2682f` · `armada-deployments@bac3639` · `armada-nitro@55939ef` (`origin/integrated`) · `armada-sdk@db5757f`. Full citations: [A.1](./A.1-reuse-inventory.md).

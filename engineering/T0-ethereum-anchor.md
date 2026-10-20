@@ -1,165 +1,84 @@
 # T0 · Ethereum anchor
 
-**Status:** draft · tier doc · 2026-09-04
+**Status:** built, mostly · tier doc · 2026-10-20
 **Parent:** [`05-building-block-view.md`](./05-building-block-view.md) · **Tier:** T0
-**Release:** v1 (T0.0, T0.1, T0.2, T0.3, T0.7) · v2 (T0.4, T0.5) · opt (T0.6)
-**Depends on / Blocks:** root tier — depends on nothing above it. Blocks T1.2 (indexes T0.0 commitments/nullifiers + T0.2/T0.3 events), T2.1 (voucher metering over T0.2), T4.1 (quote/settle app in the T0.3 app registry), T6.2 (settlement client drives T0.3), T6.3 (watchtower response with T0.2), T6.6 (mobile proving from T0.0/T0.1 artifacts). T0.4 underpins T2.4 bonding; T0.5 underpins T3 slashing.
+**Depends on / Blocks:** root tier — depends on nothing above it. Blocks T1 (indexes T0.0 commitments/nullifiers and T0.2 events), T6.2 (settlement client drives the T0.2 deposit/payout boundary), T6.3 (watchtower response against T0.2).
 
-The on-chain anchor is where value lives and where disputes settle. Its reuse boundary splits cleanly (ADR-0014): the settlement rail is reuse — vanilla `go-nitro` adjudicator/ForceMove/MultiAssetHolder (T0.2) plus the modest deposit/payout contract (T0.3) that binds it to the pool and realizes *notes in → normal Nitro → notes out* — while the shielded pool (T0.0) and JoinSplit circuits (T0.1) are net-new, our own implementation of the Railgun design the A deep dive documents (A.1.1/A.1.2). The pool and circuits plus our own Phase-2 ceremony (T0.1) and the anonymity-set strategy (T0.7) are the audit-critical net-new crypto-engineering here; the deposit/payout boundary (T0.3) is the net-new integration code. Two v2 economic-security contracts (T0.4 registry+bond, T0.5 sequencing-cert + fraud-proof verifier) and one optional cryptographic upgrade (T0.6 native channelized commitment) round out the tier. Amounts are public only at the T0.3 boundary — Design A, the default.
+The on-chain anchor is where value lives and where disputes settle. `armada-poc` built the shielded pool (T0.0) and its governance contracts. `armada-circuits` built the `Transact` circuit (T0.1). `armada-nitro` built the adjudicator, and merged the deposit/payout boundary into it (T0.2; there is no separate T0.3 contract, ruling 1 of `labbook/2026-10-19-docs-versus-code.md`). T0.4, T0.5 and T0.6 remain a plan.
 
-## T0.0 Shielded pool — our own implementation (spec-compatible with Railgun); fee=0
+## T0.0 Shielded pool — built
 
-**What it is.** This is our own shielded pool: our own implementation of the shielded-pool contracts, spec-compatible with the Railgun design (ADR-0014), and it forms the root of the spine. Every downstream item references the pool address, its commitment/nullifier event ABI, and its `shield`/`unshield` entrypoints.
+`PrivacyPool` (`armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol`) is the router. It holds all state and routes to four modules by `delegatecall`: `ShieldModule`, `TransactModule`, `MerkleModule`, `VerifierModule`, each set once at `initialize()` with no setter. `PrivacyPool` is not a proxy.
 
-**Reuse vs. build.** This is net-new: real, audit-critical crypto-engineering, but of a well-understood, de-risked design — the A deep dive pins the exact behavior and format our implementation matches. The Railgun `contract` and `circuits-v2` repos are the reference spec (behavior and format documented in A.1), never a source we copy; `engine`/`cookbook` are useful only as reference reading.
+**What is in the Railgun design, and what Armada changed.** The pool reimplements Railgun's note/commitment/nullifier shape: a 16-deep commitment tree per `treeNumber` (65,536 leaves), `rootHistory[treeNumber][root] -> isValid`, and `nullifiers[treeNumber][nullifier] -> isSpent`, set in `TransactModule._accumulateAndNullify` before payout. A batch that would overflow the current tree rolls to `(treeNumber+1, 0)`. Token policy is a blocklist, not an allow-list: any ERC-20 not blocklisted can be shielded, and USDC can never be blocked.
 
-| Component | Reference spec (design target — not a source dependency) |
-|---|---|
-| Pool / accumulator (Merkle tree, nullifier set, Groth16 verifier) | [`Railgun-Privacy/contract`](https://github.com/Railgun-Privacy/contract) — behavior/format documented in A.1.1 |
-| ZK circuits (Circom) — JoinSplit circuits by UTXO in→out count | [`Railgun-Privacy/circuits-v2`](https://github.com/Railgun-Privacy/circuits-v2) — behavior/format documented in A.1.2; authored under T0.1 |
+**Fee.** `shieldFee` defaults to 0 bps and is owner-settable, capped at `MAX_SHIELD_FEE_BPS = 1000` (10%). The Sepolia deploy script sets it to 50 bps (`scripts/deploy_privacy_pool.ts:264-265`). This is not the fee = 0 design the earlier docs assumed; Armada's own revenue model (`ArmadaFeeModule`, a tiered take on shield and yield fees) is built alongside the pool (`contracts/fees/ArmadaFeeModule.sol`).
 
-The proof system is Groth16 via Circom and snarkjs ([`iden3/snarkjs`](https://github.com/iden3/snarkjs)); browser and node prove through snarkjs-WASM, while mobile proves via T6.6. We author and deploy a registered subset of the generated `(nIn,nOut)` combos (T0.1) for wallet compatibility. Trimming the subset further is a later gas and setup optimization: each circuit dropped is one fewer Phase-2 key from T0.1, but it also costs a wallet capability.
+**No entry gate.** No proof-of-innocence or disclosure-proof check exists anywhere under `contracts/privacy-pool/`. Selective disclosure (ADR-0020, [16](./16-selective-disclosure.md)) is voluntary and off-chain and gates nothing.
 
-**Design deltas from the Railgun spec** (our choices, not a protocol fork):
-1. **Fee = 0.** Zero the shield/unshield fee params. Revenue is venue spread plus watcher metering, not a pool skim, and this is the whole reason to own the deployment.
-2. **No entry gate.** Selective disclosure ([ADR-0020](./09-architecture-decisions.md#adr-0020), [16](./16-selective-disclosure.md)) is voluntary and off-chain. No deposit, transfer, or withdrawal checks it, so the pool carries no compliance list or list authority.
-3. **Settlement-contract allow-list.** Reserve and authorize the T0.3 deposit/payout contract address in the pool config. Here we only leave the config hook; the contract itself is T0.3.
-4. **Token allow-list.** Start with USDC, ETH/wstETH, and expand later.
+**Cross-chain.** `PrivacyPool`/`PrivacyPoolClient`/`CCTPHookRouter` shield and unshield across chains over CCTP v2 (`atomicCrossChainUnshield`, `handleReceiveFinalizedMessage`). Cross-chain unshield is USDC-only.
 
-**Interface exposed.** The pool publishes pool and verifier addresses per network; the commitment-insert and nullifier-spend event ABI (consumed by T1.2, decrypted by T6.1); `shield`/`unshield` plus the reserved deposit/payout hook that T0.3 binds to; and circuit `wasm` and `zkey` artifacts and hashes for T6.6.
+**Verifier.** `VerifierModule` holds `verificationKeys[nullifierCount][commitmentCount]`, owner-set via `PrivacyPool.setVerificationKey`, with no deletion path. 19 `(nIn, nOut)` shapes are registered from `armada-circuits`' build, from `(1,1)` through `(8,4)`.
 
-**Testing.** Use a Laconic fixturenet for deterministic E2E (shield → commitment event → unshield → nullifier, proofs against our keys). We author our own test suite for the pool and circuits — the Railgun design is the behavioral oracle — with explicit coverage of fee=0 enforced, deposit/payout hook authorization, and spec-compatibility (note/commitment format, nullifier semantics) against the A.1 reference.
+**Testing.** `armada-poc` ships Hardhat/TS suites for the pool, crowdfund, governance, revenue and yield paths, and Foundry suites including fuzz, invariant and Halmos symbolic-execution tests for the pool and the adjudicator boundary.
 
-**Risks.** The pool and circuits are a real, audit-critical crypto-engineering workstream (§11): correctness and exact spec-compatibility with the Railgun design (note format, nullifier semantics, verifier wiring) are the primary concern, and anything touching pool spend authorization is audit-critical before mainnet.
+## T0.1 Circuits + trusted setup — partly built
 
-## T0.1 Circuits + trusted setup — our own JoinSplit circuits (spec-compatible); reuse Perpetual PoT Phase-1; own Phase-2 MPC (1-of-N)
+`armada-circuits` (`ef2682f`) is one circom template, `Transact(N,M)` (`src/operations/Transact.circom`, 167 lines, plus `merkle.circom`, 55 lines), instantiated as 19 `main_NxM.circom` entry points. It builds on `circomlib ^2.0.5`, the way Railgun's own circuits do. Groth16 proving; Phase-1 reuses the community Perpetual Powers of Tau.
 
-**What it is.** T0.1 owns two things (ADR-0014): our own JoinSplit circuits — authored in Circom, spec-compatible with the Railgun circuit design (A.1.2) — and the Groth16 trusted setup over that circuit set. The circuits are net-new code; the setup has two phases, and only Phase 2 is ours (a process deliverable). Together this is net-new, audit-critical but of a well-understood design.
+**The Phase-2 ceremony has not run.** The `v1.0.0-ceremony` tag's `ceremony/manifest.json` lists every shape `"status": "open"` with no beacon. `main` carries only `scripts/setup-dev.sh`, labeled unsafe for anything but local testing. Until the ceremony finishes, every deployed verifying key traces to the dev script, not a published, multi-party transcript.
 
-**Reuse vs. build.**
-- **Circuits — net-new.** We author our own JoinSplit circuit set in Circom, spec-compatible with the Railgun design (A.1.2) (ADR-0014). This is the audit-critical crypto-engineering half of T0.1; the setup below runs over *our* circuits.
-- **Phase 1 — reuse.** We consume the community Perpetual Powers of Tau BN254 artifact ([`privacy-ethereum/perpetualpowersoftau`](https://github.com/privacy-ethereum/perpetualpowersoftau)). It is circuit-agnostic, large, and vetted — the expensive, risky part, and a good one already exists. We never run our own universal ceremony; Railgun sits in exactly this position.
-- **Phase 2 — ours.** This is a circuit-specific MPC over our deployed set. Security rests on 1-of-N honest: a single participant destroying their toxic waste suffices. We publish the full transcript plus a final public randomness beacon.
+**Selective disclosure is a second, unmerged circuit.** `NullifierDisclosure.circom` (112 lines) exists on the `disclosure-circuit` branch (`7175b46`), with the matching client code on `armada-sdk`'s `selective-disclosure` branch (`0aa2ba1`). It is in progress, not merged. It will add shapes to this same Phase-2 ceremony, not start a new one (ADR-0003 D3.4).
 
-**Tooling.** The `snarkjs zkey new → contribute → beacon → verify` sequence is the primary path and remains the standard ([`iden3/snarkjs`](https://github.com/iden3/snarkjs)). Target ≥5 independent contributors (team plus external), organizationally distinct, so the 1-honest assumption is credible. Publish the `.zkey`/`.vkey` hashes and the verification transcript in-repo, then generate the Solidity verifier(s) from the final `vkey`s and wire them into T0.0's verifier contract.
+**Re-run trigger.** Phase 2 is repeated only when circuits change. The selective-disclosure circuit and any future T0.6 (native channelized commitment) change are both triggers.
 
-**Re-run trigger.** Phase 2 is repeated only when circuits change; the canonical trigger is T0.6 (native channelized commitment). Phase 1 is never re-run.
+## T0.2 Nitro adjudicator and deposit/payout boundary — partly built, merged
 
-> **Reuse-Railgun-keys alternative, moot.** Railgun's published Phase-2 `.zkey`s are bound to *their* circuit instances. Because our circuits are net-new (ADR-0014), those keys do not apply regardless — a fresh Phase-2 over our own set is required, not merely preferred.
+`ArmadaNitroAdjudicator` (`armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol`) extends `go-nitro`'s `NitroAdjudicator`. The vendor import (`8edacc1`, "unmodified") is followed by six commits that patch the vendored contracts:
 
-**Testing.** Run `snarkjs zkey verify` in CI against the published transcript, and fail the build on any `zkey` hash mismatch.
+1. Accept EIP-1271 participants (removes the owner-controlled L2↔L1 bridge stub).
+2. Fix a guarantee-type check in `MultiAssetHolder.transfer` (wrong index).
+3. Credit deposits by the measured balance delta, reverting on a short transfer.
+4. Add a hub-configured asset allow-list, gating `deposit` and `depositFromNote`.
+5. Add a per-channel reentrancy lock across the six holdings-mutating entry points.
+6. Pay out ERC-20 via `SafeERC20`.
 
-## T0.2 Nitro adjudicator — `go-nitro` NitroAdjudicator / ForceMove / MultiAssetHolder
+This is a patched adjudicator, not a vanilla deploy. It is also the deposit/payout boundary, not a second contract:
 
-**What it is.** This is the on-chain settlement adjudicator and the off-chain channel machinery that move value once T0.3 has funded a channel from a note. It is vanilla `go-nitro`, and the adjudicator is unchanged.
+- **Deposit.** `depositFromNote(channelId, expectedHeld, transactions)` requires a `UnshieldType.NORMAL` transaction whose `adaptContract`/`adaptParams` bind to this channel and holding, requires the note pays the adjudicator (`npk == address(this)`), and credits `holdings[asset][channelId]` by the measured received amount.
+- **Payout.** `_executeSingleAssetExit` pays every allocation of type `SHIELD` as a fresh note, calling `pool.shield(requests, address(0))`; non-`SHIELD` allocations keep normal `go-nitro` payout behavior.
 
-**Reuse vs. build.** We fully reuse [`cerc-io/go-nitro`](https://github.com/cerc-io/go-nitro) (a fork of `statechannels/go-nitro`): `NitroAdjudicator.sol`, `ForceMove.sol`, `MultiAssetHolder.sol`, virtual channels ([`protocols/virtualfund/virtualfund.go`](https://github.com/cerc-io/go-nitro)), vouchers ([`payments/vouchers.go`](https://github.com/cerc-io/go-nitro)), and `examples/HashLockedSwap.sol` as a reference ForceMove app. Nothing here is protocol-new; it is `go-nitro` deploy and configure.
+There is no `fundChannel` function and no separate deposit/payout contract. `IArmadaPool` (`src/armada/IArmadaPool.sol`) is the two-function interface the adjudicator calls: `shield` and `transact`.
 
-**Interface.** Off-chain play is plain signed ForceMove states plus vouchers, with virtual channels via a hub — pure state machines, no circuits. The `NitroAdjudicator` address is consumed by T0.3 (which escrows into it) and by T2.1 (whose voucher metering reuses `payments/vouchers.go`). The `ForceMove` app-registry adjudication interface is where T4.1's quote/settle app registers.
+**HubCustodian.** `HubCustodian.sol` is a FROST-gated principal for a hub, not a Schnorr/`chain-signatures` custodian. It verifies a group signature (`FROST.verifySignature`, via `frost-secp256k1-evm`, pinned `65d03d0`) before executing a call, and authorizes a hot delegate by EIP-1271 with a timed revocation.
 
-**Dispute / challenge machinery.** This is the standard ForceMove `forceMove` / `respond` / `checkpoint` on `NitroAdjudicator`, where a challenge window finalizes if left unanswered. This challenge/dispute *machinery* is owned here (T0.2). The watchtower response — submitting a higher-turn state within the window so a user never loses funds to a stale-state force-close — is owned by T6.3, built against this adjudicator and gated on T2 feed freshness. Reference T6.3 rather than duplicating it.
+**Testing.** `armada-nitro`'s Forge suites cover the adjudicator (`ArmadaNitroAdjudicator.t.sol`), the custodian (`HubCustodian.t.sol`), the asset allow-list, the reentrancy guard, and the measured-deposit fix, plus fixturenet e2e jobs that shield, deposit from a note, and run the adjudicator against a real `geth` + `lighthouse` chain.
 
-**Maturity gaps (real long poles → Phase-3 hardening; document, don't assume done):**
-1. **Multi-asset ForceMove *app* is net-new.** go-nitro's `MultiAssetHolder` / `transferAllAssets` / `protocols/swap/swap.go` do support multi-asset outcomes (ETH-in / USDC-out); the gap is that no shipped ForceMove *app* produces a multi-asset atomic swap — `HashLockedSwap.sol` is single-asset / 2-party (A.1.8 §2). The net-new work is the multi-asset settlement *app*, not the outcome/holder machinery.
-2. **Dispute wiring.** Challenge/response paths exist in the adjudicator but are not fully wired in the node for our flow; they must be driven end-to-end.
-3. **Persistent connections / liveness.** Reliable state and voucher delivery is required, which ties to T2.3 transport.
+## T0.4 Registry + bond contract — not built
 
-go-nitro is documented pre-production, so treat these as pre-mainnet blockers; none of them block the v1 spine demo.
+No federation registry or bond contract exists. This stays a plan for a future bonded-federation phase (T2.4).
 
-## T0.3 Deposit/payout contract — the Nitro↔Railgun boundary (notes in / notes out)
+## T0.5 Sequencing-cert + fraud-proof verifier — not built
 
-**What it is.** This is the one genuinely new v1 contract: modest Solidity that binds the T0.0 pool to T0.2 channels and realizes the thesis —
+No L1 verifier for sequencing certs exists. This stays a plan for a future ordering tier (T3).
 
-> **Notes in → normal Nitro → notes out.**
+## T0.6 Native channelized commitment — not built
 
-```
-  shielded note ──unshield──►  DEPOSIT ──fund──►  Nitro channel (NitroAdjudicator escrow)
-                                                          │
-                                            off-chain ForceMove states / vouchers (T0.2)
-                                                          │
-  fresh shielded notes ◄──shield── PAYOUT ◄──outcome── channel finalize / force-close
-```
+Hiding amounts during play, not only at the shield/unshield boundary, would need a circuit change and a re-run of the Phase-2 ceremony (ADR-0003 D3.4, ADR-0005). No such circuit exists. This stays an optional, deferred upgrade.
 
-- **Deposit (unshield-in).** The user unshields from the T0.0 pool into the deposit endpoint, which opens and funds a Nitro channel via `NitroAdjudicator`. This is the one boundary where the amount is public (Design A). Deposit records the consumed nullifier and the funded `channelId`.
-- **Off-chain play.** This is vanilla T0.2: signed states, vouchers, and virtual channels via a hub. The application logic lives in ForceMove apps — pure state machines such as oracle-as-signer markets, TLSNotary-fed outcomes, and HashLockedSwap.
-- **Payout (shield-out).** On finalize (cooperative close *or* post-challenge), the payout endpoint reads the channel outcome and shields it into fresh notes (a fresh-shield exit). Settlement returns to notes, not public keys.
+## T0.7 Anonymity-set strategy — strategy, not code
 
-The Nitro game analysis is fully isolated from the Railgun privacy analysis; the two meet only at the allocation→note boundary. This adds Nitro's optimistic exits and arbitrary games to Railgun-style notes without new cryptography and without governance-gated RelayAdapt modules. RelayAdapt is Railgun's own recipe, used only inside T4.2's solver and never here.
+A shielded pool's privacy is k-anonymity against the set of unspent, indistinguishable notes. The pool already hides amounts inside a shield; the SNARK enforces value conservation and range, so a note's size carries no information. The amount leaks only at the shield/unshield and channel deposit/payout boundaries.
 
-**Allow-lists.** Payout mints new commitments, so recipients get clean notes with no linkage to the deposit note beyond the public deposit amount (fresh-shield exit). ForceMove app bytecode and adjudication logic is allow-listed, so the games are gated; the update authority is our L1 governance wallet, moving to on-chain governance later. No compliance check gates a deposit (selective disclosure is off-chain, ADR-0020).
+**The crowd grows only from the pool's own deposits.** No cross-pool proof and no Railgun onboarding bridge exist or are planned: a spend hides only among the notes it could consume, so a Railgun note that this pool accepted would let its owner spend the same value twice, and the pool would pay out tokens it never received (`labbook/2026-10-19-docs-versus-code.md` decision 2).
 
-**Interface exposed (consumers bind to this, MUST NOT re-derive):**
-- Contract address and ABI per network, plus the `NitroAdjudicator` (T0.2) address it uses.
-- Events: `Deposit(channelId, asset, amount, consumedNullifier)`, `Payout(channelId, newCommitments[])`, plus adjudicator `Challenge`/`Checkpoint`/`Finalized` — indexed by T1.2, reacted to by T6.3.
-- Channel lifecycle API: open/fund-from-note, propose/accept state, cooperative close, force-close, respond — driven by T6.2 (settlement client) and T4.2 (venue solver).
-- Voucher format — reused by T2.1 for Nitro metering.
-- **ForceMove app registry:** allow-listed app IDs plus the adjudication interface — where T4.1's quote/settle game registers.
-
-**Maturity note.** The go-nitro gaps in T0.2 (the net-new multi-asset ForceMove *app*, dispute wiring) surface here first, since deposit/payout must encode outcomes; the multi-asset holder/outcome machinery already exists, so the swap-demo pull is authoring the multi-asset app on top of it.
-
-**Testing.** Run fixturenet E2E: note → deposit → off-chain updates → (a) cooperative close and (b) force-close plus T6.3 response → payout → fresh notes scanned. Adversarial cases that MUST pass are a stale-state force-close defeated by the watchtower (T6.3), an unresponsive counterparty where the honest party still exits correctly, and a double-fund or replayed nullifier rejected at deposit. Reuse go-nitro's Go tests, and add tests only for the deposit/payout contract.
-
-**Risks.** Deposit/payout is spend-authorizing and therefore audit-critical before mainnet. The boundary amount-leak is inherent to Design A; hiding it in-play is T0.6.
-
-## T0.4 Registry + bond contract — venue/party bonding *(v2)*
-
-**What it is.** This is a v2 economic-security contract: the federation's on-chain entry point, where watcher-party and venue membership is registered and where disputes and slashing settle on L1. It is net-new and design-stage.
-
-**Role.** It holds the bond that T2.4 posts (federation membership plus threshold-DKG signing bond) and is the settlement point for slashing driven by T0.5's verifier and, in v2, by T3 ordering faults. Membership and bonding coordination proper lives in T2.4; T0.4 is only the on-L1 registry and bond escrow that those parties reference.
-
-It is kept concise, a v2 contract underpinning T2.4 bonding rather than v1 detail. It carries no v1 dependency, and the v1 spine ships without it.
-
-## T0.5 Sequencing-cert + fraud-proof verifier *(v2)*
-
-**What it is.** This is a v2 L1 verification contract. It verifies a watcher party's aggregate Ethereum-flavoured Schnorr (DSS) signature ([`chain-signatures`](https://git.vdb.to/cerc-io/chain-signatures) `ethschnorr` / `ethdss`), so a bad ordering or a censored-commit receipt becomes a slashable fraud proof against the bond (T0.4). It is net-new and design-stage.
-
-**Role.** Because the federation's inclusion receipts and sequencing certs are on-chain-verifiable Schnorr, T3's ordering guarantees (T3.2 DSS attestation) become enforceable: a forged or absent attestation is provable to this contract, which triggers slashing on T0.4. It underpins T3 slashing. The ordering *protocol* that produces the certs is T3; this is only the L1 verifier and slashing point.
-
-It is kept concise as v2 economic-security and verification, not v1 detail.
-
-## T0.6 Native channelized commitment — amount-privacy-in-play *(opt)*
-
-**What it is.** This is the one optional cryptographic upgrade in the plan — fork-lite. It hides trade amounts even during play and on dispute by making channel allocations reference hidden-amount commitments instead of plaintext outcome balances, so amounts stay concealed on-chain even when a dispute forces state to L1. It is a decision/design note, Phase-4, not on the spine, and blocks nothing.
-
-**Where the line is.** Design A (default, T0.3) leaks amounts only at the two transparent boundaries. Fork-full (Design B — shielded ForceMove, ZK matching plus dispute over hidden state) is research-grade and OUT unless separately greenlit. T0.6 is the middle point only.
-
-**Why "lite."** It stays inside the primitives T0.0/T0.1 already ship:
-- **No new proof system** — keep Groth16 via Circom and snarkjs; Halo2 is a separate, rejected decision.
-- **No shielded dispute game** — `NitroAdjudicator` (T0.2) still runs its normal challenge/checkpoint/conclude; only the on-chain outcome it settles points at commitments rather than cleartext balances, opened by the T0.3 payout endpoint into fresh notes as today.
-- **Scope of the circuit delta** — extend the payout/settlement side of our own JoinSplit note format (T0.1) so a channel's final allocation is amount-hiding commitments (Pedersen/Poseidon values already native to the pool) with a range/consistency proof that allocations sum to the deposited value. This is a format extension of our circuits, not a new construction; the Nitro game stays isolated, meeting T0.3 only at the allocation→note boundary.
-
-**Trusted-setup consequence.** Fork-lite changes circuits, which means it re-runs T0.1's Phase-2 MPC over the amended set (Phase-1 / Perpetual PoT is never re-run): `snarkjs zkey new → contribute → beacon → verify`, ≥5 contributors, published transcript plus hashes, and regenerate plus redeploy the Solidity verifier. New `wasm` and `zkey` artifacts ship to T6.6. T0.1 already names T0.6 as the canonical "circuits changed" trigger, so nothing new is invented — the pipeline is simply re-executed.
-
-**Buys vs. costs.** It buys amounts hidden on-chain even during disputes, and a venue that is also amount-blind for the settled allocation. It costs circuit engineering plus a fresh spend-authorization-adjacent audit (the dominant cost), a new Phase-2 ceremony on each format change, and heavier mobile prover time — the exact axis flagged by mobile-proving research ([`mobile-proving-research.md`](../mobile-proving-research.md); [zkmopro perf](https://zkmopro.org/docs/performance)) and constrained in T6.6.
-
-**Decision: defer to Phase-4; ship Design A first.** Design A delivers the full feature set with zero new crypto or ceremony. Greenlight T0.6 only on a concrete requirement (venue, counterparty, or regulatory posture) that cannot tolerate amounts on-chain during a force-close, and only with budget for a circuit audit plus ceremony re-run. Fork-full stays out regardless.
-
-**Testing (lighter — PoC gate).** On a fixturenet, force-close a committed-amount channel and show that the challenge/finalize state reveals no cleartext amount while payout still opens to the correct fresh notes; that a proof where allocations don't sum to the deposit is rejected (no value creation); and that `snarkjs zkey verify` against the new transcript passes in CI.
-
-## T0.7 Anonymity-set strategy — bootstrap the crowd with new users
-
-**What it is.** This is a strategy/decision owning exactly one lever — crowd size (and the timing discipline that keeps a large deposit from re-narrowing the set on exit). A shielded pool's privacy is k-anonymity against the set of unspent, indistinguishable notes; a fresh pool starts near zero and compounds with volume, which makes crowd size the single biggest non-engineering risk. The mechanics it rides — `shield`/`unshield` — land in T0.0.
-
-**What the pool already gives for free** (narrowing what T0.7 must solve): amounts are hidden inside the shield, since the SNARK enforces value-conservation plus range — *$50 and $5,000,000 are equally opaque* — so there are no Tornado-style denomination buckets; the amount leaks only at the transparent boundary (`shield`/`unshield` and the T0.3 deposit hop). The read side (watcher, T2.0) and write side (broadcaster) are covered by the substrate, so T0.7 is purely about populating the set.
-
-**Strategy (settled, ADR-0006).** No new crypto. The crowd grows only from our own users: incentivized early volume, our own market-making capital, and the yield-clearing flywheel where saturating depositors convert to LPs (T4.5). Every note in our pool comes from a deposit into our pool, so nothing outside the pool adds to the crowd.
-
-**Moving from Railgun.** The wallet makes it easy for a Railgun user to move funds in (T6.7). The move is a Railgun unshield followed by a shield into our pool, so it is an ordinary deposit with the security costs listed in T6.7. It is a wallet feature: no contract of ours reads or touches Railgun's pool. Moved value counts towards our crowd only from the moment it is shielded here, like any other deposit.
-
-**No entry check.** A moved-in deposit is a normal entry, and no compliance check gates it (selective disclosure is off-chain, ADR-0020). Payout is a fresh-shield exit, so settlement never re-links to the deposit beyond the one public amount.
-
-**Bootstrap levers (discipline, not crypto).** Incentivize early depositors and LPs, and convert saturating whales to LPs to deepen the pool and grow the crowd together. Mitigate the boundary risk for large actors with aggregation, not buckets: trade an aggregation window (bigger means a larger crowd but more latency) against LP build-up depth — two clocks — or dribble value in and out incrementally. Quantization matters only at the transparent boundary hops (round or common amounts), a light convention.
-
-**Metrics (instrument via T1.2/T2.0 feeds).** Track anonymity-set size (unspent indistinguishable commitments over time); effective k (the realistic crowd a spend hides in after correlation — track the worst-case lone large crossing separately); boundary-exposure rate (value transiting the transparent hop vs. staying shielded); moves from Railgun; and LP-conversion rate.
+**Moving from Railgun is a wallet feature (T6.7), not a protocol component.** It is a Railgun unshield followed by a shield into this pool. No contract of ours reads or touches Railgun's pool. The wallet shows the security costs before the user confirms: the token, the amount and the time are public on both pools; the unshield recipient is public; the value leaves Railgun's larger crowd for this smaller one; a later exit can link back; Railgun charges its unshield fee. This wallet feature is not built; `armada-interface` has no Railgun-unshield code today.
 
 ## Sources
 
-- go-nitro (cerc-io @435eb2b) — https://github.com/cerc-io/go-nitro — `NitroAdjudicator.sol`, `ForceMove.sol`, `MultiAssetHolder.sol`, `protocols/virtualfund/virtualfund.go`, `payments/vouchers.go`, `examples/HashLockedSwap.sol` · upstream https://github.com/statechannels/go-nitro
-- Railgun pool (reference spec for T0.0/T0.1; ADR-0014) — https://github.com/Railgun-Privacy/contract · circuits (note/commitment format) https://github.com/Railgun-Privacy/circuits-v2
-- Railgun RelayAdapt / Cookbook recipe (T4.2 only, not this tier) — https://github.com/Railgun-Community/cookbook
-- Railgun trusted-setup / proving system — https://docs.railgun.org/wiki/learn/privacy-system/trusted-setup-ceremony
-- Perpetual Powers of Tau (Phase-1 reuse) — https://github.com/privacy-ethereum/perpetualpowersoftau
-- snarkjs (Phase-2 CLI) — https://github.com/iden3/snarkjs
-- chain-signatures (@9016a7c) — `ethschnorr` / `ethdss` (T0.5 verifier) — https://git.vdb.to/cerc-io/chain-signatures
-- Mobile proving cost (T0.6 / T6.6 constraint) — [`mobile-proving-research.md`](../mobile-proving-research.md) · https://zkmopro.org/docs/performance
-- Site docs — [`architecture.html`](../architecture.html) (Design A boundary; net-new T0 contracts) · [`build-plan.html`](../build-plan.html) (T0 build order; registry+bond, cert verifier) · [`yield-clearing.html`](../yield-clearing.html) (amount-hiding vs. buckets, aggregation window / dribble / LP flywheel) · [`glossary.html`](../glossary.html) (one anonymity set; watcher/keeper duality)
+- `armada-poc` `origin/main@102f17b8` — `contracts/privacy-pool/`, `contracts/fees/`, `contracts/governance/`.
+- `armada-circuits` `ship-armada.github.com/main@ef2682f` — `src/operations/Transact.circom`; `disclosure-circuit@7175b46` — `src/operations/NullifierDisclosure.circom`.
+- `armada-deployments` `ship-armada.github.com/main@bac3639`; tag `v1.0.0-ceremony:ceremony/manifest.json`.
+- `armada-nitro` `origin/integrated@55939ef` — `src/ArmadaNitroAdjudicator.sol`, `src/HubCustodian.sol`, `src/armada/IArmadaPool.sol`.
+- Evidence: `labbook/2026-10-19-docs-versus-code.md`; `.scratch/rewrite-evidence/inv-InvPool.md`, `inv-InvNitroSdk.md`, `cmp-CmpArc42.md` (in `armada-laconic`).
+- Site docs — [`05-building-block-view.html`](./05-building-block-view.html) (registry) · [`09-architecture-decisions.html`](./09-architecture-decisions.html) (ADR-0002, 0003, 0004, 0014, 0016) · [`build-plan.html`](./build-plan.html) (status and sequencing).

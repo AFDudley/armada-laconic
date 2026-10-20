@@ -44,10 +44,10 @@ The pool, the circuits, the adjudicator and the deposit/payout boundary already 
 
 | id | item | status | code |
 |---|---|---|---|
-| T0.0 | Shielded pool — `PrivacyPool`, routed by `delegatecall` to four modules (`ShieldModule`, `TransactModule`, `MerkleModule`, `VerifierModule`); no proxy; a 16-deep commitment tree per `treeNumber`; a token blocklist (USDC exempt); a shield fee (`MAX_SHIELD_FEE_BPS = 1000`, deployed at 50 bps) | built | `armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol:31,38,46-49` |
+| T0.0 | Shielded pool — `PrivacyPool`, routed by `delegatecall` to four modules (`ShieldModule`, `TransactModule`, `MerkleModule`, `VerifierModule`); no proxy; a 16-deep commitment tree per `treeNumber`; a token blocklist (USDC exempt); a shield fee (`MAX_SHIELD_FEE_BPS = 1000`, deployed at 50 bps) | built | `armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol:20,39,330-336`, `contracts/privacy-pool/modules/MerkleModule.sol:13` |
 | T0.1 | Circuits + trusted setup — one `Transact(N,M)` circom template, 19 `(nIn,nOut)` shapes; Groth16; Phase-1 reuses the community Perpetual Powers of Tau; the Phase-2 ceremony is open, not finished (`v1.0.0-ceremony` manifest lists every shape `"status": "open"`, no beacon) | partly built | `armada-circuits@ef2682f:src/operations/Transact.circom`; tag `v1.0.0-ceremony:ceremony/manifest.json` |
 | T0.2 | Nitro adjudicator — `ArmadaNitroAdjudicator` extends `go-nitro`'s `NitroAdjudicator`; six commits patch the vendored contracts (EIP-1271 participants, a guarantee-check fix, measured-balance deposit crediting, an asset allow-list, a per-channel reentrancy lock, `SafeERC20` payout), so this is a patched adjudicator, not a vanilla deploy | partly built | `armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol`; `git log --oneline -- src/nitro` |
-| — | Deposit/payout boundary — merged into T0.2. `depositFromNote` funds a channel from a shielded note; a `SHIELD`-type allocation pays a note back out in `_executeSingleAssetExit`. No `fundChannel` and no separate contract | built | `armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol:36-50` |
+| — | Deposit/payout boundary — merged into T0.2. `depositFromNote` funds a channel from a shielded note; a `SHIELD`-type allocation pays a note back out in `_executeSingleAssetExit`. No `fundChannel` and no separate contract | built | `armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol:93-108,136-150` |
 | T0.4 | Registry + bond contract — venue/party bonding | not built | — |
 | T0.5 | Sequencing-cert + fraud-proof verifier | not built | — |
 | T0.6 | Native channelized commitment — amount-privacy-in-play; a circuit change (optional) | not built | — |
@@ -94,7 +94,7 @@ No venue contract and no matcher exist in `armada-poc`. These items stay a plan.
 | T4.1 | Quote/settle ForceMove app | not built | — |
 | T4.2 | Venue solver | not built | — |
 | T4.3 | Fee-split allocation | not built | — |
-| T4.4 | ETH yield — shielded wstETH note; any non-blocklisted ERC-20 can already be shielded, so no new contract is needed | built (as a consequence of T0.0's design) | `armada-poc@102f17b8:contracts/privacy-pool/modules/ShieldModule.sol:261-271` |
+| T4.4 | ETH yield — shielded wstETH note; any non-blocklisted ERC-20 can already be shielded, so no new contract is needed | built (as a consequence of T0.0's design) | `armada-poc@102f17b8:contracts/privacy-pool/modules/ShieldModule.sol:258` |
 | T4.5 | USDC yield — LP-buffered Aave rail | not built | — |
 | T4.6 | ex_net matcher + LP vault | not built | — |
 

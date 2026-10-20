@@ -19,7 +19,7 @@ The `v1.0.0-ceremony` tag's `ceremony/manifest.json` lists every shape `"status"
 
 ## A.3.4 The 19 shapes
 
-`armada-poc@102f17b8:lib/sdk/armada-artifacts.ts:28-45` lists the 19 `ARMADA_SHAPES` the circuits build produces, and `lib/artifacts.ts` lists the subset the deploy/registration tooling actually registers: `(1,1)` lend/redeem, `(1,2)` shield, `(2,2)` simple transfer, `(2,3)` transfer+change, `(8,4)` medium consolidation, plus smaller consolidation, transfer-with-change, and fan-out shapes. Keys are loaded from `armada-circuits/build/<N>x<M>/`, fetched by `scripts/fetch-circuits.sh`.
+`armada-poc@102f17b8:lib/sdk/armada-artifacts.ts:28-47` lists the 19 `ARMADA_SHAPES` the circuits build produces, and `lib/artifacts.ts` lists the subset the deploy/registration tooling actually registers: `(1,1)` lend/redeem, `(1,2)` shield, `(2,2)` simple transfer, `(2,3)` transfer+change, `(8,4)` medium consolidation, plus smaller consolidation, transfer-with-change, and fan-out shapes. Keys are loaded from `armada-circuits/build/<N>x<M>/`, fetched by `scripts/fetch-circuits.sh`.
 
 ## A.3.5 Selective disclosure — a second circuit, in progress
 

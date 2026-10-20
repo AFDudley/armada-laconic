@@ -111,7 +111,7 @@
 <td>T0.0</td>
 <td>Shielded pool — <code>PrivacyPool</code>, routed by <code>delegatecall</code> to four modules (<code>ShieldModule</code>, <code>TransactModule</code>, <code>MerkleModule</code>, <code>VerifierModule</code>); no proxy; a 16-deep commitment tree per <code>treeNumber</code>; a token blocklist (USDC exempt); a shield fee (<code>MAX_SHIELD_FEE_BPS = 1000</code>, deployed at 50 bps)</td>
 <td>built</td>
-<td><code>armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol:31,38,46-49</code></td>
+<td><code>armada-poc@102f17b8:contracts/privacy-pool/PrivacyPool.sol:20,39,330-336</code>, <code>contracts/privacy-pool/modules/MerkleModule.sol:13</code></td>
 </tr>
 <tr>
 <td>T0.1</td>
@@ -129,7 +129,7 @@
 <td>—</td>
 <td>Deposit/payout boundary — merged into T0.2. <code>depositFromNote</code> funds a channel from a shielded note; a <code>SHIELD</code>-type allocation pays a note back out in <code>_executeSingleAssetExit</code>. No <code>fundChannel</code> and no separate contract</td>
 <td>built</td>
-<td><code>armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol:36-50</code></td>
+<td><code>armada-nitro@55939ef:src/ArmadaNitroAdjudicator.sol:93-108,136-150</code></td>
 </tr>
 <tr>
 <td>T0.4</td>
@@ -310,7 +310,7 @@
 <td>T4.4</td>
 <td>ETH yield — shielded wstETH note; any non-blocklisted ERC-20 can already be shielded, so no new contract is needed</td>
 <td>built (as a consequence of T0.0's design)</td>
-<td><code>armada-poc@102f17b8:contracts/privacy-pool/modules/ShieldModule.sol:261-271</code></td>
+<td><code>armada-poc@102f17b8:contracts/privacy-pool/modules/ShieldModule.sol:258</code></td>
 </tr>
 <tr>
 <td>T4.5</td>

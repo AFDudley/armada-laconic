@@ -22,112 +22,106 @@
 </nav>
 
 <h1 id="8-cross-cutting-concepts">8. Cross-cutting Concepts</h1>
-<p>arc42 §8 · 2026-09-04</p>
-<p>Some concerns recur <strong>across</strong> tiers, tracing "lines" through the §5 registry. Each such concept is described <strong>once</strong> here. Its realizing building blocks are named by their <code>T#.#</code> id — the detail lives in the tier docs and is not repeated — and its governing decision by <code>ADR-####</code>. Where tiers group the registry vertically, these concepts group it horizontally.</p>
+<p>arc42 §8 · 2026-10-20</p>
+<p>Some concerns recur <strong>across</strong> tiers, tracing "lines" through the §5 registry. Each such concept is described <strong>once</strong> here. Its realizing building blocks are named by their <code>T#.#</code> id — the detail lives in the tier docs and is not repeated. Where tiers group the registry vertically, these concepts group it horizontally. Status in the table below is the concept's weakest linked item: a concept with any not-built item is marked accordingly, even where another of its items is built.</p>
 <table>
 <thead>
 <tr>
 <th>#</th>
 <th>Concept</th>
 <th>Realized by</th>
-<th>Governing ADR</th>
+<th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>8.1</td>
 <td>Settlement model — nitro-on-railgun</td>
-<td>T0.2, T0.3, T0.6</td>
-<td>ADR-0004</td>
+<td>T0.0, T0.2</td>
+<td>built</td>
 </tr>
 <tr>
 <td>8.2</td>
 <td>Privacy model</td>
-<td>T0.0, T0.3, T0.6, T0.7</td>
-<td>ADR-0005, ADR-0006</td>
+<td>T0.0, T0.2, T0.6, T0.7</td>
+<td>partly built (plan for T0.6, T1 integration)</td>
 </tr>
 <tr>
 <td>8.3</td>
 <td>Non-custody &amp; exit</td>
-<td>T0.2, T0.3, T6.3</td>
-<td>ADR-0004</td>
+<td>T0.2, T6.3</td>
+<td>partly built (T0.2 built; T6.3 not built)</td>
 </tr>
 <tr>
 <td>8.4</td>
 <td>Transport</td>
 <td>T2.3, T6.5</td>
-<td>ADR-0008</td>
+<td>not built</td>
 </tr>
 <tr>
 <td>8.5</td>
 <td>Metering</td>
 <td>T2.1, T4.3</td>
-<td>—</td>
+<td>partly built (different mechanism)</td>
 </tr>
 <tr>
 <td>8.6</td>
 <td>Trusted setup</td>
 <td>T0.1</td>
-<td>ADR-0003</td>
+<td>in progress (ceremony open)</td>
 </tr>
 <tr>
 <td>8.7</td>
 <td>Identity (optional)</td>
 <td>T6.8</td>
-<td>—</td>
+<td>not built</td>
 </tr>
 </tbody>
 </table>
 <h2 id="81-settlement-model-nitro-on-railgun">8.1 Settlement model — nitro-on-railgun</h2>
-<p>The core architectural idea is notes in → normal Nitro → notes out (ADR-0004). A shielded note is unshielded into the <strong>deposit/payout contract</strong> (T0.3), which funds a vanilla <code>go-nitro</code> channel (T0.2). Arbitrary off-chain ForceMove games and vouchers then play out, and on finalize — whether by cooperative close or by post-challenge force-close — the outcome is shielded back into fresh notes. This gives us Nitro's optimistic exits and expressive settlement games over Railgun-style value with no new cryptography and without governance-gated RelayAdapt modules.</p>
-<p>The decisive property is <strong>isolation</strong>. The Nitro game analysis and the Railgun privacy analysis stay fully separate, meeting only at the <strong>allocation→note boundary</strong> (T0.3). Neither side has to reason about the other's internals; the boundary is the single place where the two models are stitched together. RelayAdapt, Railgun's own recipe, appears only inside the venue solver's atomic hedge leg (T4.2) — <strong>never</strong> in settlement.</p>
-<p>The optional amount-privacy upgrade (T0.6, §8.2/ADR-0005) preserves this isolation exactly. It changes only what the allocation→note boundary opens, exposing commitments rather than cleartext balances; the Nitro game still runs its normal challenge, checkpoint, and conclude flow unchanged.</p>
-<p>→ detail in §5 T0.2, T0.3; runtime sequences in §6; deep dive in <a href="./A-nitro-on-railgun/A.0-overview.html"><code>A.0 nitro-on-railgun overview</code></a> and <a href="./shielded-nitro-bridge-design.html"><code>shielded-nitro-bridge-design.md</code></a>.</p>
+<p>The core architectural idea is notes in → normal Nitro → notes out (ADR-0004). A shielded note is unshielded into <code>ArmadaNitroAdjudicator</code>'s <code>depositFromNote</code>, which funds a Nitro channel on the same contract. Arbitrary off-chain ForceMove games then play out, and on finalize — whether by cooperative close or by post-challenge force-close — the outcome is shielded back into fresh notes through a <code>SHIELD</code>-type allocation. This gives Nitro's optimistic exits and expressive settlement games over shielded value with no new cryptography. There is no separate deposit/payout contract; the code merges that boundary into the adjudicator itself (ruling 1).</p>
+<p>The decisive property is <strong>isolation</strong>. The Nitro game analysis and the shielded-pool privacy analysis stay fully separate, meeting only inside <code>depositFromNote</code> and the SHIELD payout. Neither side has to reason about the other's internals. Armada's adapters do not use Railgun's RelayAdapt/Cookbook recipe pattern anywhere, in settlement or elsewhere: the Aave-v4 yield adapter calls the pool's own <code>adaptContract</code>/<code>adaptParams</code> binding instead (T5.0b).</p>
+<p>The optional amount-privacy upgrade (T0.6, §8.2) would preserve this isolation exactly, changing only what the boundary opens — exposing commitments rather than cleartext balances — while the Nitro game still runs its normal challenge, checkpoint, and conclude flow unchanged. It is not built.</p>
+<p>→ detail in §5 T0.0, T0.2; runtime sequences in §6.</p>
 <h2 id="82-privacy-model">8.2 Privacy model</h2>
 <p>The privacy model states what Armada hides, from whom it hides it, and where value becomes visible. Every other part of the system exists to defend it.</p>
 <h3 id="inside-the-pool-amounts-are-hidden">Inside the pool, amounts are hidden</h3>
-<p>Value lives in our own pool as commitments. The pool follows the Railgun design. A commitment is a hash that hides the note's owner and its amount. A zero-knowledge proof checks every spend. The proof shows that the spend conserves value and that each amount is in range, but it does not reveal the amounts. A large note therefore looks the same as a small one. The pool needs no fixed denominations, unlike Tornado Cash.</p>
+<p>Value lives in Armada's own pool as commitments. The pool follows the Railgun design. A commitment is a hash that hides the note's owner and its amount. A zero-knowledge proof checks every spend. The proof shows that the spend conserves value and that each amount is in range, but it does not reveal the amounts. A large note therefore looks the same as a small one. The pool needs no fixed denominations, unlike Tornado Cash. This is built: <code>PrivacyPool</code> (T0.0) deploys the commitment tree, shield, and transact paths.</p>
 <h3 id="amounts-become-public-only-at-the-boundary">Amounts become public only at the boundary</h3>
-<p>Hidden value becomes visible where it crosses from the pool to the public chain. In the design we ship, this happens at three points:</p>
-<ul>
-<li>when a user shields or unshields;</li>
-<li>when a Nitro channel takes a deposit or makes a payout;</li>
-<li>when a channel is force-closed.</li>
-</ul>
-<p>Two designs could also hide the amounts inside a channel. The smaller one keeps the dispute game as it is. A finalized channel then lists its payouts as commitments instead of amounts, and the payout opens them into fresh notes. It changes our circuits, so it needs a new trusted-setup ceremony and a new audit, and it makes proving on phones slower. It is an optional later upgrade, not part of version 1.</p>
-<p>The larger design moves the dispute game itself into a proof, so that every state change proves its own validity against hidden balances. It is out of scope.<sup id="fnref:proven-dispute"><a class="footnote-ref" href="#fn:proven-dispute">1</a></sup></p>
+<p>Hidden value becomes visible where it crosses from the pool to the public chain. In the design, this happens at the same boundary every time: inside <code>ArmadaNitroAdjudicator</code>, when a user shields or unshields, when a channel takes a deposit or makes a payout, or when a channel is force-closed.</p>
+<p>A design could also hide the amounts inside a channel. The smaller one keeps the dispute game as it is. A finalized channel then lists its payouts as commitments instead of amounts, and the payout opens them into fresh notes. It changes the circuits, so it needs a new trusted-setup ceremony and a new audit, and it makes proving on phones slower. This is item T0.6, not built, and not scheduled.</p>
+<p>A larger design moves the dispute game itself into a proof, so that every state change proves its own validity against hidden balances. It is out of scope.<sup id="fnref:proven-dispute"><a class="footnote-ref" href="#fn:proven-dispute">1</a></sup></p>
 <h3 id="privacy-grows-with-the-crowd">Privacy grows with the crowd</h3>
 <p>The pool hides each spend among all the unspent notes that look alike. This crowd is the <strong>anonymity set</strong>. A spend is only as private as the crowd is large, so a new pool starts with almost no privacy and gains it with use.</p>
-<p>The crowd grows only from deposits into our own pool. A note in another pool cannot hide a spend here, so we grow the crowd by bringing in new users.</p>
-<p>The wallet also makes it easy for a Railgun user to move funds in. The move is a Railgun unshield followed by a shield into our pool, so it is an ordinary deposit. It costs the user some privacy. The token, the amount and the time are public on both pools, so an observer can match the two sides. The moved value also leaves Railgun's large crowd for our smaller one. The wallet shows these costs before the user confirms.</p>
+<p>The crowd grows only from deposits into Armada's own pool (ruling 5). A note in another pool cannot hide a spend here, so the crowd grows by bringing in new users; there is no cross-pool proof and no onboarding bridge.</p>
+<p>The wallet also makes it easy for a Railgun user to move funds in. The move is a Railgun unshield followed by a shield into Armada's pool, so it is an ordinary deposit (T0.7, T6.7). It costs the user some privacy. The token, the amount and the time are public on both pools, so an observer can match the two sides. The moved value also leaves Railgun's large crowd for the smaller one. The wallet is meant to show these costs before the user confirms; this flow has no shipped code yet in <code>armada-interface</code> (T6.7).</p>
 <h3 id="selective-disclosure-shows-where-value-came-from">Selective disclosure shows where value came from</h3>
-<p>No check stands between a user and the pool. Deposits, transfers, withdrawals and channel deposits proceed without any proof of origin.</p>
-<p>A user who must show where value came from, for example to an exchange, uses <strong>selective disclosure</strong>. This is a voluntary, off-chain proof of a chain of custody for chosen value. The chain runs from a shielding address, through notes and channels, to a payout or a withdrawal. The proof reveals nothing else about the wallet, and it never becomes a condition of pool use.</p>
-<h3 id="reading-and-writing-leave-no-trace">Reading and writing leave no trace</h3>
-<p>A user touches the pool in two ways. The user reads the pool to find their notes, and writes to it to submit a transaction. Different components protect each side of the same crowd.</p>
-<p>On the read side, a watcher serves every user the same bytes, each with a proof that the bytes are correct. The user's device scans them locally. So no RPC provider learns which commitments or nullifiers a user looks for.</p>
-<p>On the write side, a keeper or broadcaster submits transactions for the user. So no address of the user's own appears as the sender. A fresh address for each channel also stops one boundary crossing from being linked to the next.</p>
-<p>One limit remains. The transport encrypts traffic and authenticates peers, but it does not hide a user's IP address. Section 8.4 covers the transport.</p>
-<p><em>Items:</em> T0.0, T0.3, T0.6, T0.7, T2.0, T6.1, T6.4, T6.5, T6.7. <em>Decisions:</em> ADR-0002, ADR-0005, ADR-0006, ADR-0008, ADR-0020. <em>Design:</em> <a href="./16-selective-disclosure.html">16 selective disclosure</a>. <em>Quality scenarios:</em> §10. <em>Cold-start risk:</em> §11.</p>
+<p>No check stands between a user and the pool. Deposits, transfers, withdrawals and channel deposits proceed without any proof of origin, and no Proofs of Innocence exist or are planned (ruling 4).</p>
+<p>A user who must show where value came from, for example to an exchange, uses <strong>selective disclosure</strong>. This is a voluntary, off-chain proof of a chain of custody for chosen value. The chain runs from a shielding address, through notes and channels, to a payout or a withdrawal. The proof reveals nothing else about the wallet, and it never becomes a condition of pool use. The disclosure circuit exists only on unmerged branches: armada-circuits <code>disclosure-circuit</code> (<code>7175b46</code>, <code>src/operations/NullifierDisclosure.circom</code>) and armada-sdk <code>selective-disclosure</code> (<code>0aa2ba1</code>).</p>
+<h3 id="reading-and-writing-leave-no-trace-as-a-goal">Reading and writing leave no trace, as a goal</h3>
+<p>A user touches the pool in two ways. The user reads the pool to find their notes, and writes to it to submit a transaction. The design calls for different components to protect each side of the same crowd; today only part of this is built.</p>
+<p>On the read side, the goal is that no RPC provider learns which commitments or nullifiers a user looks for. Today <code>armada-interface</code> reads over plain RPC and trusts the answer. The nimbus verified proxy (T1) would let a client verify a read against a beacon-anchored header instead of trusting the server, but no client integrates it yet.</p>
+<p>On the write side, the goal is that a keeper or broadcaster submits transactions for the user, so no address of the user's own appears as the sender. Today <code>armada-interface</code> submits transactions directly from the user's own key; no broadcaster or address-rotation code exists (T6.5).</p>
+<p>One limit remains even once built. Verifying a read does not hide a user's IP address from whichever server they ask. Section 8.4 covers transport, which is also not built.</p>
+<p><em>Items:</em> T0.0, T0.2, T0.6, T0.7, T1, T6.1, T6.5, T6.7. <em>Decisions:</em> ADR-0002, ADR-0005, ADR-0006, ADR-0009. <em>Design:</em> <a href="./16-selective-disclosure.html">16 selective disclosure</a>. <em>Quality scenarios:</em> §10. <em>Cold-start risk:</em> §11.</p>
 <h2 id="83-non-custody-exit">8.3 Non-custody &amp; exit</h2>
-<p>No tier ever takes custody of user value, and correctness of settlement means a user can <strong>always exit unilaterally</strong>. Value is either a shielded note (T0.0) or an allocation in a Nitro channel the user co-signs (T0.2) — never held by a venue, watcher, or relay. A liveness failure therefore degrades to <strong>halt, not loss</strong>.</p>
-<p>The exit guarantee rests on the ForceMove dispute machinery — <code>forceMove</code>, <code>respond</code>, and <code>checkpoint</code> on <code>NitroAdjudicator</code>, owned in T0.2 — plus its counterpart, the <strong>watchtower</strong>, which supplies the response half. This is the <strong>watcher/watchtower duality</strong>: a watchtower is a watcher's read feed (T2 freshness) <strong>plus</strong> a bonded challenge responder (T0.2). The phone-resident watchtower (T6.3) composes the two. It watches for a stale-state force-close over the T2 feed and submits the user's higher-turn co-signed state within the challenge window, so a dead counterparty freezes trading but never funds. T6.3 <strong>gates on T2 feed freshness</strong>: a stale feed is treated as a liveness alarm — fall back to a redundant party or direct submit — not a silently missed window.</p>
-<p>→ detail in §5 T0.2, T6.3; challenge/watchtower flow in §6; "never miss a valid challenge" scenario in §10.</p>
+<p>No tier ever takes custody of user value, and correctness of settlement means a user can <strong>always exit unilaterally</strong>. Value is either a shielded note (T0.0) or an allocation in a Nitro channel the user co-signs (T0.2) — never held by a venue, watcher, or relay. A liveness failure therefore degrades to <strong>halt, not loss</strong>, at the contract level.</p>
+<p>The exit guarantee rests on the ForceMove dispute machinery — <code>forceMove</code>, <code>respond</code>, and <code>checkpoint</code> on <code>ArmadaNitroAdjudicator</code>, owned in T0.2 and built — plus its counterpart, the <strong>watchtower</strong>, which supplies the automated response half. A watchtower is a read feed plus a bonded challenge responder. <code>armada-nitro</code>'s e2e gate harness has exactly this (<code>env/gates/watchtower/watch.ts</code>), but no client-resident watchtower exists (T6.3, not built). Today a user who notices a stale-state challenge must respond manually, within the window, by calling <code>respond</code>/<code>checkpoint</code> themselves; the contract-level guarantee holds regardless of whether an automated watchtower exists, but nothing watches on the user's behalf yet.</p>
+<p>→ detail in §5 T0.2, T6.3; challenge flow in §6; this gap tracked in §11.</p>
 <h2 id="84-transport">8.4 Transport</h2>
-<p>We run two transports, each chosen for what it does best (ADR-0008). <strong>Waku pub/sub</strong> handles feed discovery, gossip, and async delivery; it is recipient-unlinkable within a content-topic's anonymity set, and it is the transport Railgun's broadcaster network already speaks. <strong>libp2p-noise direct streams</strong> handle the 1:1 hot loop — voucher and quote exchange, low-latency reads — that Waku's multi-hop store-and-forward cannot meet at tens-of-ms latency. A circuit-relay plus STUN/TURN bootstrap is the only fixed transport infrastructure. This substrate is owned by T2.3.</p>
-<p>On mobile the same two transports are a <strong>port, not a new protocol</strong> (T6.5). An interim WebView browser stack carries the spine demo, followed by a production <strong>native gomobile</strong> module (go-waku plus go-libp2p-noise) sitting behind the same transport interface that the settlement client (T6.2) and watchtower (T6.3) bind to. The js-libp2p stack is not React-Native-compatible, which is why the native port is required rather than optional polish (§11 crux).</p>
-<p><strong>IP privacy — the optional Nym underlay.</strong> Noise provides encryption and peer-id auth <strong>only — not IP privacy</strong>; endpoints otherwise see each other's IPs. IP/metadata privacy is an <strong>optional Nym mixnet underlay</strong> that any Armada service or user can run beneath T2.3/T6.5 — the <em>same</em> underlay everywhere, uniform and opt-in, off by default for latency and on for maximum privacy. It is not a bespoke per-feature transport.</p>
+<p>The design calls for two transports (ADR-0008): <strong>Waku pub/sub</strong> for feed discovery, gossip, and async delivery, and <strong>libp2p-noise direct streams</strong> for a 1:1 hot loop. Neither exists in any ship-armada repo: no Waku dependency, no libp2p dependency, and no code of either kind in <code>armada-client</code>, <code>armada-relayer</code>, or <code>armada-interface</code> (T2.3, T6.5, not built). <code>armada-interface</code> talks plain HTTP/RPC to Ethereum L1 and to <code>armada-relayer</code> today.</p>
+<p><strong>IP privacy — the optional Nym underlay.</strong> The design calls for an optional Nym mixnet underlay beneath whatever transport ships, uniform and opt-in, off by default for latency and on for maximum privacy. This remains a design note; no transport exists yet to underlay.</p>
 <p>→ detail in §5 T2.3, T6.5; deployment of relays/peers in §7.</p>
 <h2 id="85-metering">8.5 Metering</h2>
-<p>Reads and settlement are <strong>paid the same way</strong>: private per-request <strong>go-nitro payment vouchers</strong> that net into a co-signed virtual-channel allocation, settled to L1 in USDC. On the read path (T2.1), paid feed methods are metered with vouchers <strong>funded at note creation</strong>, so paying for reads leaks nothing about the reader. On the write/settle path (T4.3), the venue fee is <strong>just a fee-split in the channel allocation</strong> — user, protocol, and integrator shares on the co-signed channel state, with no fee vault and no negotiation — netted on close. Both paths reuse the identical go-nitro voucher/virtual-channel mechanism (<code>payments/vouchers.go</code>, <code>protocols/virtualfund/virtualfund.go</code>), the same one T0.2/T0.3 already publish. Because metering is non-custodial, the worst case is refused service, never loss. These two flows are the project's two revenue pillars — <strong>watcher metering + venue spread</strong>.</p>
-<p>→ detail in §5 T2.1, T4.3; runtime metering step in §6.</p>
+<p>The design calls for reads and settlement to be paid the same way, with private per-request go-nitro payment vouchers that net into a co-signed virtual-channel allocation. This is not built. Today <code>armada-relayer</code>'s actor charges a flat USDC fee computed from a gas estimate (<code>fee-calculator.ts</code>), a conventional per-transaction charge, not a voucher stream (T2.1, built, a different mechanism). No go-nitro voucher code (<code>payments.ts</code>-equivalent) exists in <code>armada-poc</code>, <code>armada-relayer</code>, or <code>armada-interface</code>. The venue fee-split (T4.3) is not built, because no venue exists.</p>
+<p>→ detail in §5 T2.1, T4.3; this gap tracked in §11.</p>
 <h2 id="86-trusted-setup">8.6 Trusted setup</h2>
-<p>Groth16 needs a per-circuit setup, and the concept here is a <strong>reuse-Phase-1 / own-Phase-2</strong> discipline (ADR-0003), owned as a process — not code — in T0.1. Phase-1 reuses the community Perpetual Powers of Tau, the expensive, vetted, circuit-agnostic part; we never run our own universal ceremony. Phase-2 is <strong>ours</strong>: a circuit-specific MPC over our deployed set, with <strong>1-of-N honest</strong> security (≥5 organizationally distinct contributors), a published transcript, and a final randomness beacon. The Solidity verifier is generated from the final vkey and wired into T0.0.</p>
-<p>The key coupling is that any circuit change re-runs Phase-2 while Phase-1 is never re-run. The canonical trigger is the T0.6 amount-privacy upgrade (§8.2). New <code>wasm</code> and <code>zkey</code> artifacts then ship to the mobile prover (T6.6). This is why fork-lite carries a ceremony, fresh-audit, and heavier-prover cost (ADR-0005): nothing new is invented, the same pipeline is simply re-executed.</p>
-<p>→ detail in §5 T0.1; prover constraint in §5 T6.6; deferral rationale in §11.</p>
+<p>Groth16 needs a per-circuit setup, and the concept here is a <strong>reuse-Phase-1 / own-Phase-2</strong> discipline (ADR-0003), owned as a process — not code — in T0.1. Phase-1 reuses the community Perpetual Powers of Tau, the expensive, vetted, circuit-agnostic part; Armada never runs its own universal ceremony. Phase-2 is <strong>Armada's own</strong>: a circuit-specific MPC over its deployed set. The <code>v1.0.0-ceremony</code> tag's manifest lists every circuit shape as <code>"status": "open"</code>, with no beacon — the production ceremony has not finished. Only <code>scripts/setup-dev.sh</code> exists today, explicitly labeled unsafe for anything but local testing.</p>
+<p>The key coupling is that any circuit change re-runs Phase-2 while Phase-1 is never re-run. The canonical trigger would be the T0.6 amount-privacy upgrade (§8.2), if it is ever greenlit.</p>
+<p>→ detail in §5 T0.1; ceremony status in §11.</p>
 <h2 id="87-identity-optional">8.7 Identity (optional)</h2>
-<p>Identity is called out here explicitly to record that it is <strong>not</strong> cross-cutting-required. It is a single <strong>optional</strong> wallet parameter (T6.8), default off. A user may source a selective-disclosure attestation off-band — for example a Self zk-passport (nationality, age, OFAC-clear, personhood) — proven on-device and verified <strong>off-chain, anchored to an Ethereum address</strong>, with the shielded pool identity left unlinked. The wallet stores it as one more optional signing input, surfaced only when a T4 venue's match filter requires it. It threads through no other tier and is deferred rather than built, so it is listed as a concept only to fix its non-cross-cutting scope.</p>
-<p>→ detail in §5 T6.8; per-venue loyalty-key policy in §5 T6.4.</p>
+<p>Identity is called out here explicitly to record that it is <strong>not</strong> cross-cutting-required. It is a single <strong>optional</strong> wallet parameter (T6.8, not built). A user may source a selective-disclosure attestation off-band — for example a Self zk-passport (nationality, age, OFAC-clear, personhood) — proven on-device and verified off-chain, anchored to an Ethereum address, with the shielded pool identity left unlinked. No such mechanism exists in the client today. It threads through no other tier, so it is listed as a concept only to fix its non-cross-cutting scope.</p>
+<p>→ detail in §5 T6.8.</p>
 <hr />
 <p><em>Decisions behind these concepts: <a href="./09-architecture-decisions.html">§9 ADRs</a>. The building blocks they span: <a href="./05-building-block-view.html">§5 registry</a>. Quality scenarios that exercise them: <a href="./10-quality-requirements.html">§10</a>; open risks: <a href="./11-risks-and-technical-debt.html">§11</a>.</em></p>
 <div class="footnote">

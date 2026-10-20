@@ -22,120 +22,130 @@
 </nav>
 
 <h1 id="10-quality-requirements">10. Quality Requirements</h1>
-<p>arc42 §10 · 2026-09-04</p>
-<p>This section refines the quality goals named in §1 into a <strong>quality tree</strong> that decomposes each
-attribute into sub-attributes, then makes those sub-attributes testable as concrete
-<strong>stimulus → response</strong> scenarios. Every scenario names the <code>T#.#</code> item(s) that realize the
-guarantee and, where a decision fixes its shape, the governing <code>ADR-####</code>. The quality tree is a
-view over the §5 registry; it invents no new items.</p>
+<p>arc42 §10 · 2026-10-20</p>
+<p>This section refines the quality goals named in §1 into a <strong>quality tree</strong> that
+decomposes each attribute into sub-attributes, then makes those sub-attributes
+testable as concrete <strong>stimulus → response</strong> scenarios. Every scenario names the
+<code>T#.#</code> item(s) that realize the guarantee and states whether that item is built,
+in progress, or a plan. The quality tree is a view over the §5 registry; it invents no
+new items.</p>
 <h2 id="quality-tree">Quality tree</h2>
 <pre><code>Armada × Laconic quality
 ├─ Security / Privacy         &quot;leak nothing that collapses the anonymity set&quot;
-│  ├─ Custody               non-custodial always — parties serve/meter, never hold value   (T0.2/T0.3, ADR-0004)
-│  ├─ Read-time anonymity   no observer learns which notes a user scans                     (T2.0/T6.1, ADR-0009)
-│  ├─ Write-time origin     on-chain msg.sender is never the user's EOA                     (T6.5/T2.2, ADR-0008)
-│  └─ Amount privacy        amounts opaque in-pool; public only at the transparent boundary (T0.0/T0.7; opt T0.6, ADR-0005)
+│  ├─ Custody               non-custodial always — the pool/channel hold value, no vault   (T0.0/T0.2, built)
+│  ├─ Read-time anonymity   no observer learns which notes a user scans                     (T1, in progress)
+│  ├─ Write-time origin     on-chain msg.sender is never the user's EOA                     (T6.5, not built)
+│  └─ Amount privacy        amounts opaque in-pool; public only at the boundary             (T0.0/T0.7; opt T0.6, not built)
 ├─ Safety / Liveness         &quot;a dead or lying counterparty costs time, never funds&quot;
-│  ├─ Force-closability      an honest party can always exit unilaterally                    (T0.2/T0.3, ADR-0004)
-│  ├─ Watchtower correctness a stale-state force-close is always answered in-window          (T6.3/T0.2)
-│  └─ Feed freshness         staleness is detected (head cursor), never silently missed      (T2.0/T6.3; v2 T2.4)
-├─ Operability               &quot;phone-first, near-zero fixed infra&quot;
-│  ├─ Mobile-first           full shield/trade/settle/scan on-device, keys in the enclave    (T6.0/T6.1/T6.5)
-│  └─ Low fixed infra        only state-diff emitters + STUN/TURN are fixed; rest is P2P     (T1/T2.2/T2.3)
+│  ├─ Force-closability      an honest party can always exit unilaterally                    (T0.2, built)
+│  ├─ Watchtower correctness a stale-state force-close is always answered in-window          (T6.3, not built — test harness only)
+│  └─ Feed freshness         staleness is detected, never silently missed                    (T1/T2.4, not built)
+├─ Operability               &quot;phone-first where possible, conventional server where not&quot;
+│  ├─ Mobile-first           shield/trade/settle/scan on a phone                             (T6.0/T6.1/T6.5, not built)
+│  └─ Low fixed infra        armada-relayer is a conventional server today, not P2P          (T2.2, built — different mechanism)
 ├─ Performance               &quot;clearing latency + on-device proving are usable&quot;
-│  ├─ RFQ latency            posted-price take-it-or-leave-it over a tens-of-ms hot loop      (T4.0/T4.1/T2.3, ADR-0007)
-│  └─ On-device proving      Groth16 proof within acceptable time/memory                      (T6.6, ADR-0003)
+│  ├─ RFQ latency            posted-price take-it-or-leave-it venue                          (T4.0/T4.1, not built)
+│  └─ On-device proving      Groth16 proof within acceptable time/memory                      (T6.6, partly built — browser only)
 └─ Auditability              &quot;correctness is checkable, not trusted&quot;
-   ├─ Local verifiability    every feed response carries a storage proof the client checks    (T2.0)
-   └─ On-chain enforceability v2 attestations are slashable fraud proofs on L1                (T2.4/T0.4/T0.5)
+   ├─ Local verifiability    a client verifies reads against a beacon-anchored header         (T1, in progress)
+   └─ On-chain enforceability a federation's attestation is a slashable fraud proof on L1      (T2.4/T0.4/T0.5, not built)
 </code></pre>
-<p>The priorities are clear. Read-time anonymity is the do-first property: if
-reads fingerprint the user, the anonymity set collapses to one and every other protection is
-moot (T2.0/T6.1 ★). Watchtower correctness is the highest-priority <em>safety</em> surface (T6.3).
-Both dominate the test budget.</p>
+<p>Read-time anonymity is the do-first property: if reads fingerprint the user, the
+anonymity set collapses to one and every other protection is moot. Today no client
+verifies a read (T1 is upstream and unintegrated), so this property is not yet met.
+Watchtower correctness is the highest-priority <em>safety</em> surface and is also not met
+today outside a test harness (T6.3).</p>
 <h2 id="quality-scenarios">Quality scenarios</h2>
-<p>Each scenario states a stimulus (its source and trigger), the required response, and the
-observable measure that makes it testable. Measures run on fixturenet unless noted otherwise.</p>
-<p><strong>QS-1 · Read-time anonymity — feed authenticity.</strong>
-<em>Stimulus:</em> a watcher party serves a <strong>tampered <code>value</code></strong> for a pool storage slice.
-<em>Response:</em> the client verifies the <code>{value, proof}</code> storage/Merkle proof against the L1 state
-root <strong>locally</strong> and rejects any mismatch, placing no trust in the watcher.
-<em>Measure:</em> after shielding or depositing a known value, a doctored <code>value</code> MUST fail client-side
-proof verification while the honest slice verifies. → <strong>T2.0</strong> (see §5 T2.0, §8 privacy).</p>
-<p><strong>QS-2 · Read-time anonymity — anti-fingerprint.</strong>
-<em>Stimulus:</em> a data or RPC provider tries to learn <strong>which commitments/nullifiers</strong> a user scans.
-<em>Response:</em> every subscriber to a slice receives <strong>byte-identical</strong> feed responses and scans
-locally, so there is no per-user query to fingerprint.
-<em>Measure:</em> a headless server peer and an in-browser peer subscribed to the same slice receive
-identical bytes, and a device scan issues <strong>zero</strong> <code>eth_getLogs</code> / <code>eth_getStorageAt</code> calls to a
-public endpoint. → <strong>T2.0 / T6.1</strong> (mobile-privacy §4 ★, ADR-0009).</p>
-<p><strong>QS-3 · Watchtower correctness — stale-state force-close.</strong>
-<em>Stimulus:</em> a counterparty <strong>force-closes an old (superseded) state</strong> while the user is offline.
-<em>Response:</em> the phone-resident watchtower submits the user's <strong>higher-turn co-signed state</strong>
-through T0.3 <code>respond</code>/<code>checkpoint</code> <strong>within the challenge window</strong>, and the correct outcome
-finalizes.
-<em>Measure:</em> an old state is force-closed, the offline user's watchtower responds, and funds settle
-to the correct fresh notes rather than the stale allocation. → <strong>T6.3 / T0.2 / T0.3</strong> (ADR-0004).</p>
+<p>Each scenario states a stimulus, the required response, and the observable measure
+that makes it testable. A scenario marked <strong>plan</strong> has no code to test yet; its
+measure describes what a future build must satisfy.</p>
+<p><strong>QS-1 · Read-time anonymity — proof verification (plan).</strong>
+<em>Stimulus:</em> an RPC provider or indexer serves a tampered value for a pool storage slot
+or an incomplete receipt set.
+<em>Response:</em> the client verifies the value against a beacon-anchored header through the
+nimbus verified proxy — a storage proof (EIP-1186) for a slot, or a rebuilt receipt
+trie root for a block's receipts — and rejects any mismatch, placing no trust in the
+server.
+<em>Measure:</em> after shielding or depositing a known value, a doctored response MUST fail
+client-side verification while the honest one verifies. No client calls the proxy
+today. → <strong>T1</strong> (not integrated).</p>
+<p><strong>QS-2 · Read-time anonymity — no RPC fingerprint (not met today).</strong>
+<em>Stimulus:</em> an RPC or indexing provider tries to learn which commitments or nullifiers
+a user scans.
+<em>Response:</em> the design calls for every subscriber to a feed slice to receive
+identical bytes and scan locally, so there is no per-user query to fingerprint.
+<em>Measure:</em> <code>armada-interface</code> today issues ordinary RPC calls configured per
+deployment; no identical-bytes feed or local-only scan guarantee exists. → <strong>T1/T6.1</strong>
+(the scanner is built; the privacy guarantee depends on the unbuilt proxy integration).</p>
+<p><strong>QS-3 · Watchtower correctness — stale-state force-close (plan for a client; built as
+a test harness).</strong>
+<em>Stimulus:</em> a counterparty force-closes an old (superseded) state while the user is
+offline.
+<em>Response:</em> a watchtower would submit the user's higher-turn co-signed state through
+<code>respond</code>/<code>checkpoint</code> within the challenge window, and the correct outcome finalizes.
+<em>Measure:</em> <code>armada-nitro</code>'s e2e gate harness (<code>env/gates/watchtower/watch.ts</code>)
+exercises exactly this and passes in CI. No deployed client watchtower exists, so no
+user is protected automatically today. → <strong>T6.3</strong> (not built); dispute machinery
+<strong>T0.2</strong> (built).</p>
 <p><strong>QS-4 · Force-closability / non-custody — dead counterparty.</strong>
-<em>Stimulus:</em> a counterparty (or watcher party) goes <strong>unresponsive</strong> mid-channel.
-<em>Response:</em> the honest party <strong>unilaterally force-closes</strong> and exits; because no party ever held
-custody, the worst case is delay, not loss.
-<em>Measure:</em> with the counterparty silent, the honest party drives the force-close to finalize and
-payout mints correct fresh notes, and no configuration lets a party move user value.
-→ <strong>T0.2 / T0.3</strong> (ADR-0004).</p>
-<p><strong>QS-5 · Write-time origin privacy.</strong>
-<em>Stimulus:</em> a user submits an on-chain settlement/shield tx from a phone.
-<em>Response:</em> a <strong>keeper/broadcaster submits on-behalf</strong>, so <code>msg.sender</code> is the relay rather than
-the user's EOA, and the relayed request is metered by the same Nitro voucher stream.
-<em>Measure:</em> the finalized tx's origin is the broadcaster address, unlinkable to the user's key,
-and the request nets a metering voucher. → <strong>T6.5 / T2.2</strong> (ADR-0008).</p>
-<p><strong>QS-6 · Amount privacy at the boundary — large exit.</strong>
-<em>Stimulus:</em> a <strong>large deposit</strong> would re-narrow the anonymity set when it crosses the transparent
-Design-A boundary on exit.
-<em>Response:</em> value is <strong>aggregated over a window or dribbled</strong> in and out incrementally, balancing
-two clocks — window size against LP build-up — so that no single boundary crossing stands out.
-This is not Tornado-style denomination buckets, since in-pool amounts are
-already SNARK-opaque.
-<em>Measure:</em> a whale exit split by the aggregation/dribble policy shows no lone large boundary
-crossing above the configured threshold, and effective-k stays above target. → <strong>T0.7 / T4.5</strong>
-(ADR-0005, ADR-0006).</p>
+<em>Stimulus:</em> a counterparty goes unresponsive mid-channel.
+<em>Response:</em> the honest party unilaterally force-closes and exits through
+<code>ArmadaNitroAdjudicator</code>'s ForceMove path; because no party ever holds custody, the
+worst case is delay, not loss.
+<em>Measure:</em> with the counterparty silent, the honest party drives the force-close to
+finalize, and the SHIELD payout mints correct fresh notes. The contract-level guarantee
+holds; a client must drive this manually today, since no code in <code>armada-interface</code> or
+<code>armada-sdk</code> drives a channel lifecycle. → <strong>T0.2</strong> (built); client driver <strong>T6.2</strong>
+(partly built).</p>
+<p><strong>QS-5 · Write-time origin privacy (plan).</strong>
+<em>Stimulus:</em> a user submits an on-chain settlement/shield transaction from a wallet.
+<em>Response:</em> a keeper/broadcaster would submit on behalf of the user, so <code>msg.sender</code> is
+the relay rather than the user's EOA.
+<em>Measure:</em> today <code>armada-interface</code> submits transactions directly from the user's own
+key; no relayed/metered broadcast path exists for settlement. → <strong>T6.5</strong> (not built).</p>
+<p><strong>QS-6 · Amount privacy at the boundary — large exit (process, not code).</strong>
+<em>Stimulus:</em> a large deposit or withdrawal would re-narrow the anonymity set when it
+crosses the boundary inside <code>ArmadaNitroAdjudicator</code>.
+<em>Response:</em> the anonymity set grows only with deposits into Armada's own pool
+(ruling 5); there is no cross-pool proof and no aggregation/dribble mechanism in the
+contracts today. In-pool amounts are already SNARK-opaque; only the boundary amount is
+public.
+<em>Measure:</em> an exit's boundary amount is visible on-chain; no mitigation beyond pool
+growth exists today. → <strong>T0.7</strong> (strategy, not code).</p>
 <p><strong>QS-7 · On-device proving within budget.</strong>
-<em>Stimulus:</em> a Railgun-scale JoinSplit proof is generated <strong>on a phone</strong>.
-<em>Response:</em> the native Groth16 prover (rapidsnark/mopro) produces a standard proof within
-acceptable time and <strong>stays under the ~3 GB app-memory wall</strong>; low-memory devices fall back to
-the coSNARK server-assist, which still emits a standard Groth16 proof and leaves the verifier
-unchanged.
-<em>Measure:</em> benchmarking the real Railgun circuit on target devices shows proof-gen completing
-without OOM, and the assist path yields a verifier-accepted proof. → <strong>T6.6</strong> (ADR-0003).</p>
-<p><strong>QS-8 · RFQ latency / nothing-to-front-run.</strong>
-<em>Stimulus:</em> two takers hit the venue's posted quote near-simultaneously.
-<em>Response:</em> the v1 venue is a <strong>posted-price dealer market</strong>, so a fixed bid/ask has nothing to
-front-run; the quote/settle ForceMove exchange runs over the tens-of-ms libp2p-noise hot loop and
-reposts if the price is wrong.
-<em>Measure:</em> both fills clear at the posted price with no ordering advantage, and the 1:1 exchange
-completes over direct-noise rather than Waku store-and-forward. → <strong>T4.0 / T4.1 / T2.3</strong>
-(ADR-0007).</p>
-<p><strong>QS-9 · Metering integrity — voucher replay.</strong>
-<em>Stimulus:</em> a peer <strong>replays or reorders</strong> a paid-feed voucher to under-pay or double-count.
-<em>Response:</em> voucher accounting rejects the replayed or out-of-order voucher on go-nitro's
-nonce/redemption logic, and an unpaid or underpaid request is refused; because the design is
-non-custodial, the worst case is denied service.
-<em>Measure:</em> N metered requests net to exactly the expected co-signed allocation, and a replayed
-voucher is rejected without changing the channel balance. → <strong>T2.1</strong> (see §5 T2.1).</p>
-<p><strong>QS-10 · Feed-freshness liveness (withholding watcher).</strong>
-<em>Stimulus:</em> a watcher <strong>withholds</strong> or lags the feed so the storage proof, which only catches a
-<em>lying</em> value, cannot help.
-<em>Response:</em> the consumer detects staleness via the published <strong>head cursor</strong> and treats it as a
-liveness alarm, falling back to a redundant party or direct submit; v2 adds a <strong>bonded
-federation</strong> whose attestation makes a withholding party slashable.
-<em>Measure:</em> an artificially lagged emitter trips the freshness gate before the challenge window
-elapses and the watchtower fails over, never silently missing the window. → <strong>T2.0 / T6.3</strong>;
-v2 <strong>T2.4 / T0.4 / T0.5</strong>.</p>
+<em>Stimulus:</em> a shield or transact proof is generated on the user's device.
+<em>Response:</em> <code>armada-sdk</code>'s <code>snarkjs</code> Web Worker prover produces a standard Groth16
+proof in the browser, worker-first with a same-thread fallback, against
+<code>armada-circuits</code>' SHA-256-manifest-checked build artifacts.
+<em>Measure:</em> the browser prover completes without blocking the UI thread and the
+verifier accepts its proof. No native mobile (rapidsnark/mopro) prover exists, so this
+scenario is untested on a phone. → <strong>T6.1/T6.6</strong> (browser: built; mobile: not built).</p>
+<p><strong>QS-8 · RFQ latency / nothing-to-front-run (plan).</strong>
+<em>Stimulus:</em> two takers hit a venue's posted quote near-simultaneously.
+<em>Response:</em> a posted-price dealer market would have a fixed bid/ask with nothing to
+front-run.
+<em>Measure:</em> no venue, price-setter contract, or quote/settle app exists in <code>armada-poc</code>
+or <code>armada-nitro</code>, so there is nothing to measure yet. → <strong>T4.0/T4.1</strong> (not built).</p>
+<p><strong>QS-9 · Metering integrity (different mechanism than planned).</strong>
+<em>Stimulus:</em> a peer tries to under-pay or double-count a metered read or relay.
+<em>Response:</em> <code>armada-relayer</code>'s actor charges a flat USDC fee computed from a gas
+estimate per transaction (<code>fee-calculator.ts</code>), not a go-nitro payment-voucher stream.
+There is no voucher-replay surface to test, because there are no vouchers.
+<em>Measure:</em> a relayed transaction is charged the computed fee; a transaction without
+payment is not relayed. → <strong>T2.1</strong> (built, a different mechanism from the plan).</p>
+<p><strong>QS-10 · Feed-freshness liveness (plan).</strong>
+<em>Stimulus:</em> an indexer withholds or lags behind the chain head.
+<em>Response:</em> the design calls for a published head cursor a consumer checks, falling
+back to a direct read if the cursor lags; a later bonded federation would make
+withholding slashable.
+<em>Measure:</em> today <code>armada-relayer</code>'s Ponder indexer exposes no head-cursor freshness
+check that a client consults, and no federation exists. → <strong>T2.4/T0.4/T0.5</strong> (not
+built).</p>
 <hr />
-<p><strong>Traceability.</strong> These scenarios refine the §1 quality goals and exercise the §6 runtime flows;
-the concepts they defend are described once in §8 (privacy, settlement, transport, metering,
-trusted setup). The open exposures behind the deferred and v2 rows — cold-start anonymity set,
-go-nitro maturity, ingestion freshness, and mobile transport — are tracked in §11.</p>
+<p><strong>Traceability.</strong> These scenarios refine the §1 quality goals and exercise the §6
+runtime flows; the concepts they defend are described once in §8 (privacy, settlement,
+transport, metering, trusted setup). The gap between each plan scenario and today's
+code is tracked in §11.</p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/10-quality-requirements.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

@@ -23,7 +23,7 @@ These are the fixed rules the architecture must obey, not decisions to revisit h
 - *Governs:* ADR-0004 · §5 T0.2.
 
 **TC-5 — The client stack targets servers, browsers, iOS and Android; no mobile code exists yet.** `armada-client` `docs/SPEC.md` names the four targets. `armada-client` has no application code; the live client, `armada-interface`, is a web app.
-- *Consequence:* Key custody today is browser memory (`keyManager.ts`), not a device secure enclave. Mobile custody, a mobile prover, and `libverifproxy.a` for iOS/Android are unbuilt work (T6.5, T6.6).
+- *Consequence:* Key custody today is browser memory (`keyManager.ts`), not a device secure enclave. `libverifproxy.a` builds for iOS and Android (Android needs `-d:PREFER_HASHTREE_SHA256=false`); mobile custody and a mobile prover are unbuilt work (T6.5, T6.6).
 - *Governs:* §5 T6.0, T6.1, T6.5.
 
 **TC-6 — EVM gas / verifier limits.** Every on-chain verifier and settlement path must fit within L1 gas and pairing-check budgets.
@@ -31,7 +31,7 @@ These are the fixed rules the architecture must obey, not decisions to revisit h
 - *Governs:* ADR-0003 · §5 T0.
 
 **TC-7 — The proof path is the nimbus verified proxy.** A client verifies headers against a beacon light client, storage with EIP-1186 proofs, and log inclusion and completeness by rebuilding a block's receipt trie (`eth_getBlockReceipts`). `watcher-ts` is an optional, unverified server cache.
-- *Consequence:* `eth_getLogs` ranges are not used for note sync, because an omitted log is undetectable in a range. Mobile needs a `libverifproxy.a` cross-compile that does not exist upstream yet.
+- *Consequence:* `eth_getLogs` ranges are not used for note sync, because an omitted log is undetectable in a range. `libverifproxy.a` builds for iOS and Android; the browser WASM build stalls at its first `sync()` call.
 - *Governs:* ADR-0009 · §5 T1, T2.
 
 ## 2.2 Organizational & scope constraints

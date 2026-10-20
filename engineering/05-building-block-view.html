@@ -33,7 +33,7 @@
  T4  EXECUTION / venue   posted-price venue + clearing                       C        not built
  T3  ORDERING            commit-reveal + beacon · epoch set-agreement · DA   C        not built
  T2  WATCHER substrate   proof verification (nimbus proxy) · relay fee       B        in progress
- T1  INGESTION           nimbus verified proxy over execution + beacon data  B        in progress
+ T1  INGESTION           nimbus verified proxy over execution + beacon data  B        proven on fixturenet
  T0  ETHEREUM anchor     pool · circuits · adjudicator · governance          A        built/partly built
 </code></pre>
 <p>Read this as a layered building-block view: the tiers are horizontal layers, and the subsystems (A/B/C/D) are vertical slices that cross them. The <code>owner</code> column is each tier's primary subsystem; <strong>T6 is shared</strong>. Vertical position is on-chain-to-client proximity. The <code>status</code> column reports what the code holds today, and each item in the registry below carries its own status.</p>
@@ -158,7 +158,7 @@
 </tbody>
 </table>
 <h3 id="t1-ingestion">T1 · Ingestion</h3>
-<p>The proof path is the nimbus verified proxy, not a nimbus-eth1 state-diff emitter into IPLD (ruling 8, brief §4). <code>armada-nitro</code>'s vendored <code>go-nitro</code> and <code>PrivacyPool</code> need no change for this path; the proxy verifies RPC answers upstream of the client.</p>
+<p>The proof path is the nimbus verified proxy, not a nimbus-eth1 state-diff emitter into IPLD (ruling 8, brief §4). <code>armada-nitro</code>'s vendored <code>go-nitro</code> and <code>PrivacyPool</code> need no change for this path; the proxy verifies RPC answers upstream of the client. The proxy's fixes live on <code>AFDudley/nimbus-eth1</code> <code>armada/verified-proxy-fixes</code> (<code>b0205d1d</code>), not upstream.</p>
 <table>
 <thead>
 <tr>
@@ -172,20 +172,20 @@
 <tr>
 <td>T1.0</td>
 <td>Proof source — the nimbus verified proxy (<code>status-im/nimbus-eth1</code>): a native binary, <code>libverifproxy.a</code> with C/Go bindings, and a WASM build; it anchors headers to a beacon light client and verifies storage with EIP-1186 proofs</td>
-<td>in progress (upstream, unintegrated)</td>
+<td>proven on the fixturenet by hand; wired into no client</td>
 <td><code>nimbus-eth1:engine/blocks.nim:105-128</code>, <code>engine/accounts.nim:26-125</code>, <code>Makefile:346-398</code></td>
 </tr>
 <tr>
 <td>T1.1</td>
 <td>Inclusion and completeness — the proxy fetches <code>eth_getBlockReceipts</code> for a block, rebuilds the receipt trie, and rejects the block if the root disagrees with the header; this proves one log and the completeness of the block's logs. <code>eth_getLogs</code> ranges are not used, because an omitted log is undetectable in a range</td>
-<td>in progress (upstream, unintegrated)</td>
+<td>proven on the fixturenet by hand; wired into no client</td>
 <td><code>nimbus-eth1:engine/receipts.nim:53-57,132-173</code></td>
 </tr>
 <tr>
 <td>T1.2</td>
-<td>Fixturenet patch — the proxy's genesis-parameter loader hard-codes <code>sepolia</code>/<code>hoodi</code>; a custom-network patch is needed to point it at the armada-nitro fixturenet's lighthouse genesis</td>
-<td>not built</td>
-<td><code>nimbus-eth1:engine/genesis_params.nim:48-70</code></td>
+<td>Fixturenet patch — the proxy's genesis-parameter loader hard-codes <code>sepolia</code>/<code>hoodi</code>; a custom-network patch points it at the armada-nitro fixturenet's genesis directory</td>
+<td>built, on <code>AFDudley/nimbus-eth1</code> <code>armada/verified-proxy-fixes</code></td>
+<td><code>AFDudley/nimbus-eth1@b0205d1d:nimbus_verified_proxy/engine/genesis_params.nim</code></td>
 </tr>
 </tbody>
 </table>
@@ -395,7 +395,7 @@
 </tr>
 <tr>
 <td>T6.5</td>
-<td>Mobile transport — one TypeScript client stack on four targets: Linux server, browser, iOS, Android (<code>armada-client</code> <code>docs/SPEC.md</code>); <code>libverifproxy.a</code> has no upstream iOS/Android build yet</td>
+<td>Mobile transport — one TypeScript client stack on four targets: Linux server, browser, iOS, Android (<code>armada-client</code> <code>docs/SPEC.md</code>); <code>libverifproxy.a</code> builds for iOS and Android, but no client wires it in</td>
 <td>not built</td>
 <td><code>armada-client@78a8fdc:docs/SPEC.md</code></td>
 </tr>
@@ -419,7 +419,7 @@
 </tr>
 </tbody>
 </table>
-<p><em>Decisions that shaped these items: <a href="./09-architecture-decisions.html">§9 ADRs</a>. Recurring concerns spanning tiers: <a href="./08-crosscutting-concepts.html">§8 cross-cutting concepts</a>. Status audit: <code>labbook/2026-10-19-docs-versus-code.md</code>, <code>labbook/2026-10-19-unified-stack-and-verified-note-sync.md</code>, <code>labbook/2026-10-19-nimbus-verified-proxy-proofs.md</code>.</em></p>
+<p><em>Decisions that shaped these items: <a href="./09-architecture-decisions.html">§9 ADRs</a>. Recurring concerns spanning tiers: <a href="./08-crosscutting-concepts.html">§8 cross-cutting concepts</a>. Status audit: <code>labbook/2026-10-19-docs-versus-code.md</code>, <code>labbook/2026-10-19-unified-stack-and-verified-note-sync.md</code>, <code>labbook/2026-10-19-nimbus-verified-proxy-proofs.md</code>, <code>labbook/2026-10-20-nimbus-fixturenet-and-proxy-proof.md</code>.</em></p>
 
 <hr/>
 <p class="small">Generated from <code>engineering/05-building-block-view.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>

@@ -67,7 +67,7 @@ A user who must show where value came from, for example to an exchange, uses **s
 
 A user touches the pool in two ways. The user reads the pool to find their notes, and writes to it to submit a transaction. The design calls for different components to protect each side of the same crowd; today only part of this is built.
 
-On the read side, the goal is that no RPC provider learns which commitments or nullifiers a user looks for. Today `armada-interface` reads over plain RPC and trusts the answer. The nimbus verified proxy (T1) would let a client verify a read against a beacon-anchored header instead of trusting the server, but no client integrates it yet.
+On the read side, the goal is that no RPC provider learns which commitments or nullifiers a user looks for. Today `armada-interface` reads over plain RPC and trusts the answer. The nimbus verified proxy (T1) proved a read against a beacon-anchored header by hand on the armada-nitro fixturenet, but no client integrates it yet.
 
 On the write side, the goal is that a keeper or broadcaster submits transactions for the user, so no address of the user's own appears as the sender. Today `armada-interface` submits transactions directly from the user's own key; no broadcaster or address-rotation code exists (T6.5).
 

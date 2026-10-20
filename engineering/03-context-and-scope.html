@@ -25,7 +25,7 @@
 <p>arc42 §3 · <strong>2026-10-20</strong></p>
 <p>This section draws the system boundary and catalogues the external systems the build touches. Per <a href="./09-architecture-decisions.html#adr-0013">ADR-0013</a>, this is <strong>one engineering team building the whole Armada product</strong> — a Railgun-based privacy layer for USDC. The team works from the ship-armada repos: <code>armada-poc</code>, <code>armada-circuits</code>, <code>armada-deployments</code>, <code>armada-nitro</code>, <code>armada-sdk</code>, <code>armada-client</code>, <code>armada-relayer</code>, <code>armada-interface</code>. The static decomposition of the in-scope side is the <a href="./05-building-block-view.html">§5 registry</a>; here we fix only the perimeter. Terminology follows <a href="./09-architecture-decisions.html#adr-0010">ADR-0010</a>.</p>
 <h2 id="the-product">The product</h2>
-<p>Armada is pluggable asset-privacy infrastructure for USDC: routine flows (payments, payroll, treasury, yield) route through a single immutable shielded pool (one anonymity set), and privacy compounds as more flows join. The pool, its governance contracts, the circuits, the adjudicator, and the web client are built. The proof path, the mobile client, and any future venue remain a plan.</p>
+<p>Armada is pluggable asset-privacy infrastructure for USDC: routine flows (payments, payroll, treasury, yield) route through a single immutable shielded pool (one anonymity set), and privacy compounds as more flows join. The pool, its governance contracts, the circuits, and the web client are built. The proof path has run once by hand on the fixturenet and is wired into no client; the mobile client and any future venue remain a plan.</p>
 <h2 id="in-scope-the-whole-product-by-work-package">In scope — the whole product (by work package)</h2>
 <p>The four <a href="./00-work-packages.html">work packages (§0)</a> are the entire scope; each owns a set of <code>T#.#</code> items, per the real status in <a href="./05-building-block-view.html">§5</a>.</p>
 <table>
@@ -162,9 +162,9 @@
 </tr>
 <tr>
 <td><strong>The armada-nitro fixturenet</strong></td>
-<td>Real <code>geth</code> + <code>lighthouse</code> consensus, used for testing the adjudicator and, once patched, the first nimbus-proxy proof.</td>
+<td><code>geth</code> + <code>lighthouse</code> consensus, used for testing the adjudicator, plus a non-validating <code>nimbus-eth1</code>/<code>nimbus-eth2</code> pair that follows the same chain and served the first nimbus-proxy proof.</td>
 <td>T0.2, T1</td>
-<td>ADR-0009, <code>labbook/2026-10-19-nimbus-verified-proxy-proofs.md</code></td>
+<td>ADR-0009, <code>labbook/2026-10-20-nimbus-fixturenet-and-proxy-proof.md</code></td>
 </tr>
 </tbody>
 </table>

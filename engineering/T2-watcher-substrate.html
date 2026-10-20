@@ -25,7 +25,7 @@
 <p><strong>Status:</strong> in progress · tier doc · 2026-10-20
 <strong>Parent:</strong> <a href="./05-building-block-view.html"><code>05-building-block-view.md</code></a> · <strong>Tier:</strong> T2
 <strong>Depends on / Blocks:</strong> T1 (the proxy is what a client trusts); T2 only caches what T1 can re-verify.</p>
-<p>With the nimbus verified proxy as the proof path (T1, ADR-0009), a server-side watcher is optional: a cache a client may read from, then re-verify through the proxy. It is never a trust boundary.</p>
+<p>With the nimbus verified proxy as the proof path (T1, ADR-0009), a server-side watcher is optional: a cache a client may read from, then re-verify through the proxy. It is never a trust boundary. Snapshots are the default note-sync path: a client checks a snapshot's commitments against <code>rootHistory</code> at a recent block, then syncs forward with full proofs. A full verified receipt scan, block by block, is for a watcher building that snapshot, not for an ordinary client sync.</p>
 <pre><code>  nimbus verified proxy (T1, the trust boundary)
         ▲
         │  re-verify anything read from the cache
@@ -54,6 +54,7 @@
 <li>The commitment part of a snapshot is fully verifiable against <code>rootHistory</code>, independent of who served it.</li>
 <li>Ciphertexts and the nullifier set are not: the tree root does not cover ciphertexts, and the nullifier set has no on-chain root. A bad ciphertext or a missing nullifier from a snapshot causes delay or a hidden note, not theft.</li>
 <li>Independent watchers would sign the snapshot CID, and a client would accept a CID that several of them sign. <code>watcher-ts</code> state checkpoints (IPLD, by CID) are a plausible mechanism to reuse for this, if <code>watcher-ts</code> is ever adopted for this purpose.</li>
+<li>Building a snapshot, or checking a deep header, needs state below nimbus-eth1's base, which it does not serve. The feasible source is a nimbus-eth1 Aristo emitter into an <code>ipld-eth-server</code>-style <code>ipld.blocks</code> store, estimated at 4 to 5 points, with geth v1.17 (<code>--history.trienode</code>) or Erigon v3.4+ (<code>--prune.include-commitment-history</code>) as fallbacks (<code>labbook/2026-10-20-archive-state-for-nimbus.md</code>). This emitter serves watchers only; a client's own reads never need it.</li>
 </ul>
 <p>No bonding, no DKG ceremony, and no signer set exist. This is a design note (<code>labbook/2026-10-19-unified-stack-and-verified-note-sync.md</code> decision 7), not a build in progress.</p>
 <h2 id="what-stays-true-across-the-tier">What stays true across the tier</h2>
@@ -64,6 +65,7 @@
 <li><code>watcher-ts@18ca4e1a</code> — <code>packages/util/src/database.ts</code>, <code>util/src/indexer.ts</code>.</li>
 <li><code>labbook/2026-10-19-unified-stack-and-verified-note-sync.md</code> (the unification and no-Ponder, no-React-Native-indexing rulings; the snapshot proposal).</li>
 <li><code>labbook/2026-10-19-nimbus-verified-proxy-proofs.md</code> (why the proxy, not a server feed, is the trust boundary).</li>
+<li><code>labbook/2026-10-20-archive-state-for-nimbus.md</code>, <code>labbook/2026-10-20-proxy-and-archive-open-questions.md</code> (the archive emitter for watchers).</li>
 <li>Site docs: <a href="./T1-ingestion.html"><code>T1-ingestion.html</code></a>, <a href="./09-architecture-decisions.html#adr-0009"><code>09-architecture-decisions.html</code></a>.</li>
 </ul>
 

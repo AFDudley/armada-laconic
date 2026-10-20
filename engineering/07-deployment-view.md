@@ -28,15 +28,21 @@ an actor that submits transactions and charges a flat USDC fee from a gas estima
 federation, and it is not the proof path: a client that reads from it is trusting the
 server, not verifying a proof (T2.2).
 
-### Proof path — the nimbus verified proxy (upstream, unintegrated)
+### Proof path — the nimbus verified proxy (proven on the fixturenet, unintegrated)
 
 `status-im/nimbus-eth1` ships a verified proxy — native (`libverifproxy.a`), WASM, and
 a CLI — that anchors a header to a beacon light client and verifies storage and
-receipts client-side (T1.0, T1.1). No Armada repo runs or embeds it today: no server
-operates it against any Armada chain, no WASM bundle ships in `armada-interface`, and
-`libverifproxy.a` has no iOS or Android cross-compile target yet. Once integrated, this
-runs inside the client process, not as a separate server node (`client (T2 caches,
-re-verified through the proxy)` in [`T1-ingestion.md`](./T1-ingestion.md)). → §5 T1.
+receipts client-side (T1.0, T1.1). Its fixes for a fixturenet's custom consensus
+genesis live on `AFDudley/nimbus-eth1` `armada/verified-proxy-fixes` (`b0205d1d`), not
+upstream. The patched proxy proved a pool `Shield` log and a `rootHistory` slot by hand
+against the armada-nitro fixturenet, with nimbus-eth2 as its light-client source and
+nimbus-eth1 as its execution source. No Armada repo runs or embeds it as a standing
+service: no server operates it against any Armada chain, no WASM bundle ships in
+`armada-interface` (the WASM build stalls at its first `sync()` call in a browser), and
+`libverifproxy.a` builds for iOS and Android but no client links it. Once integrated,
+this runs inside the client process, not as a separate server node (`client (T2
+caches, re-verified through the proxy)` in [`T1-ingestion.md`](./T1-ingestion.md)). →
+§5 T1.
 
 ### Venue node — plan, not built
 
@@ -52,9 +58,10 @@ browser, not a phone-resident P2P peer. It holds keys in browser memory
 (`keyManager.ts`, T6.0), scans and trial-decrypts notes locally (`sync.ts`, T6.1), and
 drives the pool's shield/transact calls (`handler.ts`, T6.2). It talks to Ethereum L1
 and to `armada-relayer` over plain HTTP/RPC, not libp2p or Waku. No channel lifecycle
-code, no client-side watchtower (T6.3), and no mobile build exist. `armada-client`, the
-repo meant to host a unified TypeScript stack across Linux server, browser, iOS, and
-Android (`docs/SPEC.md`), has no application code (T6.5).
+code and no client-side watchtower exist (T6.3). `armada-client`, the repo meant to
+host a unified TypeScript stack across Linux server, browser, iOS, and Android
+(`docs/SPEC.md`), has no application code (T6.5); `libverifproxy.a` builds for Linux,
+iOS, and Android, but no client repo links it in.
 
 ## Deployment diagram (blocks → nodes)
 
@@ -81,7 +88,7 @@ Android (`docs/SPEC.md`), has no application code (T6.5).
    └─────────────────────────────────────────────────────────┘
 
    ─────────────── plan, no code today ───────────────────────
-   nimbus verified proxy integration (T1) — would run inside the
+   nimbus verified proxy integration (T1) — proven by hand on the fixturenet; would run inside the
    client process, verifying reads instead of trusting the relayer
    venue node (T4) — posted-price contract + quote/settle app
    client watchtower (T6.3) — only a test-harness watchtower exists
@@ -92,7 +99,7 @@ Android (`docs/SPEC.md`), has no application code (T6.5).
 
 | Environment | Purpose | L1 target |
 |---|---|---|
-| **fixturenet** | `armada-nitro`'s e2e gate harness runs deterministic tests here, including the test-only watchtower (`env/gates/watchtower/watch.ts`). | orchestrated local L1 (real `geth` + `lighthouse`, per `docs/ENVIRONMENT.md`) |
+| **fixturenet** | `armada-nitro`'s e2e gate harness runs deterministic tests here, including the test-only watchtower (`env/gates/watchtower/watch.ts`), and a non-validating `nimbus-eth1`/`nimbus-eth2` pair that served the first proxy proof. | orchestrated local L1 (real `geth` + `lighthouse` + the nimbus pair, per `docs/ENVIRONMENT.md`) |
 | **Sepolia** | A real deploy exists: `armada-poc`'s `scripts/deploy_privacy_pool.ts` deploys `PrivacyPool` with a 50 bps shield fee. | Sepolia |
 | **mainnet `armada-1`** | Crowdfund, governance, and CCTP are live. The pool ships in a later launch; the Phase-2 ceremony is not finished (`v1.0.0-ceremony` tag, shapes "open", no beacon). | Ethereum L1 |
 

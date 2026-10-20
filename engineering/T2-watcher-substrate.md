@@ -4,7 +4,7 @@
 **Parent:** [`05-building-block-view.md`](./05-building-block-view.md) · **Tier:** T2
 **Depends on / Blocks:** T1 (the proxy is what a client trusts); T2 only caches what T1 can re-verify.
 
-With the nimbus verified proxy as the proof path (T1, ADR-0009), a server-side watcher is optional: a cache a client may read from, then re-verify through the proxy. It is never a trust boundary.
+With the nimbus verified proxy as the proof path (T1, ADR-0009), a server-side watcher is optional: a cache a client may read from, then re-verify through the proxy. It is never a trust boundary. Snapshots are the default note-sync path: a client checks a snapshot's commitments against `rootHistory` at a recent block, then syncs forward with full proofs. A full verified receipt scan, block by block, is for a watcher building that snapshot, not for an ordinary client sync.
 
 ```
   nimbus verified proxy (T1, the trust boundary)
@@ -44,6 +44,7 @@ No Waku, no libp2p dependency, and no code of either exists in the client, relay
 - The commitment part of a snapshot is fully verifiable against `rootHistory`, independent of who served it.
 - Ciphertexts and the nullifier set are not: the tree root does not cover ciphertexts, and the nullifier set has no on-chain root. A bad ciphertext or a missing nullifier from a snapshot causes delay or a hidden note, not theft.
 - Independent watchers would sign the snapshot CID, and a client would accept a CID that several of them sign. `watcher-ts` state checkpoints (IPLD, by CID) are a plausible mechanism to reuse for this, if `watcher-ts` is ever adopted for this purpose.
+- Building a snapshot, or checking a deep header, needs state below nimbus-eth1's base, which it does not serve. The feasible source is a nimbus-eth1 Aristo emitter into an `ipld-eth-server`-style `ipld.blocks` store, estimated at 4 to 5 points, with geth v1.17 (`--history.trienode`) or Erigon v3.4+ (`--prune.include-commitment-history`) as fallbacks (`labbook/2026-10-20-archive-state-for-nimbus.md`). This emitter serves watchers only; a client's own reads never need it.
 
 No bonding, no DKG ceremony, and no signer set exist. This is a design note (`labbook/2026-10-19-unified-stack-and-verified-note-sync.md` decision 7), not a build in progress.
 
@@ -57,4 +58,5 @@ A client never trusts a watcher. It re-verifies anything it reads from a cache t
 - `watcher-ts@18ca4e1a` — `packages/util/src/database.ts`, `util/src/indexer.ts`.
 - `labbook/2026-10-19-unified-stack-and-verified-note-sync.md` (the unification and no-Ponder, no-React-Native-indexing rulings; the snapshot proposal).
 - `labbook/2026-10-19-nimbus-verified-proxy-proofs.md` (why the proxy, not a server feed, is the trust boundary).
+- `labbook/2026-10-20-archive-state-for-nimbus.md`, `labbook/2026-10-20-proxy-and-archive-open-questions.md` (the archive emitter for watchers).
 - Site docs: [`T1-ingestion.html`](./T1-ingestion.html), [`09-architecture-decisions.html`](./09-architecture-decisions.html#adr-0009).

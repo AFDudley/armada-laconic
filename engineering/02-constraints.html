@@ -38,13 +38,13 @@
 - <em>Consequence:</em> Audit of the settlement rail covers the patches, not only the deposit/payout glue.
 - <em>Governs:</em> ADR-0004 · §5 T0.2.</p>
 <p><strong>TC-5 — The client stack targets servers, browsers, iOS and Android; no mobile code exists yet.</strong> <code>armada-client</code> <code>docs/SPEC.md</code> names the four targets. <code>armada-client</code> has no application code; the live client, <code>armada-interface</code>, is a web app.
-- <em>Consequence:</em> Key custody today is browser memory (<code>keyManager.ts</code>), not a device secure enclave. Mobile custody, a mobile prover, and <code>libverifproxy.a</code> for iOS/Android are unbuilt work (T6.5, T6.6).
+- <em>Consequence:</em> Key custody today is browser memory (<code>keyManager.ts</code>), not a device secure enclave. <code>libverifproxy.a</code> builds for iOS and Android (Android needs <code>-d:PREFER_HASHTREE_SHA256=false</code>); mobile custody and a mobile prover are unbuilt work (T6.5, T6.6).
 - <em>Governs:</em> §5 T6.0, T6.1, T6.5.</p>
 <p><strong>TC-6 — EVM gas / verifier limits.</strong> Every on-chain verifier and settlement path must fit within L1 gas and pairing-check budgets.
 - <em>Consequence:</em> This favors Groth16's constant-size proof and cheap verify, reinforcing TC-3.
 - <em>Governs:</em> ADR-0003 · §5 T0.</p>
 <p><strong>TC-7 — The proof path is the nimbus verified proxy.</strong> A client verifies headers against a beacon light client, storage with EIP-1186 proofs, and log inclusion and completeness by rebuilding a block's receipt trie (<code>eth_getBlockReceipts</code>). <code>watcher-ts</code> is an optional, unverified server cache.
-- <em>Consequence:</em> <code>eth_getLogs</code> ranges are not used for note sync, because an omitted log is undetectable in a range. Mobile needs a <code>libverifproxy.a</code> cross-compile that does not exist upstream yet.
+- <em>Consequence:</em> <code>eth_getLogs</code> ranges are not used for note sync, because an omitted log is undetectable in a range. <code>libverifproxy.a</code> builds for iOS and Android; the browser WASM build stalls at its first <code>sync()</code> call.
 - <em>Governs:</em> ADR-0009 · §5 T1, T2.</p>
 <h2 id="22-organizational-scope-constraints">2.2 Organizational &amp; scope constraints</h2>
 <p><strong>OC-1 — Non-custodial at every tier.</strong> No tier ever holds user funds in a way that lets it move them unilaterally; custody is contract-enforced (T0).

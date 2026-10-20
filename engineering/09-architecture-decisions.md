@@ -149,17 +149,17 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Alternatives.** gossipsub-only is worse for 1:1 latency. js-libp2p on React Native is not RN-compatible, which is why the native port exists.
 
 ## ADR-0009
-**The proof path is the nimbus verified proxy, not a state-diff emitter** · accepted · 2026-09-04; revised 2026-10-19
+**The proof path is the nimbus verified proxy, not a state-diff emitter** · accepted · 2026-09-04; revised 2026-10-20
 
 **Context.** A client on every target must verify Ethereum state against a header that a beacon light client checks: the execution header, storage values (`rootHistory`, `nullifiers`, the adjudicator's slots), the inclusion of one pool or armada-nitro log, and the completeness of a block's pool logs. The docs planned a nimbus-eth1 state-diff emitter mapped into IPLD, served by `watcher-ts`. `status-im/nimbus-eth1` already ships a verified proxy for this purpose (`labbook/2026-10-19-nimbus-verified-proxy-proofs.md`).
 
 **Decision.**
 
-- **D9.1** Target the **nimbus verified proxy** as the proof path. It anchors headers to a beacon light client, verifies storage with EIP-1186 proofs, and proves a log by rebuilding the block's receipt trie (`eth_getBlockReceipts`), which also proves completeness of that block's logs. `eth_getLogs` ranges are not used for note sync, because an omitted log is undetectable in a range.
-- **D9.2** The proxy runs natively on servers, as WASM in browsers, and as `libverifproxy.a` on mobile once a cross-compile exists (none exists upstream yet). `watcher-ts` becomes an optional, unverified server-side cache; a client re-verifies anything it reads from the cache through the proxy.
-- **D9.3** The nimbus state-diff emitter, an IPLD mapper, and the cerc-io `ipld-eth-server` pipeline are not on the proof path. The pipeline is geth-only and dormant since August 2024, and its receipt data, in the current schema, carries no per-log proof to `receiptsRoot`.
+- **D9.1** Target the **nimbus verified proxy** as the proof path. It anchors headers to a beacon light client, verifies storage with EIP-1186 proofs, and proves a log by rebuilding the block's receipt trie (`eth_getBlockReceipts`), which also proves completeness of that block's logs. `eth_getLogs` ranges are not used for note sync, because an omitted log is undetectable in a range. The proxy proved a pool `Shield` log and a `rootHistory` slot by hand on the armada-nitro fixturenet, with the fixturenet's own non-validating `nimbus-eth1`/`nimbus-eth2` pair as its data source (`labbook/2026-10-20-nimbus-fixturenet-and-proxy-proof.md`).
+- **D9.2** The proxy runs natively on servers and as `libverifproxy.a` on iOS and Android (Android needs `-d:PREFER_HASHTREE_SHA256=false`). The WASM build compiles but stalls at its first `sync()` call in a browser; the cause is not yet known. `watcher-ts` becomes an optional, unverified server-side cache; a client re-verifies anything it reads from the cache through the proxy.
+- **D9.3** The nimbus state-diff emitter, an IPLD mapper, and the cerc-io `ipld-eth-server` pipeline are not on the client proof path. The pipeline is geth-only and dormant since August 2024, and its receipt data, in the current schema, carries no per-log proof to `receiptsRoot`.
 
-**Consequences.** T1 shrinks from a state-diff emitter build to operating the proxy and patching it for the fixturenet's custom genesis. The client tier gains the WASM and mobile build cost instead. Historical `eth_getProof` still needs an archive execution node behind the proxy.
+**Consequences.** T1 shrinks from a state-diff emitter build to operating the proxy and patching it for the fixturenet's custom genesis, both done. The client tier gains the WASM-browser fix and the mobile client wiring instead. Historical `eth_getProof`, where a watcher needs it, needs an archive layer outside the client's proxy; the lab book records the options (`labbook/2026-10-20-archive-state-for-nimbus.md`).
 
 **Alternatives.** The nimbus-eth1 state-diff emitter with IPLD and a `watcher-ts` proof feed (rejected for the proof path: the proxy does the same verification upstream, with less new code). Reviving plugeth (rejected as stale). Bare JSON-RPC offers no proofs.
 

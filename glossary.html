@@ -168,11 +168,11 @@
 </tr>
 <tr>
 <td><strong>nimbus-eth1</strong></td>
-<td>Nim Ethereum L1 execution client. Its stateless/witness execution path and its verified proxy (<code>libverifproxy</code>) are the proof path Armada's docs now target (ADR-0009); <strong>unintegrated</strong>: no Armada repo runs it yet. GitHub.</td>
+<td>Nim Ethereum L1 execution client. Its stateless/witness execution path and its verified proxy (<code>libverifproxy</code>) are the proof path Armada's docs now target (ADR-0009); its fixes for Armada's fixturenet live on <code>AFDudley/nimbus-eth1</code> <code>armada/verified-proxy-fixes</code>, not upstream. <strong>Unintegrated into any client</strong>; proved a pool log and a storage slot by hand on the armada-nitro fixturenet. GitHub.</td>
 </tr>
 <tr>
 <td><strong>ipld-eth-server</strong> / ipld-eth-state-snapshot</td>
-<td>index and serve Ethereum state as IPLD. <strong>Not on the proof path</strong>: geth-only, dormant since August 2024, and its current schema carries no per-log proof to <code>receiptsRoot</code>. GitHub.</td>
+<td>index and serve Ethereum state as IPLD. <strong>Not on the client proof path</strong>: geth-only, dormant since August 2024, and its current schema carries no per-log proof to <code>receiptsRoot</code>. Its proof path, reused by a feasible nimbus-eth1 Aristo emitter, could serve a watcher-only archive layer. GitHub.</td>
 </tr>
 <tr>
 <td><strong>laconic-so</strong></td>
@@ -230,7 +230,7 @@
 <li><strong>Tier (T0–T6)</strong> — the stack: <strong>T0</strong> Ethereum anchor · <strong>T1</strong> ingestion · <strong>T2</strong> watcher-party substrate · <strong>T3</strong> ordering · <strong>T4</strong> execution platform (ex_net) · <strong>T5</strong> adapters · <strong>T6</strong> client/apps. Software-architecture tiers — not blockchain layers.</li>
 <li><strong>Watcher party</strong> — a bonded federation of service providers serving one data need, and here also the execution venue. A sequencing-and-attestation role, <strong>not</strong> a BFT chain (<strong>T2</strong>, federation <strong>T2.4</strong>).</li>
 <li><strong>Proof-carrying feed</strong> — a watcher feed whose query results ship with verifiable proofs (nimbus-eth1 state-diff → IPLD), so consumers verify rather than trust (<strong>T1.1</strong>, served over <strong>T2</strong>).</li>
-<li><strong>Nimbus verified proxy</strong> — <code>status-im/nimbus-eth1</code>'s proof client: anchors headers to a beacon light client, verifies storage via EIP-1186, and proves log inclusion/completeness by rebuilding a block's receipt trie. The proof path (<strong>T1</strong>, ADR-0009); upstream, unintegrated into any Armada repo.</li>
+<li><strong>Nimbus verified proxy</strong> — <code>status-im/nimbus-eth1</code>'s proof client: anchors headers to a beacon light client, verifies storage via EIP-1186, and proves log inclusion/completeness by rebuilding a block's receipt trie. The proof path (<strong>T1</strong>, ADR-0009); proved a pool log and a storage slot by hand on the armada-nitro fixturenet, unintegrated into any client.</li>
 <li><strong>Commit-reveal</strong> — fair ordering: <code>commit = H(order‖salt)</code> → seal epoch + inclusion receipts → post-seal beacon fixes positions → reveal → matcher runs. Blocks operator front-running without client-side ZK (ordering <strong>T3</strong> v2, ADR-0007).</li>
 <li><strong>Post-seal randomness beacon</strong> — randomness revealed <em>after</em> the epoch is sealed, fixing order positions.</li>
 <li><strong>Epoch set-agreement</strong> — the watcher party agreeing <em>which</em> commits belong to an epoch and in what order (leader-propose + threshold-attest + censorship fraud proofs). The core net-new, highest-risk piece (<strong>T3.1</strong>, v2).</li>

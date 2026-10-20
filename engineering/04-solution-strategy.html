@@ -84,13 +84,13 @@ design, not novel cryptography). The hard cryptographic assets break down as:</p
 <td><strong>T0.2</strong></td>
 </tr>
 <tr>
-<td>Proof path — the nimbus verified proxy over execution and beacon data</td>
-<td>in progress (upstream, unintegrated)</td>
+<td>Proof path — the nimbus verified proxy over execution and beacon data, proven by hand on the fixturenet</td>
+<td>proven on the fixturenet; wired into no client</td>
 <td><strong>T1.0, T1.1</strong></td>
 </tr>
 <tr>
 <td>Fixturenet patch for the proxy's genesis loader</td>
-<td>not built</td>
+<td>built, on <code>AFDudley/nimbus-eth1</code> <code>armada/verified-proxy-fixes</code></td>
 <td><strong>T1.2</strong></td>
 </tr>
 <tr>
@@ -135,11 +135,11 @@ front-run, the fair-ordering stack (T3) stays a plan.</p>
 <tr>
 <td><strong>Read-time privacy</strong> — sync/read without leaking to a public endpoint</td>
 <td>The <strong>nimbus verified proxy</strong> verifies <code>eth_getBlockReceipts</code> and storage proofs client-side against a beacon-anchored header, so a client never trusts a public RPC's answer unchecked; <code>watcher-ts</code> is not the proof path — it is an optional, unverified Postgres cache</td>
-<td>proxy T1.0/T1.1 (in progress, unintegrated); anonymity set T0.7</td>
+<td>proxy T1.0/T1.1 (proven on the fixturenet, wired into no client); anonymity set T0.7</td>
 </tr>
 <tr>
 <td><strong>Mobile-first</strong> — a phone is a full non-custodial peer</td>
-<td>One TypeScript client stack on four targets — Linux server, browser, iOS, Android (<code>armada-client</code> <code>docs/SPEC.md</code>) — with native <code>libverifproxy.a</code> on server and mobile and a WASM build in the browser; mobile has no upstream iOS/Android build yet</td>
+<td>One TypeScript client stack on four targets — Linux server, browser, iOS, Android (<code>armada-client</code> <code>docs/SPEC.md</code>) — with native <code>libverifproxy.a</code> on server, iOS and Android, and a WASM build that stalls at its first <code>sync()</code> call in a browser</td>
 <td>client stack T6.5 (not built); proxy build T1.0</td>
 </tr>
 <tr>
@@ -160,11 +160,12 @@ today. Hiding amounts in-play is the not-built T0.6 upgrade.</p>
   <code>TreasurySteward</code>, <code>ArmadaToken</code>, <code>ArmadaCrowdfund</code>, <code>ArmadaWindDown</code>,
   <code>ArmadaRedemption</code>); the <code>armada-interface</code> web client, note-scanner, and browser
   prover (T6.0–T6.2, T6.6, T6.7).</li>
-<li><strong>In progress, unintegrated.</strong> The nimbus verified proxy (T1.0, T1.1) exists
-  upstream in <code>nimbus-eth1</code> but is not wired into any Armada repo; the fixturenet patch
-  for its genesis loader (T1.2) is not built; the selective-disclosure circuit
-  (armada-circuits branch <code>disclosure-circuit</code>, armada-sdk branch
-  <code>selective-disclosure</code>) is on unmerged branches.</li>
+<li><strong>Proven on the fixturenet, wired into no client.</strong> The nimbus verified proxy
+  (T1.0, T1.1), with its fixes on <code>AFDudley/nimbus-eth1</code> <code>armada/verified-proxy-fixes</code>,
+  proved a pool <code>Shield</code> log and a <code>rootHistory</code> slot by hand on the armada-nitro
+  fixturenet (T1.2). No Armada repo runs it as a standing gate. The
+  selective-disclosure circuit (armada-circuits branch <code>disclosure-circuit</code>,
+  armada-sdk branch <code>selective-disclosure</code>) is on unmerged branches.</li>
 <li><strong>Plan, no code.</strong> The posted-price venue and quote/settle app (T4), the ordering
   stack (T3), Swaps (T5.0c), the watchtower client (T6.3), mobile transport (T6.5),
   native mobile proving (T6.6's native half), and the economic-security contracts for a
@@ -181,7 +182,7 @@ through <code>depositFromNote</code> to fund a Nitro channel (T0.2). It drives a
 ForceMove app — a single co-signed fill, standing in for the real T4.1 quote/settle —
 to a finalized outcome, pays that outcome back out into fresh notes via the SHIELD
 payout (T0.2), and scans and confirms balances on-device against the nimbus verified
-proxy (T6.1 over a T1.0/T1.1 proof, once integrated). This exercises the
+proxy (T6.1 over a T1.0/T1.1 proof, proven by hand, wired into no client). This exercises the
 <em>notes-in-Nitro-notes-out</em> thesis end-to-end with the smallest possible game.</p>
 <h3 id="the-sequence-at-a-high-level">The sequence, at a high level</h3>
 <p>The full stage-by-stage sequence, with chunks, points and 5090 hours, is
@@ -201,9 +202,8 @@ proxy (T6.1 over a T1.0/T1.1 proof, once integrated). This exercises the
   path, and client verified reads. Then the <code>armada-client</code> channel/watchtower phase
   (Phase 2) and client support for the new artifacts (F5).</li>
 <li><strong>Later.</strong> Mobile (<code>armada-client</code> Phase 3), the watcher federation, the
-  production Phase-2 ceremony, venue v1, the v2/deferred backlog, and the
-  Sepolia-then-mainnet cutover, in that rough order — everything proven on the
-  fixturenet before Sepolia, and on Sepolia before mainnet.</li>
+  production Phase-2 ceremony, venue v1, the v2/deferred backlog, and the mainnet
+  cutover, in that rough order — everything proven on the fixturenet before mainnet.</li>
 </ul>
 <p>The walking skeleton above is the first integration target inside this sequence,
 not a separate track: it becomes concrete once the contract-owned-notes pool and

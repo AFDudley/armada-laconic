@@ -24,7 +24,7 @@ This describes what a person does and sees in `armada-interface`, the live Armad
 
 ### 3.1 Shielded balance (read) — built, not yet verified
 
-The balance is computed in-browser by `sync.ts` from note scanning and trial decryption. Today this reads through whatever RPC or the relayer's Ponder-indexed `/v2/quick-sync` endpoint the client is configured against, not through a cryptographically verified proof path. The nimbus verified proxy (T1, ADR-0009) is the intended trust boundary; `armada-interface` does not use it yet, so a user's balance read today trusts the RPC or the relayer, not a client-side proof.
+The balance is computed in-browser by `sync.ts` from note scanning and trial decryption. Today this reads through whatever RPC or the relayer's Ponder-indexed `/v2/quick-sync` endpoint the client is configured against, not through a cryptographically verified proof path. The nimbus verified proxy (T1, ADR-0009) is the intended trust boundary and has proved reads by hand on the armada-nitro fixturenet; `armada-interface` does not use it yet, so a user's balance read today trusts the RPC or the relayer, not a client-side proof.
 
 ### 3.2 Add funds / shield-in — built
 

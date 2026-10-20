@@ -9,20 +9,20 @@ This is the work breakdown: the deliverable-oriented decomposition of the progra
 | WP | Mission | Owns (`T#.#`) | Status |
 |---|---|---|---|
 | **A · on-chain anchor** | Non-custodial settlement of shielded value: the pool, the circuits, the adjudicator, and governance. | T0.0–T0.7 | Mostly built |
-| **B · proof path** | A client verifies Ethereum state against a header a beacon light client checks, through the nimbus verified proxy. | T1.0–T1.2, T2.0–T2.4; note-scanner T6.1 | In progress, upstream, unintegrated |
+| **B · proof path** | A client verifies Ethereum state against a header a beacon light client checks, through the nimbus verified proxy. | T1.0–T1.2, T2.0–T2.4; note-scanner T6.1 | First proof run by hand on the fixturenet; not yet a gate |
 | **C · venue and adapters** | Let users earn yield and swap, over a future venue; the adapters are already live. | T3.\*, T4.\* (plan); T5.0, T5.1 | Adapters partly built; venue not built |
 | **D · client** | The wallet/app. | T6.0, T6.2–T6.8 | The web app is built; mobile is a spec only |
 
 ## What is built, per work package
 
 - **A.** `armada-poc` built the pool and its governance and revenue contracts. `armada-circuits` built the `Transact` circuit. `armada-nitro` built the patched adjudicator and the merged deposit/payout boundary. The Phase-2 ceremony has not run.
-- **B.** The nimbus verified proxy exists upstream, unintegrated. No server runs it against any Armada chain; no WASM bundle ships; no mobile build exists.
+- **B.** The nimbus verified proxy's fixes live on `AFDudley/nimbus-eth1` `armada/verified-proxy-fixes` (`b0205d1d`), not upstream. The armada-nitro fixturenet runs a nimbus pair beside geth and lighthouse (merged to `integrated` at `990c9fa9`, pebble `arn-b58`). The first proof ran on the fixturenet by hand: `eth_getBlockReceipts` proved a pool `Shield` log, and `eth_getStorageAt` proved a `rootHistory` slot. No server runs the proxy as a standing gate; the WASM build stalls in a browser; `libverifproxy.a` builds for iOS and Android.
 - **C.** CCTP and the Aave-v4 yield adapter are built (`armada-poc`). No venue, no matcher, and no Swaps contract exist.
 - **D.** `armada-interface` (web) is built and wired to `armada-sdk`. `armada-client`, meant to host a mobile client, has no application code; its `docs/SPEC.md` is a plan for four targets (Linux server, browser, iOS, Android).
 
 ## What remains
 
-The full ordered sequence, with chunks, points and hours, is [`build-plan.md`](./build-plan.md). In short: a non-upgradeable contract-owned-notes pool deploy and hidden-balance ZK channel apps on armada-nitro (in progress, briefs already written); a Baal treasury governance migration and the armada-nitro side of contract-owned collateral, once the pool's owner-auth path lands; a settlement-client channel lifecycle and watchtower (`armada-client` Phases 1–3) and the proof path (operate the nimbus proxy, patch the fixturenet genesis, ship a WASM build and mobile cross-compiles); the Phase-2 ceremony (no shape has a published, multi-party transcript yet); a venue (the least mature part of the plan, with no code and no near-term dependency forcing it).
+The full ordered sequence, with chunks, points and hours, is [`build-plan.md`](./build-plan.md). In short: a non-upgradeable contract-owned-notes pool deploy and hidden-balance ZK channel apps on armada-nitro (in progress, briefs already written); a Baal treasury governance migration and the armada-nitro side of contract-owned collateral, once the pool's owner-auth path lands; a settlement-client channel lifecycle and watchtower (`armada-client` Phases 1–3) and the proof path (wire the proxy into a client as a verification gate, fix the WASM browser stall, ship mobile cross-compiles); the Phase-2 ceremony (no shape has a published, multi-party transcript yet); a venue (the least mature part of the plan, with no code and no near-term dependency forcing it).
 
 ## Interface contracts, as built
 

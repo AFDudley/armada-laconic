@@ -47,7 +47,7 @@ Armada is asset-privacy infrastructure for USDC: a shielded pool, spec-compatibl
 
 ## What is still a plan
 
-- **The proof path.** The nimbus verified proxy is the intended trust boundary (see `engineering/09-architecture-decisions.html#adr-0009`); it runs nowhere in Armada's stack today. A client reads chain state over RPC or an unverified cache.
+- **The proof path.** The nimbus verified proxy is the intended trust boundary (see `engineering/09-architecture-decisions.html#adr-0009`); it has proved reads by hand on the armada-nitro fixturenet but runs nowhere in Armada's stack as a standing service. A client reads chain state over RPC or an unverified cache.
 - **A mobile client.** `armada-client` has no application code. `armada-interface`, the live web app, is the only shipped client.
 - **A settlement-client channel lifecycle and a watchtower.** The adjudicator side is built and tested; no client drives it.
 - **An exchange venue.** No posted-price contract, quote/settle app, or matcher exists.
@@ -62,7 +62,7 @@ Armada is asset-privacy infrastructure for USDC: a shielded pool, spec-compatibl
    ON-CHAIN ANCHOR            PrivacyPool · ArmadaNitroAdjudicator (deposit/payout merged)
                               governance and revenue contracts                              built
    ─────────────────────────────────────────────────────────────────────────────────────
-   PROOF PATH                 nimbus verified proxy — unintegrated · watcher-ts optional cache — not built
+   PROOF PATH                 nimbus verified proxy — proven on the fixturenet, unintegrated · watcher-ts optional cache — not built
 </pre>
 
 <p class="small">See <a href="architecture.html">Architecture</a> for the full tier stack, and <a href="engineering/05-building-block-view.html">the item registry</a> for per-item status with code citations.</p>

@@ -16,7 +16,7 @@ The ship-armada repos — `armada-poc`, `armada-circuits`, `armada-deployments`,
  T4  EXECUTION / venue   posted-price venue + clearing                       C        not built
  T3  ORDERING            commit-reveal + beacon · epoch set-agreement · DA   C        not built
  T2  WATCHER substrate   proof verification (nimbus proxy) · relay fee       B        in progress
- T1  INGESTION           nimbus verified proxy over execution + beacon data  B        in progress
+ T1  INGESTION           nimbus verified proxy over execution + beacon data  B        proven on fixturenet
  T0  ETHEREUM anchor     pool · circuits · adjudicator · governance          A        built/partly built
 ```
 
@@ -55,13 +55,13 @@ The pool, the circuits, the adjudicator and the deposit/payout boundary already 
 
 ### T1 · Ingestion
 
-The proof path is the nimbus verified proxy, not a nimbus-eth1 state-diff emitter into IPLD (ruling 8, brief §4). `armada-nitro`'s vendored `go-nitro` and `PrivacyPool` need no change for this path; the proxy verifies RPC answers upstream of the client.
+The proof path is the nimbus verified proxy, not a nimbus-eth1 state-diff emitter into IPLD (ruling 8, brief §4). `armada-nitro`'s vendored `go-nitro` and `PrivacyPool` need no change for this path; the proxy verifies RPC answers upstream of the client. The proxy's fixes live on `AFDudley/nimbus-eth1` `armada/verified-proxy-fixes` (`b0205d1d`), not upstream.
 
 | id | item | status | code |
 |---|---|---|---|
-| T1.0 | Proof source — the nimbus verified proxy (`status-im/nimbus-eth1`): a native binary, `libverifproxy.a` with C/Go bindings, and a WASM build; it anchors headers to a beacon light client and verifies storage with EIP-1186 proofs | in progress (upstream, unintegrated) | `nimbus-eth1:engine/blocks.nim:105-128`, `engine/accounts.nim:26-125`, `Makefile:346-398` |
-| T1.1 | Inclusion and completeness — the proxy fetches `eth_getBlockReceipts` for a block, rebuilds the receipt trie, and rejects the block if the root disagrees with the header; this proves one log and the completeness of the block's logs. `eth_getLogs` ranges are not used, because an omitted log is undetectable in a range | in progress (upstream, unintegrated) | `nimbus-eth1:engine/receipts.nim:53-57,132-173` |
-| T1.2 | Fixturenet patch — the proxy's genesis-parameter loader hard-codes `sepolia`/`hoodi`; a custom-network patch is needed to point it at the armada-nitro fixturenet's lighthouse genesis | not built | `nimbus-eth1:engine/genesis_params.nim:48-70` |
+| T1.0 | Proof source — the nimbus verified proxy (`status-im/nimbus-eth1`): a native binary, `libverifproxy.a` with C/Go bindings, and a WASM build; it anchors headers to a beacon light client and verifies storage with EIP-1186 proofs | proven on the fixturenet by hand; wired into no client | `nimbus-eth1:engine/blocks.nim:105-128`, `engine/accounts.nim:26-125`, `Makefile:346-398` |
+| T1.1 | Inclusion and completeness — the proxy fetches `eth_getBlockReceipts` for a block, rebuilds the receipt trie, and rejects the block if the root disagrees with the header; this proves one log and the completeness of the block's logs. `eth_getLogs` ranges are not used, because an omitted log is undetectable in a range | proven on the fixturenet by hand; wired into no client | `nimbus-eth1:engine/receipts.nim:53-57,132-173` |
+| T1.2 | Fixturenet patch — the proxy's genesis-parameter loader hard-codes `sepolia`/`hoodi`; a custom-network patch points it at the armada-nitro fixturenet's genesis directory | built, on `AFDudley/nimbus-eth1` `armada/verified-proxy-fixes` | `AFDudley/nimbus-eth1@b0205d1d:nimbus_verified_proxy/engine/genesis_params.nim` |
 
 ### T2 · Watcher substrate
 
@@ -116,9 +116,9 @@ No venue contract and no matcher exist in `armada-poc`. These items stay a plan.
 | T6.2 | Settlement client — drives `PrivacyPool` shield/transact calls; no code drives an armada-nitro channel lifecycle yet | partly built | `armada-interface:src/features/{shield,transfer-shielded,unshield}/handler.ts` |
 | T6.3 | Self-hosted watchtower — `armada-nitro`'s e2e gate harness has a watchtower (`env/gates/watchtower/watch.ts`); no client watchtower exists | not built (client); built (test harness only) | `armada-nitro@55939ef:env/gates/watchtower/watch.ts` |
 | T6.4 | Address rotation + loyalty keys | not checked | — |
-| T6.5 | Mobile transport — one TypeScript client stack on four targets: Linux server, browser, iOS, Android (`armada-client` `docs/SPEC.md`); `libverifproxy.a` has no upstream iOS/Android build yet | not built | `armada-client@78a8fdc:docs/SPEC.md` |
+| T6.5 | Mobile transport — one TypeScript client stack on four targets: Linux server, browser, iOS, Android (`armada-client` `docs/SPEC.md`); `libverifproxy.a` builds for iOS and Android, but no client wires it in | not built | `armada-client@78a8fdc:docs/SPEC.md` |
 | T6.6 | Groth16 mobile proving — a browser Web Worker prover exists (T6.1); no native mobile (rapidsnark/mopro) prover | partly built | see T6.1 |
 | T6.7 | Armada-branded app + SDK wiring; wallet move from Railgun (the security costs are in T6.7 and §8.2) | built (app); move from Railgun not built | `armada-interface` |
 | T6.8 | Identity — optional Self zk-passport attestation | not built | — |
 
-*Decisions that shaped these items: [§9 ADRs](./09-architecture-decisions.md). Recurring concerns spanning tiers: [§8 cross-cutting concepts](./08-crosscutting-concepts.md). Status audit: `labbook/2026-10-19-docs-versus-code.md`, `labbook/2026-10-19-unified-stack-and-verified-note-sync.md`, `labbook/2026-10-19-nimbus-verified-proxy-proofs.md`.*
+*Decisions that shaped these items: [§9 ADRs](./09-architecture-decisions.md). Recurring concerns spanning tiers: [§8 cross-cutting concepts](./08-crosscutting-concepts.md). Status audit: `labbook/2026-10-19-docs-versus-code.md`, `labbook/2026-10-19-unified-stack-and-verified-note-sync.md`, `labbook/2026-10-19-nimbus-verified-proxy-proofs.md`, `labbook/2026-10-20-nimbus-fixturenet-and-proxy-proof.md`.*

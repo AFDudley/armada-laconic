@@ -14,7 +14,7 @@
 
 `armada-interface/src/lib/shielded/sync.ts` scans and trial-decrypts notes in the browser. `armada-interface/src/lib/shielded/sdk-prover.ts` and `armada-sdk@db5757f:src/prover/index.ts` run a `snarkjs` Web Worker Groth16 prover, worker-first with a same-thread fallback for tests, against `armada-circuits`' build artifacts (SHA-256 manifest-checked). No native mobile prover exists.
 
-**What is not yet true.** The scanner reads chain state over whatever RPC `armada-interface` is configured with, not yet through the T1 nimbus verified proxy. Verified note sync (ADR-0009) is still a plan for this client, not a shipped behavior.
+**What is not yet true.** The scanner reads chain state over whatever RPC `armada-interface` is configured with, not yet through the T1 nimbus verified proxy. The proxy has proved reads by hand on the fixturenet (T1), but verified note sync (ADR-0009) is still unwired in this client.
 
 ## T6.2 Settlement client — partly built
 
@@ -30,7 +30,7 @@ No inventory read covered this item in either `armada-interface` or `armada-sdk`
 
 ## T6.5 Mobile transport — not built
 
-`armada-client` `docs/SPEC.md` is the plan: one TypeScript codebase for wallet, relayer, and watchtower, on Linux server, browser, iOS, and Android, using `ts-nitro` over a Waku transport. No mobile code exists, interim or native. `libverifproxy.a`, the proof path's mobile library (T1), has no upstream iOS or Android build either, so even a mobile client that existed today could not yet verify.
+`armada-client` `docs/SPEC.md` is the plan: one TypeScript codebase for wallet, relayer, and watchtower, on Linux server, browser, iOS, and Android, using `ts-nitro` over a Waku transport. No mobile code exists, interim or native. `libverifproxy.a`, the proof path's mobile library (T1), builds for iOS and Android (Android needs `-d:PREFER_HASHTREE_SHA256=false`), but no mobile client repo links it in yet.
 
 ## T6.6 Groth16 mobile proving — partly built
 

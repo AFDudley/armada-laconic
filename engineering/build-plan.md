@@ -10,7 +10,7 @@ Points and hours use [`estimation-method.md`](./estimation-method.md): one point
 
 **Review.** The family's husband reviews every chunk before it merges, with extra care on the audit-critical chunks P1, P2a, P2b, N1, N2 and G3. There is no separate reviewer step (operator ruling, CHUNK-RULES.md rule 2).
 
-**Acceptance.** Every chunk's acceptance reuses the armada-nitro environment — the laconic-so fixturenet and reconciler, and the gates under `armada-nitro/env/gates/`: `nitro-e2e`, `pool-e2e`, `watchtower`, `hub-custodian-frost`. A chunk that changes the pool, the circuits, governance or the SDK extends one of these gates (a new step, or a new gate directory beside them) rather than building a separate harness (operator ruling, CHUNK-RULES.md rule 3). The gate chunks G7a/G7b, N7, N8 and C5 are extensions of these gates. Everything is proven on the fixturenet before Sepolia, and on Sepolia before mainnet (CHUNK-RULES.md rule 4).
+**Acceptance.** Every chunk's acceptance reuses the armada-nitro environment — the laconic-so fixturenet and reconciler, and the gates under `armada-nitro/env/gates/`: `nitro-e2e`, `pool-e2e`, `watchtower`, `hub-custodian-frost`. A chunk that changes the pool, the circuits, governance or the SDK extends one of these gates (a new step, or a new gate directory beside them) rather than building a separate harness (operator ruling, CHUNK-RULES.md rule 3). The gate chunks G7a/G7b, N7, N8 and C5 are extensions of these gates. Everything is proven on the fixturenet before mainnet (CHUNK-RULES.md rule 4).
 
 **Routing.** A chunk's route is `5090` at up to 9 points; above 9 points it splits or starts on Sonnet (`estimation-method.md` §2, §4). P2 and G7 are split below because they exceeded 9 points. Every pebble is filed starting on the 5090 regardless of route; a worker that outgrows the window escalates to Sonnet through `contextPromotion` (CHUNK-RULES.md rule 1). Circuit chunks carry extra routing risk because circom on the 27B model is unmeasured; P1 and N5 are flagged below.
 
@@ -26,7 +26,7 @@ Points and hours use [`estimation-method.md`](./estimation-method.md): one point
 | S4 | Baal treasury governance: a Safe-owned treasury replaces the v1 custom governor | next |
 | S5 | armada-nitro side of contract-owned collateral: commitments as channel collateral | next |
 | S6 | armada-client Phase 1: daemon with wallet and relayer, e2e on the fixturenet | next |
-| S7 | Proof path: patch the fixturenet genesis, operate the nimbus verified proxy, run the first proof | next |
+| S7 | Proof path: patch the fixturenet genesis, operate the nimbus verified proxy, run the first proof | done, by hand; not yet a standing gate |
 | S8 | Client verified reads: the Armada verification library, the browser WASM proxy, the mobile `libverifproxy.a` cross-compiles | next |
 | S9 | armada-client Phase 2: Waku transport, ts-nitro channels, watchtower, hub role | next |
 | S10 | Client support for contract-owned notes and ZK channel apps | next |
@@ -35,7 +35,7 @@ Points and hours use [`estimation-method.md`](./estimation-method.md): one point
 | S13 | The production Phase-2 ceremony over the final shape set | later |
 | S14 | Venue v1: posted-price RFQ, quote/settle app, fee-split | later |
 | S15 | v2 / deferred backlog: ordering, venue solver, LP-buffered USDC yield, ex_net matcher, Swaps, routing interface, registry + bond, fraud-proof verifier, native commitment, address-rotation audit, optional identity | later |
-| S16 | Sepolia proof, external audit, mainnet cutover | later |
+| S16 | External audit, mainnet cutover | later |
 
 Order (operator ruling, 2026-10-20): the next work dispatched is, in this order of waves — S2 and S3 in wave 1; S4 and S5 in wave 2, both after P2b. Briefs for all four families (P, N-zk-app, G, N-collateral) are already written and workers start on them first, so S2–S5 sit directly after S1, ahead of the client and proof-path stages.
 
@@ -152,7 +152,7 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-con
 
 **Acceptance:** armada-client's own E2E relay gate (P1-09) against the armada-nitro environment's fixturenet; this reuses the reconciler's deployment manifest (P1-05), not a new chain setup.
 
-## S7 — Proof path (next)
+## S7 — Proof path (done, by hand; not yet a standing gate)
 
 **Goal:** operate the nimbus verified proxy against the armada-nitro fixturenet and run the first proof.
 
@@ -167,7 +167,9 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-con
 
 **Stage total:** 14 points, 2 sessions, 1.0 h.
 
-**Acceptance:** the fixturenet proof script (`labbook/2026-10-19-nimbus-verified-proxy-proofs.md` §3.8) — shield on the fixturenet, `eth_getBlockReceipts` through the patched proxy finds the `Shield` log, `eth_getStorageAt` on the `rootHistory[tree][root]` slot returns non-zero, all against lighthouse's beacon REST API. Runs against the armada-nitro environment's fixturenet (geth + lighthouse, via the reconciler); this becomes a new verification step alongside the existing gates, not a separate harness.
+**Status.** Both chunks are done, by hand, not through the chunk/pebble process. The genesis patch is `AFDudley/nimbus-eth1` `armada/verified-proxy-fixes` at `b0205d1d` (base `master@2c8eabf`), alongside a `convHeader` fix at `827f95ff`. The fixturenet runs a non-validating `nimbus-eth1`/`nimbus-eth2` pair, merged to `armada-nitro` `integrated` at `990c9fa9` (pebble `arn-b58`). The lead ran the first proof by hand on 2026-10-20: `eth_getBlockReceipts` found the pool's `Shield` log; `eth_getStorageAt` on the `rootHistory[tree][root]` slot returned non-zero. The light-client source is nimbus-eth2, not lighthouse, because lighthouse v8.2.2's period-0 best update stays a pre-finality update on this fixturenet (`labbook/2026-10-20-nimbus-fixturenet-and-proxy-proof.md`).
+
+**Acceptance, not yet met.** The same proof script, run as a step inside `armada-nitro`'s existing gates (alongside `nitro-e2e`, `pool-e2e`, `watchtower`), not run by hand. No chunk currently schedules this integration; it is the open item carried into S8.
 
 ## S8 — Client verified reads (next)
 
@@ -180,11 +182,13 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-con
 | Chunk | Deliverable | Depends on | Pts | Route |
 |---|---|---|---:|---|
 | T1-3 | Armada verification library: slot keys for `rootHistory`/`nullifiers`, receipt scan for pool/armada-nitro logs | T1-1 | 7 | 5090 |
-| T1-4 | Browser WASM build of the proxy, wired into `armada-interface`'s note-scanner | T1-1 | 7 | 5090 |
-| T1-5a | iOS cross-compile of `libverifproxy.a` (no upstream target) | T1-1 | 9 | 5090 |
-| T1-5b | Android cross-compile of `libverifproxy.a` (no upstream target) | T1-1 | 9 | 5090 |
+| T1-4 | Fix the browser WASM build's stall at its first `sync()` call, then wire it into `armada-interface`'s note-scanner | T1-1 | 7 | 5090 |
+| T1-5a | iOS cross-compile of `libverifproxy.a` — done | T1-1 | 9 | 5090 |
+| T1-5b | Android cross-compile of `libverifproxy.a` (`-d:PREFER_HASHTREE_SHA256=false`) — done | T1-1 | 9 | 5090 |
 
 **Stage total:** 32 points, 4 sessions, 2.0 h.
+
+**Status.** T1-5a and T1-5b are done: `libverifproxy.a` builds for iOS (device and simulator) and Android, outside the chunk/pebble process (`labbook/2026-10-19-nimbus-verified-proxy-proofs.md` §7). No client repo links either build in yet, so T1-3 and T1-4 remain open.
 
 **Acceptance:** `armada-interface`'s note-scanner verifies a read through the WASM proxy in a browser test; `libverifproxy.a` links into a minimal iOS/Android test harness. No armada-nitro gate covers client-library builds; this is new verification alongside the existing gates.
 
@@ -332,21 +336,19 @@ Every chunk below is self-sized from `estimation-method.md` §2's anchors; none 
 
 **Acceptance:** each item's own eventual scenario on the armada-nitro environment, per its tier doc; none is scheduled, so no gate extension is named yet.
 
-## S16 — Sepolia proof, external audit, mainnet cutover (later)
+## S16 — External audit, mainnet cutover (later)
 
-**Goal:** the proof path and the finished v1 rail run on Sepolia, pass external audit, and replace the existing armada-1 mainnet deployment.
+**Goal:** the finished v1 rail passes external audit and replaces the existing armada-1 mainnet deployment.
 
-**Delivers:** the fixturenet-before-Sepolia-before-mainnet rule, for every tier this plan touches.
+**Delivers:** the fixturenet-before-mainnet rule, for every tier this plan touches.
 
 **Depends on:** S7 (fixturenet proof proven), S13 (ceremony, for audit scope); [INFERENCE] realistically also S4, S5, S10, since mainnet should carry the new governance and collateral design, not the superseded one.
 
-| Chunk | Deliverable | Depends on | Pts | Route |
-|---|---|---|---:|---|
-| SEP-1 | Re-run the fixturenet proof script against Sepolia (the patched proxy already supports Sepolia natively; no genesis patch needed) | S7 | 5 | 5090 |
+No engineering chunk remains for this stage. Sepolia is currently out of scope (operator, 2026-10-20), so the plan has no Sepolia re-run of the proof.
 
-**Stage total:** 5 points, 1 session, 0.5 h. External audit and the mainnet deploy are coordination/operational work, not engineering chunks; not sized (`estimation-method.md` §5).
+**Stage total:** 0 points. External audit and the mainnet deploy are coordination/operational work, not engineering chunks; not sized (`estimation-method.md` §5).
 
-**Acceptance:** fixturenet first, then Sepolia, then mainnet (CHUNK-RULES.md rule 4); external audit of `ArmadaNitroAdjudicator`, `HubCustodian` and the pool; the mainnet deploy supersedes the existing armada-1 crowdfund + governance + CCTP-only deployment.
+**Acceptance:** proven on the fixturenet, then mainnet (CHUNK-RULES.md rule 4); external audit of `ArmadaNitroAdjudicator`, `HubCustodian` and the pool; the mainnet deploy supersedes the existing armada-1 crowdfund + governance + CCTP-only deployment.
 
 ## Plan totals
 
@@ -366,8 +368,8 @@ Every chunk below is self-sized from `estimation-method.md` §2's anchors; none 
 | S13 | 10 | 1 | 0.5 |
 | S14 | 29 | 4 | 2.0 |
 | S15 | 107 | 12 | 6.0 |
-| S16 | 5 | 1 | 0.5 |
-| **Total** | **498** | **63** | **31.5** |
+| S16 | 0 | 0 | 0.0 |
+| **Total** | **493** | **62** | **31.0** |
 
 **Critical path, 209-point programme chunks (`labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md` §8, `labbook/2026-10-18-treasury-governance-baal-safe-shielded.md` §7, as split in S2 and S4):** P1 → P2a → P2b → G3 → G7a → G7b — 6 chunks, 6 sessions, 3.0 h, before rework.
 
@@ -375,7 +377,7 @@ Every chunk below is self-sized from `estimation-method.md` §2's anchors; none 
 
 ## Pinned refs
 
-`armada-poc` `origin/main@102f17b8` · `armada-circuits` `ship-armada.github.com/main@ef2682f` · `armada-deployments` `ship-armada.github.com/main@bac3639` · `armada-sdk` `origin/main@db5757f` · `armada-client` `origin/main@78a8fdc` · `armada-relayer` `origin/main@bbf5e62` · `armada-interface` `origin/main@6968cd7` · `armada-nitro` `origin/integrated@55939ef` · `status-im/nimbus-eth1` `master` (clone `4df52ef`, 2026-10-19).
+`armada-poc` `origin/main@102f17b8` · `armada-circuits` `ship-armada.github.com/main@ef2682f` · `armada-deployments` `ship-armada.github.com/main@bac3639` · `armada-sdk` `origin/main@db5757f` · `armada-client` `origin/main@78a8fdc` · `armada-relayer` `origin/main@bbf5e62` · `armada-interface` `origin/main@6968cd7` · `armada-nitro` `origin/integrated@990c9fa9` · `status-im/nimbus-eth1` `master` (clone `4df52ef`, 2026-10-19) · `AFDudley/nimbus-eth1` `armada/verified-proxy-fixes@b0205d1d` (base `master@2c8eabf`).
 
 ---
 

@@ -45,7 +45,7 @@
 <td><strong>B · proof path</strong></td>
 <td>A client verifies Ethereum state against a header a beacon light client checks, through the nimbus verified proxy.</td>
 <td>T1.0–T1.2, T2.0–T2.4; note-scanner T6.1</td>
-<td>In progress, upstream, unintegrated</td>
+<td>First proof run by hand on the fixturenet; not yet a gate</td>
 </tr>
 <tr>
 <td><strong>C · venue and adapters</strong></td>
@@ -64,12 +64,12 @@
 <h2 id="what-is-built-per-work-package">What is built, per work package</h2>
 <ul>
 <li><strong>A.</strong> <code>armada-poc</code> built the pool and its governance and revenue contracts. <code>armada-circuits</code> built the <code>Transact</code> circuit. <code>armada-nitro</code> built the patched adjudicator and the merged deposit/payout boundary. The Phase-2 ceremony has not run.</li>
-<li><strong>B.</strong> The nimbus verified proxy exists upstream, unintegrated. No server runs it against any Armada chain; no WASM bundle ships; no mobile build exists.</li>
+<li><strong>B.</strong> The nimbus verified proxy's fixes live on <code>AFDudley/nimbus-eth1</code> <code>armada/verified-proxy-fixes</code> (<code>b0205d1d</code>), not upstream. The armada-nitro fixturenet runs a nimbus pair beside geth and lighthouse (merged to <code>integrated</code> at <code>990c9fa9</code>, pebble <code>arn-b58</code>). The first proof ran on the fixturenet by hand: <code>eth_getBlockReceipts</code> proved a pool <code>Shield</code> log, and <code>eth_getStorageAt</code> proved a <code>rootHistory</code> slot. No server runs the proxy as a standing gate; the WASM build stalls in a browser; <code>libverifproxy.a</code> builds for iOS and Android.</li>
 <li><strong>C.</strong> CCTP and the Aave-v4 yield adapter are built (<code>armada-poc</code>). No venue, no matcher, and no Swaps contract exist.</li>
 <li><strong>D.</strong> <code>armada-interface</code> (web) is built and wired to <code>armada-sdk</code>. <code>armada-client</code>, meant to host a mobile client, has no application code; its <code>docs/SPEC.md</code> is a plan for four targets (Linux server, browser, iOS, Android).</li>
 </ul>
 <h2 id="what-remains">What remains</h2>
-<p>The full ordered sequence, with chunks, points and hours, is <a href="./build-plan.html"><code>build-plan.md</code></a>. In short: a non-upgradeable contract-owned-notes pool deploy and hidden-balance ZK channel apps on armada-nitro (in progress, briefs already written); a Baal treasury governance migration and the armada-nitro side of contract-owned collateral, once the pool's owner-auth path lands; a settlement-client channel lifecycle and watchtower (<code>armada-client</code> Phases 1–3) and the proof path (operate the nimbus proxy, patch the fixturenet genesis, ship a WASM build and mobile cross-compiles); the Phase-2 ceremony (no shape has a published, multi-party transcript yet); a venue (the least mature part of the plan, with no code and no near-term dependency forcing it).</p>
+<p>The full ordered sequence, with chunks, points and hours, is <a href="./build-plan.html"><code>build-plan.md</code></a>. In short: a non-upgradeable contract-owned-notes pool deploy and hidden-balance ZK channel apps on armada-nitro (in progress, briefs already written); a Baal treasury governance migration and the armada-nitro side of contract-owned collateral, once the pool's owner-auth path lands; a settlement-client channel lifecycle and watchtower (<code>armada-client</code> Phases 1–3) and the proof path (wire the proxy into a client as a verification gate, fix the WASM browser stall, ship mobile cross-compiles); the Phase-2 ceremony (no shape has a published, multi-party transcript yet); a venue (the least mature part of the plan, with no code and no near-term dependency forcing it).</p>
 <h2 id="interface-contracts-as-built">Interface contracts, as built</h2>
 <ul>
 <li><strong>The adjudicator exposes:</strong> <code>IArmadaPool</code> (<code>shield</code>, <code>transact</code>), <code>depositFromNote</code>, the <code>SHIELD</code>-type payout path, go-nitro's standard challenge/checkpoint/conclude.</li>

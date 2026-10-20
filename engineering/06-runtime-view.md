@@ -153,13 +153,14 @@ outcomes) would close it; a happy off-chain settle reveals none of this.
 
 The read-path scenario the anonymity-set guarantee depends on. The design calls for a
 client to verify every read rather than trust an RPC provider's answer. This is partly
-real: the proof mechanism exists upstream, unintegrated (T1); no client calls it yet.
+real: the proof mechanism has proven itself by hand on the fixturenet (T1); no client
+calls it yet.
 
 ```mermaid
 sequenceDiagram
   participant W as Wallet (T6.1)
   participant RPC as RPC provider (today)
-  participant PX as nimbus verified proxy (T1, unintegrated)
+  participant PX as nimbus verified proxy (T1, proven on the fixturenet)
   W->>RPC: eth_getBlockReceipts (trusted, not verified)
   Note over W,PX: planned: route through the proxy instead
   PX-->>W: verified receipts / storage proof (once integrated)
@@ -181,8 +182,7 @@ sequenceDiagram
 4. **Metering.** Today `armada-relayer`'s actor charges a flat USDC fee computed from a
    gas estimate, not go-nitro payment vouchers (T2.1, partly built — a different
    mechanism than planned).
-5. **What remains.** No client wires the proxy in yet (T1.0, in progress); the
-   fixturenet patch for its genesis loader does not exist (T1.2, not built); no
-   federation or bond secures a cache (T2.4, not built).
+5. **What remains.** No client wires the proxy in yet (T1.0, proven on the
+   fixturenet, not integrated); no federation or bond secures a cache (T2.4, not built).
 
 → proof path detail §5 T1; cache and metering §5 T2; this gap §11.

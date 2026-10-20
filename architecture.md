@@ -52,7 +52,7 @@ The deployed shape is a conventional server-client topology, not a peer-to-peer 
       └─────────────────────────────────────────┘
 
       ─────────── plan, no code today ───────────
-      nimbus verified proxy integration (T1) — a client
+      nimbus verified proxy integration (T1, proven on the fixturenet) — a client
       would verify reads instead of trusting the relayer
       watcher federation / threshold attestation (T2.4) —
       design only
@@ -87,7 +87,7 @@ Settlement is non-custodial Nitro state channels on Ethereum L1. Funds are locke
 
 The earlier plan called for a `nimbus-eth1` state-diff emitter mapping into IPLD, served by `watcher-ts`. That pipeline is geth-only (`plugeth`), dormant since August 2024, and its current IPLD schema stores no receipt trie, so no proof connects a single log to `receiptsRoot` in it (`labbook/2026-10-19-nimbus-verified-proxy-proofs.md`). `status-im/nimbus-eth1` instead ships a **verified proxy** — native, WASM, and a C/Go-bound library — that does the verification job upstream of the client: it anchors a header to a beacon light client, verifies storage with EIP-1186 proofs, and verifies a block's receipts by rebuilding the receipt trie against `header.receiptsRoot`. Rebuilding the trie proves both the inclusion of one log and the completeness of the block's logs at once, which an `eth_getLogs` range cannot do, since an omitted log inside a range is undetectable.
 
-**What is built:** the proxy exists upstream, unintegrated. **What is not:** no Armada repo runs or embeds it; no server operates it against any Armada chain; `armada-interface` ships no WASM bundle; `libverifproxy.a` has no iOS or Android cross-compile target; and the proxy's genesis-parameter loader needs a fixturenet patch before it can verify `armada-nitro`'s own test network (T1.2). See <a href="engineering/T1-ingestion.html">T1 ingestion</a> for the full assessment.
+**What is built:** the proxy proved a pool log and a storage slot by hand on the armada-nitro fixturenet, through its own nimbus-eth1/nimbus-eth2 pair; its fixturenet patch lives on `AFDudley/nimbus-eth1` `armada/verified-proxy-fixes`, not upstream. **What is not:** no Armada repo runs or embeds it as a standing service; no server operates it against any Armada chain; `armada-interface` ships no WASM bundle (the WASM build compiles but stalls at its first `sync()` call in a browser); `libverifproxy.a` builds for iOS and Android, but no client links it in. See <a href="engineering/T1-ingestion.html">T1 ingestion</a> for the full assessment.
 
 ## T2 · Watcher substrate {#t2}
 
@@ -159,14 +159,14 @@ Caveats: identity privacy is only as strong as the pool's anonymity set, which g
 <ol class="refs">
 <li id="r-poc"><strong>armada-poc</strong> — the shielded pool, governance, crowdfund, and adapter contracts. <code>origin/main@102f17b8</code>.</li>
 <li id="r-circuits"><strong>armada-circuits</strong> — the `Transact(N,M)` circuit template and Phase-2 ceremony manifest. <code>ship-armada.github.com/main@ef2682f</code>; tag <code>v1.0.0-ceremony</code>.</li>
-<li id="r-nitro"><strong>armada-nitro</strong> — `ArmadaNitroAdjudicator`, patched `go-nitro`, `HubCustodian`. <code>origin/integrated@55939ef</code>.</li>
+<li id="r-nitro"><strong>armada-nitro</strong> — `ArmadaNitroAdjudicator`, patched `go-nitro`, `HubCustodian`, and the nimbus pair in the fixturenet. <code>origin/integrated@990c9fa9</code>.</li>
 <li id="r-sdk"><strong>armada-sdk</strong> — the browser Groth16 prover and client SDK. <code>origin/main@db5757f</code>.</li>
 <li id="r-interface"><strong>armada-interface</strong> — the live web client. <code>origin/main@6968cd7</code>.</li>
 <li id="r-relayer"><strong>armada-relayer</strong> — the Ponder/Postgres indexer and flat-fee actor. <code>origin/main</code>.</li>
 <li id="r-client"><strong>armada-client</strong> — the unbuilt mobile-stack plan, `docs/SPEC.md`. <code>origin/main@78a8fdc</code>.</li>
 <li id="r-gonitro"><strong>go-nitro</strong> (upstream, vendored into armada-nitro) — <code>cerc-io/go-nitro@435eb2b</code>.</li>
 <li id="r-forcemove"><strong>ForceMove.sol</strong> (<code>challenge</code> L39, <code>checkpoint</code> L90, <code>conclude</code> L127). <a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/packages/nitro-protocol/contracts/ForceMove.sol#L39-L127">go-nitro · ForceMove.sol</a>.</li>
-<li id="r-nimbus"><strong>nimbus-eth1 verified proxy</strong> — the proof path (T1). <a href="https://github.com/status-im/nimbus-eth1">github.com/status-im/nimbus-eth1</a>, `master@4df52ef`.</li>
+<li id="r-nimbus"><strong>nimbus-eth1 verified proxy</strong> — the proof path (T1), proven by hand on the fixturenet. <a href="https://github.com/status-im/nimbus-eth1">github.com/status-im/nimbus-eth1</a>, `master@4df52ef`; fixturenet fixes at <a href="https://github.com/AFDudley/nimbus-eth1">AFDudley/nimbus-eth1</a> `armada/verified-proxy-fixes@b0205d1d`.</li>
 <li id="r-frost"><strong>frost-secp256k1-evm</strong> — the hub custodian's threshold scheme (T2). Pinned submodule <code>65d03d0</code> in `armada-nitro`.</li>
 <li id="r-railgun"><strong>Railgun</strong> — the shielded-pool design Armada's own pool and circuits implement. <a href="https://github.com/Railgun-Privacy/contract">contract</a>, <a href="https://github.com/Railgun-Privacy/circuits-v2">circuits-v2</a>.</li>
 </ol>

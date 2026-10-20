@@ -49,13 +49,13 @@
 </tr>
 <tr>
 <td>R3</td>
-<td><strong>Proof path unintegrated.</strong> The nimbus verified proxy exists upstream but runs nowhere in Armada's stack. A client today reads chain state over RPC or an unverified cache (<code>armada-relayer</code>'s Ponder indexer), not a verified proof.</td>
+<td><strong>Proof path unintegrated.</strong> The nimbus verified proxy proved a pool log and a storage slot by hand on the armada-nitro fixturenet but runs nowhere in Armada's stack as a standing service. A client today reads chain state over RPC or an unverified cache (<code>armada-relayer</code>'s Ponder indexer), not a verified proof.</td>
 <td>High (today's reads are trust-the-RPC, not trust-math)</td>
 <td>T1, T2 · ADR-0009</td>
 </tr>
 <tr>
 <td>R4</td>
-<td><strong>No mobile client.</strong> <code>armada-client</code> has no application code; <code>libverifproxy.a</code> has no upstream iOS/Android target.</td>
+<td><strong>No mobile client.</strong> <code>armada-client</code> has no application code. <code>libverifproxy.a</code> builds for iOS and Android, but no client repo links it in.</td>
 <td>High (no mobile product exists)</td>
 <td>T6.5</td>
 </tr>

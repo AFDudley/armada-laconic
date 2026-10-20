@@ -67,7 +67,7 @@ Armada is asset-privacy infrastructure for USDC: a shielded pool, spec-compatibl
 
 <h2 id="what-is-still-a-plan">What is still a plan</h2>
 <ul>
-<li><strong>The proof path.</strong> The nimbus verified proxy is the intended trust boundary (see <code>engineering/09-architecture-decisions.html#adr-0009</code>); it runs nowhere in Armada's stack today. A client reads chain state over RPC or an unverified cache.</li>
+<li><strong>The proof path.</strong> The nimbus verified proxy is the intended trust boundary (see <code>engineering/09-architecture-decisions.html#adr-0009</code>); it has proved reads by hand on the armada-nitro fixturenet but runs nowhere in Armada's stack as a standing service. A client reads chain state over RPC or an unverified cache.</li>
 <li><strong>A mobile client.</strong> <code>armada-client</code> has no application code. <code>armada-interface</code>, the live web app, is the only shipped client.</li>
 <li><strong>A settlement-client channel lifecycle and a watchtower.</strong> The adjudicator side is built and tested; no client drives it.</li>
 <li><strong>An exchange venue.</strong> No posted-price contract, quote/settle app, or matcher exists.</li>
@@ -81,7 +81,7 @@ Armada is asset-privacy infrastructure for USDC: a shielded pool, spec-compatibl
    ON-CHAIN ANCHOR            PrivacyPool · ArmadaNitroAdjudicator (deposit/payout merged)
                               governance and revenue contracts                              built
    ─────────────────────────────────────────────────────────────────────────────────────
-   PROOF PATH                 nimbus verified proxy — unintegrated · watcher-ts optional cache — not built
+   PROOF PATH                 nimbus verified proxy — proven on the fixturenet, unintegrated · watcher-ts optional cache — not built
 </pre>
 
 <p class="small">See <a href="architecture.html">Architecture</a> for the full tier stack, and <a href="engineering/05-building-block-view.html">the item registry</a> for per-item status with code citations.</p>

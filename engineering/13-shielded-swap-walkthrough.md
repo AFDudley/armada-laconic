@@ -145,7 +145,7 @@ A third facet, **scope**, keeps the difficulty honest. Almost everything this sw
 | WASM note-scanner (T6.1) | built | 5 | shared |
 | Transport — Waku + libp2p-noise (T2.3) | not built | 3 | shared |
 | Nitro adjudicator, merged deposit/payout boundary (T0.2) | built, patched `go-nitro` | 2 | shared |
-| nimbus verified proxy read verification (T1) | in progress, unintegrated | 2 | shared |
+| nimbus verified proxy read verification (T1) | proven by hand on the fixturenet, unintegrated | 2 | shared |
 | Relay fee (T2.1) | built, different mechanism (flat USDC fee, not vouchers) | 2 | shared |
 | ↳ Channel machinery — virtualfund, payments, ExitFormat | reuse (within T0.2's patched `go-nitro`) | incl. → T0.2 | shared |
 | Quote/settle ForceMove app (T4.1) | not built | 4 | swap |

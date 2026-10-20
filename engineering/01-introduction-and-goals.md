@@ -13,7 +13,7 @@ The core engineering construction is the deposit/payout boundary inside `ArmadaN
 - **Shielded payments.** Built. A user shields USDC into the pool and sends and receives it as shielded notes without revealing sender, recipient, or amount, through `armada-interface`'s web UI (**T0.0**, **T6.1**, **T6.2**).
 - **Yield.** Built. CCTP and Aave-v4 yield adapters route through the pool's own `adaptContract` binding (**T5.0**), not Railgun's RelayAdapt/Cookbook recipe, which this codebase does not use.
 - **Private exchange and clearing.** Not built. No venue, no posted price, and no matcher exist in `armada-poc` (**T3**, **T4**).
-- **Verified, mobile-first client support.** In progress. The proof path is the nimbus verified proxy (**T1**, [ADR-0009](./09-architecture-decisions.md#adr-0009)), integrated nowhere yet. `armada-interface` is web-only; `armada-client`'s four-target plan (Linux server, browser, iOS, Android) has no code.
+- **Verified, mobile-first client support.** In progress. The proof path is the nimbus verified proxy (**T1**, [ADR-0009](./09-architecture-decisions.md#adr-0009)), proven by hand on the armada-nitro fixturenet but wired into no client. `armada-interface` is web-only; `armada-client`'s four-target plan (Linux server, browser, iOS, Android) has native builds for Linux, iOS, and Android, and a WASM build that stalls in a browser.
 - **Settlement-client channel lifecycle and a client watchtower.** Not built. The adjudicator side is built and tested; no client drives it yet (**T6.2**, **T6.3**).
 
 ## 1.3 Top quality goals
@@ -40,7 +40,7 @@ The core engineering construction is the deposit/payout boundary inside `ArmadaN
 | Tier | Coverage |
 |---|---|
 | **T0** Ethereum anchor | Pool, circuits, adjudicator, governance built; T0.4–T0.6 not built. |
-| **T1/T2** Proof path and cache | In progress, upstream, unintegrated. |
+| **T1/T2** Proof path and cache | Proven by hand on the fixturenet; unintegrated. |
 | **T3** Ordering | Entirely not built; a plan. |
 | **T4** Execution / venue | Entirely not built; a plan, except T4.4's yield case, which needs no new contract. |
 | **T5** Adapters | CCTP and Aave-v4 yield built; Swaps not built. |

@@ -43,14 +43,20 @@ an actor that submits transactions and charges a flat USDC fee from a gas estima
 (<code>fee-calculator.ts</code>, T2.1). This is a conventional server, not a bonded P2P
 federation, and it is not the proof path: a client that reads from it is trusting the
 server, not verifying a proof (T2.2).</p>
-<h3 id="proof-path-the-nimbus-verified-proxy-upstream-unintegrated">Proof path — the nimbus verified proxy (upstream, unintegrated)</h3>
+<h3 id="proof-path-the-nimbus-verified-proxy-proven-on-the-fixturenet-unintegrated">Proof path — the nimbus verified proxy (proven on the fixturenet, unintegrated)</h3>
 <p><code>status-im/nimbus-eth1</code> ships a verified proxy — native (<code>libverifproxy.a</code>), WASM, and
 a CLI — that anchors a header to a beacon light client and verifies storage and
-receipts client-side (T1.0, T1.1). No Armada repo runs or embeds it today: no server
-operates it against any Armada chain, no WASM bundle ships in <code>armada-interface</code>, and
-<code>libverifproxy.a</code> has no iOS or Android cross-compile target yet. Once integrated, this
-runs inside the client process, not as a separate server node (<code>client (T2 caches,
-re-verified through the proxy)</code> in <a href="./T1-ingestion.html"><code>T1-ingestion.md</code></a>). → §5 T1.</p>
+receipts client-side (T1.0, T1.1). Its fixes for a fixturenet's custom consensus
+genesis live on <code>AFDudley/nimbus-eth1</code> <code>armada/verified-proxy-fixes</code> (<code>b0205d1d</code>), not
+upstream. The patched proxy proved a pool <code>Shield</code> log and a <code>rootHistory</code> slot by hand
+against the armada-nitro fixturenet, with nimbus-eth2 as its light-client source and
+nimbus-eth1 as its execution source. No Armada repo runs or embeds it as a standing
+service: no server operates it against any Armada chain, no WASM bundle ships in
+<code>armada-interface</code> (the WASM build stalls at its first <code>sync()</code> call in a browser), and
+<code>libverifproxy.a</code> builds for iOS and Android but no client links it. Once integrated,
+this runs inside the client process, not as a separate server node (<code>client (T2
+caches, re-verified through the proxy)</code> in <a href="./T1-ingestion.html"><code>T1-ingestion.md</code></a>). →
+§5 T1.</p>
 <h3 id="venue-node-plan-not-built">Venue node — plan, not built</h3>
 <p>The earlier plan calls for an off-chain venue node holding a <code>priceSetter</code> authority
 and filling quotes from a pre-funded static inventory (T4.0, T4.1), with a later
@@ -62,9 +68,10 @@ browser, not a phone-resident P2P peer. It holds keys in browser memory
 (<code>keyManager.ts</code>, T6.0), scans and trial-decrypts notes locally (<code>sync.ts</code>, T6.1), and
 drives the pool's shield/transact calls (<code>handler.ts</code>, T6.2). It talks to Ethereum L1
 and to <code>armada-relayer</code> over plain HTTP/RPC, not libp2p or Waku. No channel lifecycle
-code, no client-side watchtower (T6.3), and no mobile build exist. <code>armada-client</code>, the
-repo meant to host a unified TypeScript stack across Linux server, browser, iOS, and
-Android (<code>docs/SPEC.md</code>), has no application code (T6.5).</p>
+code and no client-side watchtower exist (T6.3). <code>armada-client</code>, the repo meant to
+host a unified TypeScript stack across Linux server, browser, iOS, and Android
+(<code>docs/SPEC.md</code>), has no application code (T6.5); <code>libverifproxy.a</code> builds for Linux,
+iOS, and Android, but no client repo links it in.</p>
 <h2 id="deployment-diagram-blocks-nodes">Deployment diagram (blocks → nodes)</h2>
 <pre><code>                     ┌──────────────────────────────────────────┐
                      │  ETHEREUM L1  (fixturenet | testnet |     │
@@ -88,7 +95,7 @@ Android (<code>docs/SPEC.md</code>), has no application code (T6.5).</p>
    └─────────────────────────────────────────────────────────┘
 
    ─────────────── plan, no code today ───────────────────────
-   nimbus verified proxy integration (T1) — would run inside the
+   nimbus verified proxy integration (T1) — proven by hand on the fixturenet; would run inside the
    client process, verifying reads instead of trusting the relayer
    venue node (T4) — posted-price contract + quote/settle app
    client watchtower (T6.3) — only a test-harness watchtower exists
@@ -106,8 +113,8 @@ Android (<code>docs/SPEC.md</code>), has no application code (T6.5).</p>
 <tbody>
 <tr>
 <td><strong>fixturenet</strong></td>
-<td><code>armada-nitro</code>'s e2e gate harness runs deterministic tests here, including the test-only watchtower (<code>env/gates/watchtower/watch.ts</code>).</td>
-<td>orchestrated local L1 (real <code>geth</code> + <code>lighthouse</code>, per <code>docs/ENVIRONMENT.md</code>)</td>
+<td><code>armada-nitro</code>'s e2e gate harness runs deterministic tests here, including the test-only watchtower (<code>env/gates/watchtower/watch.ts</code>), and a non-validating <code>nimbus-eth1</code>/<code>nimbus-eth2</code> pair that served the first proxy proof.</td>
+<td>orchestrated local L1 (real <code>geth</code> + <code>lighthouse</code> + the nimbus pair, per <code>docs/ENVIRONMENT.md</code>)</td>
 </tr>
 <tr>
 <td><strong>Sepolia</strong></td>

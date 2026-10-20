@@ -6,7 +6,7 @@ This section draws the system boundary and catalogues the external systems the b
 
 ## The product
 
-Armada is pluggable asset-privacy infrastructure for USDC: routine flows (payments, payroll, treasury, yield) route through a single immutable shielded pool (one anonymity set), and privacy compounds as more flows join. The pool, its governance contracts, the circuits, the adjudicator, and the web client are built. The proof path, the mobile client, and any future venue remain a plan.
+Armada is pluggable asset-privacy infrastructure for USDC: routine flows (payments, payroll, treasury, yield) route through a single immutable shielded pool (one anonymity set), and privacy compounds as more flows join. The pool, its governance contracts, the circuits, and the web client are built. The proof path has run once by hand on the fixturenet and is wired into no client; the mobile client and any future venue remain a plan.
 
 ## In scope — the whole product (by work package)
 
@@ -51,7 +51,7 @@ Direction is stated relative to Armada's system.
 | **Aave v4** | The yield protocol the Aave-v4 adapter reaches (`unshield USDC → supply → reshield aUSDC`), through the pool's own adapt-contract binding. Amounts public only at the transparent supply boundary. | T5.0 (C) | — |
 | **Circle CCTP** | Cross-chain USDC mint wrapped into a shield by `CCTPHookRouter` — arrives as a fresh shielded USDC note. Bidirectional; built. | T5.0 (C), via T0.0 | — |
 | **Beacon chain light client** | The proof anchor the nimbus verified proxy checks every header against. Inbound. | T1 | ADR-0009 |
-| **The armada-nitro fixturenet** | Real `geth` + `lighthouse` consensus, used for testing the adjudicator and, once patched, the first nimbus-proxy proof. | T0.2, T1 | ADR-0009, `labbook/2026-10-19-nimbus-verified-proxy-proofs.md` |
+| **The armada-nitro fixturenet** | `geth` + `lighthouse` consensus, used for testing the adjudicator, plus a non-validating `nimbus-eth1`/`nimbus-eth2` pair that follows the same chain and served the first nimbus-proxy proof. | T0.2, T1 | ADR-0009, `labbook/2026-10-20-nimbus-fixturenet-and-proxy-proof.md` |
 
 ## Not built / excluded
 

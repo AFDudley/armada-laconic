@@ -53,8 +53,9 @@ nimbus verified proxy — a storage proof (EIP-1186) for a slot, or a rebuilt re
 trie root for a block's receipts — and rejects any mismatch, placing no trust in the
 server.
 *Measure:* after shielding or depositing a known value, a doctored response MUST fail
-client-side verification while the honest one verifies. No client calls the proxy
-today. → **T1** (not integrated).
+client-side verification while the honest one verifies. The proxy met this measure by
+hand on the armada-nitro fixturenet; no client calls the proxy today. → **T1** (proven
+on the fixturenet, not integrated).
 
 **QS-2 · Read-time anonymity — no RPC fingerprint (not met today).**
 *Stimulus:* an RPC or indexing provider tries to learn which commitments or nullifiers

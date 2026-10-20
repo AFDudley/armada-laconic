@@ -1,18 +1,15 @@
 # Mobile end-to-end privacy
 
-<p class="lede">A shielded pool only makes a user private if <em>every</em> surface around it is private too — the network path, how the client reads the chain, how orders are sequenced, how transactions reach the chain, and where keys live. This document follows a single mobile transaction through each of those surfaces, names what is hidden and from whom, cites the code that implements it, and scopes what it takes to assemble on a phone.</p>
+<p class="lede">A shielded pool only makes a user private if <em>every</em> surface around it is private too — the network path, how the client reads the chain, how transactions reach the chain, and where keys live. This document follows a single transaction through each of those surfaces, names what is hidden and from whom, cites the code that implements it, and states what remains a plan. There is no mobile client yet; "mobile" below names a plan, not a shipped surface.</p>
 
 <p style="margin-top:14px">
-  <span class="tag">audience: Armada + Laconic engineering</span>
-  <span class="tag">scope: Design A (v1)</span>
+  <span class="tag">audience: Armada engineering</span>
   <span class="tag">non-custodial</span>
+  <span class="tag">web client today</span>
 </p>
 
 <div class="panel">
-<strong>Conventions.</strong> Where a property is asserted from design rather than shipped code it is labelled <em>net-new</em> or <em>[inference]</em>. Maturity is one of <em>mainnet / prod / testnet / PoC / fork / net-new / paper</em>. Mobile-integration difficulty uses a three-point scale:
-<span class="chip ok">Low</span> configuration or wire-up of existing production code ·
-<span class="chip part">Med</span> real integration with gaps, but the components exist ·
-<span class="chip new">High</span> net-new protocol, circuit, native module, or research.
+<strong>Status.</strong> The live client, `armada-interface`, is a browser web app. No mobile build, no Waku transport, no libp2p, and no Nym mixnet integration exist in any ship-armada repo. Most of this page describes a plan (ruling 7, brief §4). Where a property is built, it is labeled <strong>built</strong>; everything else is a plan with no code.
 </div>
 
 ## Contents {#contents}
@@ -20,190 +17,155 @@
 <div class="toc">
   <a href="#threat">1. Threat model — who observes what</a>
   <a href="#flow">2. The end-to-end flow</a>
-  <a href="#l1">3. Network &amp; transport</a>
-  <a href="#l2">4. Read, order &amp; submit</a>
+  <a href="#l1">3. Network &amp; transport (plan)</a>
+  <a href="#l2">4. Read &amp; submit</a>
   <a href="#l3">5. Settlement, identity &amp; custody</a>
   <a href="#leaks">6. What still leaks</a>
-  <a href="#difficulty">7. Integration difficulty</a>
+  <a href="#difficulty">7. What remains to build</a>
   <a href="#refs">References</a>
 </div>
 
 ## 1. Threat model — who observes what {#threat}
 
-"Private" is meaningless without naming the observer. A mobile user transacting against a shielded pool is potentially exposed to six distinct parties, each of which sees a different slice of the interaction. The layers that follow exist to blind each one.
+"Private" is meaningless without naming the observer. A user transacting against a shielded pool is potentially exposed to several distinct parties, each of which sees a different slice of the interaction.
 
 <table>
-<tr><th>Observer</th><th>What they could learn without mitigation</th><th>Blinded by</th></tr>
-<tr><td>Network observer / ISP / gateway</td><td>The device's IP, and traffic timing/volume that correlates sender ↔ recipient</td><td>Nym mixnet underlay (§3)</td></tr>
-<tr><td>RPC / data provider</td><td>Exactly which commitments, nullifiers, and addresses the wallet queries — enough to fingerprint the user against the pool</td><td>Read-time private sync via a watcher (§4) ★</td></tr>
-<tr><td>The venue / matcher</td><td>Who you are, your funding source, your history, and that two trades are the same person</td><td>Design A shield boundary (§5)</td></tr>
-<tr><td>On-chain observers / mempool</td><td>Your EOA as the transaction origin, and the amounts you move in the clear</td><td>Broadcaster/keeper origin-privacy (§4) + Railgun shielded pool (§5)</td></tr>
-<tr><td>The sequencer / operator</td><td>Order contents in time to front-run, sandwich, or reorder</td><td>Commit-reveal ordering (§4)</td></tr>
-<tr><td>The counterparty</td><td>Your live IP; identity attributes beyond what a trade requires</td><td>Nym underlay (§3) + selective-disclosure identity (§5)</td></tr>
+<tr><th>Observer</th><th>What they could learn without mitigation</th><th>Blinded by</th><th>Status</th></tr>
+<tr><td>Network observer / ISP / gateway</td><td>The device's IP, and traffic timing/volume that correlates sender ↔ recipient</td><td>an optional mixnet underlay</td><td>plan</td></tr>
+<tr><td>RPC / data provider</td><td>Exactly which commitments, nullifiers, and addresses the wallet queries — enough to fingerprint the user against the pool</td><td>verified reads through the nimbus proxy (§4) ★</td><td>in progress, unintegrated</td></tr>
+<tr><td>A future execution venue</td><td>Who you are, your funding source, your history, and that two trades are the same person</td><td>the shield boundary inside `ArmadaNitroAdjudicator` (§5)</td><td>boundary built; no venue exists</td></tr>
+<tr><td>On-chain observers / mempool</td><td>Your EOA as the transaction origin, and the amounts you move in the clear</td><td>a keeper/broadcaster submitting on your behalf (§4) + the shielded pool (§5)</td><td>pool built; keeper/broadcaster plan</td></tr>
+<tr><td>The counterparty</td><td>Your live IP; identity attributes beyond what a trade requires</td><td>a mixnet underlay (§3) + selective-disclosure identity (§5)</td><td>plan</td></tr>
 </table>
-<p class="small">★ marks the single property Armada's entire anonymity-set guarantee rests on: if the read path leaks, every downstream protection is moot because the observer already knows which notes are yours.</p>
+<p class="small">★ marks the single property Armada's anonymity-set guarantee rests on: if the read path leaks, every downstream protection is moot because the observer already knows which notes are yours. Today no client verifies a read; `armada-interface` trusts whatever RPC it is configured with.</p>
 
 ## 2. The end-to-end flow {#flow}
 
-The stages below trace one action: a mobile user privately swapping a shielded balance, as the lifecycle of that transaction. The section numbers in brackets map each stage to its detailed treatment.
+The stages below trace one action: a user shielding, holding, and unshielding value. The section numbers in brackets map each stage to its detailed treatment. Stages marked **(plan)** have no code today.
 
 <pre class="diagram">
-  DEVICE            keys never leave the phone (OS secure enclave)              [§5]
-    │  on-device BIP-39 mnemonic → HD keys (react-native-keychain)
+  DEVICE            browser-memory keys today (armada-interface)             [§5]
+    │  no BIP-39/HD custody, no secure enclave, no mobile build
     ▼
-  NETWORK / IP      Nym mixnet underlay hides IP + traffic metadata            [§3]
-    │  5-hop mixnet  (or 2-hop AmneziaWG for latency)   · zk-nym credentials
+  NETWORK / IP      (plan) a mixnet underlay would hide IP + traffic metadata [§3]
+    │  today: plain HTTPS to whatever RPC/relayer endpoint is configured
     ▼
-  TRANSPORT         two modes, both libp2p, both tunnelled through Nym         [§3]
-    │  ├─ Waku pub/sub      → broadcaster / discovery / async  (recipient-unlinkable)
-    │  └─ direct libp2p-noise → Nitro hot loop  (tens-of-ms; encryption + auth only)
+  READ  (sync)      today: plain RPC, trusted; (plan) verify via nimbus proxy [§4] ★
+    │  phone/browser scans + decrypts notes LOCALLY once synced
     ▼
-  READ  (sync)      watcher serves proof-carrying, same-bytes note stream      [§4] ★
-    │  phone scans + decrypts notes LOCALLY → no RPC fingerprint
+  SUBMIT (write)    today: the user's own key submits; (plan) a broadcaster   [§4]
+    │  would submit on the user's behalf so msg.sender ≠ the user
     ▼
-  ORDER            commit-reveal + post-seal beacon (venue cannot front-run)   [§4]
-    │  commit = H(order ‖ salt) → seal → beacon → reveal → match
+  SETTLE (value)    shielded pool (notes/nullifiers) + Nitro channel          [§5]
+    │  non-custodial · force-close escape hatch · boundary inside the adjudicator
     ▼
-  SUBMIT (write)    broadcaster/keeper submits tx → on-chain origin ≠ your EOA [§4]
-    │  Railgun Broadcaster over Waku · Laconic keeper · gasless
-    ▼
-  SETTLE (value)    Railgun shielded pool (notes/nullifiers) + Nitro channel   [§5]
-    │  non-custodial · force-close escape hatch · Design A boundary
-    ▼
-  IDENTITY         optional, selectively-disclosed proof (else identity-blind) [§5]
-       onboarding eth-sig + kyc_id · ex_net proofs · FHE matchmaker
+  IDENTITY         (plan) optional, selectively-disclosed proof               [§5]
+       no identity mechanism exists in the client today
 </pre>
 
-## 3. Network & transport {#l1}
+## 3. Network & transport (plan) {#l1}
 
-Before any application-level privacy matters, the network path itself must not betray the user. Two facts frame this layer. First, transport encryption is not network privacy: the libp2p Noise handshake authenticates and encrypts a connection, but both endpoints still see each other's IP address<sup><a href="#r-gonitro-msg">[6]</a></sup>. Second, mobile carrier NAT (CGNAT/eNAT) is not a privacy control — a shared, rotating carrier IP offers incidental cover against a passive observer but reveals the live IP to any counterparty you connect to and hides no traffic metadata. Real IP privacy comes from a dedicated underlay: the Nym mixnet.
+Before any application-level privacy matters, the network path itself must not betray the user. Transport encryption is not network privacy: even a design that authenticates and encrypts a connection still lets both endpoints see each other's IP address. Today `armada-interface` makes plain HTTPS requests to its configured RPC endpoint and to `armada-relayer`; no mixnet, no Waku, and no libp2p transport exist in any ship-armada repo.
 
-Laconic/Vulcanize already maintain an in-house build of the NymVPN client<sup><a href="#r-mtm">[3]</a></sup>, a fork of Nym's cross-platform client<sup><a href="#r-nym">[2]</a></sup>. It offers a 5-hop Sphinx mixnet mode (maximal metadata protection) and a lower-latency 2-hop AmneziaWG (WireGuard) mode, plus zk-nym credentials that unlink payment from usage. Because Nym operates as an OS-level packet tunnel, every socket the application opens (both Waku traffic and direct libp2p streams) transits it automatically once the tunnel is established; no per-library integration is required for the async path <span class="small">[inference, high-confidence]</span>.
-
-Above the tunnel, the client uses two transport modes on one libp2p base, chosen by latency and unlinkability needs. Waku pub/sub<sup><a href="#r-gowaku">[4]</a></sup> provides recipient-unlinkability (subscribers pull messages by content-topic, so a relay cannot link a message to a specific recipient beyond the topic's anonymity set) and is mandatory for interoperating with Railgun's broadcaster network<sup><a href="#r-broadcaster">[5]</a></sup>. Direct libp2p-noise streams<sup><a href="#r-gonitro-msg">[6]</a></sup> carry the Nitro settlement "hot loop," where cooperative fills need tens-of-milliseconds round trips that Waku's multi-hop relay and store-and-forward cannot meet.
+An earlier design called for routing all traffic through a Nym mixnet underlay, with a fast 2-hop mode for latency-sensitive paths and a slower 5-hop mode for maximal metadata protection, plus two libp2p transport modes above it (Waku pub/sub for discovery/gossip, direct libp2p-noise streams for a low-latency hot loop). None of this is built. A `cerc-io/mtm-vpn-client` fork of Nym's client is referenced in the earlier design as available to reuse, but no Armada repo integrates it.
 
 <table>
-<tr><th>Component</th><th>What it hides — and from whom</th><th>Maturity</th><th>Mobile</th></tr>
-<tr><td>Nym 5-hop mixnet<sup><a href="#r-nym">[2]</a></sup></td><td>Device IP and traffic timing/volume, from ISP, gateways, and the counterparty; zk-nym unlinks payment from usage</td><td class="ok">mainnet</td><td class="part">Med</td></tr>
-<tr><td>Nym 2-hop Fast (AmneziaWG)<sup><a href="#r-nym">[2]</a></sup></td><td>IP from the destination; hides the WireGuard signature from DPI/censors. Lower latency, weaker metadata cover than 5-hop</td><td class="ok">mainnet</td><td class="part">Med</td></tr>
-<tr><td>CGNAT / eNAT rotation</td><td>Incidental cover only — nothing from the live counterparty, no metadata unlinkability. Not a privacy primitive</td><td class="part">n/a</td><td class="ok">Low</td></tr>
-<tr><td>Waku pub/sub<sup><a href="#r-gowaku">[4]</a></sup><sup><a href="#r-broadcaster">[5]</a></sup></td><td>Which subscriber consumes a message (topic anonymity set). Does not hide sender IP/timing alone; bounded by topic size</td><td class="ok">mainnet</td><td class="new">High (RN)</td></tr>
-<tr><td>libp2p-noise<sup><a href="#r-gonitro-msg">[6]</a></sup><sup><a href="#r-tsnitro">[7]</a></sup></td><td>Transport encryption + peer-id authentication only. No IP privacy — endpoints see each other's IP</td><td class="ok">prod</td><td class="new">High (RN)</td></tr>
+<tr><th>Component</th><th>What it would hide — and from whom</th><th>Status</th></tr>
+<tr><td>Nym mixnet underlay</td><td>Device IP and traffic timing/volume, from ISP, gateways, and the counterparty</td><td>plan — not integrated by any Armada repo</td></tr>
+<tr><td>Waku pub/sub</td><td>Which subscriber consumes a message (topic anonymity set)</td><td>plan — no dependency in any client/relayer/interface repo</td></tr>
+<tr><td>libp2p-noise</td><td>Transport encryption + peer-id authentication; no IP privacy on its own</td><td>plan — same</td></tr>
 </table>
-<div class="note">
-<strong>The mixnet–hot-path tension.</strong> Routing the direct-noise hot loop through the 5-hop mixnet reintroduces the latency the direct path exists to avoid. The realistic design runs hot-path fills over Nym's 2-hop Fast mode (or bypasses the tunnel for them) while async Waku traffic uses either mode. A further caveat: WebRTC-based libp2p transports (UDP/ICE) may not cleanly traverse a WireGuard tunnel without explicit routing — the least-proven part of the Nym-plus-direct-P2P combination on mobile <span class="small">[inference]</span>.
-</div>
 
-## 4. Read, order & submit {#l2}
+## 4. Read & submit {#l2}
 
-This layer contributes two privacy properties and one integrity property. Interest-privacy ensures no one learns which notes a user reads; origin-privacy ensures the on-chain transaction sender is not the user's address; and fair ordering prevents the operator from front-running.
+This layer contributes two privacy properties. Interest-privacy would ensure no one learns which notes a user reads; origin-privacy would ensure the on-chain transaction sender is not the user's address. Neither is complete today.
 
 ### Read-time private sync ★ {#read}
 
-This is the property the whole design rests on. A shielded pool hides a user only inside a crowd, but that guarantee collapses if the way the user reads the pool is revealing. Over a conventional RPC endpoint, the provider observes every `eth_getLogs` / `eth_getStorageAt` the wallet issues and can fingerprint precisely which commitments and nullifiers the user scans for, shrinking the anonymity set toward one. A Laconic watcher<sup><a href="#r-watcher">[11]</a></sup> removes this by serving a proof-carrying, everyone-gets-the-same-bytes stream: the watcher returns the whole relevant slice with a storage/Merkle proof (so the phone verifies authenticity without trusting the watcher), and the wallet performs note-decryption and scanning locally. Because every subscriber pulls identical bytes, the server cannot tell which notes belong to whom. The generic framework is production code; the Railgun-pool/Nitro-adjudicator-specific watcher (its ABIs, state layout, and query schema) is net-new.
+This is the property the whole design rests on. A shielded pool hides a user only inside a crowd, but that guarantee collapses if the way the user reads the pool is revealing. Over a conventional RPC endpoint, the provider observes every call the wallet issues and can fingerprint precisely which commitments and nullifiers the user scans for. Today `armada-interface`'s scanner (`src/lib/shielded/sync.ts`) reads over whatever RPC it is configured with and trusts the answer; it issues no verification step.
+
+The fix in progress is the **nimbus verified proxy** (T1): a client that routes reads through it would verify storage against a beacon-anchored header (EIP-1186 proofs) and verify a block's receipts by rebuilding the receipt trie against `header.receiptsRoot`, so the client trusts the math, not the RPC provider. No Armada client integrates the proxy yet; no server runs it against any Armada chain; `libverifproxy.a` has no mobile cross-compile target. This replaces the earlier plan's watcher-based "proof-carrying, everyone-gets-the-same-bytes" feed, which depended on `watcher-ts` and a nimbus-eth1 state-diff emitter that do not exist either.
 
 ### Write-time origin privacy {#submit}
 
-When the transaction is finally submitted, a broadcaster (Railgun's term; Laconic's equivalent is a keeper) publishes it and pays the gas, so the on-chain `msg.sender` is the broadcaster's address, not the user's, and the user never touches a public mempool from their own key. Railgun's broadcaster client encrypts the transaction payload asymmetrically to the broadcaster's viewing key and exchanges it over fixed Waku content topics<sup><a href="#r-broadcaster">[5]</a></sup>; the MobyMask keeper demonstrates the same submit-on-behalf pattern via a signed-invocation relay<sup><a href="#r-mobymask">[10]</a></sup>. Both are metered by the same go-nitro voucher mechanism used for watcher reads<sup><a href="#r-watcher">[11]</a></sup><sup><a href="#r-gonitro">[9]</a></sup>, so the read and write paths share one value rail.
-
-### Fair ordering {#order}
-
-To stop the operator from front-running, orders are hidden from the venue during sequencing using commit-reveal: the user first submits a commitment `H(order ‖ salt)`; the batch is sealed; a post-seal randomness beacon fixes intra-batch positions; then users reveal, and the matcher runs over the revealed set in the fixed order. This is a net-new protocol with no in-tree implementation today.
+An earlier design called for a broadcaster or keeper to submit the user's transaction and pay the gas, so the on-chain `msg.sender` is not the user's address. Today `armada-interface` submits transactions directly from the user's own key; no broadcaster, keeper, or relay-on-behalf path exists for settlement.
 
 <table>
-<tr><th>Component</th><th>What it hides — and from whom</th><th>Maturity</th><th>Mobile</th></tr>
-<tr><td>★ Read-time private sync (watcher)<sup><a href="#r-watcher">[11]</a></sup></td><td>Which notes/addresses/commitments you care about, from the data provider and read-path observers</td><td class="part">framework prod; pool watcher net-new</td><td class="part">Med</td></tr>
-<tr><td>Write-time origin privacy (broadcaster + keeper)<sup><a href="#r-broadcaster">[5]</a></sup><sup><a href="#r-mobymask">[10]</a></sup></td><td>Your EOA as tx origin, from chain, mempool, and venue; payload encrypted to the broadcaster</td><td class="ok">Railgun prod; keeper PoC</td><td class="part">Med</td></tr>
-<tr><td>Fair ordering (commit-reveal + beacon)</td><td>Order content and sequence from the venue during sequencing</td><td class="new">paper</td><td class="new">High</td></tr>
+<tr><th>Component</th><th>What it would hide — and from whom</th><th>Status</th></tr>
+<tr><td>★ Verified read-time sync (nimbus proxy)</td><td>Which notes/addresses/commitments you care about, from the RPC provider</td><td>proxy exists upstream, unintegrated (T1)</td></tr>
+<tr><td>Write-time origin privacy (broadcaster/keeper)</td><td>Your EOA as tx origin, from chain and mempool observers</td><td>plan — not built</td></tr>
 </table>
 
 ## 5. Settlement, identity & custody {#l3}
 
-The final layer moves value privately, keeps settlement non-custodial, and treats identity as an optional, selectively-disclosed attribute rather than a default.
+The final layer moves value privately, keeps settlement non-custodial, and treats identity as an optional, undesigned-but-planned attribute rather than a default.
 
 ### Value & settlement {#value}
 
-Value privacy comes from the Railgun shielded pool<sup><a href="#r-railgun">[14]</a></sup> — a zk-SNARK (BN254/Groth16) construction of notes, commitments, and nullifiers that hides amount, sender, recipient, and cross-trade linkage. Settlement itself runs over non-custodial Nitro state channels<sup><a href="#r-gonitro">[9]</a></sup>: funds are held by the adjudicator and moved only by user-signed state, so a misbehaving venue can stall a user but never seize funds; the user unilaterally force-closes to their last co-signed state, and the absence of a settlement receipt returns the pre-fill deposit. The two are joined at the Design A boundary, a net-new Nitro↔Railgun adapter that funds and settles channels from shielded notes; across it the venue sees only an ephemeral per-channel identity and the shielded-side order terms.
+Value privacy comes from Armada's own shielded pool — a zk-SNARK construction of notes, commitments, and nullifiers that hides amount, sender, recipient, and cross-trade linkage, built and deployed (T0.0). Settlement runs over non-custodial Nitro state channels: funds are held by `ArmadaNitroAdjudicator` and moved only by user-signed state, so a misbehaving counterparty can stall a user but never seize funds; the user unilaterally force-closes to their last co-signed state (T0.2, built). The pool and the channel are joined inside the same adjudicator contract — `depositFromNote` funds a channel from a note, and a `SHIELD` payout re-shields a channel's outcome — with no separate boundary contract. No client drives a channel lifecycle yet (T6.2, partly built): `armada-interface` calls the pool's shield/transact entry points but has no open/fund-from-note, propose/accept, or close code.
 
 ### Identity {#identity}
 
-Identity is kept thin. The shipped precedent is laconicd's onboarding module<sup><a href="#r-onboarding">[12]</a></sup>, whose on-chain record binds a public key to a role and a KYC <em>receipt id</em> via an external-key signature, recording only the proof, never the underlying KYC data. This is the concrete form of the ex_net "address-signing / prove-a-match-record-only-the-proof" primitive<sup><a href="#r-exnet">[1]</a></sup>. For compliance gating without disclosure, the Laconic Matchmaker<sup><a href="#r-matchmaker">[16]</a></sup> proposes FHE encrypted set-intersection/range matching so two parties can prove they satisfy each other's constraints without either, or the venue, learning identities or exact values. At the network layer, zk-nym credentials<sup><a href="#r-nym">[2]</a></sup> provide the analogous unlinkable, double-spend-resistant access token.
-
-<p class="small"><strong>Off-the-shelf option (optional, future — not built):</strong> <a href="https://github.com/selfxyz/self">Self</a> (zk-passport) could supply the selective-disclosure identity above — on-device passport / EU-ID proof of nationality / age / OFAC / personhood via the standalone Self app, verified off-chain and anchored to an Ethereum address (the Railgun identity stays unlinked). A decent plan, deferred; not built.</p>
+Identity stays optional and has no shipped mechanism. An earlier design named a laconicd onboarding module and an FHE-based matchmaker as precedents; neither is part of any ship-armada repo or plan. The credible option on the table is a Self zk-passport attestation — proven on-device, verified off-chain, anchored to an Ethereum address, with the shielded pool identity left unlinked (T6.8). This is not built and not scheduled.
 
 ### Device key custody {#custody}
 
-Keys never leave the device: the wallet generates a BIP-39 mnemonic on-device, derives HD keys per network, and stores secrets in the OS secure enclave (iOS Keychain / Android Keystore) via `react-native-keychain`<sup><a href="#r-wallet">[13]</a></sup>. The in-house NymVPN fork additionally demonstrates seeding an embedded wallet deterministically from the Nym mnemonic<sup><a href="#r-mtm">[3]</a></sup>, a single-seed custody pattern available to reuse.
+Today, `armada-interface` holds keys in browser memory (`src/lib/shielded/keyManager.ts`). There is no BIP-39/HD custody chain, no OS secure enclave, and no mobile code. An earlier design called for on-device BIP-39 mnemonic generation, HD key derivation, and secure-enclave storage via `react-native-keychain`; none of that exists, because no React Native client exists.
 
 <table>
-<tr><th>Component</th><th>What it hides — and from whom</th><th>Maturity</th><th>Mobile</th></tr>
-<tr><td>Railgun shielded pool<sup><a href="#r-railgun">[14]</a></sup></td><td>Amounts, sender, recipient, cross-trade linkage — from venue, RPC, and chain observers (∝ anonymity-set size)</td><td class="ok">mainnet</td><td class="new">High (mobile prover)</td></tr>
-<tr><td>Design A boundary (Nitro↔Railgun adapter)</td><td>Who you are, fund origin, history, that two channels are you — from the venue</td><td class="new">net-new</td><td class="new">High</td></tr>
-<tr><td>Non-custodial Nitro channels<sup><a href="#r-gonitro">[9]</a></sup></td><td>Not privacy: guarantees no custody — force-close to last co-signed state; no receipt ⇒ refund</td><td class="ok">prod</td><td class="part">Med</td></tr>
-<tr><td>laconicd onboarding proof<sup><a href="#r-onboarding">[12]</a></sup></td><td>Records only a proof (eth-signature + KYC receipt id), never the KYC data; opt-in</td><td class="part">testnet</td><td class="part">Med</td></tr>
-<tr><td>ex_net identity proofs<sup><a href="#r-exnet">[1]</a></sup></td><td>Identity from the venue unless a counterparty/jurisdiction requires a selective proof</td><td class="part">paper + precedent</td><td class="part">Med</td></tr>
-<tr><td>Laconic Matchmaker (FHE)<sup><a href="#r-matchmaker">[16]</a></sup></td><td>Each party's identity/exact values, from the other and the venue, while proving constraints match</td><td class="new">PoC</td><td class="new">High</td></tr>
-<tr><td>Device key custody<sup><a href="#r-wallet">[13]</a></sup></td><td>Keys and mnemonic never leave the device</td><td class="ok">prod (bare-bones)</td><td class="ok">Low</td></tr>
+<tr><th>Component</th><th>What it hides — and from whom</th><th>Status</th></tr>
+<tr><td>Shielded pool</td><td>Amounts, sender, recipient, cross-trade linkage — from a venue, RPC, and chain observers (∝ anonymity-set size)</td><td>built (T0.0)</td></tr>
+<tr><td>Deposit/payout boundary (inside the adjudicator)</td><td>Who you are, fund origin, history — from a future venue</td><td>built (T0.2)</td></tr>
+<tr><td>Non-custodial Nitro channels</td><td>Not privacy: guarantees no custody — force-close to last co-signed state</td><td>built (T0.2); no client drives it yet</td></tr>
+<tr><td>Identity attestation</td><td>Would gate nothing by default; optional proof to a counterparty</td><td>plan — not built (T6.8)</td></tr>
+<tr><td>Device key custody</td><td>Keys stay on-device</td><td>built, browser memory only — not HD, not secure-enclave</td></tr>
 </table>
 
 ## 6. What still leaks {#leaks}
 
-Some exposure remains. In Design A (the v1 scope), the following stand:
+- **No read is verified today.** `armada-interface` trusts its configured RPC. Until the nimbus verified proxy is integrated, a malicious or compromised RPC provider could serve a tampered answer undetected, and any RPC provider can see every query the wallet makes.
+- **The transaction sender is the user's own key.** Without a broadcaster or keeper, every on-chain call from `armada-interface` is attributable to the user's address.
+- **Amounts are public only at the boundary.** Arbitrary amounts are hidden inside the pool; the only exposure is the transparent boundary (shield/unshield, deposit, payout, force-close). A large lone public crossing stands out; once inside, transfers are private.
+- **No network-level IP privacy exists.** Every request the browser makes exposes the user's IP to whatever server receives it.
 
-- **The venue sees trade amounts and terms.** It must, in order to match. Design A makes the venue a blind, non-custodial matcher: it does not learn who you are, your funding source, your history, or that two channels are you. Hiding the amounts/terms from the venue itself is Design B (ZK matching plus a "shielded ForceMove" dispute over hidden state), which is deferred.
-- **Amounts: private inside, boundary-only leak.** Arbitrary amounts are hidden inside the shield (confidential commitments, no denomination buckets); the only exposure is the transparent boundary (shield/unshield, CCTP mint, Aave deposit), mitigated by atomic batched aggregation (CoinJoin-style) plus staying shielded plus a fresh per-channel identity. A large lone public crossing (e.g. a $5M shield) stands out; but once inside, exits/yield/transfers are private if decorrelated. Anonymity-set size (our pool's crowd, Waku topic) is still finite.
-- **CGNAT is not privacy.** It provides no guarantee against the live counterparty; IP privacy must come entirely from the Nym underlay.
-- **Waku exposes the requester's IP** to lightpush/filter/store service nodes unless that traffic is itself tunnelled through Nym.
+## 7. What remains to build {#difficulty}
 
-## 7. Integration difficulty {#difficulty}
-
-The privacy primitives largely exist and are individually production-grade: Nym, Waku, Railgun, and the Nitro adjudicator are all live. Design A requires no new cryptography. The cost is concentrated in two places: making a phone run stacks it cannot run natively today, and building roughly five net-new protocol/contract pieces. Ranked by difficulty:
+The hard work ahead is engineering and integration, not new cryptography: the pool, circuits, and adjudicator already exist and need no redesign for this page's purposes. Ranked by what blocks what:
 
 <table>
-<tr><th>#</th><th>Item</th><th>Why it is hard</th><th>Difficulty</th></tr>
-<tr><td>1</td><td>Real libp2p on React Native — twice, under a VPN</td><td>No working RN libp2p exists today (the wallet is WalletConnect-only). Both a <code>go-waku</code> gomobile native module and a direct-noise path (the MobyMask stack in a WebView, or native) must run inside one app, through the Nym tunnel, within iOS/Android background-execution limits and WebRTC-over-WireGuard routing constraints</td><td class="new">High</td></tr>
-<tr><td>2</td><td>Mobile Railgun prover</td><td>Client-side Groth16 (BN254) witness generation and Merkle note-scanning on a phone; RN has no native prover, so a WASM or native prover must be shipped in-app. Native provers make medium circuits tractable (mopro + rapidsnark: ~0.15–3.4&nbsp;s on a 2024 phone, ~8–20× browser snarkjs), so the binding limit becomes memory on a Railgun-scale circuit — mitigated by folding or a coSNARK server-assist<sup><a href="#r-mopro">[17]</a></sup></td><td class="new">High</td></tr>
-<tr><td>3</td><td>Nitro↔Railgun boundary adapter (Design A)</td><td>A net-new contract that moves value between a shielded-note representation and a channel-deposit representation while preserving unlinkability and remaining unilaterally force-closable</td><td class="new">High</td></tr>
-<tr><td>4</td><td>Commit-reveal + post-seal beacon ordering</td><td>A net-new protocol plus a two-phase (commit → reveal) mobile UX and a trustworthy post-seal randomness source</td><td class="new">High</td></tr>
-<tr><td>5</td><td>★ Railgun/Nitro watcher config + verifying light client</td><td>The framework exists, but the pool-specific watcher (ABIs, state layout, query schema) is net-new, and the phone needs a verifying light client doing local note-scan. Anonymity-set-critical, so it is the do-first item</td><td class="part">Med–High</td></tr>
-<tr><td>6</td><td>Nym mode-selection policy</td><td>Choosing 5-hop (maximal privacy) vs 2-hop Fast (hot-path latency) vs bypass per traffic class; no repository implements this end-to-end on mobile</td><td class="part">Med</td></tr>
+<tr><th>#</th><th>Item</th><th>Why it matters</th><th>Status</th></tr>
+<tr><td>1</td><td>★ Integrate the nimbus verified proxy into a client</td><td>Anonymity-set-critical: until a client verifies reads, every other protection on this page is moot. The proxy exists upstream; no client wires it in, and the fixturenet needs a genesis patch first (T1.2)</td><td>not built</td></tr>
+<tr><td>2</td><td>A channel-driving client</td><td>No code in `armada-interface` or `armada-sdk` opens, funds, or closes a Nitro channel; today's client only shields and transacts against the pool directly</td><td>not built (T6.2)</td></tr>
+<tr><td>3</td><td>A keeper/broadcaster for origin privacy</td><td>Needed so the on-chain sender is not the user's own address</td><td>not built</td></tr>
+<tr><td>4</td><td>A mobile client</td><td>`armada-client`'s `docs/SPEC.md` plans one TypeScript stack across Linux server, browser, iOS, and Android; zero lines of `src/` exist</td><td>not built (T6.5)</td></tr>
+<tr><td>5</td><td>A native mobile prover</td><td>A browser Web Worker `snarkjs` prover exists (T6.1); no native mopro/rapidsnark prover exists for a phone</td><td>not built (T6.6)</td></tr>
+<tr><td>6</td><td>A network-privacy underlay</td><td>No mixnet, Waku, or libp2p integration exists anywhere in the client stack</td><td>plan</td></tr>
 </table>
 
-### Reusable today (Low / wire-up)
+### Built today
 
-- **On-device key custody**<sup><a href="#r-wallet">[13]</a></sup> — already ships; only new signing paths are additive.
-- **Nitro adjudicator / ForceMove**<sup><a href="#r-gonitro">[9]</a></sup> — live on Ethereum; the mobile side runs the in-browser ts-nitro node<sup><a href="#r-tsnitro">[7]</a></sup> in a WebView.
-- **Railgun shielded pool**<sup><a href="#r-railgun">[14]</a></sup> — live and immutable (Armada's); consumed, not built.
-- **NymVPN client**<sup><a href="#r-mtm">[3]</a></sup> — shipped for Android/iOS in-house; wire-up, plus the embedded-wallet-from-mnemonic precedent.
-- **Keeper relay + broadcaster**<sup><a href="#r-broadcaster">[5]</a></sup><sup><a href="#r-mobymask">[10]</a></sup> — the Railgun broadcaster is production; the keeper submit is a trivial RPC call.
-- **Onboarding proof**<sup><a href="#r-onboarding">[12]</a></sup> — a Cosmos message the wallet nearly signs already; add the external-key signature and public-key return.
+- **Shielded pool** — live and deployed (T0.0).
+- **Nitro adjudicator, with the merged deposit/payout boundary** — live on Ethereum (T0.2).
+- **Browser Groth16 prover** — a `snarkjs` Web Worker in `armada-interface`/`armada-sdk` (T6.1).
+- **Device key custody (browser only)** — `armada-interface`'s in-memory key manager (T6.0).
 
 <div class="note">
-<strong>Bottom line.</strong> For v1 the hard work is engineering, not cryptography: (a) running two libp2p transports plus a ZK prover on a phone under a mixnet VPN, and (b) four net-new protocol/contract pieces: the boundary adapter, commit-reveal ordering, the pool-specific watcher, and the glue that connects them. The do-first item is read-time private sync (§4): if reads leak, the pool's anonymity set collapses and every other protection on this page becomes moot.
+<strong>Bottom line.</strong> The do-first item is integrating the nimbus verified proxy (§4): until a client verifies reads, the pool's anonymity-set guarantee is only a design intention, not a property any user has today.
 </div>
 
 <hr/>
 
 ## References {#refs}
 
-<p class="small">Code links use GitHub where a mirror exists, otherwise the Laconic Gitea (<code>git.vdb.to</code>). Commits are pinned so line references stay stable; <code>mtm-vpn-client</code> is a private repository.</p>
 <ol class="refs">
-<li id="r-exnet"><strong>ex_net whitepaper</strong>, Vulcanize (© 2017). <a href="ex_net_whitepaper.pdf">ex_net_whitepaper.pdf</a> (in this repo) — "Address signing / Identity proofs," "Liquidity proofs."</li>
-<li id="r-nym"><strong>NymVPN client</strong> — 5-hop mixnet + 2-hop AmneziaWG + zk-nym credentials. <a href="https://github.com/nymtech/nym-vpn-client">github.com/nymtech/nym-vpn-client</a>; crates <code>nym-vpn-core/crates/{nym-vpn-lib, nym-gateway-directory, nym-vpn-credential-fetcher, nym-vpn-account-controller, nym-vpn-lib-uniffi, nym-wg-go, nym-routing, nym-dns, nym-firewall}</code>.</li>
-<li id="r-mtm"><strong>cerc-io/mtm-vpn-client</strong> — in-house NymVPN fork (private). <code>git.vdb.to/cerc-io/mtm-vpn-client</code>; branch <code>release-nym-vpn-android-v1.5.0-mtm-0.1.0</code> — embedded wallet seeded from the Nym mnemonic (#16, #11), all changes under <code>nym-vpn-android/</code>. <span class="small">Parent-verified via SSH clone; not anonymously reachable.</span></li>
-<li id="r-gowaku"><strong>go-waku</strong> — mobile Waku (filter/lightpush/store/relay) with gomobile bindings. <a href="https://github.com/waku-org/go-waku">github.com/waku-org/go-waku</a>; <code>library/mobile</code>, <code>library/{filter,lightpush,store,relay}.go</code>. (<code>@waku/sdk</code> is not React-Native compatible; the mobile path is the native gomobile module.)</li>
-<li id="r-broadcaster"><strong>Railgun Waku broadcaster client</strong> — gasless origin-privacy over fixed Waku content topics. <a href="https://github.com/Railgun-Community/waku-broadcaster-client">github.com/Railgun-Community/waku-broadcaster-client</a>; <code>packages/common/src/waku/waku-topics.ts</code> (<code>/railgun/v2/${chain.type}-${chain.id}-{fees,transact,transact-response}/json</code>), <code>packages/common/src/transact/broadcaster-transaction.ts</code> (payload encrypted to the broadcaster viewing key).</li>
-<li id="r-gonitro-msg"><strong>go-nitro P2P message service</strong> — direct libp2p-noise streams. <a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/node/engine/messageservice/p2p-message-service/service.go">node/engine/messageservice/p2p-message-service/service.go</a> @ <code>435eb2b</code> (<code>/nitro/msg/1.0.0</code>; noise over TCP/WebSocket — encryption + auth only).</li>
-<li id="r-tsnitro"><strong>ts-nitro</strong> — in-browser/mobile Nitro node. <a href="https://github.com/cerc-io/ts-nitro/tree/884d616a9a026742ef1ce57233801a13d681375a">github.com/cerc-io/ts-nitro</a> @ <code>884d616</code>; uses <code>@chainsafe/libp2p-noise</code> via <code>@cerc-io/peer</code> (circuit-relay + webrtc-star + gossipsub).</li>
-<li id="r-gonitro"><strong>go-nitro settlement</strong> — non-custodial channels &amp; dispute game. <a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/packages/nitro-protocol/contracts/ForceMove.sol">ForceMove.sol</a> (challenge L39 / checkpoint L90 / conclude L127), <code>NitroAdjudicator.sol</code>, <code>MultiAssetHolder.sol</code>, <code>protocols/swap</code>, <code>payments/vouchers.go</code>, all @ <code>435eb2b</code>.</li>
-<li id="r-mobymask"><strong>mobymask keeper</strong> — submit-on-behalf relay (keeper lineage). <a href="https://github.com/cerc-io/mobymask/blob/23291987766f863e366a344973670c57cd82d678/packages/server/index.ts">packages/server/index.ts</a> @ <code>2329198</code> (<code>submitInvocations → registry.invoke</code>). PoC OpenRPC relayer.</li>
-<li id="r-watcher"><strong>watcher-ts</strong> — proof-carrying, metered read-time sync framework. <a href="https://github.com/cerc-io/watcher-ts/blob/18ca4e1a08328770af8e10f15f2128a459c9c704/packages/util/src/types.ts">packages/util/src/types.ts</a> (<code>getStorageAt → {value, proof}</code>), <code>indexer.ts</code>, <code>misc.ts</code>, <code>payments.ts</code> (go-nitro voucher metering), <code>constants.ts</code> (paid RPC methods), all @ <code>18ca4e1</code>. The Railgun/Nitro-specific watcher config is net-new.</li>
-<li id="r-onboarding"><strong>laconicd onboarding</strong> — selective-disclosure identity proof. <a href="https://git.vdb.to/cerc-io/laconicd/src/commit/d130608f672983cb65acfbddc89976747a417aac/proto/cerc/onboarding/v1/onboarding.proto">proto/cerc/onboarding/v1/onboarding.proto</a> (<code>Participant</code>: <code>role</code>, <code>kyc_id</code>), <code>tx.proto</code> (<code>MsgOnboardParticipant</code>: <code>eth_payload</code>, <code>eth_signature</code>), @ <code>d130608</code>.</li>
-<li id="r-wallet"><strong>laconic-wallet</strong> — on-device key custody. <a href="https://git.vdb.to/cerc-io/laconic-wallet/src/commit/bb5223afdab0d16822bb3c119b6ba2350dab921e">git.vdb.to/cerc-io/laconic-wallet</a> @ <code>bb5223a</code>, <code>src/utils/accounts.ts</code> (BIP-39 mnemonic + HD derivation, <code>react-native-keychain</code>); browser build <a href="https://git.vdb.to/cerc-io/laconic-wallet-web/src/commit/2a4a478e32d0a677711ac41f93ff40f364851c3a">laconic-wallet-web</a> @ <code>2a4a478</code>.</li>
-<li id="r-railgun"><strong>Railgun</strong> — shielded-pool contracts &amp; circuits (BN254/Groth16; commitments/nullifiers). <a href="https://github.com/Railgun-Privacy/contract">github.com/Railgun-Privacy/contract</a>, <a href="https://github.com/Railgun-Privacy/circuits-v2">circuits-v2</a>. Armada's; immutable; consumed, not modified.</li>
-<li id="r-chainsig"><strong>chain-signatures</strong> — threshold Schnorr (<code>ethschnorr</code> / <code>ethdss</code>) backing slashable sequencing/censorship receipts. <a href="https://git.vdb.to/cerc-io/chain-signatures/src/commit/9016a7c4a7f046cac8f57b3335a1afcde346e75f/ethdss/ethdss.go">git.vdb.to/cerc-io/chain-signatures</a> @ <code>9016a7c</code>.</li>
-<li id="r-matchmaker"><strong>Laconic Matchmaking Services</strong> proposal, Nov 2022 — privacy-preserving, broker-dealer-compliant matching via FHE encrypted set-intersection / range matching. Internal Google Doc (Laconic/Vulcanize access required).</li>
-<li id="r-mopro"><strong>Mobile proving — benchmarks &amp; alternatives</strong> — on-device Groth16 timings (mopro/rapidsnark), the memory wall, and Ethereum-compatible proving alternatives (ProveKit, ICICLE-Metal, coSNARKs, folding). Research note: <a href="mobile-proving-research.html">mobile-proving-research</a>; primary data <a href="https://zkmopro.org/docs/performance">zkmopro.org/docs/performance</a>.</li>
+<li id="r-poc"><strong>armada-poc</strong> — the shielded pool. <code>origin/main@102f17b8</code>.</li>
+<li id="r-nitro"><strong>armada-nitro</strong> — `ArmadaNitroAdjudicator`, patched `go-nitro`. <code>origin/integrated@55939ef</code>.</li>
+<li id="r-interface"><strong>armada-interface</strong> — the live web client. <code>src/lib/shielded/{sync.ts,keyManager.ts,sdk-prover.ts}</code>, <code>src/features/{shield,transfer-shielded,unshield}/handler.ts</code>. <code>origin/main@6968cd7</code>.</li>
+<li id="r-sdk"><strong>armada-sdk</strong> — the browser Groth16 prover. <code>src/prover/index.ts</code>. <code>origin/main@db5757f</code>.</li>
+<li id="r-client"><strong>armada-client</strong> — the unbuilt mobile-stack plan. <code>docs/SPEC.md</code>, <code>origin/main@78a8fdc</code>.</li>
+<li id="r-nimbus"><strong>nimbus-eth1 verified proxy</strong> — the proof path (T1), unintegrated. <a href="https://github.com/status-im/nimbus-eth1">github.com/status-im/nimbus-eth1</a>, <code>master@4df52ef</code>.</li>
+<li id="r-forcemove"><strong>ForceMove.sol</strong> (challenge/checkpoint/conclude), vendored into `armada-nitro`. <a href="https://github.com/cerc-io/go-nitro/blob/435eb2b02777d740483f5b5953ed5b88ef90c665/packages/nitro-protocol/contracts/ForceMove.sol">go-nitro · ForceMove.sol</a>.</li>
+<li id="r-mopro"><strong>Mobile proving — benchmarks &amp; alternatives</strong> — on-device Groth16 timings and alternatives, relevant once a native mobile prover is scoped. <a href="mobile-proving-research.html">mobile-proving-research</a>.</li>
 </ol>
 
-<p class="small" style="margin-top:26px">Companion to <a href="architecture.html">Architecture</a> (tier stack) and the <a href="build-plan.html">Build plan</a> (status &amp; backlog). Design B (ZK matching + shielded ForceMove) is deferred and out of scope for this document.</p>
+<p class="small" style="margin-top:26px">Companion to <a href="architecture.html">Architecture</a> (tier stack) and the <a href="engineering/build-plan.html">Build plan</a> (status &amp; backlog). Earlier references to Nym, Waku, libp2p, <code>watcher-ts</code>, MobyMask, <code>laconic-wallet</code>, and a Laconic FHE matchmaker are removed: none of them are reused in any ship-armada repo (ruling 7, brief §4).</p>

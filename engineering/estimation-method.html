@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Estimation method: points and 5090 hours — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../engineering/build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="estimation-method-points-and-5090-hours">Estimation method: points and 5090 hours</h1>
+<p>estimation method · 2026-10-20</p>
+<p>This is the estimation method for armada-laconic. The plan
+(<a href="./build-plan.html"><code>build-plan.md</code></a>) states every unit of work in these points and
+converts them to hours on the 5090 with these rules. It replaces the old
+"linear difficulty points" (1–10) scale; that scale and its numbers are gone from
+this doc set.</p>
+<p>Source: session <code>01a150cb</code>, 2026-10-19 03:14 to 03:31 UTC, recorded in
+<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §2 ("Context
+scale"), §7 and §8.</p>
+<h2 id="1-the-unit">1. The unit</h2>
+<p>One <strong>point</strong> is 10,000 tokens of peak context that one worker must hold at one
+moment (<code>exophial/src/exophial/estimate.py:199</code>, <code>TOKENS_PER_POINT = 10_000</code>;
+exophial issue exo-231a.1). Points measure the size of a task, not its
+difficulty, and not cumulative token spend.</p>
+<p>A <strong>chunk</strong> is one unit of work that one worker does in one session: one brief,
+one branch, one acceptance check. Every plan item is a chunk or a list of chunks.</p>
+<h2 id="2-size-limits">2. Size limits</h2>
+<ul>
+<li>The 27B model on the 5090 holds 163,200 tokens, so the exophial dispatcher
+  refuses any pebble above 16 points on the 5090. marks holds 262,144 tokens,
+  so 26 points there.</li>
+<li>A worker starts at about 86,000 tokens before its first tool call (one
+  measured cloud worker, session <code>01a0fd64</code>, 2026-10-02). On the 5090 that leaves
+  about 8 points of real work.</li>
+<li>So a chunk for the local route is at most <strong>9 points</strong>. A larger chunk is split,
+  or starts on Sonnet.</li>
+<li>No chunk is above 12 points on any route.</li>
+</ul>
+<p>Anchors from the MetaLeX plan: a bootstrap chunk is 4 points; a derivation with
+test vectors is 7; a funding flow with a privacy assertion is 9; a deploy module
+is 10.</p>
+<h2 id="3-from-points-to-hours">3. From points to hours</h2>
+<ul>
+<li>Decode is not the limit. The 5090 decodes 45 tok/s on average under real agent
+  load (vLLM lifetime metrics, session <code>01a0deb8</code>, 2026-09-27), and 116.7 to 138
+  tok/s warm (<code>~/qwen3.8-27b-vllm-omp-setup.md</code> lines 216-242). One measured
+  worker wrote about 1,100 output tokens per point (session <code>01a0fd64</code>). On
+  decode alone, 30 minutes covers about 70 points.</li>
+<li>Turn overhead is the limit. A pilot pebble on marks took 923 s over 62 turns,
+  about 15 s per turn, mostly tool execution, prefill and the gate (session
+  <code>01a0bd0d</code>, 2026-09-25).</li>
+<li>Rule: <strong>one 30-minute session completes one chunk of about 10 points</strong>, or two
+  chunks if both are small (about 5 points or less).</li>
+<li>Hours for a plan = (number of chunks, counting two small chunks as one) × 0.5
+  hours, before rework. Example: the 209-point list has about 27 chunks, so about
+  27 sessions, or 13 to 14 hours of worker time.</li>
+<li>Parallel hosts shorten the calendar time, not the worker hours. The
+  dependency graph decides how many chunks can run at once.</li>
+</ul>
+<h2 id="4-how-the-plan-uses-it">4. How the plan uses it</h2>
+<ul>
+<li>Every stage lists its chunks. Each chunk has an id, a one-line deliverable, its
+  dependencies, its points, and its route (5090 if at most 9 points; otherwise
+  split, or Sonnet).</li>
+<li>Each stage gives its total points, its session count and its hours by §3.</li>
+<li>The plan ends with the totals: points, sessions, 5090 hours, and the critical
+  path in sessions.</li>
+<li>Circuit work and the critical-path chunks P1 and N5 carry a routing note: circom
+  on the 27B model is not measured (lab book §8), so these are the chunks most
+  likely to escalate to Sonnet through <code>contextPromotion</code>. Every chunk still
+  starts on the 5090 (operator ruling, CHUNK-RULES.md rule 1); there is no
+  separate plan-time Sonnet assignment.</li>
+</ul>
+<h2 id="5-limits-of-the-method">5. Limits of the method</h2>
+<ul>
+<li>The output-per-point figure and the 15 s turn come from one sample each.</li>
+<li>Rework, review and gate failures are not in the hours.</li>
+<li>Mark any estimate that rests on these samples as [INFERENCE] where it matters.</li>
+</ul>
+
+<hr/>
+<p class="small">Generated from <code>engineering/estimation-method.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+for (const code of document.querySelectorAll("code.language-mermaid")) {
+  const div = document.createElement("div");
+  div.className = "mermaid";
+  div.textContent = code.textContent;
+  (code.closest("pre") || code).replaceWith(div);
+}
+mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+mermaid.run();
+</script>
+
+</body>
+</html>

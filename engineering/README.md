@@ -13,11 +13,12 @@ The documentation is organized according to **[arc42](https://arc42.org)** (Star
 | 2 | [Constraints](./02-constraints.md) | non-custodial, pool immutable, Ethereum-anchored, mobile-first |
 | 3 | [Context & Scope](./03-context-and-scope.md) | reuse vs net-new boundary ([ADR-0013](./09-architecture-decisions.md#adr-0013)); external systems |
 | 4 | [Solution Strategy](./04-solution-strategy.md) | nitro-on-railgun; integration-not-new-crypto; delivery increments |
+| 4· | [Build Plan](./build-plan.md) | the one ordered sequence of stages; points and 5090 hours ([`estimation-method.md`](./estimation-method.md)) |
 | 5 | [Building Block View](./05-building-block-view.md) | the tier stack + **item registry** (T0–T6 detail docs) |
 | 6 | [Runtime View](./06-runtime-view.md) | swap, deposit→Nitro→payout, challenge/watchtower flows |
 | 7 | [Deployment View](./07-deployment-view.md) | watcher parties (browser/mobile/server peers), relays, fixturenet |
 | 8 | [Cross-cutting Concepts](./08-crosscutting-concepts.md) | privacy, settlement, transport, metering, identity, trusted setup |
-| 9 | [Architecture Decisions](./09-architecture-decisions.md) | ADRs 0001–0018; append-only log with clause-level supersession |
+| 9 | [Architecture Decisions](./09-architecture-decisions.md) | ADRs 0001–0020; append-only log with clause-level supersession |
 | 9a | [Current Decisions](./09a-current-decisions.md) | **generated** live view: every accepted ADR's live clauses + the supersession table ([`compile-decisions.py`](../tools/compile-decisions.py)) |
 | 9· | [Decision records](./decision-records.md) | how ADRs are written, superseded, and compiled (style + mechanics) |
 | 10 | [Quality Requirements](./10-quality-requirements.md) | non-custody, read-time privacy, latency, force-closability |

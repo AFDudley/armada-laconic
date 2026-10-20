@@ -16,9 +16,8 @@ The core idea is one sentence (ADR-0004):
 A shielded note is unshielded into `ArmadaNitroAdjudicator`'s `depositFromNote`, which
 funds a Nitro channel. Parties then play arbitrary off-chain **ForceMove** games, and a
 `SHIELD`-type allocation pays the channel outcome back out into fresh notes. The code
-merges this deposit/payout boundary into the adjudicator itself; there is no separate
-boundary contract and no `fundChannel` (ruling 1, `labbook/2026-10-19-docs-versus-code.md`;
-T0.2 in §5). The Nitro game analysis and the Railgun privacy analysis stay fully
+merges this deposit/payout boundary into the adjudicator itself (ruling 1,
+`labbook/2026-10-19-docs-versus-code.md`; T0.2 in §5). The Nitro game analysis and the Railgun privacy analysis stay fully
 isolated; they meet only inside `depositFromNote` and the SHIELD payout path. This buys
 optimistic exits and arbitrary settlement games over shielded value **with no new
 cryptography**. Armada's adapters do not use Railgun's RelayAdapt/Cookbook recipe
@@ -117,25 +116,33 @@ payout (T0.2), and scans and confirms balances on-device against the nimbus veri
 proxy (T6.1 over a T1.0/T1.1 proof, once integrated). This exercises the
 *notes-in-Nitro-notes-out* thesis end-to-end with the smallest possible game.
 
-### Critical path through the dependency DAG
+### The sequence, at a high level
 
-```
-        T0.0 ─┐
-              ├─► T0.2 ──► T1.0/T1.1 ──► T1.2 ─┐
-        T0.1 ─┘                               ├─► T4 (venue)  ─► T5
-                                               └─► T6 (wallet) ─► walking skeleton
-```
+The full stage-by-stage sequence, with chunks, points and 5090 hours, is
+[`build-plan.md`](./build-plan.md). At a high level:
 
-- **Already done:** T0.0, T0.1 (pool and circuits, Phase-2 ceremony pending) and T0.2
-  (adjudicator with the merged deposit/payout boundary) are built. Nothing above T0
-  needed to wait for them; they already exist.
-- **Long pole:** integrating the nimbus verified proxy (T1.0, T1.1) into an Armada
-  client and writing the fixturenet genesis patch (T1.2). Every read-side consumer
-  (client reads, future T4 venue, T6 wallet) assumes a verified view of chain state,
-  and today no client code calls the proxy.
-- **Also unbuilt:** the T4 venue and T6's watchtower, mobile transport, and native
-  proving. These sit behind the T1 proof path for any read they need, but do not
-  block on each other.
+- **Already done.** T0.0, T0.1 (pool and circuits, Phase-2 ceremony pending), T0.2
+   (adjudicator with the merged deposit/payout boundary), the CCTP and Aave-v4
+   adapters, the v1 governance/revenue contracts, the FROST hub custodian core, and
+   the web wallet. Nothing later needed to wait for these; they already exist.
+- **Next.** Two independent tracks run first: the `armada-client` daemon (Phase 1)
+  and the proof path (patch the fixturenet genesis, operate the nimbus verified
+  proxy, run the first proof). Both unblock the most later work — client reads and
+  every later client phase depend on them.
+- **Then, in parallel.** A non-upgradeable, contract-owned-notes pool deploy and a
+  generic ZK `IForceMoveApp` for hidden-balance channels (209-point list families
+  F1 and F2). Both feed a Baal treasury governance migration and the
+  armada-nitro side of contract-owned collateral (F3 and F4), which in turn feed
+  client support for the new artifacts (F5) and the `armada-client` channel/
+  watchtower phase (Phase 2).
+- **Later.** Mobile (`armada-client` Phase 3), the watcher federation, the
+  production Phase-2 ceremony, venue v1, the v2/deferred backlog, and the
+  Sepolia-then-mainnet cutover, in that rough order — everything proven on the
+  fixturenet before Sepolia, and on Sepolia before mainnet.
+
+The walking skeleton above is the first integration target inside this sequence,
+not a separate track: it becomes concrete once the proof path (next) and the
+contract-owned-notes pool (then) exist.
 
 ---
 

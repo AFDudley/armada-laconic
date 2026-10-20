@@ -64,4 +64,4 @@ The nimbus state-diff emitter, an IPLD mapper, and the cerc-io `ipld-eth-server`
 - `status-im/nimbus-eth1` `master`, clone at `.scratch/nimbus-eth1` in `armada-laconic` (`4df52ef`, 2026-10-19) — `engine/blocks.nim`, `engine/accounts.nim`, `engine/receipts.nim`, `engine/rpc_frontend.nim`, `engine/engine.nim`, `engine/genesis_params.nim`, `nimbus_verified_proxy_conf.nim`, `library/verifproxy.nim`, `Makefile`.
 - `armada-nitro` `origin/integrated` — `docs/ENVIRONMENT.md` (fixturenet consensus chain: real `geth` + `lighthouse`).
 - `labbook/2026-10-19-nimbus-verified-proxy-proofs.md` (full assessment and work-item table); `labbook/2026-10-19-unified-stack-and-verified-note-sync.md` (the question this entry answers, and the addendum on receipt-trie history).
-- Site docs: [`09-architecture-decisions.html`](./09-architecture-decisions.html#adr-0009), [`build-plan.html`](./build-plan.html) (WI-A..WI-H).
+- Site docs: [`09-architecture-decisions.html`](./09-architecture-decisions.html#adr-0009), [`build-plan.html`](./build-plan.html) (S3, S4).

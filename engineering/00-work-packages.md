@@ -22,11 +22,7 @@ This is the work breakdown: the deliverable-oriented decomposition of the progra
 
 ## What remains
 
-1. **The Phase-2 ceremony.** No shape has a published, multi-party transcript yet.
-2. **The proof path.** Operate the nimbus proxy on a server; patch it for the fixturenet's genesis; ship a WASM build in the browser client; cross-compile for mobile.
-3. **A settlement-client channel lifecycle and a client watchtower.** Neither exists in `armada-interface` or `armada-sdk`.
-4. **Mobile.** `armada-client`'s four-target plan has no code yet.
-5. **A venue.** No code exists for T3 or T4; this is the least mature part of the plan.
+The full ordered sequence, with chunks, points and hours, is [`build-plan.md`](./build-plan.md). In short: the Phase-2 ceremony (no shape has a published, multi-party transcript yet); the proof path (operate the nimbus proxy, patch the fixturenet genesis, ship a WASM build and mobile cross-compiles); a non-upgradeable contract-owned-notes pool deploy; a Baal treasury governance migration; hidden-balance ZK channel apps on armada-nitro; a settlement-client channel lifecycle and watchtower (`armada-client` Phases 1–3); a venue (the least mature part of the plan, with no code and no near-term dependency forcing it).
 
 ## Interface contracts, as built
 
@@ -35,12 +31,9 @@ This is the work breakdown: the deliverable-oriented decomposition of the progra
 - **The proof path, once integrated, exposes:** verified `{value, proof}` reads and verified receipts, through the nimbus proxy, to any client.
 - **The client exposes:** `armada-interface`'s shield/transfer/unshield handlers, over `@armada/sdk`.
 
-## Sequencing, revised
+## Sequencing
 
-1. **The on-chain anchor is already built**; it is the baseline everything else now targets.
-2. **The proof path is the next concrete target**: operate the proxy, patch the fixturenet genesis, and run the first proof (`labbook/2026-10-19-nimbus-verified-proxy-proofs.md` §3.8).
-3. **The client's settlement lifecycle and watchtower** are the next client-side gap, once a verified read path exists to build them against.
-4. **A venue** has no code and no near-term dependency forcing it; it stays last.
+The one ordered sequence of stages is [`build-plan.md`](./build-plan.md). At a high level: the on-chain anchor is already built, so it is the baseline everything else targets; the `armada-client` daemon and the proof path run next, in parallel, because they unblock the most later work; the contract-owned-notes pool deploy and the hidden-balance ZK channel apps follow, feeding the Baal treasury governance migration, the client's channel/watchtower phase, and client support for the new artifacts; a venue, the watcher federation, and the v2/deferred backlog come last.
 
 ## Relationship to the arc42 docs
 

@@ -77,13 +77,13 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 
 ## 4. Railgun / Armada terms
 
-- **Railgun** — Ethereum privacy protocol: a shielded pool using zk-SNARK circuits (BN254 / Groth16). Immutable core (**T0.0**).
-- **Armada** — pluggable **asset-privacy infrastructure for USDC** on Railgun; three tiers (shielded pool / adapters / apps+SDK), crowdfunded, ARM-token DAO + steward. `@ship_armada`, `armada.wtf`. In testnet.
-- **Shielded pool** — the shared privacy pool; privacy compounds with volume (one anonymity set). Railgun pool **T0.0**.
-- **Shielded note / Note** — a shielded UTXO-like value commitment inside the pool, and the unit of shielded value. Railgun pool **T0.0**.
-- **Anonymity set** — the crowd of shielded notes among which a spend is indistinguishable; privacy compounds with volume. It grows only from deposits into our own pool (**T0.7**, ADR-0006).
-- **Commitment** — a note's on-chain hash (its value commitment), added to the pool's Merkle tree. Railgun pool **T0.0**; indexed by **T1.2**.
-- **Nullifier** — a note's spend-marker; prevents double-spending without revealing which note was spent. Railgun pool **T0.0**; indexed by **T1.2**.
+- **Railgun** — the Ethereum privacy protocol whose design Armada's own pool implements: a shielded pool using zk-SNARK circuits (BN254 / Groth16). Armada's pool is its own implementation, not a reuse of Railgun's deployed contracts (ADR-0014).
+- **Armada** — asset-privacy infrastructure for USDC and ETH, built around its own shielded pool, adjudicator, and adapters; crowdfunded, ARM-token DAO + steward. `@ship_armada`, `armada.wtf`. Mainnet `armada-1` runs crowdfund, governance, and CCTP; the pool ships in a later launch (brief §3, known corrections).
+- **Shielded pool** — the shared privacy pool; privacy compounds with volume (one anonymity set). Armada's own pool, implementing the Railgun design (**T0.0**).
+- **Shielded note / Note** — a shielded UTXO-like value commitment inside the pool, and the unit of shielded value. Armada's pool **T0.0**.
+- **Anonymity set** — the crowd of shielded notes among which a spend is indistinguishable; privacy compounds with volume. It grows only from deposits into Armada's own pool (**T0.7**, ADR-0006).
+- **Commitment** — a note's on-chain hash (its value commitment), added to the pool's Merkle tree. Armada's pool **T0.0**.
+- **Nullifier** — a note's spend-marker; prevents double-spending without revealing which note was spent. Armada's pool **T0.0**.
 - **0zk address** — a Railgun private receiving address.
 - **Broadcaster / Relayer** — see §1 ("Relay", Railgun); the **keeper**'s Railgun analog.
 - **Waku** — decentralized libp2p-based p2p messaging (filter / lightpush / store), carrying broadcaster↔user comms and gossip/discovery. Transport **T2.3** (ADR-0008).

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rules for the chunk briefs and their execution — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../engineering/build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="rules-for-the-chunk-briefs-and-their-execution">Rules for the chunk briefs and their execution</h1>
+<p>Operator rulings, 2026-10-20.</p>
+<ol>
+<li><strong>Start on the 5090.</strong> Every implementation pebble starts on the 5090
+   (exophial dispatcher, <code>max_workers: 1</code>). A worker that outgrows the window
+   escalates to Sonnet through <code>contextPromotion</code>; the 5090 then takes the next
+   pebble. At most 4 Sonnet sessions run at once, counting escalated workers and
+   brief writers.</li>
+<li><strong>The husband reviews.</strong> No separate <code>reviewer</code> agent. The husband of each
+   family reviews every chunk before it merges, and reviews the audit-critical
+   chunks (P1, P2, N1, N2, G3) with extra care. Review findings become child
+   pebbles in the family.</li>
+<li><strong>Reuse the armada-nitro e2e work.</strong> Acceptance for every chunk, in every
+   repo, uses the armada-nitro environment and gates, not a new harness:
+   - the laconic-so fixturenet and reconciler
+     (<code>armada-nitro</code> <code>docs/ENVIRONMENT.md</code>, briefs E1 to E9 in <code>docs/tasks/</code>);
+   - the gates under <code>armada-nitro/env/gates/</code>: <code>nitro-e2e</code>, <code>pool-e2e</code>,
+     <code>watchtower</code>, <code>hub-custodian-frost</code>.
+   A chunk that changes the pool, the circuits, governance or the SDK extends
+   the existing reconciler and gates (for example a new step in <code>pool-e2e</code>, or a
+   new gate directory beside them) rather than building a separate fixturenet.
+   The gate chunks G7, N7 and C5 are extensions of these gates (N8 was withdrawn
+   on 2026-10-22: there is no protocol swap fee).</li>
+<li><strong>Fixturenet first, then Sepolia, then mainnet.</strong></li>
+<li><strong>Estimates</strong> use <code>ESTIMATION.md</code> in this directory: points, chunks of at most
+   9 points for the 5090.</li>
+<li><strong>The handoff is the live state.</strong> <code>armada-laconic/notes/handoff-2026-10-20.md</code>
+   §0 records the state of every family, brief, pebble and gate. The lead
+   updates it and commits it to <code>main</code> whenever any of them changes. Husbands
+   report state changes to the lead; they do not edit the handoff. Every brief
+   names the handoff row it moves (family and chunk id).</li>
+</ol>
+
+<hr/>
+<p class="small">Generated from <code>engineering/chunk-rules.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+for (const code of document.querySelectorAll("code.language-mermaid")) {
+  const div = document.createElement("div");
+  div.className = "mermaid";
+  div.textContent = code.textContent;
+  (code.closest("pre") || code).replaceWith(div);
+}
+mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+mermaid.run();
+</script>
+
+</body>
+</html>

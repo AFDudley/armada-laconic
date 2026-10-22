@@ -9,10 +9,11 @@ Repos affected: `armada-laconic` (docs), `armada-circuits` (pool circuits),
 This entry records the pool and armada-nitro decisions. A sibling entry records
 the governance decisions. The two share the pool as a dependency.
 
-Revision, 2026-10-22 (session `01a156a6`): §3a replaces decisions 1, 2, 3, 9 and
-11 for contract owners. A contract owner holds a public per-token balance inside
-the pool, not notes. The replaced decisions stay in place, marked, so the history
-stays readable.
+Revision, 2026-10-22 (session `01a156a6`): §3a records three defects that the
+session found in the merged code, a surplus counter (R4) and a test rule (R8). A
+pool-balance model for contract owners was written into this entry on 2026-10-22
+and withdrawn the same day, because it broke the pool's core invariant; §5
+records it as rejected. Decisions 1, 2, 3, 9 and 11 stand.
 
 ## 1. The question
 
@@ -135,6 +136,16 @@ plan.
   (Treasury entry, decision 23: the N8 swap-fee edge.)
 - 2026-10-22T09:18:16Z — okay, it's also kinda arbitrary and insane because the
   swap happens from within the shielded pool, right?
+- 2026-10-22T09:40:21Z — from inside the pool, a user can send a shielded note to
+  a contract, no problem. What's completely fucking bonkers insane is how does an
+  unshield operation change a shielded balance?
+- 2026-10-22T09:42:09Z — isn't this the core invariant of the shielded pool being
+  violated?
+- 2026-10-22T09:50:17Z — I don't see how this actually reduces the code because
+  you've created a third inconsistent state, that should have dramatically
+  increased the code.
+- 2026-10-22T09:55:11Z — Yeah, fix all these errors in the docs, etc and be
+  exhaustive with regards to this bizarre change you suggested.
 
 ## 3. Findings and decisions
 
@@ -143,16 +154,14 @@ Each finding is one sentence. Each one traces to the evidence or a ruling above.
 1. A Safe can own shielded notes through a `Transact` variant that derives the
    note keys from a public `owner` address and disables the EdDSA check, because
    the hook already exists at `Transact.circom:158` (reply 22:26 UTC).
-   **Replaced for contract owners by §3a R1 (2026-10-22).**
 2. The pool authorizes a contract-owned spend by `msg.sender == owner`, and it
    keeps a public `balance[owner]` registry, because the contract holds no
-   spending key (reply 22:22 UTC). **Replaced by §3a R1–R3: the balance is the
-   holding, not a registry beside notes (2026-10-22).**
+   spending key (reply 22:22 UTC). The registry was never built; §3a records it
+   as an open defect.
 3. A contract-owned note has a public preimage and a public `nullifyingKey`, and
    the creator publishes the preimage in the creating transaction, because the
-   contract cannot decrypt a ciphertext (replies 22:32, 23:00 UTC). **The
-   invariant stays; §3a R2 enforces it: a contract owner receives value only as
-   a public credit (2026-10-22).**
+   contract cannot decrypt a ciphertext (replies 22:32, 23:00 UTC). The merged
+   code does not enforce it; §3a records it as an open defect.
 4. A public nullifier is not a show-stopper, because double-spend prevention
    needs one nullifier per leaf, not a secret key, and the treasury notes are
    public by construction (ruling 2026-10-18T22:30:13Z; reply 22:32 UTC).
@@ -170,8 +179,7 @@ Each finding is one sentence. Each one traces to the evidence or a ruling above.
    only ARM holders (reply 22:34 UTC).
 9. The adjudicator owns its channel collateral as notes, so the collateral never
    leaves the pool and there is no public `deposit` path, no raw-transfer
-   surplus, and no `sweep` (reply 22:54 UTC). **Probably replaced by §3a R6
-   (2026-10-22).**
+   surplus, and no `sweep` (reply 22:54 UTC).
 10. The change to armada-nitro's privacy claims is practically zero, because
     amounts and timing stay public and the sender was already hidden; the one
     gain is that a payout no longer names the recipient's `npk` in a `Shield`
@@ -179,7 +187,6 @@ Each finding is one sentence. Each one traces to the evidence or a ruling above.
 11. The adjudicator-owned note's preimage is published at creation, in the same
     transaction, inside `adaptParams`, and the adjudicator verifies it against
     the proof's output commitment before it credits anything (reply 23:00 UTC).
-    **Probably replaced by §3a R6 (2026-10-22).**
 12. A Safe's balance cannot be made private by any circuit, because the Safe must
     know its own balance to act and holds no secret (reply 23:03 UTC).
 13. Hidden channel balances need a new nitro circuit, because the adjudicator's
@@ -217,11 +224,10 @@ Each finding is one sentence. Each one traces to the evidence or a ruling above.
 24. The mobile surface is a skeleton, so the client chunks C1 to C6 cannot run
     until `armada-client` Phase 1 and Phase 2 merge (reply 12:31 UTC).
 
-## 3a. Revision of 2026-10-22: contract balances in the pool
+## 3a. Findings of 2026-10-22: defects in the merged code
 
-Session `01a156a6` (2026-10-21 13:30 UTC to 2026-10-22 07:25 UTC) traced the
-merged armada-poc code from a deposit to `ShieldedRagequit`. It found three
-defects that decisions 1 to 3 did not prevent:
+Session `01a156a6` traced the merged armada-poc code from a deposit to
+`ShieldedRagequit`. It found three defects that decisions 1 to 3 did not prevent:
 
 - A plain `transact` makes `publicOutputs` optional
   (`TransactModule.sol:543-605`), so a sender can create a contract-owned note
@@ -233,44 +239,17 @@ defects that decisions 1 to 3 did not prevent:
 - The `balance[owner]` registry of decision 2 was never built. So
   `ShieldedRagequit` reads one note that the caller names, not the treasury.
 
-Two invariants stay. A contract-owned value is public at creation (decision 3).
-Incoming treasury value becomes governed value in the same transaction (sibling
-entry, decision 12). A merge of incoming value into an owner's note needs the
-owner as caller, and a payer is not the owner. So the holding itself must be a
-pool balance (rulings 2026-10-21T13:52:42Z, 13:59:25Z and 14:16:39Z).
+These defects are open. They must be fixed inside the note model. The pool's
+core invariant is that value in the pool exists only as notes: every token the
+pool holds backs exactly one unspent note, and the only moves are shield, transact
+and unshield (ruling 2026-10-22T09:42:09Z).
 
-R1. A contract owner holds a public per-token balance in the pool,
-    `balance[owner][token]`, and no notes.
-R2. Any payer credits a contract owner with a private `transact` that ends in an
-    unshield whose destination is `balance[owner][token]` instead of an ERC-20
-    transfer. The unshield output's recipient, token and value are already
-    public and proven by the existing `Transact` circuit
-    (`TransactModule.sol:314-329`; `Transact.circom:103-112`), so the change is
-    in the contracts only: no new circuit and no new ceremony. The pool credits
-    the balance in that transaction.
-R3. The owner spends only as the caller. The pool debits `balance[owner][token]`
-    when `msg.sender == owner` and creates the recipient's note the way `shield`
-    creates one, from the internal balance and with no proof. No shield fee
-    applies, because shield fees apply only to shields
-    (`ShieldModule.sol:130,178`).
-R4. The pool keeps `accounted[token]`. Every shield and credit raises it, and
-    every unshield and debit lowers it. A standard ERC-20 transfer runs no code
-    in the recipient, so the pool cannot refuse a raw transfer or an airdrop.
-    Such tokens form the surplus `balanceOf(pool) − accounted[token]`, which no
-    note and no balance can claim (ruling 2026-10-21T14:20:35Z).
-R5. The pool invariants are exact. Per token, `accounted[token]` equals the
-    value behind unspent notes plus the sum of `balance[owner][token]` over all
-    owners. Per owner, `balance[owner][token]` equals that owner's public
-    credits minus its debits. An inequality is rejected, because it hides a
-    leak (ruling 2026-10-21T14:20:35Z).
-R6. The adjudicator (decisions 9 and 11) probably moves to
-    `balance[adjudicator][token]` too. A separate check must show that the
-    mechanism works for channel collateral before F4 continues (ruling
-    2026-10-21T14:16:39Z).
-R7. The treasury does not need the owned circuit, the owned verifying keys,
-    `transactOwned`, `verifyOwned`, `ownerField` or the optional
-    `publicOutputs`. Their removal waits on R6, because N1a and
-    `ShieldedRagequit` use them today.
+R1, R2, R3, R5, R6, R7. Withdrawn on 2026-10-22: the pool-balance model (§5).
+R4. The pool keeps `accounted[token]`: every shield raises it, and every unshield
+    lowers it. A standard ERC-20 transfer runs no code in the recipient, so the
+    pool cannot refuse a raw transfer or an airdrop. Such tokens form the surplus
+    `balanceOf(pool) − accounted[token]`, which no note can claim (ruling
+    2026-10-21T14:20:35Z). The sibling entry, §3a T4, sweeps it.
 R8. Tests run the production deploy and real proofs. The pool keeps no proof
     bypass: `testingMode` and `VERIFICATION_BYPASS` go. The upstream audit fix
     `534e6306` ("Fix C-1/C-2: remove setTestingMode() and VERIFICATION_BYPASS")
@@ -292,8 +271,7 @@ does not build them.
 | 13, 15, 16 (hidden-balance circuit, generic ZK app, per game type) | N4 `forge test` with a trivial circuit through the ZK app; N5 ledger circuit vectors; N6 game template; F2 gate resolves one hidden-state move on the fixturenet. |
 | 20 (hubs + Aave) | ~~N8 gate: in-channel swap fee → Safe-owned note → `cumulativeFees` → RevenueLock release.~~ Withdrawn on 2026-10-22: there is no protocol swap fee (treasury entry §3a T9). F2 gates cover the hub swap itself. |
 | 24 (client reaches the mobile surface) | C5 gate: hidden-balance `waUSDC` swap through the mobile client on the fixturenet. |
-| R1, R2, R3 (balances, credit by unshield, owner-only debit) | `forge test` on the production deploy: an unshield to a balance raises `balance[owner]`; a debit by any caller other than the owner reverts; a payout pays no shield fee. |
-| R4, R5 (accounting, exact invariants) | Invariant tests on the production deploy: the per-token equality and the per-owner ledger hold; a raw transfer changes only the surplus. |
+| R4 (surplus counter) | An invariant test on the production deploy: per token, `accounted[token]` equals the value of the unspent notes; a raw transfer changes only the surplus. |
 | R8 (no proof bypass) | A test that `PrivacyPool` has no `testingMode` and no `VERIFICATION_BYPASS`; every pool test proves with the real circuit artifacts. |
 
 ## 5. Rejected options
@@ -323,6 +301,22 @@ does not build them.
 - **List items 14, 17 and 21 of the agreed-changes list.** Removed. Any contract
   can hold notes, item 17 was a negative assertion, and item 21 was superseded by
   commitment outcomes (ruling 2026-10-18T23:55:41Z; reply 23:55 UTC).
+- **A pool-internal balance for contract owners** (`balance[owner][token]`,
+  written as §3a R1–R7 on 2026-10-22 and withdrawn the same day). Rejected. It
+  broke the pool's core invariant (rulings 2026-10-22T09:40:21Z and 09:42:09Z):
+  - a payment to a contract was an unshield that kept the tokens in the pool, a
+    fourth move the pool does not have;
+  - the pool held value that was not a note, so the solvency rule had to change
+    from "tokens equal unspent notes" to "tokens equal notes plus balances";
+  - a third party could push value into any contract's balance, which recreated
+    stuck funds inside the pool;
+  - it added code instead of removing it: new storage, a new unshield kind,
+    credit and debit entry points, a second solvency rule, and every check
+    written twice, while the owned-note path stayed for the adjudicator
+    (ruling 2026-10-22T09:50:17Z).
+  The session had claimed it simplified the code by listing only what it
+  removed. A claim that a change is simpler needs two specified lists, the code
+  removed and the code added.
 
 ### A correction the session made to its own evidence
 
@@ -338,7 +332,7 @@ Both statements are in the transcript. The later statement is the finding.
   given that A.2.7 defers this and the answer must not be the Baal DAO?
 - Does the pool restrict a contract-owned note's creation to the owner, so that a
   stranger cannot create an unrecorded commitment at the adjudicator's `npk`?
-  Resolved by §3a R1 and R2 (2026-10-22): a contract owner holds no notes.
+  Open; §3a records the related defects.
 - Where do the pool contracts live? The plan marks `armada-poc/contracts` as an
   [INFERENCE] and asks the operator to confirm, or to init a third repo.
 - Is a per-pebble Sonnet route override available in exophial, or must a husband
@@ -354,8 +348,7 @@ chunk.
 
 Revision, 2026-10-22: N8 is withdrawn, and the "fee-tagged outputs" in P2 and N2
 go, because there is no protocol swap fee (treasury entry, decision 23 struck and
-§3a T9). N1 to N3 and N7 are superseded by §3a R6 pending the pool balance work.
-The table stays as copied.
+§3a T9). The table stays as copied.
 
 | # | Chunk | Depends on | Pts |
 |---|---|---|---:|

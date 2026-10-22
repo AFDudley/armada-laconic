@@ -114,7 +114,7 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-tre
 
 ## S5 — armada-nitro side of contract-owned collateral (next)
 
-**Goal:** `ArmadaNitroAdjudicator` holds its channel collateral in the pool, so collateral never leaves the pool. Revised 2026-10-22: the adjudicator holds a pool balance, `balance[adjudicator][token]`, not notes (contract-owned-notes lab book §3a R6). N1–N3 and N7 are superseded pending the pool balance work, and N8 is withdrawn.
+**Goal:** `ArmadaNitroAdjudicator` holds its channel collateral as contract-owned notes, so collateral never leaves the pool. N8 is withdrawn (there is no protocol swap fee).
 
 **Delivers:** a hardening delta on T0.2.
 

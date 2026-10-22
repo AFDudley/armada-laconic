@@ -299,7 +299,7 @@
 <p><strong>Stage total:</strong> 55 points, 8 sessions, 4.0 h.</p>
 <p><strong>Acceptance:</strong> G7a/G7b extend the armada-nitro environment's <code>pool-e2e</code>/<code>nitro-e2e</code> gates with the crowdfund → claim → vote → spend → ragequit scenario, shield fees only, on the fixturenet; a run where a captured majority blocks an exit, or where a holder cannot exit at any time, must fail. No new harness.</p>
 <h2 id="s5-armada-nitro-side-of-contract-owned-collateral-next">S5 — armada-nitro side of contract-owned collateral (next)</h2>
-<p><strong>Goal:</strong> <code>ArmadaNitroAdjudicator</code> holds its channel collateral in the pool, so collateral never leaves the pool. Revised 2026-10-22: the adjudicator holds a pool balance, <code>balance[adjudicator][token]</code>, not notes (contract-owned-notes lab book §3a R6). N1–N3 and N7 are superseded pending the pool balance work, and N8 is withdrawn.</p>
+<p><strong>Goal:</strong> <code>ArmadaNitroAdjudicator</code> holds its channel collateral as contract-owned notes, so collateral never leaves the pool. N8 is withdrawn (there is no protocol swap fee).</p>
 <p><strong>Delivers:</strong> a hardening delta on T0.2.</p>
 <p><strong>Depends on:</strong> S2 (needs P2b).</p>
 <p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7). N8 is withdrawn: there is no protocol swap fee (treasury lab book, decision 23 struck and §3a T9).</p>

@@ -7,8 +7,8 @@ Lab book entry, 2026-10-18 to 2026-10-19. Session `01a150cb-a1b2-727e-87fc-e7623
 
 Revision, 2026-10-22 (session `01a156a6`): §3a makes the treasury a public pool balance,
 removes every crowdfund code path, and fixes the ragequit divisor. It replaces decisions 6,
-12, 13, 14, 15, 16 and 20, and makes 17 and 18 mechanical. The replaced decisions stay in
-place, marked.
+12, 13, 14, 15, 16 and 20, makes 17 and 18 mechanical, strikes decision 23 (an agent error:
+there is no swap fee), and adds T9. The replaced decisions stay in place, marked.
 
 ## 1. The question
 
@@ -109,6 +109,12 @@ holder exit at any time?
 - 2026-10-22 07:24:49 — "2. Yes. write the entries. 3. Yes. this needs to be well
   documented." Item 3 answered: "does 'excluded' mean the payout divisor is `totalSupply −
   Safe − Hedgey lockup`, read before the burn?"
+- 2026-10-22 09:15:29 — "the fee is to shield-in, right? just answer the question, are the docs
+  clear about this?"
+- 2026-10-22 09:16:33 — "decision 23 was drafted by an agent in error, confirm."
+- 2026-10-22 09:18:16 — "okay, it's also kinda arbitrary and insane because the swap happens
+  from within the shielded pool, right?"
+- 2026-10-22 09:19:02 — "okay update all the docs, the down stream consequences, etc etc."
 
 ## 3. Findings and decisions
 
@@ -176,8 +182,11 @@ Each decision is one sentence. Each traces to the evidence or a ruling above.
 22. RevenueLock keeps its purpose but reads `cumulativeFees` from the pool, so its ratchet
     and wind-down freeze go, and every unlock corresponds to real USDC that ARM holders own
     (session reply, 22:00).
-23. Governance does not depend on armada-nitro, and the one shared edge is N8, which proves
-    that a swap fee reaches RevenueLock (session replies, 03:16 and 03:17).
+23. ~~Governance does not depend on armada-nitro, and the one shared edge is N8, which proves
+    that a swap fee reaches RevenueLock (session replies, 03:16 and 03:17).~~ **Struck on
+    2026-10-22 (ruling 09:16:33).** An agent drafted it in a reply to a question about
+    dependencies; no ruling supported it. There is no protocol swap fee (§3a T9), so N8 is
+    withdrawn and governance has no edge to armada-nitro.
 
 ## 3a. Revision of 2026-10-22: the treasury is a pool balance
 
@@ -228,6 +237,13 @@ T7. Treasury ARM is excluded from the divisor: `divisor = supply − ARM held by
     excluded"; confirmed as this divisor on 2026-10-22 07:24:49).
 T8. The Safe has exactly two modules, Baal and `ShieldedRagequit`. `ShieldedRagequit` may
     make the Safe call only the pool payout of T6(d): no other function and no other target.
+T9. The only protocol fee is the shield-in fee, charged by `ShieldModule` on a shield. There is no
+    swap fee. A swap is a co-signed reallocation inside a channel whose collateral is already in
+    the pool, so it crosses no pool boundary and the protocol is not a party to it; a hub's
+    price is the hub's own spread (rulings 2026-10-22 09:15:29 and 09:18:16). Consequences: N8
+    is withdrawn; the "fee-tagged outputs" of P2 and N2 go; merged P2b code that counts a
+    published `transact` output paid to `feeRecipient` as a fee (`TransactModule.sol`
+    `_recordPreimages` → `_recognizeFee`) is a defect under T2.
 
 Merged code that these decisions correct (armada-poc `integrated`, 2026-10-21):
 
@@ -271,9 +287,8 @@ It does not build them.
 - **Pool invariant tests** (sibling entry R5) show that `balance[Safe][token]` equals its public
   credits minus its debits, and that a raw transfer changes only the surplus. This enforces T1
   and T4.
-- **N8 gate** proves in-channel swap fee → Safe-owned note → `cumulativeFees` → RevenueLock
-  release. A run where a swap fee never reaches RevenueLock must fail. This enforces decisions
-  22 and 23.
+- ~~**N8 gate** proves in-channel swap fee → Safe-owned note → `cumulativeFees` → RevenueLock
+  release.~~ Withdrawn on 2026-10-22: there is no swap fee (§3a T9).
 
 ## 5. Rejected options
 

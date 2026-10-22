@@ -131,6 +131,10 @@ plan.
   the same thing caused by the same issue. confirm.
 - 2026-10-22T07:24:49Z — 2. Yes. write the entries. 3. Yes. this needs to be
   well documented.
+- 2026-10-22T09:16:33Z — decision 23 was drafted by an agent in error, confirm.
+  (Treasury entry, decision 23: the N8 swap-fee edge.)
+- 2026-10-22T09:18:16Z — okay, it's also kinda arbitrary and insane because the
+  swap happens from within the shielded pool, right?
 
 ## 3. Findings and decisions
 
@@ -286,7 +290,7 @@ does not build them.
 | 7 (pool not upgradeable) | P3 non-upgradeable deployment: constructor keys, no proxy, deploy script. |
 | 9, 11 (adjudicator-owned notes, preimage at creation) | N2 `depositFromNote` as an in-pool spend and payout as a spend; N7 re-runs E11 and E16 on in-pool collateral. |
 | 13, 15, 16 (hidden-balance circuit, generic ZK app, per game type) | N4 `forge test` with a trivial circuit through the ZK app; N5 ledger circuit vectors; N6 game template; F2 gate resolves one hidden-state move on the fixturenet. |
-| 20 (hubs + Aave, swap fee to treasury) | N8 gate: in-channel swap fee → Safe-owned note → `cumulativeFees` → RevenueLock release. |
+| 20 (hubs + Aave) | ~~N8 gate: in-channel swap fee → Safe-owned note → `cumulativeFees` → RevenueLock release.~~ Withdrawn on 2026-10-22: there is no protocol swap fee (treasury entry §3a T9). F2 gates cover the hub swap itself. |
 | 24 (client reaches the mobile surface) | C5 gate: hidden-balance `waUSDC` swap through the mobile client on the fixturenet. |
 | R1, R2, R3 (balances, credit by unshield, owner-only debit) | `forge test` on the production deploy: an unshield to a balance raises `balance[owner]`; a debit by any caller other than the owner reverts; a payout pays no shield fee. |
 | R4, R5 (accounting, exact invariants) | Invariant tests on the production deploy: the per-token equality and the per-owner ledger hold; a raw transfer changes only the surplus. |
@@ -347,6 +351,11 @@ Both statements are in the transcript. The later statement is the finding.
 Copied from the 209-point list of 2026-10-19 03:17 UTC. This entry covers the
 pool chunks, the armada-nitro chunks, the client chunks, and the D2 document
 chunk.
+
+Revision, 2026-10-22: N8 is withdrawn, and the "fee-tagged outputs" in P2 and N2
+go, because there is no protocol swap fee (treasury entry, decision 23 struck and
+§3a T9). N1 to N3 and N7 are superseded by §3a R6 pending the pool balance work.
+The table stays as copied.
 
 | # | Chunk | Depends on | Pts |
 |---|---|---|---:|

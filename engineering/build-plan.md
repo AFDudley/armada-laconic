@@ -61,7 +61,7 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-con
 |---|---|---|---:|---|
 | P1 | Contract-owned `Transact` variant, differential tests, manifest shapes | — | 9 | 5090 (circom; unmeasured, flagged for escalation) |
 | P2a | Owner auth path, preimage registry | P1 | 6 | 5090 |
-| P2b | Fee-tagged outputs, pool-level `cumulativeFees`, `ShieldModule` fee note, tests | P2a | 5 | 5090 |
+| P2b | ~~Fee-tagged outputs,~~ pool-level `cumulativeFees`, `ShieldModule` fee note, tests (fee-tagged outputs withdrawn 2026-10-22: there is no swap fee) | P2a | 5 | 5090 |
 | P4 | Phase-2 run for the new shapes | P1 | 4 | 5090 |
 | P3 | Non-upgradeable deployment: constructor keys, no proxy, deploy script | P2b, P4 | 6 | 5090 |
 
@@ -114,25 +114,25 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-tre
 
 ## S5 — armada-nitro side of contract-owned collateral (next)
 
-**Goal:** `ArmadaNitroAdjudicator` holds its channel collateral as contract-owned notes, so collateral never leaves the pool.
+**Goal:** `ArmadaNitroAdjudicator` holds its channel collateral in the pool, so collateral never leaves the pool. Revised 2026-10-22: the adjudicator holds a pool balance, `balance[adjudicator][token]`, not notes (contract-owned-notes lab book §3a R6). N1–N3 and N7 are superseded pending the pool balance work, and N8 is withdrawn.
 
 **Delivers:** a hardening delta on T0.2.
 
 **Depends on:** S2 (needs P2b).
 
-Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md` §7); N8 also depends on S4's G4.
+Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md` §7). N8 is withdrawn: there is no protocol swap fee (treasury lab book, decision 23 struck and §3a T9).
 
 | Chunk | Deliverable | Depends on | Pts | Route |
 |---|---|---|---:|---|
 | N1 | `MultiAssetHolder` on commitments | P2b (S2) | 11 | Sonnet (audit-critical) |
-| N2 | `depositFromNote` as in-pool spend, payout as spend including fee-tagged outputs to the Safe, tests | N1 | 10 | Sonnet (audit-critical) |
+| N2 | `depositFromNote` as in-pool spend, payout as spend ~~including fee-tagged outputs to the Safe~~, tests | N1 | 10 | Sonnet (audit-critical) |
 | N3 | Commitment-outcome finalization branch, tests | N2 | 8 | 5090 |
 | N7 | E11 and E16 gates updated for in-pool collateral | N2, N3 | 8 | 5090 |
-| N8 | Gate: in-channel swap fee → Safe-owned note → `cumulativeFees` → RevenueLock release | N2, N7, G4 (S4) | 6 | 5090 |
+| ~~N8~~ | ~~Gate: in-channel swap fee → Safe-owned note → `cumulativeFees` → RevenueLock release~~ (withdrawn 2026-10-22) | — | 0 | — |
 
-**Stage total:** 43 points, 5 sessions, 2.5 h.
+**Stage total:** 37 points, 4 sessions, 2.0 h.
 
-**Acceptance:** N7 extends `nitro-e2e` with in-pool-collateral coverage of E11/E16; N8 extends `pool-e2e`/`nitro-e2e` with the in-channel-swap-fee-to-RevenueLock scenario. No new harness.
+**Acceptance:** N7 extends `nitro-e2e` with in-pool-collateral coverage of E11/E16. No new harness.
 
 ## S6 — armada-client Phase 1 (next)
 
@@ -357,7 +357,7 @@ No engineering chunk remains for this stage. Sepolia is currently out of scope (
 | S2 | 30 | 4 | 2.0 |
 | S3 | 23 | 3 | 1.5 |
 | S4 | 55 | 8 | 4.0 |
-| S5 | 43 | 5 | 2.5 |
+| S5 | 37 | 4 | 2.0 |
 | S6 | 25 | 3 | 1.5 |
 | S7 | 14 | 2 | 1.0 |
 | S8 | 32 | 4 | 2.0 |
@@ -369,7 +369,7 @@ No engineering chunk remains for this stage. Sepolia is currently out of scope (
 | S14 | 29 | 4 | 2.0 |
 | S15 | 107 | 12 | 6.0 |
 | S16 | 0 | 0 | 0.0 |
-| **Total** | **493** | **62** | **31.0** |
+| **Total** | **487** | **61** | **30.5** |
 
 **Critical path, 209-point programme chunks (`labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md` §8, `labbook/2026-10-18-treasury-governance-baal-safe-shielded.md` §7, as split in S2 and S4):** P1 → P2a → P2b → G3 → G7a → G7b — 6 chunks, 6 sessions, 3.0 h, before rework.
 

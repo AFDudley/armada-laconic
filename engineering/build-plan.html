@@ -159,7 +159,7 @@
 </tr>
 <tr>
 <td>P2b</td>
-<td>Fee-tagged outputs, pool-level <code>cumulativeFees</code>, <code>ShieldModule</code> fee note, tests</td>
+<td>~~Fee-tagged outputs,~~ pool-level <code>cumulativeFees</code>, <code>ShieldModule</code> fee note, tests (fee-tagged outputs withdrawn 2026-10-22: there is no swap fee)</td>
 <td>P2a</td>
 <td style="text-align: right;">5</td>
 <td>5090</td>
@@ -299,10 +299,10 @@
 <p><strong>Stage total:</strong> 55 points, 8 sessions, 4.0 h.</p>
 <p><strong>Acceptance:</strong> G7a/G7b extend the armada-nitro environment's <code>pool-e2e</code>/<code>nitro-e2e</code> gates with the crowdfund → claim → vote → spend → ragequit scenario, shield fees only, on the fixturenet; a run where a captured majority blocks an exit, or where a holder cannot exit at any time, must fail. No new harness.</p>
 <h2 id="s5-armada-nitro-side-of-contract-owned-collateral-next">S5 — armada-nitro side of contract-owned collateral (next)</h2>
-<p><strong>Goal:</strong> <code>ArmadaNitroAdjudicator</code> holds its channel collateral as contract-owned notes, so collateral never leaves the pool.</p>
+<p><strong>Goal:</strong> <code>ArmadaNitroAdjudicator</code> holds its channel collateral in the pool, so collateral never leaves the pool. Revised 2026-10-22: the adjudicator holds a pool balance, <code>balance[adjudicator][token]</code>, not notes (contract-owned-notes lab book §3a R6). N1–N3 and N7 are superseded pending the pool balance work, and N8 is withdrawn.</p>
 <p><strong>Delivers:</strong> a hardening delta on T0.2.</p>
 <p><strong>Depends on:</strong> S2 (needs P2b).</p>
-<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7); N8 also depends on S4's G4.</p>
+<p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7). N8 is withdrawn: there is no protocol swap fee (treasury lab book, decision 23 struck and §3a T9).</p>
 <table>
 <thead>
 <tr>
@@ -323,7 +323,7 @@
 </tr>
 <tr>
 <td>N2</td>
-<td><code>depositFromNote</code> as in-pool spend, payout as spend including fee-tagged outputs to the Safe, tests</td>
+<td><code>depositFromNote</code> as in-pool spend, payout as spend ~~including fee-tagged outputs to the Safe~~, tests</td>
 <td>N1</td>
 <td style="text-align: right;">10</td>
 <td>Sonnet (audit-critical)</td>
@@ -343,16 +343,16 @@
 <td>5090</td>
 </tr>
 <tr>
-<td>N8</td>
-<td>Gate: in-channel swap fee → Safe-owned note → <code>cumulativeFees</code> → RevenueLock release</td>
-<td>N2, N7, G4 (S4)</td>
-<td style="text-align: right;">6</td>
-<td>5090</td>
+<td>~~N8~~</td>
+<td>~~Gate: in-channel swap fee → Safe-owned note → <code>cumulativeFees</code> → RevenueLock release~~ (withdrawn 2026-10-22)</td>
+<td>—</td>
+<td style="text-align: right;">0</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Stage total:</strong> 43 points, 5 sessions, 2.5 h.</p>
-<p><strong>Acceptance:</strong> N7 extends <code>nitro-e2e</code> with in-pool-collateral coverage of E11/E16; N8 extends <code>pool-e2e</code>/<code>nitro-e2e</code> with the in-channel-swap-fee-to-RevenueLock scenario. No new harness.</p>
+<p><strong>Stage total:</strong> 37 points, 4 sessions, 2.0 h.</p>
+<p><strong>Acceptance:</strong> N7 extends <code>nitro-e2e</code> with in-pool-collateral coverage of E11/E16. No new harness.</p>
 <h2 id="s6-armada-client-phase-1-next">S6 — armada-client Phase 1 (next)</h2>
 <p><strong>Goal:</strong> one daemon runs the wallet and the relayer against the armada-nitro environment, end to end.</p>
 <p><strong>Delivers:</strong> the client's <code>config</code>, <code>contracts</code>, <code>wallet</code>, <code>relay</code> packages and its daemon/CLI (armada-client <code>docs/SPEC.md</code> §7 Phase 1, tasks P1-01 to P1-10).</p>
@@ -893,9 +893,9 @@
 </tr>
 <tr>
 <td>S5</td>
-<td style="text-align: right;">43</td>
-<td style="text-align: right;">5</td>
-<td style="text-align: right;">2.5</td>
+<td style="text-align: right;">37</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2.0</td>
 </tr>
 <tr>
 <td>S6</td>
@@ -965,9 +965,9 @@
 </tr>
 <tr>
 <td><strong>Total</strong></td>
-<td style="text-align: right;"><strong>493</strong></td>
-<td style="text-align: right;"><strong>62</strong></td>
-<td style="text-align: right;"><strong>31.0</strong></td>
+<td style="text-align: right;"><strong>487</strong></td>
+<td style="text-align: right;"><strong>61</strong></td>
+<td style="text-align: right;"><strong>30.5</strong></td>
 </tr>
 </tbody>
 </table>

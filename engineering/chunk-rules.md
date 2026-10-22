@@ -20,7 +20,8 @@ Operator rulings, 2026-10-20.
    A chunk that changes the pool, the circuits, governance or the SDK extends
    the existing reconciler and gates (for example a new step in `pool-e2e`, or a
    new gate directory beside them) rather than building a separate fixturenet.
-   The gate chunks G7, N7, N8 and C5 are extensions of these gates.
+   The gate chunks G7, N7 and C5 are extensions of these gates (N8 was withdrawn
+   on 2026-10-22: there is no protocol swap fee).
 4. **Fixturenet first, then Sepolia, then mainnet.**
 5. **Estimates** use `ESTIMATION.md` in this directory: points, chunks of at most
    9 points for the 5090.

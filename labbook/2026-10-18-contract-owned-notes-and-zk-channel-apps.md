@@ -9,6 +9,11 @@ Repos affected: `armada-laconic` (docs), `armada-circuits` (pool circuits),
 This entry records the pool and armada-nitro decisions. A sibling entry records
 the governance decisions. The two share the pool as a dependency.
 
+Revision, 2026-10-22 (session `01a156a6`): §3a replaces decisions 1, 2, 3, 9 and
+11 for contract owners. A contract owner holds a public per-token balance inside
+the pool, not notes. The replaced decisions stay in place, marked, so the history
+stays readable.
+
 ## 1. The question
 
 The session asked one design question in two halves. First: can a Safe own
@@ -110,6 +115,22 @@ plan.
   on the above.
 - 2026-10-18T23:57:07Z — but funding comes from existing notes. confirm.
 - 2026-10-19T12:33:15Z — fork armada-poc
+- 2026-10-21T13:52:42Z — how can publicOutputs make any sense as optional?
+- 2026-10-21T13:59:25Z — your two invariants are correct. explain how the
+  conclusion from those two is this registry that was never built. what is that
+  registry for?
+- 2026-10-21T14:12:41Z — let's remove 2 as a separate codepath for the
+  crowdfund, baal won't be participating in the crowdfund.
+- 2026-10-21T14:16:39Z — 1. this would cause a lot of problems and isn't in the
+  existing specs? 2. through step 3. as I just mentioned. 3. probably. if it
+  actually works. The crowdfund is already deployed baal doesn't need to have
+  hard coded support it for it. that's an improper separation of concerns.
+- 2026-10-21T14:20:35Z — yes. make those changes and the pool needs to reject
+  naked erc20 deposits, is that possible
+- 2026-10-21T14:22:30Z — the mark and sweep is the stuck funds discussion, it's
+  the same thing caused by the same issue. confirm.
+- 2026-10-22T07:24:49Z — 2. Yes. write the entries. 3. Yes. this needs to be
+  well documented.
 
 ## 3. Findings and decisions
 
@@ -118,12 +139,16 @@ Each finding is one sentence. Each one traces to the evidence or a ruling above.
 1. A Safe can own shielded notes through a `Transact` variant that derives the
    note keys from a public `owner` address and disables the EdDSA check, because
    the hook already exists at `Transact.circom:158` (reply 22:26 UTC).
+   **Replaced for contract owners by §3a R1 (2026-10-22).**
 2. The pool authorizes a contract-owned spend by `msg.sender == owner`, and it
    keeps a public `balance[owner]` registry, because the contract holds no
-   spending key (reply 22:22 UTC).
+   spending key (reply 22:22 UTC). **Replaced by §3a R1–R3: the balance is the
+   holding, not a registry beside notes (2026-10-22).**
 3. A contract-owned note has a public preimage and a public `nullifyingKey`, and
    the creator publishes the preimage in the creating transaction, because the
-   contract cannot decrypt a ciphertext (replies 22:32, 23:00 UTC).
+   contract cannot decrypt a ciphertext (replies 22:32, 23:00 UTC). **The
+   invariant stays; §3a R2 enforces it: a contract owner receives value only as
+   a public credit (2026-10-22).**
 4. A public nullifier is not a show-stopper, because double-spend prevention
    needs one nullifier per leaf, not a secret key, and the treasury notes are
    public by construction (ruling 2026-10-18T22:30:13Z; reply 22:32 UTC).
@@ -141,7 +166,8 @@ Each finding is one sentence. Each one traces to the evidence or a ruling above.
    only ARM holders (reply 22:34 UTC).
 9. The adjudicator owns its channel collateral as notes, so the collateral never
    leaves the pool and there is no public `deposit` path, no raw-transfer
-   surplus, and no `sweep` (reply 22:54 UTC).
+   surplus, and no `sweep` (reply 22:54 UTC). **Probably replaced by §3a R6
+   (2026-10-22).**
 10. The change to armada-nitro's privacy claims is practically zero, because
     amounts and timing stay public and the sender was already hidden; the one
     gain is that a payout no longer names the recipient's `npk` in a `Shield`
@@ -149,6 +175,7 @@ Each finding is one sentence. Each one traces to the evidence or a ruling above.
 11. The adjudicator-owned note's preimage is published at creation, in the same
     transaction, inside `adaptParams`, and the adjudicator verifies it against
     the proof's output commitment before it credits anything (reply 23:00 UTC).
+    **Probably replaced by §3a R6 (2026-10-22).**
 12. A Safe's balance cannot be made private by any circuit, because the Safe must
     know its own balance to act and holds no secret (reply 23:03 UTC).
 13. Hidden channel balances need a new nitro circuit, because the adjudicator's
@@ -186,6 +213,66 @@ Each finding is one sentence. Each one traces to the evidence or a ruling above.
 24. The mobile surface is a skeleton, so the client chunks C1 to C6 cannot run
     until `armada-client` Phase 1 and Phase 2 merge (reply 12:31 UTC).
 
+## 3a. Revision of 2026-10-22: contract balances in the pool
+
+Session `01a156a6` (2026-10-21 13:30 UTC to 2026-10-22 07:25 UTC) traced the
+merged armada-poc code from a deposit to `ShieldedRagequit`. It found three
+defects that decisions 1 to 3 did not prevent:
+
+- A plain `transact` makes `publicOutputs` optional
+  (`TransactModule.sol:543-605`), so a sender can create a contract-owned note
+  with no recorded preimage. No one can spend that note.
+- The P1 circuit derives `npk = Poseidon(ownerField, random)`
+  (`armada-circuits` `src/operations/TransactOwned.circom:66-70`). The fresh
+  `random` hides the owner, so the pool cannot tell a contract-owned output from
+  a private one, and cannot enforce decision 3.
+- The `balance[owner]` registry of decision 2 was never built. So
+  `ShieldedRagequit` reads one note that the caller names, not the treasury.
+
+Two invariants stay. A contract-owned value is public at creation (decision 3).
+Incoming treasury value becomes governed value in the same transaction (sibling
+entry, decision 12). A merge of incoming value into an owner's note needs the
+owner as caller, and a payer is not the owner. So the holding itself must be a
+pool balance (rulings 2026-10-21T13:52:42Z, 13:59:25Z and 14:16:39Z).
+
+R1. A contract owner holds a public per-token balance in the pool,
+    `balance[owner][token]`, and no notes.
+R2. Any payer credits a contract owner with a private `transact` that ends in an
+    unshield whose destination is `balance[owner][token]` instead of an ERC-20
+    transfer. The unshield output's recipient, token and value are already
+    public and proven by the existing `Transact` circuit
+    (`TransactModule.sol:314-329`; `Transact.circom:103-112`), so the change is
+    in the contracts only: no new circuit and no new ceremony. The pool credits
+    the balance in that transaction.
+R3. The owner spends only as the caller. The pool debits `balance[owner][token]`
+    when `msg.sender == owner` and creates the recipient's note the way `shield`
+    creates one, from the internal balance and with no proof. No shield fee
+    applies, because shield fees apply only to shields
+    (`ShieldModule.sol:130,178`).
+R4. The pool keeps `accounted[token]`. Every shield and credit raises it, and
+    every unshield and debit lowers it. A standard ERC-20 transfer runs no code
+    in the recipient, so the pool cannot refuse a raw transfer or an airdrop.
+    Such tokens form the surplus `balanceOf(pool) − accounted[token]`, which no
+    note and no balance can claim (ruling 2026-10-21T14:20:35Z).
+R5. The pool invariants are exact. Per token, `accounted[token]` equals the
+    value behind unspent notes plus the sum of `balance[owner][token]` over all
+    owners. Per owner, `balance[owner][token]` equals that owner's public
+    credits minus its debits. An inequality is rejected, because it hides a
+    leak (ruling 2026-10-21T14:20:35Z).
+R6. The adjudicator (decisions 9 and 11) probably moves to
+    `balance[adjudicator][token]` too. A separate check must show that the
+    mechanism works for channel collateral before F4 continues (ruling
+    2026-10-21T14:16:39Z).
+R7. The treasury does not need the owned circuit, the owned verifying keys,
+    `transactOwned`, `verifyOwned`, `ownerField` or the optional
+    `publicOutputs`. Their removal waits on R6, because N1a and
+    `ShieldedRagequit` use them today.
+R8. Tests run the production deploy and real proofs. The pool keeps no proof
+    bypass: `testingMode` and `VERIFICATION_BYPASS` go. The upstream audit fix
+    `534e6306` ("Fix C-1/C-2: remove setTestingMode() and VERIFICATION_BYPASS")
+    already did this, but it was never merged into `integrated` (ruling
+    2026-10-21T13:30:34Z).
+
 ## 4. The check for each decision
 
 Each named check would show the decision false or would enforce it. The gate
@@ -201,6 +288,9 @@ does not build them.
 | 13, 15, 16 (hidden-balance circuit, generic ZK app, per game type) | N4 `forge test` with a trivial circuit through the ZK app; N5 ledger circuit vectors; N6 game template; F2 gate resolves one hidden-state move on the fixturenet. |
 | 20 (hubs + Aave, swap fee to treasury) | N8 gate: in-channel swap fee → Safe-owned note → `cumulativeFees` → RevenueLock release. |
 | 24 (client reaches the mobile surface) | C5 gate: hidden-balance `waUSDC` swap through the mobile client on the fixturenet. |
+| R1, R2, R3 (balances, credit by unshield, owner-only debit) | `forge test` on the production deploy: an unshield to a balance raises `balance[owner]`; a debit by any caller other than the owner reverts; a payout pays no shield fee. |
+| R4, R5 (accounting, exact invariants) | Invariant tests on the production deploy: the per-token equality and the per-owner ledger hold; a raw transfer changes only the surplus. |
+| R8 (no proof bypass) | A test that `PrivacyPool` has no `testingMode` and no `VERIFICATION_BYPASS`; every pool test proves with the real circuit artifacts. |
 
 ## 5. Rejected options
 
@@ -244,6 +334,7 @@ Both statements are in the transcript. The later statement is the finding.
   given that A.2.7 defers this and the answer must not be the Baal DAO?
 - Does the pool restrict a contract-owned note's creation to the owner, so that a
   stranger cannot create an unrecorded commitment at the adjudicator's `npk`?
+  Resolved by §3a R1 and R2 (2026-10-22): a contract owner holds no notes.
 - Where do the pool contracts live? The plan marks `armada-poc/contracts` as an
   [INFERENCE] and asks the operator to confirm, or to init a third repo.
 - Is a per-pebble Sonnet route override available in exophial, or must a husband

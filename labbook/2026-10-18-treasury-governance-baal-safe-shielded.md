@@ -5,6 +5,11 @@ Lab book entry, 2026-10-18 to 2026-10-19. Session `01a150cb-a1b2-727e-87fc-e7623
 `ShieldedRagequit`, RevenueLock), `armada-circuits` (the contract-owned note circuit),
 `armada-nitro` (the settlement rail, one shared gate), `armada-laconic` (the ADR).
 
+Revision, 2026-10-22 (session `01a156a6`): §3a makes the treasury a public pool balance,
+removes every crowdfund code path, and fixes the ragequit divisor. It replaces decisions 6,
+12, 13, 14, 15, 16 and 20, and makes 17 and 18 mechanical. The replaced decisions stay in
+place, marked.
+
 ## 1. The question
 
 The operator asked the session to study MolochDAO and its successors. The operator then
@@ -90,6 +95,20 @@ holder exit at any time?
   irrelevant. we are using selective disclosure circuits in place of POI. Update your
   respones based on the above."
 - 2026-10-18 22:48:00 — "3. oh. you need to call that shieldedragequit you screwball."
+- 2026-10-21 14:03:26 — "this owner of the safe is the baal contract. confirm."
+- 2026-10-21 14:12:41 — "let's remove 2 as a separate codepath for the crowdfund, baal won't
+  be participating in the crowdfund."
+- 2026-10-21 14:16:39 — "1. this would cause a lot of problems and isn't in the existing
+  specs? 2. through step 3. as I just mentioned. 3. probably. if it actually works. The
+  crowdfund is already deployed baal doesn't need to have hard coded support it for it.
+  that's an improper separation of concerns."
+- 2026-10-21 14:20:35 — "yes. make those changes and the pool needs to reject naked erc20
+  deposits, is that possible"
+- 2026-10-21 14:22:30 — "the mark and sweep is the stuck funds discussion, it's the same
+  thing caused by the same issue. confirm."
+- 2026-10-22 07:24:49 — "2. Yes. write the entries. 3. Yes. this needs to be well
+  documented." Item 3 answered: "does 'excluded' mean the payout divisor is `totalSupply −
+  Safe − Hedgey lockup`, read before the burn?"
 
 ## 3. Findings and decisions
 
@@ -110,7 +129,8 @@ Each decision is one sentence. Each traces to the evidence or a ruling above.
    (session replies, 21:24 and 22:00).
 6. Treasury ARM sits in the Safe and in the Hedgey lockup, and neither address ever
    ragequits, so that ARM carries no claim and needs no exclusion list (ruling 21:21:32;
-   session reply, 21:40).
+   session reply, 21:40). **Replaced by §3a T7: treasury ARM is excluded from the payout
+   divisor (2026-10-22).**
 7. A linear unlock releases the reserved ARM, and the session uses Hedgey `TokenLockupPlans`
    because Safe has no built-in unlock and Hedgey cannot be configured wrong (ruling
    21:27:17; session reply, 21:29).
@@ -124,29 +144,33 @@ Each decision is one sentence. Each traces to the evidence or a ruling above.
     reply, 21:44).
 12. The treasury is shielded, and treasury value enters as a shielded note and becomes
     governed value in the same transaction, so no treasury note stays outstanding (rulings
-    21:44:04, 21:47:09, 22:16:46, and 22:18:27).
+    21:44:04, 21:47:09, 22:16:46, and 22:18:27). **Stays; §3a T1 and T2 give its form: the
+    value is credited to `balance[Safe][token]` in the same transaction (2026-10-22).**
 13. A contract-owned `Transact` variant makes this possible: the `npk` derives from the
     owning contract's address, the nullifying key is public, and the EdDSA check is replaced
-    by a binding to `msg.sender` (session reply, 22:19).
+    by a binding to `msg.sender` (session reply, 22:19). **Replaced by §3a T1 (2026-10-22).**
 14. The Safe owns the notes directly, so the design deletes the treasury channel, the
     custodian, `RagequitApp`, and both threshold DKGs, which makes the design the most
-    parsimonious shape (session replies, 22:22 and 22:24).
+    parsimonious shape (session replies, 22:22 and 22:24). **The Safe holds no notes; §3a
+    T1 (2026-10-22). The deleted channel, custodian, `RagequitApp` and DKGs stay deleted.**
 15. Fees are shielded into Safe-owned notes, and `ShieldModule` creates the fee note to the
     Safe's `npk` and increments `cumulativeFees` in the same permissionless call (ruling
-    21:44:04; session replies, 22:19 and 22:22).
+    21:44:04; session replies, 22:19 and 22:22). **Replaced by §3a T2(a) (2026-10-22).**
 16. Deposits stay permissionless: anyone spends their own note into a Safe-owned note, and
     the spend proof carries selective disclosure, which is the taint control (ruling
-    22:30:13; session replies, 22:19 and 21:55).
+    22:30:13; session replies, 22:19 and 21:55). **Replaced by §3a T2(b) (2026-10-22).**
 17. A raw ERC-20 `transfer` to a contract credits no note and enters no outcome, so tainted
-    dust is stuck, not mixed (session reply, 21:55).
+    dust is stuck, not mixed (session reply, 21:55). **§3a T4 gives the mechanism
+    (2026-10-22).**
 18. Quarantined funds have two states only: a Baal proposal shields them into the treasury,
     or it leaves them where they are, with no refund path and no burn path (ruling 21:59:24;
-    session reply, 21:59).
+    session reply, 21:59). **§3a T4 gives the mechanism (2026-10-22).**
 19. A court order is handled by ARM holders voting to send funds to an address, which the
     design accepts as the only sensible path (ruling 21:58:36).
 20. Ragequit is a contract named `ShieldedRagequit`, which burns the holder's ARM and pays
     `burned / supply × treasury` as a note to the holder's `npk`, both a Baal manager shaman
-    and a Safe module (ruling 22:48:00; session reply, 22:22).
+    and a Safe module (ruling 22:48:00; session reply, 22:22). **Replaced by §3a T6 and T8
+    (2026-10-22).**
 21. `ShieldedRagequit` is the one shaman, which satisfies the "minimal set of shamans"
     constraint (ruling 21:19:51; session reply, 22:22).
 22. RevenueLock keeps its purpose but reads `cumulativeFees` from the pool, so its ratchet
@@ -154,6 +178,71 @@ Each decision is one sentence. Each traces to the evidence or a ruling above.
     (session reply, 22:00).
 23. Governance does not depend on armada-nitro, and the one shared edge is N8, which proves
     that a swap fee reaches RevenueLock (session replies, 03:16 and 03:17).
+
+## 3a. Revision of 2026-10-22: the treasury is a pool balance
+
+Session `01a156a6` (2026-10-21 to 2026-10-22). The sibling entry's §3a (R1 to R5) makes a
+contract owner's holding a public per-token balance inside the pool. For the treasury, that
+gives the decisions below. The merged code that these decisions correct is listed after
+them.
+
+T1. The treasury is `balance[Safe][token]` inside the pool. The Safe holds no notes, and
+    Baal is the Safe's only owner (decision 9; ruling 2026-10-21 14:03:26). Ruling 21:44:04
+    ("the safe ... will also need to take shielded notes") and ruling 21:47:09 ("the safe
+    doesn't need to hold the note per se, but the treasury needs to be shielded") hold in
+    this form: treasury value never sits as an ERC-20 balance at the Safe's address, and every
+    payment into it comes from a shielded payer, through a spend that carries selective
+    disclosure.
+T2. Value reaches the treasury in two ways only.
+    (a) Shield fees. Each shield's fee credits `balance[Safe][token]` and
+        `cumulativeFees[token]` in the same transaction.
+    (b) Any payment. A payer's private `transact` ends in an unshield whose destination is
+        `balance[Safe][token]` (sibling entry R2). Sale proceeds, the USDC leg of a swap with
+        the Safe, and a gift all take this path.
+    Only (a) counts toward `cumulativeFees`, so only real fees release ARM from RevenueLock
+    (decision 22).
+T3. The crowdfund has no code path into the pool or into governance. It is already deployed,
+    and Baal does not take part in it. Its proceeds reach the treasury only as a payment
+    under T2(b) (rulings 2026-10-21 14:12:41 and 14:16:39: hard-coded crowdfund support is an
+    improper separation of concerns).
+T4. Raw ERC-20 transfers and airdrops to the pool cannot be refused. They form the pool's
+    surplus (sibling entry R4). A Baal proposal sweeps the surplus into `balance[Safe][token]`,
+    or leaves it where it is ("mark and sweep"). This is decisions 17 and 18 in mechanical form
+    (ruling 2026-10-21 14:22:30).
+T5. A governance spend is a Baal proposal that the Safe executes. The pool sees
+    `msg.sender == Safe`, debits `balance[Safe][token]`, and creates the recipient's note. No
+    fee applies. This extends decision 10 to every spend.
+T6. Ragequit. A holder calls `ShieldedRagequit` with an ARM amount and an `npk`. The contract:
+    (a) reads the ARM supply and the divisor (T7) before the burn;
+    (b) as Baal's shaman, burns the holder's ARM;
+    (c) for each token, computes `payout = burned × balance[Safe][token] / divisor`;
+    (d) as a Safe module, makes the Safe call the pool through `execTransactionFromModule`,
+        so that the pool sees the Safe as the caller, debits the payout from
+        `balance[Safe][token]`, and creates a note for it at the holder's `npk`.
+    No fee applies. The exit needs no treasury signature and no vote, so any holder can exit
+    at any time (decision 1).
+T7. Treasury ARM is excluded from the divisor: `divisor = supply − ARM held by the Safe − ARM
+    held by the Hedgey lockup`, all read before the burn. That ARM never ragequits and carries
+    no claim, so counting it would let the other holders together claim only part of each
+    treasury asset (ruling 21:21:32, "the ARM held in the treasury should simply be
+    excluded"; confirmed as this divisor on 2026-10-22 07:24:49).
+T8. The Safe has exactly two modules, Baal and `ShieldedRagequit`. `ShieldedRagequit` may
+    make the Safe call only the pool payout of T6(d): no other function and no other target.
+
+Merged code that these decisions correct (armada-poc `integrated`, 2026-10-21):
+
+- `ArmadaCrowdfund.finalize` shields the proceeds to `pool.feeRecipient()` (lines 566-583).
+  That is a crowdfund code path (against T3), and `_recognizeFee` counts the whole sale in
+  `cumulativeFees` (against T2).
+- No production deploy script calls `setFeeRecipient`; only
+  `test-foundry/helpers/CrowdfundPoolDeploy.sol` does. That is a second, test-only deploy path.
+- `ShieldedRagequit` reads one caller-named note through `preimageOf`, requires the raw
+  address as `npk`, which the P1 circuit never produces, and calls `transactOwned` itself, so
+  the pool sees the shaman, not the Safe, as the caller (against T1, T6 and T8).
+- `PrivacyPool.verify` and `verifyOwned` return `true` in `testingMode`, and 12 test files
+  turn it on (against sibling entry R8).
+- The crowdfund window change (`arp-dda`, `arp-29f`) and the G7a lifecycle (`arn-5c3`) exist
+  only to run the crowdfund inside the governance gate (against T3).
 
 ## 4. The check that would show each decision false, or enforce it
 
@@ -165,17 +254,23 @@ It does not build them.
 - **G2 fixturenet deploy** summons Baal and the Safe and wires the module. A deploy where the
   Safe has a human owner, or where the token is a proxy, must fail. This enforces decisions
   1, 4, and 9.
-- **G3 tests** build the `ShieldedRagequit` exit proof with the SDK. A test where the exit
-  pays more than `burned / supply × treasury`, or where the exit needs the treasury's
-  signature, must fail. This enforces decisions 20 and 12.
+- **G3 tests**, on the production deploy with real proofs. A test where the exit pays anything
+  other than `burned × balance[Safe][token] / divisor` read before the burn (T6, T7), where the
+  pool sees a caller other than the Safe, where the module makes the Safe call anything but the
+  payout (T8), or where the exit needs the treasury's signature, must fail. This enforces
+  decisions 1, 12, T6, T7 and T8.
 - **G4 tests** rewrite RevenueLock on `cumulativeFees`. A test that inflates the counter for
   free, or that releases ARM with no matching fee, must fail. This enforces decision 22.
-- **G5 tests** show the crowdfund delivers ARM shares and shields the proceeds to the Safe. A
-  test where crowdfund USDC sits at a public address must fail. This enforces decisions 15
-  and 16.
-- **G7 gate** runs crowdfund → claim → vote → spend → ragequit on the fixturenet, with shield
-  fees only. A run where a captured majority blocks an exit, or where a holder cannot exit at
-  any time, must fail. This enforces decisions 1, 12, and 20.
+- **G5 tests** show the Hedgey lockup. A test where crowdfund proceeds raise `cumulativeFees`,
+  or where any pool or governance code references the crowdfund, must fail. This enforces T2
+  and T3.
+- **G7 gate** runs payment → vote → spend → ragequit on the fixturenet: ARM holders, a payment
+  to the Safe under T2(b), a Baal vote, a governance spend (T5), and a ragequit (T6). It does
+  not use the crowdfund. A run where a captured majority blocks an exit, or where a holder
+  cannot exit at any time, must fail. This enforces decisions 1, T2, T5 and T6.
+- **Pool invariant tests** (sibling entry R5) show that `balance[Safe][token]` equals its public
+  credits minus its debits, and that a raw transfer changes only the surplus. This enforces T1
+  and T4.
 - **N8 gate** proves in-channel swap fee → Safe-owned note → `cumulativeFees` → RevenueLock
   release. A run where a swap fee never reaches RevenueLock must fail. This enforces decisions
   22 and 23.
@@ -211,6 +306,14 @@ It does not build them.
   "left alone" or "moved into the treasury" remain (ruling 21:59:24; session reply, 21:59).
 - **N-of-M human Safe owners.** Rejected as default, because human owners are a second
   spending path; the Safe owner is Baal only, threshold 1 (session replies, 22:36 and 22:37).
+- **Safe-owned notes for the treasury** (decisions 13 and 14). Replaced on 2026-10-22 by a
+  public pool balance (§3a T1). A payer cannot merge value into a note the Safe owns, so notes
+  left the treasury split across many outputs, some with no recorded preimage.
+- **A crowdfund code path into the pool or governance** (the merged G5 `finalize`). Rejected
+  as an improper separation of concerns (ruling 2026-10-21 14:16:39).
+- **Treasury ARM in the payout divisor** (decision 6). Rejected; §3a T7.
+- **An inequality pool invariant** ("tokens ≥ unspent notes + balances"). Rejected; it hides a
+  leak. The invariants are exact (sibling entry R5).
 
 ## 6. Open questions
 

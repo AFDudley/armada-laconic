@@ -206,6 +206,11 @@ T2. Only shield fees count toward `cumulativeFees`. `ShieldModule` creates the f
     Safe (sale proceeds, the USDC leg of a swap with the Safe, a gift) is a payer's `transact`
     that creates a Safe-owned note (decision 16). It is not a fee. So only real fees release ARM
     from RevenueLock (decision 22).
+    Deferred, 2026-10-24: the merged `ShieldModule.sol` pays the shield fee to the treasury
+    address as a plain token transfer (`safeTransfer`, line 216), not as a Safe-owned note. The
+    Lean pool model (`AFDudley/armada-lean`, branch `pool-model`) models that behavior and records
+    the departure. The operator chose to keep the unshielded fee for this pass and to fix it in a
+    later pass.
 T3. The crowdfund has no code path into the pool or into governance. It is already deployed,
     and Baal does not take part in it. Its proceeds reach the treasury only as a payment under T2
     (rulings 2026-10-21 14:12:41 and 14:16:39: hard-coded crowdfund support is an improper

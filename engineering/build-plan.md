@@ -116,6 +116,8 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-tre
 
 **Goal:** `ArmadaNitroAdjudicator` holds its channel collateral as contract-owned notes, so collateral never leaves the pool. N8 is withdrawn (there is no protocol swap fee).
 
+**Specification (operator ruling, 2026-10-24):** the adjudicator is rewritten from a Lean model, and the commented Lean model is its specification. The model is in `AFDudley/armada-lean`: branch `owned-notes` (contract-owned notes, a pool feature, proved) and branch `adjudicator-model-v4` (the adjudicator as an ordinary pool user, 23 statements). Rewrite briefs are derived from the model. The N1a–N3, N7, N8 and R1 briefs below are superseded and deleted from armada-nitro; they remain in history at armada-nitro `5519526c`. The merged N1–N3 code on `integrated` has confirmed defects (deposit cannot be funded by any client, reclaim creates value, payouts send a zero proof) and is replaced by the rewrite.
+
 **Delivers:** a hardening delta on T0.2.
 
 **Depends on:** S2 (needs P2b).

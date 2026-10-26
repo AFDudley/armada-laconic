@@ -301,6 +301,13 @@
 <h2 id="s5-armada-nitro-side-of-contract-owned-collateral-next">S5 — armada-nitro side of contract-owned collateral (next)</h2>
 <p><strong>Goal:</strong> <code>ArmadaNitroAdjudicator</code> holds its channel collateral as contract-owned notes, so collateral never leaves the pool. N8 is withdrawn (there is no protocol swap fee).</p>
 <p><strong>Specification (operator ruling, 2026-10-24):</strong> the adjudicator is rewritten from a Lean model, and the commented Lean model is its specification. The model is in <code>AFDudley/armada-lean</code>: branch <code>owned-notes</code> (contract-owned notes, a pool feature, proved) and branch <code>adjudicator-model-v4</code> (the adjudicator as an ordinary pool user, 23 statements). Rewrite briefs are derived from the model. The N1a–N3, N7, N8 and R1 briefs below are superseded and deleted from armada-nitro; they remain in history at armada-nitro <code>5519526c</code>. The merged N1–N3 code on <code>integrated</code> has confirmed defects (deposit cannot be funded by any client, reclaim creates value, payouts send a zero proof) and is replaced by the rewrite.</p>
+<p><strong>Verification chain (operator rulings, 2026-10-25):</strong> three layers, two refinement proofs.</p>
+<ol>
+<li>The Lean model (<code>AFDudley/armada-lean</code>) is a symbolic (Dolev–Yao) specification. Hashes are symbolic terms with distinct function symbols (Poseidon, Keccak). Addresses are Keccak-derived terms, not numbers. It is the only layer that reasons about an attacker.</li>
+<li>A Stele specification (EquiVM's specification language) gives the same contract with concrete values (<code>address</code> is a 20-byte word). A new refinement proof shows that the Stele specification implements the Lean model. This proof maps each symbolic term to its concrete value, and it carries the one cryptographic assumption as a named hypothesis: no Keccak or Poseidon collision among the values a run uses. No existing tool provides this proof.</li>
+<li>The bytecode runs on EVMLean (<code>AccountAddress = Fin 2^160</code>, transparent Keccak). EquiVM proves that the bytecode refines the Stele specification.</li>
+</ol>
+<p>So the rewrite needs both proofs: Lean model → Stele (new) and Stele → bytecode (EquiVM).</p>
 <p><strong>Delivers:</strong> a hardening delta on T0.2.</p>
 <p><strong>Depends on:</strong> S2 (needs P2b).</p>
 <p>Chunk ids and points are copied from the 209-point list (<code>labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md</code> §7). N8 is withdrawn: there is no protocol swap fee (treasury lab book, decision 23 struck and §3a T9).</p>

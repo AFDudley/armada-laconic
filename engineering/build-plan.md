@@ -118,6 +118,14 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-tre
 
 **Specification (operator ruling, 2026-10-24):** the adjudicator is rewritten from a Lean model, and the commented Lean model is its specification. The model is in `AFDudley/armada-lean`: branch `owned-notes` (contract-owned notes, a pool feature, proved) and branch `adjudicator-model-v4` (the adjudicator as an ordinary pool user, 23 statements). Rewrite briefs are derived from the model. The N1a–N3, N7, N8 and R1 briefs below are superseded and deleted from armada-nitro; they remain in history at armada-nitro `5519526c`. The merged N1–N3 code on `integrated` has confirmed defects (deposit cannot be funded by any client, reclaim creates value, payouts send a zero proof) and is replaced by the rewrite.
 
+**Verification chain (operator rulings, 2026-10-25):** three layers, two refinement proofs.
+
+1. The Lean model (`AFDudley/armada-lean`) is a symbolic (Dolev–Yao) specification. Hashes are symbolic terms with distinct function symbols (Poseidon, Keccak). Addresses are Keccak-derived terms, not numbers. It is the only layer that reasons about an attacker.
+2. A Stele specification (EquiVM's specification language) gives the same contract with concrete values (`address` is a 20-byte word). A new refinement proof shows that the Stele specification implements the Lean model. This proof maps each symbolic term to its concrete value, and it carries the one cryptographic assumption as a named hypothesis: no Keccak or Poseidon collision among the values a run uses. No existing tool provides this proof.
+3. The bytecode runs on EVMLean (`AccountAddress = Fin 2^160`, transparent Keccak). EquiVM proves that the bytecode refines the Stele specification.
+
+So the rewrite needs both proofs: Lean model → Stele (new) and Stele → bytecode (EquiVM).
+
 **Delivers:** a hardening delta on T0.2.
 
 **Depends on:** S2 (needs P2b).

@@ -349,6 +349,17 @@ Move it to `docs/` and cite it by path. The module comment of `Notes.lean`
 (`Notes.lean:1-110`) and the doc comment of `PoolOwnedSpendStep`
 (`Notes.lean:229-277`) exceed this limit.
 
+**Source order (operator ruling, 2026-10-26).** Start with the latest paper.
+Then check the code. For Nitro, the latest paper is SATP (2022). The code is
+the statechannels team's go-nitro at `64c4ee9a1` (2023-11-14; last contract
+change `9d3a669e5`, 2023-10-13). Do not use armada-nitro's vendored copy as
+the code source. It is cerc-io's fork at `435eb2b` (2024-10-30), with changes
+to `MultiAssetHolder`, `NitroAdjudicator` and `StatusManager`. Where the code
+corrects the paper, follow the code and cite both. An example is the challenge
+rule: SATP Listing 1 allows a re-challenge at an equal version, and go-nitro
+requires a strictly higher turn number. Name sources by title (ForceMove,
+Nitro, SATP, go-nitro), not by labels such as S1–S4.
+
 **Source.** `docs/process.md` practice 13 ("Keep the code and the record as
 one graph") and the Literate Code Principle in `~/.claude/CLAUDE.md`.
 

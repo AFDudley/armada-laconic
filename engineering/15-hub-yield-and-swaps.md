@@ -38,10 +38,10 @@ This holds only for tokens whose balances change exclusively by transfers, with 
 
 **Enforcement:**
 
-1. **An asset allow-list in the adjudicator.** Only allow-listed assets may be deposited, by either path. Initial list: USDC, WETH, `wstETH`, `waUSDC`. `stETH` and `aUSDC` are never listed; their non-rebasing wrappers are.
-2. **Balance-delta accounting on every deposit path.** `depositFromNote` already credits the measured balance change and requires it to equal the note's value. The inherited go-nitro `deposit`, which the hub custodian uses to fund its side, credits the requested `amount` without measuring. Override it to measure the balance change and require equality, so a token outside the assumptions is refused at the deposit rather than discovered at the exit.
+1. **An asset allow-list in the adjudicator.** Only allow-listed assets may be deposited. Initial list: USDC, WETH, `wstETH`, `waUSDC`. `stETH` and `aUSDC` are never listed; their non-rebasing wrappers are.
+2. **One deposit path: a note.** The adjudicator has no raw-token deposit (operator ruling, 2026-10-26). The inherited go-nitro `deposit`, which pulls tokens from an address, is removed. The hub is an ordinary pool user: it shields its tokens into notes and funds its side of a channel with a note deposit, like a user. So every unit of collateral enters as a note, and the deposit credits exactly the note's value.
 
-The pool's own token allow-list ([T0](./T0-ethereum-anchor.md)) governs which notes can exist. It does not cover `deposit`, which takes tokens straight from an address, so the adjudicator needs its own.
+The pool's own token allow-list ([T0](./T0-ethereum-anchor.md)) governs which notes can exist. The adjudicator's allow-list restricts which of those notes may fund a channel.
 
 ### I2 · Swaps are atomic
 
@@ -77,7 +77,7 @@ go-nitro already provides per-asset exits: `transfer(assetIndex, ...)` pays one 
 Close it by construction with two measures:
 
 - the allow-list (I1) excludes tokens with hooks;
-- a reentrancy guard on every function that moves holdings (`deposit`, `depositFromNote`, `transfer`, `transferAllAssets`, `concludeAndTransferAllAssets`, `reclaim`).
+- a reentrancy guard on every function that moves holdings (`depositFromNote`, `transfer`, `transferAllAssets`, `concludeAndTransferAllAssets`, `reclaim`).
 
 ### I7 · The hub's Aave position stays off the channel
 

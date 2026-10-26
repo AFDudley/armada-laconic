@@ -48,10 +48,10 @@
 </ul>
 <p><strong>Enforcement:</strong></p>
 <ol>
-<li><strong>An asset allow-list in the adjudicator.</strong> Only allow-listed assets may be deposited, by either path. Initial list: USDC, WETH, <code>wstETH</code>, <code>waUSDC</code>. <code>stETH</code> and <code>aUSDC</code> are never listed; their non-rebasing wrappers are.</li>
-<li><strong>Balance-delta accounting on every deposit path.</strong> <code>depositFromNote</code> already credits the measured balance change and requires it to equal the note's value. The inherited go-nitro <code>deposit</code>, which the hub custodian uses to fund its side, credits the requested <code>amount</code> without measuring. Override it to measure the balance change and require equality, so a token outside the assumptions is refused at the deposit rather than discovered at the exit.</li>
+<li><strong>An asset allow-list in the adjudicator.</strong> Only allow-listed assets may be deposited. Initial list: USDC, WETH, <code>wstETH</code>, <code>waUSDC</code>. <code>stETH</code> and <code>aUSDC</code> are never listed; their non-rebasing wrappers are.</li>
+<li><strong>One deposit path: a note.</strong> The adjudicator has no raw-token deposit (operator ruling, 2026-10-26). The inherited go-nitro <code>deposit</code>, which pulls tokens from an address, is removed. The hub is an ordinary pool user: it shields its tokens into notes and funds its side of a channel with a note deposit, like a user. So every unit of collateral enters as a note, and the deposit credits exactly the note's value.</li>
 </ol>
-<p>The pool's own token allow-list (<a href="./T0-ethereum-anchor.html">T0</a>) governs which notes can exist. It does not cover <code>deposit</code>, which takes tokens straight from an address, so the adjudicator needs its own.</p>
+<p>The pool's own token allow-list (<a href="./T0-ethereum-anchor.html">T0</a>) governs which notes can exist. The adjudicator's allow-list restricts which of those notes may fund a channel.</p>
 <h3 id="i2-swaps-are-atomic">I2 · Swaps are atomic</h3>
 <p>A swap changes two assets' allocations in one state. ForceMove accepts or rejects whole states, so a half-executed swap (one leg moved, the other not) cannot be represented on chain. Nothing in the contracts needs to coordinate the legs.</p>
 <h3 id="i3-no-free-option-in-a-swap">I3 · No free option in a swap</h3>
@@ -73,7 +73,7 @@
 <p>Close it by construction with two measures:</p>
 <ul>
 <li>the allow-list (I1) excludes tokens with hooks;</li>
-<li>a reentrancy guard on every function that moves holdings (<code>deposit</code>, <code>depositFromNote</code>, <code>transfer</code>, <code>transferAllAssets</code>, <code>concludeAndTransferAllAssets</code>, <code>reclaim</code>).</li>
+<li>a reentrancy guard on every function that moves holdings (<code>depositFromNote</code>, <code>transfer</code>, <code>transferAllAssets</code>, <code>concludeAndTransferAllAssets</code>, <code>reclaim</code>).</li>
 </ul>
 <h3 id="i7-the-hubs-aave-position-stays-off-the-channel">I7 · The hub's Aave position stays off the channel</h3>
 <p>The hub turns USDC into <code>waUSDC</code> (ERC-4626 <code>deposit</code>) and back (<code>redeem</code>) as its own inventory management, through <code>HubCustodian.execute</code> under its FROST group key. Users never depend on these calls:</p>

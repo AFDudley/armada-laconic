@@ -545,8 +545,13 @@ Each step rewrites the listed proofs so that every `Step` fact comes from a
 | C3 | `checkpoint_can_happen` (116), `challenge_can_happen` (52), `challenge_timeout_can_happen` (43), `conclude_can_happen` (61) | 6 | 120 | C1 |
 | C4 | `deposit_can_happen_witness` (126), `deposit_can_happen` (36), `topup_can_happen` (342) | 9 | 150 | C2 |
 | C5 | `payout_can_happen` (290), `reclaim_can_happen` (146) | 9 | 150 | C2, C4 |
-| C6 | `bulk_conclude_and_transfer_can_happen` (273), `transfer_after_transfer_can_happen` (494) | 9 | 200 | C2, C4 |
+| C6 | `bulk_conclude_and_transfer_can_happen` (273) | 6 | 100 | C2, C4 |
 | C7 | `guarantee_reallocation_order_dependent` (186) | 6 | 80 | C2 |
+
+`transfer_after_transfer_can_happen` (494 lines) is gone: on 2026-10-26 the
+operator approved its replacement by `finalized_affordable_pays` (Nitro §5.2),
+an 11-line proof over the factored invariant `FinalizedPaysInv`
+(`adjudicator-model-v4` `23e01b5`).
 
 - Acceptance for each: `check.sh <baseline>` EXIT 0; D6 over each
   declaration's range prints 0; LINES ≤ target or a report.

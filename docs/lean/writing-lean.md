@@ -258,7 +258,10 @@ breaks the rule: it gives only a lower bound on the payout. So
 `bulk_conclude_and_transfer_can_happen` (273) each build a literal execution
 from `genesis` with hand-written witnesses. `sign_step` (`Safety.lean:4067`,
 11 lines) and `signNote_step` (13 lines) follow the rule: they state the exact
-result and the can-happen proofs reuse them.
+result and the can-happen proofs reuse them. `finalized_affordable_pays`
+(`23e01b5`) also follows it. It replaced `transfer_after_transfer_can_happen`
+with an 11-line proof that reuses the invariant `FinalizedPaysInv` and the
+exact payout lemma `finalizedPaysInv_pays`.
 
 **Source.** Abelson and Sussman 1996, §2.2.4 (stratified design).
 `docs/process.md` Stratum 4, gate.

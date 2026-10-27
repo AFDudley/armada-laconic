@@ -14,6 +14,7 @@ The documentation is organized according to **[arc42](https://arc42.org)** (Star
 | 3 | [Context & Scope](./03-context-and-scope.md) | reuse vs net-new boundary ([ADR-0013](./09-architecture-decisions.md#adr-0013)); external systems |
 | 4 | [Solution Strategy](./04-solution-strategy.md) | nitro-on-railgun; integration-not-new-crypto; delivery increments |
 | 4· | [Build Plan](./build-plan.md) | the one ordered sequence of stages; points and 5090 hours ([`estimation-method.md`](./estimation-method.md)) |
+| 4· | [Chunk rules](./chunk-rules.md), [Operating rules](./operating-rules.md) | operator rules for chunk execution; procedures for dispatch, husbands, filing, git and fixturenets |
 | 5 | [Building Block View](./05-building-block-view.md) | the tier stack + **item registry** (T0–T6 detail docs) |
 | 6 | [Runtime View](./06-runtime-view.md) | swap, deposit→Nitro→payout, challenge/watchtower flows |
 | 7 | [Deployment View](./07-deployment-view.md) | watcher parties (browser/mobile/server peers), relays, fixturenet |

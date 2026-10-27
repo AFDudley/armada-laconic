@@ -44,14 +44,16 @@
    new gate directory beside them) rather than building a separate fixturenet.
    The gate chunks G7, N7 and C5 are extensions of these gates (N8 was withdrawn
    on 2026-10-22: there is no protocol swap fee).</li>
-<li><strong>Fixturenet first, then Sepolia, then mainnet.</strong></li>
-<li><strong>Estimates</strong> use <code>ESTIMATION.md</code> in this directory: points, chunks of at most
-   9 points for the 5090.</li>
-<li><strong>The handoff is the live state.</strong> <code>armada-laconic/notes/handoff.md</code>
-   §0 records the state of every family, brief, pebble and gate. The lead
-   updates it and commits it to <code>main</code> whenever any of them changes. Husbands
-   report state changes to the lead; they do not edit the handoff. Every brief
-   names the handoff row it moves (family and chunk id).</li>
+<li><strong>Fixturenet first, then mainnet.</strong> Sepolia is out of scope (operator,
+   2026-10-20; <code>build-plan.md</code> S7).</li>
+<li><strong>Estimates</strong> use <code>estimation-method.md</code> in this directory: points, chunks of
+   at most 9 points for the 5090.</li>
+<li><strong>The handoff holds no copied state.</strong> <code>armada-laconic/notes/handoff.md</code>
+   holds the work in flight, the next steps, what waits for the operator, and
+   the open questions. It does not copy state that a command, the pebble bus or
+   another document shows. The lead updates it and commits it to <code>main</code>.
+   Husbands report to the lead; they do not edit the handoff. Rules and
+   procedures go in <code>operating-rules.md</code>, not in the handoff.</li>
 </ol>
 
 <hr/>

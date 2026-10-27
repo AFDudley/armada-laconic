@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Operating rules for the build programme — Armada × Laconic</title>
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<main>
+<nav class="nav">
+  <a href="../index.html">Overview</a>
+  <a href="../architecture.html">Architecture</a>
+  <a href="../engineering/build-plan.html">Build plan</a>
+  <a href="../execution-platform.html">Execution platform</a>
+  <a href="../yield-clearing.html">Yield &amp; clearing</a>
+  <a href="../mobile-privacy.html">Mobile privacy</a>
+  <a href="../glossary.html">Glossary</a>
+  <a href="../laconic_ethereum_privacy_via_armada.html">Thesis</a>
+  <a href="../builder-codes.html">Builder codes</a>
+  <a href="../engineering/README.html" class="active">Engineering</a>
+</nav>
+
+<h1 id="operating-rules-for-the-build-programme">Operating rules for the build programme</h1>
+<p>This document holds the operator rules and the procedures that are not written in another document. It does not record
+state. The handoff (<code>notes/handoff.md</code>) records only the work in flight, the next steps and the open questions.</p>
+<h2 id="rules-written-elsewhere">Rules written elsewhere</h2>
+<p>Read these documents. This file does not repeat them.</p>
+<table>
+<thead>
+<tr>
+<th>Subject</th>
+<th>Document</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The 5090 first, escalation to Sonnet, at most 4 Sonnet sessions, husband review, audit-critical chunks, acceptance on the armada-nitro gates</td>
+<td><code>engineering/chunk-rules.md</code></td>
+</tr>
+<tr>
+<td>Points, the 9-point chunk limit, the 12-point limit on any route</td>
+<td><code>engineering/estimation-method.md</code></td>
+</tr>
+<tr>
+<td>Lab book entries, not ADRs, record decisions; Sepolia is out of scope</td>
+<td><code>engineering/build-plan.md</code></td>
+</tr>
+<tr>
+<td>Nothing goes upstream; the upstream defects</td>
+<td><code>labbook/2026-10-20-nimbus-fixturenet-and-proxy-proof.md</code> §9</td>
+</tr>
+<tr>
+<td>Lean source order, source names by title, citation of every theorem, axioms only for primitives, statement changes only with operator approval</td>
+<td><code>docs/lean/writing-lean.md</code> §10–§11, <code>docs/process.md</code> 2.4 and 8.3</td>
+</tr>
+<tr>
+<td>Non-vacuity witness, proof size limits</td>
+<td><code>docs/lean/verification.md</code> §5a, §6a</td>
+</tr>
+<tr>
+<td>E17 test rule (a mutation for a met clause, red first for a broken clause)</td>
+<td>armada-nitro <code>docs/tasks/E17-nitro-spec-conformance.md</code></td>
+</tr>
+<tr>
+<td>Fixturenet start, recovery, ports, <code>sources.lock.json</code></td>
+<td>armada-nitro <code>stack/README.md</code>, <code>docs/ENVIRONMENT.md</code></td>
+</tr>
+<tr>
+<td>The gate Dockerfile in each repo</td>
+<td>exophial <code>docs/REPO_INIT.md</code> "The gate Dockerfile"</td>
+</tr>
+<tr>
+<td>Filing with <code>exophial intake</code>, the duplicate check, <code>exophial integrate --branch</code></td>
+<td>skill <code>exophial-defect-forking</code>, exophial <code>docs/AUTHORING.md</code></td>
+</tr>
+<tr>
+<td>Reducer liveness and stop</td>
+<td>skill <code>exophial-reducer-liveness</code></td>
+</tr>
+<tr>
+<td>Timeouts are a symptom, not a setting</td>
+<td><code>~/.claude/CLAUDE.md</code> "Technical Discipline"</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-lean-specification-work-operator-rulings-2026-10-2627">1. Lean specification work (operator rulings, 2026-10-26/27)</h2>
+<ul>
+<li>Use the terms of the papers. Do not invent type names. A different construction is a different type. Example: the
+  channel kinds are <code>ledger</code> and <code>virtual</code> (SATP §1).</li>
+<li>The symbolic layer contains no contract layout and no encoding.</li>
+<li>Use Mathlib wherever it applies. The "no Mathlib" pins in <code>docs/lean/README.md</code> and <code>docs/lean/writing-lean.md</code>
+  describe the old <code>adjudicator-model-v4</code> branch.</li>
+<li>The operator decides theorem types. If the papers determine the fix for a defect, the coordinator fixes it and does
+  not ask.</li>
+<li>Do not suggest nitrolite.</li>
+<li>Do not propose pool contract changes until the Lean work is complete.</li>
+<li>eprint.iacr.org blocks <code>curl</code> (Cloudflare). The papers are in armada-nitro <code>docs/references/nitro/sources/</code>. Do not
+  download them again. The Railgun whitepaper and audits are in armada-laconic <code>.scratch/rewrite-B/sources/</code>.</li>
+<li>All armada-lean branches use toolchain <code>leanprover/lean4:v4.33.1</code> and one Mathlib rev. Run <code>lake exe cache get</code>
+  before <code>~/.elan/bin/lake build</code>.</li>
+</ul>
+<h2 id="2-models">2. Models</h2>
+<ul>
+<li>Subagents: Sonnet by default. Use Opus only when Sonnet fails at the task. Do not use Fable. Keep the <code>fable</code> agent
+  definition file. Evidence: <code>labbook/2026-10-27-nitro-liveness-game-defects.md</code>.</li>
+<li>Circuit work (armada-circuits) runs on Sonnet.</li>
+<li>Husbands run on Sonnet, as the <code>task</code> agent.</li>
+<li>At most 5 workers run at once. When an Anthropic account passes 60% of its 5-hour window, or its 7-day use grows
+  faster than 0.6%/h, at most 2 Sonnet workers run.</li>
+<li>The 5090 serves one session (<code>local_agents/router/pools.json</code>, <code>maxSessions: 1</code>). <code>exophial4</code> shares it through
+  <code>pool/27b-class</code>. vLLM's fp8 KV cache holds 168,779 tokens, so two large contexts evict each other.</li>
+<li><code>pool/5090</code> and <code>pool/5090-local</code> both run <code>vllm/qwen3.8-27b-ablit</code> (window 146,816 tokens). <code>pool/5090</code> promotes to
+  <code>anthropic/claude-sonnet-5</code> when the window overflows. <code>pool/5090-local</code> does not promote. A worker on
+  <code>pool/5090-local</code> that outgrows the window fails, and the husband merges that chunk by hand.</li>
+</ul>
+<h3 id="what-qwen-on-the-5090-did-measured-2026-10-20">What Qwen on the 5090 did (measured 2026-10-20)</h3>
+<ul>
+<li>It finished small, plain changes: <code>arp-133</code> (config and CI, peak 59k tokens).</li>
+<li>It escalated when the work outgrew the window: G1 at about 228k tokens, G2 at 373k.</li>
+<li>It looped on its own tooling and did not detect the loop: circom (about 120 retries on a JS harness) and a Solidity
+  re-pin (<code>arn-4d9</code>, four runs).</li>
+<li>On <code>pool/5090-local</code> it degraded near its window: G6 <code>arp-93a</code> ran 174 turns to 116k tokens, then repeated one
+  planning line. Chunks that read many files fit the local pool poorly.</li>
+</ul>
+<h2 id="3-husbands">3. Husbands</h2>
+<ul>
+<li>A husband owns each family. It owns the timeouts, loops and parks of its pebbles. The doctrine is exophial
+  <code>src/exophial/doctrine/repo/.claude/doctrine/husband.md</code>. The log is <code>&lt;repo&gt;/.scratch/plan/husbandry-&lt;family&gt;.md</code>.</li>
+<li>A husband does not compact (operator rule, 2026-10-22). A compacted husband loses its reasoning and acts on a summary.</li>
+<li>To replace a husband:
+  1. Tell it to stop new work.
+  2. Tell it to write a "SUCCESSOR HANDOFF" section at the end of its log: open items with next actions, worktrees and
+     jobs, learnings, and facts later proved wrong.
+  3. Verify the section.
+  4. Start a new husband from a brief that points at that section. Example brief:
+     <code>.scratch/husband-briefs/HusbandF2b.md</code>.</li>
+<li>Each brief tells the husband to keep its log current. It also tells the husband to write the handoff section and
+  yield at once if its own context compacts.</li>
+<li>A parked pebble goes to its husband, never to an unchanged unpark. The husband changes the precondition, then queues
+  the pebble. If the husband cannot resolve it, the coordinator finds the root cause, fixes it and gives the pebble back.</li>
+</ul>
+<h2 id="4-dispatch">4. Dispatch</h2>
+<ul>
+<li>The supervisor <code>.scratch/supervise/supervisor.py</code> is the only caller of <code>exophial dispatch</code>. Its docstring states
+  the routes and the start rules. Its log is <code>.scratch/supervise/supervisor.log</code>.</li>
+<li>Husbands append reviewed, unparked pebbles to <code>.scratch/supervise/queue.jsonl</code>, one object per line:
+  <code>{"repo": "armada-nitro", "id": "arn-4d9"}</code>.</li>
+<li>Do not run <code>exophial dispatch</code> by hand. While a repo's ephemeral reducer runs, <code>exophial dispatch &lt;new id&gt;</code> sends
+  the id to that reducer. The reducer serves only its own scope, so it never claims the new id (lost: <code>arp-c7a</code>,
+  <code>arp-bb3</code>, <code>arp-d0f</code>).</li>
+<li>The watcher <code>.scratch/supervise/watch.py</code> wakes the coordinator when GPU 0 averages under 15% for 10 minutes, when an
+  account passes the quota limits, and every hour. It is a background job of the coordinator session, so it stops
+  when that session ends.</li>
+<li>Do not write "blocked on", "do not dispatch" or a <code>Precondition:</code> line in a pebble unless a dependency edge exists.
+  The dispatcher withholds such a pebble (<code>exophial/src/exophial/precondition_hold.py</code>; log line "states an uncovered
+  dispatch precondition"). <code>exophial pebble dep-add &lt;id&gt; &lt;dep&gt;</code> adds the edge.</li>
+<li>After unpark, <code>exophial dispatch</code> reuses the kept worker branch. A note added on unpark does not change the result.
+  To change the precondition of a failed pebble, fix its branch by hand and integrate it, or close it as superseded
+  and file it again.</li>
+<li>A reducer keeps the exophial code that it loaded at start. Before you trust a verdict after an exophial install,
+  compare <code>Starting reducer</code> in <code>.exophial/logs/dispatcher.log</code> with the install time. Do not stop a reducer that has
+  a live worker. Let it drain, then unpark.</li>
+<li>A reducer that grades against a known-faulty oracle blocks the other pebbles of its repo (example: <code>exo-b9b</code>). Stop
+  it with <code>exophial stop</code>. Check its worktree for a left-over mutant with <code>git status</code>. Queue the other pebbles again.</li>
+</ul>
+<h2 id="5-filing-and-merging">5. Filing and merging</h2>
+<ul>
+<li>File only on an explicit operator order. A question is not an order.</li>
+<li>State the search scope of every claim that something does not exist.</li>
+<li>A spec is graded from the base commit. A comment added after derivation does not change the spec. Close the pebble
+  and file it again.</li>
+<li>Merge paths:</li>
+<li>a worker pebble: intake, estimate, spec review, queue;</li>
+<li>critical-severity Solidity: the spec derives with <code>forge_mutation_gated_test</code> (exophial <code>docs/ORACLES.md</code>). If
+    intake still escalates, the husband writes the change with red-first forge tests and merges it with
+    <code>exophial integrate --branch &lt;branch&gt;</code>;</li>
+<li>an operator-known change outside <code>scripts/</code>, <code>tests/</code> and <code>contracts/specs/</code>: <code>exophial apply &lt;branch&gt;</code>.</li>
+<li>Fixturenet grading (operator ruling, 2026-10-25), interim: a recorded host run grades a fixturenet pebble, and
+  <code>exophial apply</code> merges it. The commit quotes each fixturenet clause with the host command, the tested sha and the
+  verdict lines. The coordinator closes the original pebble as superseded.</li>
+</ul>
+<h2 id="6-environment-for-exophial-commands">6. Environment for exophial commands</h2>
+<ul>
+<li>Token: <code>CLAUDE_CODE_OAUTH_TOKEN="$(python3 ~/code/git_puller/repos/exophial/.scratch/oauth_token.py)" exophial ...</code>.
+  The helper picks the Anthropic account with the most headroom. Do not print the token.</li>
+<li>Set <code>TMPDIR=&lt;repo&gt;/.scratch</code> for <code>exophial dispatch</code>, <code>apply</code>, <code>integrate</code>, <code>intake</code> and <code>specify</code>.</li>
+<li>The grader runs each oracle in a sealed HOME and reads the oracle variables from the caller's environment. The
+  supervisor sets them per repo (<code>ORACLE_ENV</code>):</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Repo</th>
+<th><code>EXOPHIAL_ORACLE_TOOLCHAIN_BINARIES</code></th>
+<th><code>EXOPHIAL_ORACLE_DATA_DIRS</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>armada-nitro</td>
+<td><code>cargo:rustc:forge:cast:anvil:laconic-so</code></td>
+<td><code>.cargo:.rustup:.foundry:.svm:deployments:src/stack-orchestrator</code></td>
+</tr>
+<tr>
+<td>armada-poc</td>
+<td><code>forge:cast:anvil:node:npx:npm</code></td>
+<td><code>.foundry:.svm</code></td>
+</tr>
+<tr>
+<td>armada-circuits</td>
+<td><code>node:npx:npm:circomspect</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>A binary in <code>node_modules/.bin</code> is not on PATH. Do not list it.
+- <code>exophial init</code> takes no <code>-e</code> flag. To set a prefix or languages, run the packaged play:
+  <code>~/.local/share/uv/tools/exophial/bin/ansible-playbook &lt;exophial&gt;/ansible/init.yml -e exo_target_repo=&lt;repo&gt;
+  -e exo_pebble_prefix=&lt;p&gt; -e '{"exo_languages_override": ["typescript"]}'</code> (JSON form for lists).</p>
+<h2 id="7-git-and-repositories">7. Git and repositories</h2>
+<p>All repositories are under <code>~/code/git_puller/repos/</code>.</p>
+<ul>
+<li>Never pass <code>--git-dir</code> or <code>--work-tree</code> that points at a main checkout. On 2026-10-21 such a command, run from a
+  scratch worktree, changed the armada-nitro main checkout.</li>
+<li>Never run <code>git stash</code> in armada-nitro.</li>
+<li>armada-nitro: exophial commits <code>.pebbles/events.jsonl</code> in its own commits. Do not commit it by hand. After a merge,
+  if a modified file equals the pre-merge base, restore it with <code>git checkout -- &lt;file&gt;</code> (<code>exo-cba</code>).</li>
+<li>armada-laconic: commit to <code>main</code>. Push with <code>git push AFDudley.github.com HEAD:main</code>. The remote URL holds a token. Do
+  not print it.</li>
+<li>armada-poc: the HTTPS remote <code>fork</code> uses a <code>gh</code> token without <code>workflow</code> scope. A push that touches
+  <code>.github/workflows/</code> fails. Push over SSH: <code>git push git@github.com:AFDudley/armada-poc.git integrated:integrated</code>.</li>
+<li>ship-armada repositories give read access only. Open pull requests from the forks. <code>gh pr edit</code> fails there with a
+  GraphQL "Projects (classic)" error. To change a PR body, use
+  <code>gh api -X PATCH repos/ship-armada/&lt;repo&gt;/pulls/&lt;n&gt; -F body=@&lt;file&gt;</code>.</li>
+</ul>
+<h2 id="8-fixturenets">8. Fixturenets</h2>
+<ul>
+<li>A gate script must tear down its own fixturenet with an exit trap. On 2026-10-21, 18 leftover clusters used 156 GB
+  of memory, and fresh deploys stalled.</li>
+<li>To remove a leftover cluster:
+  1. Map it to its deployment directory with the label <code>com.docker.compose.project.working_dir</code>.
+  2. Keep clusters younger than the newest gate run.
+  3. Remove it with <code>docker rm -f</code> by compose project, then remove its volumes and run <code>sudo umount &lt;dep&gt;/data</code>.</li>
+<li>Recovery after geth halts on a full RAM disk, with <code>D=~/deployments/&lt;name&gt;</code>:
+  1. <code>laconic-so deployment --dir $D stop</code>.
+  2. <code>sudo umount $D/data</code> once. A hidden boot-time tmpfs below it stays until the next reboot. Do not unmount it.
+  3. <code>stack/scripts/fixturenet-recover &lt;name&gt;</code>.</li>
+</ul>
+<p>A stray process on 127.0.0.1:8545, for example a worker's <code>anvil</code>, blocks geth's port.
+- <code>run-job</code> needs <code>ARMADA_IMAGE_TAG=&lt;full sha of the deployment's build&gt;</code>. It reads the deployment's own copy of each
+  job file.
+- The env image takes armada-poc from <code>env/sources.lock.json</code>, not from the <code>lib/armada-poc</code> submodule. A pin change
+  updates both.
+- A bare <code>laconic-so deployment run-job armada-custodian-e2e</code> exits 1, because the compose file mounts
+  <code>${FROST_SIGNER_BIN}</code> with no default. Run it through <code>scripts/run-armada-custodian-e2e-check.py</code>.</p>
+<h2 id="9-gates">9. Gates</h2>
+<ul>
+<li>circom2 cannot read a symlinked <code>node_modules</code>. This applies to the armada-circuits gate.</li>
+</ul>
+<h2 id="10-known-failure-pattern-of-the-assistant">10. Known failure pattern of the assistant</h2>
+<p>The assistant often did these things:</p>
+<ul>
+<li>used a tool without reading its documentation first;</li>
+<li>stated a rule or a number that it had not measured;</li>
+<li>filed solution-shaped reports instead of the broken promise;</li>
+<li>stated that something does not exist after a partial search;</li>
+<li>wrote inferences as observations, and used passive voice that hid who acts;</li>
+<li>acted beyond the approved scope;</li>
+<li>merged by hand outside exophial;</li>
+<li>ran long commands in the foreground and blocked the operator;</li>
+<li>presented options as equal when one was clearly correct.</li>
+</ul>
+<p>Two controls work, and neither depends on the assistant: an adversarial reviewer that must approve each filing, and
+the operator asking "what did you read, what did you search, and where?".</p>
+
+<hr/>
+<p class="small">Generated from <code>engineering/operating-rules.md</code> by <code>tools/render-engineering.sh</code> — do not hand-edit. Internal Google Docs require Laconic/Vulcanize access.</p>
+
+</main>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+for (const code of document.querySelectorAll("code.language-mermaid")) {
+  const div = document.createElement("div");
+  div.className = "mermaid";
+  div.textContent = code.textContent;
+  (code.closest("pre") || code).replaceWith(div);
+}
+mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+mermaid.run();
+</script>
+
+</body>
+</html>

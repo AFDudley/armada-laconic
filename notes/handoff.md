@@ -57,11 +57,8 @@ substantive changes (Liveness hypotheses G1–G16, the 2ε clock bound, Turbo re
 - **F2** (husband `HusbandF2c`, also E11): N9 waits for N3. **F5 client:** waits for N3.
 - **Dispatch.** Before you queue work, start the supervisor and the watcher (`operating-rules.md` §4). On 2026-10-27
   neither ran.
-- **Gates.** armada-sdk and armada-circuits have no `.exophial/gate/Dockerfile` on `integrated`. Each needs one before
-  its next gated merge. The armada-poc gate omits `test:config`.
-- **armada-sdk route (operator ruling, 2026-10-27).** armada-sdk goes back to `pool/5090`, which escalates. Branch
-  `hand/sdk-escalation-default` holds the change, in worktree `armada-sdk/.scratch/sdk-escalation`. Both merge commands
-  refused it, because the gate container needs `.exophial/gate/Dockerfile`. The Dockerfile must merge first.
+- **Gates.** armada-circuits has no `.exophial/gate/Dockerfile` on `integrated`. It needs one before its next gated
+  merge. The armada-sdk Dockerfile (`c2a04b1`) is the closest pattern. The armada-poc gate omits `test:config`.
 
 ## 3. Open items with no other record
 

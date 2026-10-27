@@ -1,6 +1,6 @@
 # Payout griefing and the payout amount rule (2026-10-27)
 
-Decisions on how much an Armada adjudicator payout pays, and how far another caller can delay a pending payout. Operator rulings are marked. Gas figures are typical magnitudes, not measured; the measurement is a follow-up (end of this note).
+Decisions on how much an Armada adjudicator payout pays, and how far another caller can delay a pending payout. Operator rulings are marked. Gas figures in the "Cost asymmetry" section are measured with `forge test --gas-report` (see that section for commits, tests, and commands).
 
 ## The problem
 
@@ -39,16 +39,24 @@ Credits into a finalized channel cannot be forbidden: a sub-channel can finalize
 
 ## Cost asymmetry, and the check-order rule
 
-Typical magnitudes [not measured]:
+Measured gas, `forge test --gas-report`, repo commits as shown. Each run used a fresh detached worktree (`git worktree add --detach .scratch/gas HEAD`); no fixturenet ran.
 
-| Step | Cost |
-|---|---|
-| pool spend (proof check + Poseidon Merkle insertions) | hundreds of thousands of gas, up to about 1M |
-| `conclude` (signature checks, one status write) | tens of thousands of gas |
-| building a proof | seconds of client CPU, no gas |
-| a stale payout that fails at the adjudicator's amount check | tens of thousands of gas |
+| Step | Function | Test | Min | Avg | Max | Verification | Repo @ commit | Command |
+|---|---|---|---|---|---|---|---|---|
+| pool spend (private transfer) | `PrivacyPool.transact` | `FeeTaggedOutputsTest.test_transact_feeOutput_countsOnlyFeeRecipient` | 1,022,034 | 1,022,034 | 1,022,034 | mocked (`testingMode`) | armada-poc @ `ec8bdb978749b06d4c28a22042123df370b9dcff` | `forge test --match-contract FeeTaggedOutputsTest --match-test test_transact_feeOutput_countsOnlyFeeRecipient --gas-report` |
+| pool spend (shield, a deposit into the pool) | `PrivacyPool.shield` | `FeeTaggedOutputsTest.test_shield_toFeeRecipient_incrementsCumulativeFees` | 818,794 | 860,576 | 902,359 | n/a (shield carries no proof) | armada-poc @ `ec8bdb978749b06d4c28a22042123df370b9dcff` | `forge test --match-contract FeeTaggedOutputsTest --match-test test_shield_toFeeRecipient_incrementsCumulativeFees --gas-report` |
+| pool spend (unshield) | `PrivacyPool.transact` (`SolvencyHandler.unshieldLocal`) | `PrivacyPoolSolvencyInvariantTest.test_handlerActionsAreLive` | 991,488 | 991,488 | 991,488 | mocked (`testingMode`) | armada-poc @ `ec8bdb978749b06d4c28a22042123df370b9dcff` | `forge test --match-contract PrivacyPoolSolvencyInvariantTest --match-test test_handlerActionsAreLive --gas-report` |
+| pool spend (owned transact, contract-owned output) | `PrivacyPool.transactOwned` | `TransactOwnedTest.test_transactOwned_fromOwner_succeeds_recordsPreimage` | 866,247 | 866,247 | 866,247 | mocked (`testingMode`) | armada-poc @ `ec8bdb978749b06d4c28a22042123df370b9dcff` | `forge test --match-contract TransactOwnedTest --match-test test_transactOwned_fromOwner_succeeds_recordsPreimage --gas-report` |
+| one Groth16 verification, in isolation (no pool call) | `Snark.verify` | `SnarkVerifierTest.test_realProofVerifies` | 234,901 | 234,901 | 234,901 | real (deployed Armada circuits fixture) | armada-poc @ `ec8bdb978749b06d4c28a22042123df370b9dcff` | `forge test --match-contract SnarkVerifierTest --match-test test_realProofVerifies --gas-report` |
+| `conclude` (cooperative close, `conclude` + `transferAllAssets` in one call; no test calls bare `conclude` alone) | `NitroAdjudicator.concludeAndTransferAllAssets` | `ArmadaNitroAdjudicatorTest.test_cooperativeClose_shieldsUserNoteAndPaysCustodian` | 1,239,078 | 1,239,078 | 1,239,078 | real ECDSA signature checks (`ForceMove`); pool leg mocked (`testingMode`, see `test/helpers/ArmadaNotes.sol`) | armada-nitro @ `30790220585feffee922adcd76ba0958184eeb42` | `forge test --match-contract ArmadaNitroAdjudicatorTest --match-test test_cooperativeClose_shieldsUserNoteAndPaysCustodian --gas-report` |
+| `challenge` | `ForceMove.challenge` | `ArmadaNitroAdjudicatorTest.test_staleHubChallenge_isOverriddenByUsersLatestState` | 115,848 | 127,389 | 138,931 | real ECDSA signature checks | armada-nitro @ `30790220585feffee922adcd76ba0958184eeb42` | `forge test --match-contract ArmadaNitroAdjudicatorTest --match-test test_staleHubChallenge_isOverriddenByUsersLatestState --gas-report` |
+| `transfer` (force-close payout after challenge expiry) | `MultiAssetHolder.transfer` | `ArmadaNitroAdjudicatorTest.test_transfer_partial_pays_destination_fresh_commitment` | 1,183,606 | 1,183,606 | 1,183,606 | real; pool leg mocked (`testingMode`) | armada-nitro @ `30790220585feffee922adcd76ba0958184eeb42` | `forge test --match-contract ArmadaNitroAdjudicatorTest --match-test test_transfer_partial_pays_destination_fresh_commitment --gas-report` |
+| `depositFromNote` | `ArmadaNitroAdjudicator.depositFromNote` | `ArmadaNitroAdjudicatorTest.test_cooperativeClose_shieldsUserNoteAndPaysCustodian` | 1,024,200 | 1,038,778 | 1,053,357 | real preimage/owner checks; pool leg mocked (`testingMode`) | armada-nitro @ `30790220585feffee922adcd76ba0958184eeb42` | `forge test --match-contract ArmadaNitroAdjudicatorTest --match-test test_cooperativeClose_shieldsUserNoteAndPaysCustodian --gas-report` |
+| a stale payout that fails at the adjudicator's amount check | — | no existing test exercises this exact revert | — | — | — | [not measured; no matching test] | — | — |
 
-Per staling credit, the attacker pays two pool spends (a deposit into its own channel, the transfer into `c`), one `conclude`, and the credited amount. The victim pays one cheap failed call and one new proof, and can usually avoid the failed call by simulating first. So the attacker pays tens of times more than the victim.
+A note on "mocked (`testingMode`)": `PrivacyPool.transact` and `PrivacyPool.transactOwned` skip the Groth16 pairing check when `testingMode` is on (every pool test in both repos runs this way). The isolated `Snark.verify` call above shows the real cost a mocked `transact`/`transactOwned`/`depositFromNote` figure omits: adding 234,901 gas to a mocked pool-spend figure approximates its real-proof cost (for example, `transact` at 1,022,034 mocked becomes roughly 1,256,935 with a real proof).
+
+Per staling credit, the attacker pays two pool spends and one `conclude`. The measured `concludeAndTransferAllAssets` (1,239,078) is not a bare `conclude`: it also runs a payout, so it overstates the step. A bare `conclude` does signature checks and one status write, like `challenge` (measured 115,848 to 138,931). With two real-proof pool spends (2 × 1,256,935) and a `conclude` near the `challenge` maximum (about 140,000), the attacker pays about 2,650,000 gas, before the credited amount. The victim's one failed call has no matching test, so it stays an estimate: tens of thousands of gas. At 30,000 gas, the attacker pays about 90 times the victim's gas. With mocked pool spends (2 × 1,022,034 + 140,000 ≈ 2,180,000), the ratio is about 70. Two figures here are not measured: the bare `conclude` and the victim's failed call.
 
 That ratio holds only if a payout checks its amount before it touches the pool. If the check came after the proof check and the pool spend, each stale payout would cost the victim a full pool spend.
 
@@ -63,4 +71,4 @@ That ratio holds only if a payout checks its amount before it touches the pool. 
 
 ## Follow-up
 
-Measure the gas of a pool transact, a shield, an owned transact and an adjudicator `conclude` with `forge test --gas-report` on the existing armada-poc and armada-nitro tests, and replace the magnitudes above with the measured figures.
+Done: the "Cost asymmetry" section now has the measured gas table (2026-10-27). Open item: the victim's failed-call row (a stale payout rejected at the adjudicator's amount check) still has no matching test in either repo; a future test that exercises exactly this revert would let that row move from estimate to measurement.

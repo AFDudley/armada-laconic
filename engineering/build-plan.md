@@ -126,6 +126,18 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-tre
 
 So the rewrite needs both proofs: Lean model → Stele (new) and Stele → bytecode (EquiVM).
 
+**How each step is done (operator rulings, 2026-10-27).**
+
+- **Lean model → Stele is a programmatic translation, not hand work.** The specification's operations are executable functions (`Option`-valued, `Bool` app rules). A translator emits the Stele functions and their refinement proof from them. Its one fixed input is the representation map, and that map is already known: Keccak over `abi.encode` for channel ids and state hashes (go-nitro `NitroUtils.sol`), Poseidon for note commitments, keys and nullifiers (the pool's circuits and library), 20-byte addresses, `uint256` amounts and `uint120` note values, the Solidity ABI and storage-layout rules. The specification omits these because their concrete form is already known. Where the specification departs from go-nitro (the outcome recorded at finalization, the channel kind, a channel's own notes, the payee note key), each needs one new field, chosen by the same conventions.
+- **Stele → Solidity is transliteration** (Stele is "syntactically close to" Solidity, EquiVM `README.md`). solc compiles it.
+- **Bytecode → Stele is proved by agents with EquiVM** (Lazaropoulos and Paraskevopoulou, arXiv 2607.26306: 35 production contracts proved end to end). EquiVM and EVMLean use the same toolchain as `armada-lean`, `leanprover/lean4:v4.33.1`.
+- **The specification's shape is the translator's input,** so the operations must be small, composed and typed, and the proofs must meet the size and complexity criteria in `docs/lean/verification.md` §6a.
+
+**Alternatives considered and rejected (2026-10-27).**
+
+- **Verity** (LFG Labs, a Lean embedded contract language with a verified compiler to Yul; solc's Yul-to-bytecode step is not verified): a step backwards. It adds a young compiler to the trusted base and gives nothing EquiVM's bytecode-level check does not.
+- **Writing the specification in Bend2:** no route is shorter than this chain (`labbook/2026-10-27-bend2-to-evm.md`). A Bend2 EVM backend exists (`ind-igo/bend-evm`), but it proves only contract ≡ IR ≡ Yul model and tests the rest, solc included. Exporting Bend2 to Lean is a research project (session `01a162aa`, 2026-10-25). Bend2 could later serve as an implementation language: EquiVM checks bytecode from any source, because Stele is source-language agnostic. The Lean model → Stele proof is needed in every route.
+
 **Delivers:** a hardening delta on T0.2.
 
 **Depends on:** S2 (needs P2b).

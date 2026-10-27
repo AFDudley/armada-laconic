@@ -6,7 +6,7 @@ The [Building Block View (§5)](./05-building-block-view.md) is the structure an
 
 Points and hours use [`estimation-method.md`](./estimation-method.md): one point is 10,000 tokens of peak context; a chunk is one worker's one-session unit of work; one 30-minute session completes about 10 points, or two small (≤5-point) chunks. A stage's hours are its session count × 0.5. Built items have no chunks.
 
-**Live state.** [`notes/handoff-2026-10-20.md`](../notes/handoff-2026-10-20.md), section 0, records the status of every stage and chunk, updated whenever one changes. This page keeps stage status at the level done / in progress / next / later; the handoff note carries the day-to-day detail.
+**Live state.** [`notes/handoff.md`](../notes/handoff.md), section 0, records the status of every stage and chunk, updated whenever one changes. This page keeps stage status at the level done / in progress / next / later; the handoff note carries the day-to-day detail.
 
 **Review.** The family's husband reviews every chunk before it merges, with extra care on the audit-critical chunks P1, P2a, P2b, N1, N2 and G3. There is no separate reviewer step (operator ruling, CHUNK-RULES.md rule 2).
 
@@ -403,4 +403,4 @@ No engineering chunk remains for this stage. Sepolia is currently out of scope (
 
 ---
 
-Cross-refs: registry/status → [§5](./05-building-block-view.md); decisions → [§9](./09-architecture-decisions.md); risks/long-poles → [§11](./11-risks-and-technical-debt.md); solution strategy and the sequence at a high level → [§4](./04-solution-strategy.md); estimation method → [`estimation-method.md`](./estimation-method.md); live state → [`notes/handoff-2026-10-20.md`](../notes/handoff-2026-10-20.md).
+Cross-refs: registry/status → [§5](./05-building-block-view.md); decisions → [§9](./09-architecture-decisions.md); risks/long-poles → [§11](./11-risks-and-technical-debt.md); solution strategy and the sequence at a high level → [§4](./04-solution-strategy.md); estimation method → [`estimation-method.md`](./estimation-method.md); live state → [`notes/handoff.md`](../notes/handoff.md).

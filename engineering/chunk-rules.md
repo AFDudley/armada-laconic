@@ -25,7 +25,7 @@ Operator rulings, 2026-10-20.
 4. **Fixturenet first, then Sepolia, then mainnet.**
 5. **Estimates** use `ESTIMATION.md` in this directory: points, chunks of at most
    9 points for the 5090.
-6. **The handoff is the live state.** `armada-laconic/notes/handoff-2026-10-20.md`
+6. **The handoff is the live state.** `armada-laconic/notes/handoff.md`
    §0 records the state of every family, brief, pebble and gate. The lead
    updates it and commits it to `main` whenever any of them changes. Husbands
    report state changes to the lead; they do not edit the handoff. Every brief

@@ -11,7 +11,7 @@ tokens of peak worker context; at most 9 points per 5090 chunk, 12 on any route)
 
 ### 0.0 Lean specification state, 2026-10-27 (read this first)
 
-**The old adjudicator model is reference only.** `adjudicator-model-v4` (`23e01b5`) specifies one channel's dispute mechanics and payouts. It copies contract layout (the holdings slot), has no ledger or virtual channels, and its 40 theorems were checked against it, not derived from the papers. Do not extend it. Audit: `labbook/2026-10-26-adjudicator-layout-audit.md`.
+**The old adjudicator model is reference only.** `adjudicator-model-v4` (`23e01b5`) specifies one channel's dispute mechanics and payouts. It copies contract layout (the holdings slot), and it has no ledger or virtual channels. The 40 statements in its `README.md` were checked against the model, not derived from the papers. Do not extend it. Audit: `labbook/2026-10-26-adjudicator-layout-audit.md`.
 
 **Branches in `github.com/AFDudley/armada-lean`:**
 
@@ -22,7 +22,7 @@ tokens of peak worker context; at most 9 points per 5090 chunk, 12 on any route)
 | `pool-symbolic` | `3128085` | the pool model without contract layout (operator approved its changed types) | 15 `sorry` |
 | `armada-nitro-spec` | `7085053` | the Armada layer (44 theorem types, `ArmadaLean/ArmadaNitro/`) on the APPROVED, not the repaired, Nitro spec; `docs/verification-chain.md` | all `sorry` |
 
-Worktrees: `~/code/git_puller/repos/armada-lean-{nitro-proofs,nitro-theorems,pool-symbolic,armada-nitro-spec}`. Verify only in a separate tree, for example `armada-lean-nitro-theorems/.scratch/v` (detached; check out the branch to test, then `~/.elan/bin/lake build`). Toolchain `leanprover/lean4:v4.33.1`; Mathlib `v4.33.1` on all three spec branches (`lake exe cache get` first).
+Worktrees: `~/code/git_puller/repos/armada-lean-{nitro-proofs,nitro-theorems,pool-symbolic,armada-nitro-spec}`. Verify only in a separate tree, for example `armada-lean-nitro-theorems/.scratch/v` (detached; check out the branch to test, then `~/.elan/bin/lake build`). All four branches use toolchain `leanprover/lean4:v4.33.1` and the same Mathlib rev `0df444a3` (`lake exe cache get` first).
 
 **In flight.** Nothing. The rename to `ledger` and the removal of the uncited theorems are at `94436c3`, checked in a separate tree (build green, 30 `sorry` in Liveness only, 88 witnesses with no `sorry`, the grep for "asset holding" empty).
 
@@ -30,7 +30,7 @@ Worktrees: `~/code/git_puller/repos/armada-lean-{nitro-proofs,nitro-theorems,poo
 
 **Next steps, in order.**
 1. Operator approves the repaired Nitro types; tag the approved commit.
-2. Review the executable operations of the Nitro and Armada layers for composition, typed state and footprints (they are the input of the programmatic Lean → Stele translation, `engineering/build-plan.md` "Verification chain"). Changes before any more proofs.
+2. Review the executable operations of the Nitro and Armada layers for composition, typed state and footprints. They are the input of the programmatic Lean → Stele translation (`engineering/build-plan.md` "Verification chain"). Make the changes that this review finds before any more proofs.
 3. Rebuild `armada-nitro-spec` on the repaired Nitro spec: the payee note key becomes Nitro's external-destination parameter `E`; channels follow the `ledger`/`virtual` kinds; apply the pending payee-key rulings (`payout_spendable`, `payment_note_only_payee`, no ciphertexts). Its 44 types then come to the operator.
 4. Proofs: Nitro Liveness, the 15 pool `sorry`, then the Armada layer. Every proof task meets `docs/lean/verification.md` §5a (non-vacuity witness) and §6a (size and complexity).
 5. File the armada-circuits need: owned circuits with more than one input (merges inside a channel).
@@ -39,10 +39,11 @@ Worktrees: `~/code/git_puller/repos/armada-lean-{nitro-proofs,nitro-theorems,poo
 - Source order: the latest paper first (SATP 2022, then Nitro 2019, then ForceMove 2018), then the statechannels team's go-nitro at `64c4ee9a1`. armada-nitro's vendored copy is cerc-io's fork `435eb2b`; do not use it as a source. Name sources by title, not S1–S4.
 - Every theorem cites a paper passage, a contract line, or an operator ruling. No uncited theorems; arguments go in the labbook (`writing-lean.md` rule 11).
 - Use the papers' terms. Do not invent type names. A different construction is a different type (channel kinds are `ledger` and `virtual`, SATP §1).
-- No contract layout or encoding in the symbolic layer. Axioms may only declare primitives (`process.md` 2.4).
-- Mathlib wherever it applies. Sonnet by default for subagents, Opus only when Sonnet fails, no Fable (keep the `fable` agent definition file).
+- No contract layout or encoding in the symbolic layer. Axioms may only declare primitives (`docs/process.md` 2.4).
+- Use Mathlib wherever it applies.
+- Model choice for subagents: Sonnet by default, Opus only when Sonnet fails at the task, no Fable. Keep the `fable` agent definition file. Evidence: the Fable agent that wrote `nitro-theorems` took the destination definition from the oldest paper (Nitro 2019), not from SATP and go-nitro. Its liveness game made 29 of 35 liveness theorems false or vacuous (`labbook/2026-10-27-nitro-liveness-game-defects.md`). Acceptance now requires a non-vacuity witness for every approved theorem (`docs/lean/verification.md` §5a).
 - The operator decides theorem types. A defect whose fix the papers determine is the coordinator's to fix, not a question.
-- Do not suggest following nitrolite. Do not raise the pool contract until the Lean work is done.
+- Do not suggest following nitrolite. Do not propose pool contract changes until the Lean work is complete.
 
 **Findings recorded this session:** go-nitro's `reclaim` lock, reproduced with `forge` (`labbook/2026-10-27-gonitro-reclaim-dos.md`); payout griefing and the payout rule (`labbook/2026-10-27-payout-griefing.md`); the liveness game defects (`labbook/2026-10-27-nitro-liveness-game-defects.md`); UTXO channel literature (`labbook/2026-10-26-utxo-channel-formalizations.md`); Bend2 to EVM (`labbook/2026-10-27-bend2-to-evm.md`).
 
@@ -76,7 +77,7 @@ Worktrees: `~/code/git_puller/repos/armada-lean-{nitro-proofs,nitro-theorems,poo
 | Repo | Prefix | Backend, worker model, `max_workers` | Gate (`gate.command`) |
 |---|---|---|---|
 | armada-nitro | `arn` | `omp`, `pool/5090`, 5 | `pre-commit run --all-files` (forge build and test) |
-| armada-poc | `arp` | `omp`, `pool/5090`, 5 | `npm ci --legacy-peer-deps --offline`, pre-commit, anvil-address check, hardhat compile, contract sizes, `tsc`, `forge test --offline`; timeout 300 s. `test:config` is out of the gate until `arp-d0f` merges. |
+| armada-poc | `arp` | `omp`, `pool/5090`, 5 | `npm ci --legacy-peer-deps --offline`, pre-commit, anvil-address check, hardhat compile, contract sizes, `tsc`, `forge test --offline`; timeout 300 s. `test:config` is still out of the gate, although `arp-d0f` merged. |
 | armada-circuits | `arx` | `claude_code`, `claude-sonnet-5`, 1 | `npm ci --offline`, pre-commit (generated `contracts/specs/*.spec.json` excluded from prettier), compile of all shapes, circomspect; timeout 240 s. circom2 cannot read a symlinked `node_modules`. |
 | armada-sdk | `ars` | `omp`, `pool/5090-local`, 1 | `npm ci --offline`, pre-commit, lint, typecheck, vendor typecheck, build, vitest, POI guard, vendor-divergence check; timeout 150 s. |
 
@@ -86,18 +87,27 @@ only caller of `exophial dispatch`. Husbands append reviewed, unparked pebbles t
 (`local_agents/router`), and the quota from `exophial/.scratch/oauth_token.py --explain`. It reads each repo's route
 from that repo's `worker_model` default:
 - `pool/5090-local`: the 5090 with no cloud promotion. Starts whenever none of our workers holds the 5090, whatever
-  the Sonnet count. A worker that outgrows the window compacts or fails, and the husband lands that chunk by hand.
+  the Sonnet count. A worker that outgrows the window compacts or fails, and the husband merges that chunk by hand.
 - `pool/5090`: starts when none of our workers holds the 5090 and Sonnet is below its cap.
 - any other model: starts when Sonnet is below its cap.
 
-It sets `TMPDIR`, a per-repo `TMUX_TMPDIR` (to avoid `exo-fb55`), the token and the oracle variables, and logs every
-start and every hold. When a repo's ephemeral reducer still runs, the supervisor joins the pebble to that reducer's scope with exophial's
-`bus.merge_scope` (the reducer re-reads `.exophial/ephemeral_scope.json` every tick); `exophial dispatch` would only
-expedite the id onto the scoped reducer, which never claims it. The reducer selects nothing while it gates a branch. A parked pebble stays in the queue, held with reason `parked`: its husband resolves it per
-the doctrine; if the husband cannot, the coordinator does the root-cause analysis, fixes the cause and hands it back.
-The watcher wakes the coordinator on each new parked hold. A reducer that grades a pebble against a known-faulty oracle (for example the
-forge mutation scope fault `exo-b9b`) blocks its repo's other pebbles for hours; the coordinator stops it with
-`exophial stop`, checks the worktree for a left-over mutant (`git status`), and re-queues the other pebbles. The 5090 serves one session (`local_agents/router/pools.json`, `maxSessions: 1`); `exophial4`
+It sets `TMPDIR`, a per-repo `TMUX_TMPDIR` (to avoid `exo-fb55`), the token and the oracle variables. It logs every
+start and every hold.
+
+**Ephemeral reducers.** When a repo's ephemeral reducer still runs, the supervisor adds the pebble to that reducer's
+scope with exophial's `bus.merge_scope`. The reducer reads `.exophial/ephemeral_scope.json` again on every tick.
+`exophial dispatch` would only expedite the id onto the scoped reducer, and that reducer never claims it. The reducer
+selects nothing while it gates a branch.
+
+**Parked pebbles.** A parked pebble stays in the queue, held with reason `parked`. Its husband resolves it per the
+doctrine. If the husband cannot, the coordinator finds the root cause, fixes it and gives the pebble back. The watcher
+wakes the coordinator on each new parked hold.
+
+**Faulty oracle.** A reducer that grades a pebble against a known-faulty oracle blocks the other pebbles of its repo
+for hours. An example is the forge mutation scope fault `exo-b9b`. The coordinator stops that reducer with
+`exophial stop`, checks the worktree for a left-over mutant (`git status`), and queues the other pebbles again.
+
+**One 5090 session.** The 5090 serves one session (`local_agents/router/pools.json`, `maxSessions: 1`). `exophial4`
 shares it through `pool/27b-class`. A second session does not fit: vLLM's fp8 KV cache holds 168,779 tokens
 (`kv_cache_max_concurrency` 1.03 at full context), so two large contexts would evict each other.
 
@@ -106,8 +116,9 @@ averages under 15% for 10 minutes, when an account passes the quota limits, and 
 `.scratch/supervise/samples.csv`. The 7-day rate is coarse: omp reports whole percents.
 
 **Husbands** (doctrine `exophial/src/exophial/doctrine/repo/.claude/doctrine/husband.md`; logs
-`<repo>/.scratch/plan/husbandry-<family>.md`): `HusbandF1b` owns F1; `HusbandF2c` (Sonnet) owns F2, E11, F4 and the armada-nitro re-pin
-(it replaced `HusbandF2b`, which replaced `HusbandF2`, on 2026-10-22; operator rule: husbands run on Sonnet, the `task` agent); `HusbandF3j` owns F3, armada-sdk and small armada-poc work.
+`<repo>/.scratch/plan/husbandry-<family>.md`): `HusbandF2c` owns F2 and E11. It replaced `HusbandF2b`, which replaced
+`HusbandF2`, on 2026-10-22. `HusbandF3j` owns F3, armada-sdk and small armada-poc work. F1 and F4 have no open work.
+Operator rule: husbands run on Sonnet, as the `task` agent.
 
 **Husbands do not compact (operator rule, 2026-10-22).** A compacted husband loses its reasoning and keeps acting on a
 summary. To replace one: tell it to stop new work and write a "SUCCESSOR HANDOFF" section at the end of its log (open
@@ -116,23 +127,23 @@ husband from a brief that points at that section. The first brief of this kind i
 `armada-laconic/.scratch/husband-briefs/HusbandF2b.md`. Each brief tells the husband to keep its log current and, if
 its own context compacts, to write the handoff section and yield at once.
 
-**Landing paths.**
+**Merge paths.**
 - A worker pebble: intake, `exophial pebble estimate <id> --points N` (`exo-df06`), spec review, queue.
 - Critical-severity Solidity derives a spec with `forge_mutation_gated_test` (`exophial/docs/ORACLES.md` §515). If
-  intake still escalates, the husband writes the change with red-first forge tests and lands it with
+  intake still escalates, the husband writes the change with red-first forge tests and merges it with
   `exophial integrate --branch <branch>`.
 - An operator-known change outside `scripts/`, `tests/` and `contracts/specs/`: `exophial apply <branch>`.
 
-**No protocol swap fee (2026-10-22).** Treasury lab book decision 23 (the N8 swap-fee edge) was an agent error with no ruling; it is struck, T9 states that the only protocol fee is the shield-in fee, N8 is withdrawn, and the fee-tagged outputs of P2 and N2 go. armada-nitro briefs (`HusbandF2`) and armada-poc briefs plus its gate Dockerfile (agent `PocGateAndFeeDocs`) are being updated; merged P2b code that counts a published transact output to `feeRecipient` as a fee is a defect to file once the poc briefs merge.
+**No protocol swap fee (2026-10-22).** Treasury lab book decision 23 (the N8 swap-fee edge) was an agent error with no ruling, and it is struck. T9 states that the only protocol fee is the shield-in fee. N8 is withdrawn, and the fee-tagged outputs of P2 and N2 go. armada-poc `b1679891` marks the swap fee superseded in its briefs, and armada-nitro `ec06acc0` strips it from N2b. The merged P2b defect (a plain transact output counts as a fee) is filed as `arp-fed`, open.
 
-**Containerized gate (exophial `0.2.1+acc53c92`, ADR D49).** Each repo must track `.exophial/gate/Dockerfile`, with `.gitignore` exceptions `!.exophial/gate/` and `!.exophial/gate/Dockerfile`; without it every gate is `unevaluable`. armada-nitro has one (`5e2b8447`, merged at `cd8ceb50`: FROM exophial-e2e-base, node 24.18.0, rust 1.88.0, foundry v1.8.3, pre-commit 4.5.1, `fetch-submodules.sh` for offline lib/*). armada-poc, armada-sdk and armada-circuits still need theirs before their next gated merge; copy armada-nitro's pattern.
+**Containerized gate (exophial `0.2.1+acc53c92`, ADR D49).** Each repo must track `.exophial/gate/Dockerfile`, with `.gitignore` exceptions `!.exophial/gate/` and `!.exophial/gate/Dockerfile`; without it every gate is `unevaluable`. armada-nitro has one (`5e2b8447`, merged at `cd8ceb50`: FROM exophial-e2e-base, node 24.18.0, rust 1.88.0, foundry v1.8.3, pre-commit 4.5.1, `fetch-submodules.sh` for offline lib/*). armada-poc has one on `integrated`. armada-sdk and armada-circuits have none on `integrated`; they need one before their next gated merge. Copy armada-nitro's pattern.
 
 **Never pass `--git-dir` or `--work-tree` that points at a main checkout.** On 2026-10-21 a husband ran
 `git --git-dir=../../.git checkout 6ada67cd --` from a scratch worktree, and the command changed the armada-nitro main
 checkout. The lab book entries contract-owned-notes §3a and treasury §3a hold the revisions of 2026-10-22. F3 work
 (G7, `arp-acf`, the crowdfund changes) must follow the revised entries.
 
-**Fixturenet grading (operator rulings, 2026-10-25).** Interim rule: a fixturenet pebble is graded by a recorded host run and landed with `exophial apply`. The commit quotes each fixturenet clause with the host command, tested sha and verdict lines. The original pebble is closed as superseded. Final design: the exophial integrator starts the pebble's laconic-so stack beside the gate container (D49 amendment in progress). R2 scenarios merged this way:
+**Fixturenet grading (operator rulings, 2026-10-25).** Interim rule: a recorded host run grades a fixturenet pebble, and `exophial apply` merges it. The commit quotes each fixturenet clause with the host command, tested sha and verdict lines. The original pebble is closed as superseded. Final design: the exophial integrator starts the pebble's laconic-so stack beside the gate container (D49 amendment in progress). R2 scenarios merged this way:
 - `arn-c01` → `arn-8de` `2e8802a7`;
 - `arn-ac6` → `arn-d8e` `a93213b4`;
 - `arn-920` → `arn-40d` `33abb203`.
@@ -145,7 +156,7 @@ checkout. The lab book entries contract-owned-notes §3a and treasury §3a hold 
 
 **Timeouts are not tuned.** A timeout is a symptom; find the cause (operator rule). The coordinator raised armada-nitro `task_timeout` to 7200 s (`bf3e8b12`) and the operator corrected it; `488930d3` reverts it to 3600 s. The real cause was leftover fixturenets.
 
-**Leftover fixturenets.** The gate scripts (`check_governance_stack.sh`, `check_pool_spend.sh`, the E11 and disclosure scripts) do not tear down their own fixturenet. On 21 Oct, 18 clusters were up (memory 156 GB, load 112), and fresh deploys stalled. The coordinator removed the 15 stale ones at 10:52 (`docker rm -f` by compose project, volumes, `sudo umount <dep>/data`). The husbands add an exit trap to each script. Before removing a cluster, map it to its deployment directory with the label `com.docker.compose.project.working_dir`, and keep clusters younger than the newest gate run. The shared `armada-fixturenet-e12` has only beacon and validators running (no geth); it is not used by current gates.
+**Leftover fixturenets.** The gate scripts (`check_governance_stack.sh`, `check_pool_spend.sh`, the E11 and disclosure scripts) do not tear down their own fixturenet. On 21 Oct, 18 clusters were up (memory 156 GB, load 112), and fresh deploys stalled. The coordinator removed the 15 stale ones at 10:52 (`docker rm -f` by compose project, volumes, `sudo umount <dep>/data`). The husbands add an exit trap to each script. Before removing a cluster, map it to its deployment directory with the label `com.docker.compose.project.working_dir`, and keep clusters younger than the newest gate run.
 
 **Withheld dispatch.** The dispatcher withholds a pebble whose title or description contains "blocked on", "do not dispatch" or a `Precondition:` line, unless it has a dependency edge (`exophial/src/exophial/precondition_hold.py`). The log line is "states an uncovered dispatch precondition". `arn-5c3` waited 40 min for this; `exophial pebble dep-add arn-5c3 arn-d36` released it at 12:44. Do not write "blocked on" in a pebble body unless a dependency edge exists. `exophial pebble grade-kept <id>` re-grades a kept worktree.
 
@@ -169,7 +180,7 @@ checkout. The lab book entries contract-owned-notes §3a and treasury §3a hold 
 | F5 client (C1–C5) | — | Needs N3. |
 | Small | — | — |
 
-Critical path: G3, G7.
+Critical path: G7 (G3 merged).
 
 ### 0.4.1 What Qwen on the 5090 does (measured 2026-10-20)
 
@@ -256,7 +267,7 @@ body=@<file>`.
 4. Before you file, search the target repo's bus for a duplicate, and state the search scope of every absence claim.
 5. Review the derived spec before any worker starts. A spec is graded from the base commit. A comment added after
    derivation does not change the spec; close and file again instead.
-6. Land by the paths in section 0.3.
+6. Merge by the paths in section 0.3.
 7. A parked pebble goes to its family's husband, never an unchanged unpark. The husband changes the precondition, then
    queues it through the supervisor.
 
@@ -264,13 +275,13 @@ body=@<file>`.
 
 ### 4.1 Work outside the 209-point families
 
-1. **E11, hub yield and swaps:** runs now with F2 (section 0.4), owned by `HusbandF2`.
-2. **arn-315**, the selective-disclosure checker on a real fixturenet chain of custody. Parked: every clause runs on a
-   fixturenet (the shared one's geth is down; its rebuild needs sudo), and its real size is above its estimate of 3.
-   `HusbandF2` re-scopes and splits it when a fixturenet runs.
-3. **E17, Nitro specification conformance** (`docs/tasks/E17-nitro-spec-conformance.md`). Not scheduled. Section 4.5.
-4. **An external audit** of `ArmadaNitroAdjudicator` and `HubCustodian`, last. ADR-0016 records that the risk of this
+1. **E11, hub yield and swaps:** paused (section 0.3, "E11 paused"). Owner `HusbandF2c`.
+2. **E17, Nitro specification conformance** (`docs/tasks/E17-nitro-spec-conformance.md`). Not scheduled. Section 4.5.
+3. **An external audit** of `ArmadaNitroAdjudicator` and `HubCustodian`, last. ADR-0016 records that the risk of this
    construction is "audit, not code".
+
+`arn-315` (the selective-disclosure checker) is closed. `arn-2fd` and `arn-12e` superseded it on 2026-10-20, and each
+run now starts its own fixturenet with `stack/scripts/fixturenet-new`.
 
 ### 4.2 E16 open items
 
@@ -295,14 +306,12 @@ body=@<file>`.
 
 ### 4.4 Fixturenet
 
-- **Shared fixturenet** `~/deployments/armada-fixturenet-e12`: running (recovered 2026-10-20 13:12 from the base snapshot).
-  When geth halts on a full 3G RAM disk (the design, `stack/README.md:84-85, 93-95`): `laconic-so deployment --dir $D
-  stop`, `sudo umount $D/data` once (the RAM disk; a hidden boot-time tmpfs below it stays), then
-  `stack/scripts/fixturenet-recover armada-fixturenet-e12`. A stray process on 127.0.0.1:8545 (for example a worker's
-  `anvil`) blocks geth's port. To rebuild from nothing, with `D=~/deployments/armada-fixturenet-e12`:
-  `~/bin/laconic-so deployment --dir $D stop`, `sudo umount $D/data`, `sudo rm -rf $D
-  ~/deployments/armada-fixturenet-e12-spec.yml`, then `TMPDIR=$PWD/.scratch stack/scripts/fixturenet-new
-  armada-fixturenet-e12`.
+- **No shared fixturenet.** On 2026-10-27 `~/deployments/armada-fixturenet-e12` does not exist, and no `e12` container
+  runs. Gates start their own fixturenet with `stack/scripts/fixturenet-new <name>`.
+- When geth halts on a full 3G RAM disk (the design, `stack/README.md:84-85, 93-95`), with `D=~/deployments/<name>`:
+  `laconic-so deployment --dir $D stop`, `sudo umount $D/data` once (the RAM disk; a hidden boot-time tmpfs below it
+  stays), then `stack/scripts/fixturenet-recover <name>`. A stray process on 127.0.0.1:8545 (for example a worker's
+  `anvil`) blocks geth's port.
 - `fixturenet-new` maps ports with `localhost-fixed-random`; jobs reach geth at `http://armada-fixturenet-geth:8545`.
   Read a host port with `docker port <geth-ctr> 8545`.
 - `run-job` needs `ARMADA_IMAGE_TAG=<full sha of the deployment's build>`, and reads the deployment's own copy of each
@@ -317,11 +326,12 @@ body=@<file>`.
 
 - Test rule (operator): a clause the code meets is proven by a mutation that breaks it; a clause the code does not
   meet gets a red commit first.
-- **The papers are in armada-nitro `docs/references/nitro/sources/`** (committed, sha256 in that `README.md`).
-  The Lean citations S1–S4 refer to these files: S1 `forcemove-2018.pdf`, S2 `nitro-2019-219.pdf`,
-  S3 `satp-2022.pdf`, S4 `docs.statechannels.org/*.html`. eprint.iacr.org blocks `curl` (Cloudflare), so do not
-  download S2 again. The Railgun whitepaper and audits are in armada-laconic `.scratch/rewrite-B/sources/`.
-  `clauses.md` in the same directory lists 31 clauses, 8 differences and 7 silences.
+- **The papers are in armada-nitro `docs/references/nitro/sources/`** (committed, sha256 in that `README.md`):
+  ForceMove 2018 `forcemove-2018.pdf`, Nitro 2019 `nitro-2019-219.pdf`, SATP 2022 `satp-2022.pdf`, and the
+  statechannels docs `docs.statechannels.org/*.html`. Name them by title, not S1–S4. eprint.iacr.org blocks `curl`
+  (Cloudflare), so do not download the Nitro 2019 paper again. The Railgun whitepaper and audits are in armada-laconic
+  `.scratch/rewrite-B/sources/`.
+  armada-nitro `docs/references/nitro/clauses.md` lists 31 clauses, 8 differences and 7 silences.
 - No pebble. A defect is filed only when a test shows a clause broken. Candidates, not confirmed by a test: the
   adjudicator's `_executeSingleAssetExit` ignores a `withdrawHelper` allocation (clause 31, Sil4); `reclaim` credits
   only target allocations 0 and 1 (Sil6).
@@ -335,8 +345,8 @@ body=@<file>`.
   component; a Lean proof of the circuit against page 16 is planned at low priority.
 - **SDK:** draft ship-armada/armada-sdk#142. It depends on #3.
 - **Open gaps:** no hop has been checked against events from real transactions, and the hub's EIP-1271 check has run
-  only against a stand-in. arn-315 (section 4.1) covers both. The co-signed channel states need a recorded source in
-  that run.
+  only against a stand-in. `arn-12e` covers both; it is parked (section 0.3, "E11 paused"). The co-signed channel
+  states need a recorded source in that run.
 - **The disclosure-circuit setup is a dev setup.** The proof system and ceremony for production are open (page 16).
 
 ## 6. Designs discussed, not written
@@ -395,7 +405,7 @@ things with different red rules, and base replay applies one rule to all. It is 
 ## 9. Questions to the operator
 
 - `supervisor.py` replaces scheduling that exophial lacks (host-wide limits, quota, local versus cloud routing). Move
-  it into exophial as a feature, or add it as evidence to `exo-8f0`?
+  it into exophial as a feature? (`exo-8f0`, a related filing, merged.)
 - Give the S7 proof gate job (section 0.5) to a husband?
 - mtm production: who owns the failing reconcile, and when is the cron line enabled again?
 - Prune dangling Docker images? Remove marks from `pool/27b-class` and `pool/long`? The drive swap on the `kelce-qvos`
@@ -416,5 +426,3 @@ The assistant again and again:
 
 Fixes that work do not depend on the assistant: an adversarial reviewer that must approve each filing, and the
 operator asking "what did you read, what did you search, and where?".
-
-**Model choice for subagents (operator ruling, 2026-10-27).** Use Sonnet by default. Escalate to Opus only when Sonnet fails at the task. Do not use Fable. Evidence: the Fable agent that wrote the Nitro specification (`nitro-theorems`) took the destination definition from the oldest paper (Nitro 2019) instead of SATP and go-nitro, and wrote a liveness game whose definitions made 29 of 35 liveness theorems false or vacuous (`labbook/2026-10-27-nitro-liveness-game-defects.md`). Acceptance now requires a non-vacuity witness for every approved theorem (`docs/lean/verification.md` §5a).

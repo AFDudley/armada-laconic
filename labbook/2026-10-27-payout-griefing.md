@@ -35,7 +35,13 @@ After channel `c` is finalized, a pending payout on `c` can go stale only throug
 
 Credits into a finalized channel cannot be forbidden: a sub-channel can finalize before its ledger channel pays it.
 
-**Operator ruling: a credit into an already-finalized channel must be at least a minimum fixed at deployment.** A credit smaller than the cost of collecting it is dust: it gives `c`'s entries nothing of value and serves only to grief. With the minimum, each staling by credit costs the attacker at least the minimum, paid to the victim channel's entries. The value is open; it should be near the cost of collecting one payout.
+**Minimum credit: proposed, then withdrawn (operator ruling 2026-10-27).** A minimum for a credit into a finalized channel was ruled first, so that each staling credit would cost the attacker value. It was dropped the same day:
+
+- The measured gas asymmetry (next section, about 70–90 to 1) already bounds the attack economically.
+- In the approved game model the honest participant chooses each move after the adversary's steps in that round, so the honest move is never stale in the model. Staleness is a latency and cost problem outside the theorems, as Nitro §4.2 leaves on-chain costs out of scope.
+- The minimum made the model much larger: an outcome rule at `challenge`, `checkpoint` and `conclude`; three cases that lock value (an underfunded entry, a permanent remainder after a partial payout, a reclaim credit); an exception for credits that complete an entry; and a check inside `reclaim`. A ledger channel could also no longer send a small amount to a sub-channel.
+
+**The attack stays documented, as not practical.** After `c` is finalized, an attacker can make a pending payout on `c` stale by crediting `c` from a channel of its own. There is no limit on the number of such credits. Each one costs the attacker two pool spends and a `conclude` (about 2.2–2.65M gas), plus the credited value, which goes to `c`'s entries. Each one costs the victim one failed call (about 30,000 gas, if the amount check comes first) and a new proof. The victim can usually avoid even the failed call by simulating before it sends.
 
 ## Cost asymmetry, and the check-order rule
 
@@ -65,9 +71,8 @@ That ratio holds only if a payout checks its amount before it touches the pool. 
 ## Theorems to add (armada-nitro-spec, types first)
 
 - The payout rule: a transfer's amount equals the affordable amount (B).
-- The minimum credit into a finalized channel, as one named deploy-time parameter.
 - The check-order theorem above.
-- Non-interference as a bound: the steps that can make a pending payout on `c` stale are payouts of `c`'s entries, reclaims against `c`, and credits into `c`, each credit at least the minimum.
+- Non-interference as a list of causes: a pending payout on `c` goes stale only through a payout of one of `c`'s entries, a reclaim against `c`, or a credit into `c`. Reclaims are at most the number of guarantees. Credits have no count bound in the theorems; their cost is the attack above.
 
 ## Follow-up
 

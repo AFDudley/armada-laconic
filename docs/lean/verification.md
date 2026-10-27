@@ -306,6 +306,36 @@ grep -rc "grind" ArmadaLean/Adjudicator/*.lean
 # 68f49f6: 0 in every file
 ```
 
+### 6a. Proof size and complexity are acceptance criteria (rule added 2026-10-27)
+
+A proof that builds is not accepted if it is larger than it needs to be. The
+operations of the specification are the input of a programmatic translation to
+Stele, and their proofs are maintained for the life of the contract, so size
+and duplication are defects.
+
+Every proof task reports, and the reviewer checks:
+
+- **Size per declaration.** The line count of every new or changed theorem and
+  lemma (`.scratch/declsizes.py`, section 1). A declaration over 60 lines needs a
+  written reason in the report, and one over 150 lines is rejected unless the
+  reviewer accepts the reason.
+- **No hand-built executions.** A "can happen" or strategy proof instantiates an
+  exact-effect lemma for each operation (`writing-lean.md` rule 7). A proof that
+  builds literal states, witnesses or Merkle paths step by step is rejected.
+- **One API per operation.** Each operation has a small set of `@[simp]` lemmas
+  that state its exact result and the fields it leaves unchanged. Proofs use
+  them and do not unfold the operation (`writing-lean.md` rules 3 and 6). The
+  report counts `unfold` and `simp only [<operation>]` uses of operation
+  definitions outside their API lemmas; the count should be zero.
+- **No duplicated reasoning.** The same case analysis appears once, as a lemma.
+  The reviewer searches for repeated proof blocks of more than 10 lines.
+- **Library first.** Every hand-written general lemma (no project type in its
+  statement) is listed with the reason Mathlib or core has none.
+- **Automation where it fits.** `grind`, `omega`, `simp` and `decide` close the
+  goals they can. A long manual proof of a goal one of them closes is rejected.
+- **Totals before and after.** The report gives the total line count of every
+  changed file at the baseline and after the change.
+
 ## 7. Git rules
 
 - Work on `adjudicator-model-v4` in the worktree above. Confirm with

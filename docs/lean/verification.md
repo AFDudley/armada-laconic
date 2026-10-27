@@ -252,6 +252,30 @@ signature check (section 4) and the design checks in `worker-briefs.md` cover
 the rest: a statement whose hypotheses lost a definition changes its
 signature or its `#print axioms` set, or the design check D1 fails.
 
+### 5a. No vacuous hypotheses (rule added 2026-10-27)
+
+A theorem whose hypotheses can never hold together is true and says nothing.
+The build, the `sorry` count and the axiom check cannot detect it. Two Nitro
+liveness theorems were vacuous this way: an assumption contradicted another
+(`Assumptions.capable` against `Threat.TransfersOnly`), and a hypothesis
+quantified over made-up signed-state values (`hsetup` in the SATP theorems).
+
+Every `theorem` that a person approves needs a witness: a proved `example` in
+the module `NonVacuity.lean` beside the theorems, that builds concrete values
+for all binders and proves every hypothesis of the theorem for them. The
+example must not use `sorry`, and it must not assume the theorem's conclusion.
+One witness per theorem. A theorem with no hypotheses beyond its binders'
+types needs none; list it as "no hypotheses".
+
+The witness is part of acceptance for a new or changed theorem TYPE, before any
+proof starts. Check: `grep -c "^example" NonVacuity.lean` equals the number of
+theorems minus the "no hypotheses" list, and `lake build` builds the module with
+no `sorry` warning in it.
+
+A witness shows that the hypotheses are satisfiable. It does not show that they
+are the right hypotheses: the reviewer still reads each theorem against its
+source.
+
 ## 6. Line counts
 
 Measure before and after. The baseline numbers at `68f49f6`:

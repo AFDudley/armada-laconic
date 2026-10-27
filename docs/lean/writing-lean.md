@@ -365,11 +365,15 @@ one graph") and the Literate Code Principle in `~/.claude/CLAUDE.md`.
 
 ## 11. Hypotheses, axioms and statement texts.
 
-- An assumption is a named hypothesis or a field of a named structure
-  (`SignatureAssumptions`, `PoolSignatureLiveness`, `Notes.lean:211`). Never
-  an `axiom`. `#print axioms` on every statement lists only `propext`,
-  `Classical.choice`, `Quot.sound`, `EdDSAVerify`, `decodeGuarantee`
-  (checked on six statements, see `verification.md`).
+- An axiom may declare an uninterpreted primitive: a verifier, a hash or a
+  parser, by its type only (`EdDSAVerify`, `VerifyAccepts`, `decodeGuarantee`).
+  It never asserts a property. A property comes from the construction (the
+  Dolev–Yao `Term` constructors give collision resistance) or from a named
+  hypothesis or structure field (`SignatureAssumptions`,
+  `PoolSignatureLiveness`, `Notes.lean:211`). `#print axioms` on every
+  statement lists only the declared primitives and `propext`,
+  `Classical.choice`, `Quot.sound`. Operator ruling, 2026-10-27;
+  `docs/process.md` 2.4.
 - A statement text in `Safety.lean` changes only with the operator's approval.
   A step-level statement may gain a `Reachable …` hypothesis when its proof
   needs an invariant. List each one.

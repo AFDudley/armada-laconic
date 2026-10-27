@@ -93,8 +93,12 @@ is the `Step` case. In Solidity it is the function's `require`s and its document
 **2.3 Choose the coarsest representation that can still state the invariant** [Wirth 1971]. Symbolic hashes (Dolev–Yao)
 state everything the specification needs. Concrete values belong to the lower layers.
 
-**2.4 Every assumption is a named hypothesis, never a global axiom.** It carries a citation to the source that justifies
-it (a paper, a contract line, a chain property such as positive `block.timestamp`).
+**2.4 An axiom may declare a primitive. It never asserts a property.** An uninterpreted primitive (a verifier, a hash, a
+parser) may be an `axiom` that only declares its type, such as `EdDSAVerify` or `decodeGuarantee`. Such an axiom states
+nothing, so it cannot make the logic inconsistent. A property (unforgeability, collision resistance, timely inclusion,
+positive `block.timestamp`) comes from the construction, as the Dolev–Yao terms give collision resistance, or from a named
+hypothesis on each theorem that needs it. It is never an `axiom`, because a false axiom lets Lean prove anything. Each
+assumption cites its source (a paper, a contract line, a chain property). Operator ruling, 2026-10-27.
 
 **GATE.** The specification states its invariant before its step relation. `#print axioms` on every statement lists
 only the model's named primitives.

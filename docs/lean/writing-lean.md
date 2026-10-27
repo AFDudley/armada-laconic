@@ -374,6 +374,13 @@ one graph") and the Literate Code Principle in `~/.claude/CLAUDE.md`.
   statement lists only the declared primitives and `propext`,
   `Classical.choice`, `Quot.sound`. Operator ruling, 2026-10-27;
   `docs/process.md` 2.4.
+- Every top-level `theorem` cites its source in its doc comment: a paper
+  passage (title and lines), a go-nitro or pool contract line, or an operator
+  ruling with its date. A theorem with no such source is not added, whoever
+  proposes it, the coordinator included. An argument the coordinator makes for a
+  design choice goes in the labbook, not into the theorem list. A fact that a
+  proof needs is a lemma in `Lemmas.lean`, not a theorem. Operator ruling,
+  2026-10-27.
 - A statement text in `Safety.lean` changes only with the operator's approval.
   A step-level statement may gain a `Reachable …` hypothesis when its proof
   needs an invariant. List each one.

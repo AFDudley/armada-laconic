@@ -59,6 +59,9 @@ substantive changes (Liveness hypotheses G1–G16, the 2ε clock bound, Turbo re
   neither ran.
 - **Gates.** armada-sdk and armada-circuits have no `.exophial/gate/Dockerfile` on `integrated`. Each needs one before
   its next gated merge. The armada-poc gate omits `test:config`.
+- **armada-sdk route (operator ruling, 2026-10-27).** armada-sdk goes back to `pool/5090`, which escalates. Branch
+  `hand/sdk-escalation-default` holds the change, in worktree `armada-sdk/.scratch/sdk-escalation`. Both merge commands
+  refused it, because the gate container needs `.exophial/gate/Dockerfile`. The Dockerfile must merge first.
 
 ## 3. Open items with no other record
 
@@ -96,11 +99,8 @@ substantive changes (Liveness hypotheses G1–G16, the 2ε clock bound, Turbo re
 
 - Next step 2 can change theorem types after step 1 approves them. Do step 2 first, or limit it to changes that keep
   the approved types?
-- armada-sdk runs on `pool/5090-local`, which does not promote to Sonnet. `chunk-rules.md` rule 1 requires escalation.
-  Is this an approved exception?
 - `supervisor.py` replaces scheduling that exophial lacks (host-wide limits, quota, local versus cloud routing). Move
   it into exophial as a feature?
 - Give the S7 proof gate job to a husband?
 - mtm production: who owns the failing reconcile, and when is the cron line enabled again?
 - Prune dangling Docker images? Remove marks from `pool/27b-class` and `pool/long`?
-- The drive swap on the `kelce-qvos` pool (mirror-0 `sdc` …01064Z with mirror-2 `sdf` …00043M): when?

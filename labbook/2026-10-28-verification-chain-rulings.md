@@ -117,3 +117,17 @@ Not covered for a hidden-balance channel: the 6 consensus-specific finalization 
 `concluded_universally_finalizable`, `participant_can_prevent_cycles`). The papers state those for the consensus game
 only. A ZK-app analogue would be a new theorem about the app's own rules. Whether one is wanted is open. The earlier
 statement "10 theorems assume `consensusRules`" was wrong: 6 assume `consensusRules` and 4 assume `satpVirtualRules`.
+
+## Ruling: no limit on inputs or outputs below the system's hard limits (operator, 2026-10-28)
+
+"The hard limits of inputs and outputs are technical constraints of the system, we shouldn't needlessly constrain it
+more than that."
+
+- The pool's verifying-key registry maps `(nullifierCount, commitmentCount)` to a key and sets no bound of its own
+  (armada-poc `VerifierModule.sol:14,37-46,55`). The largest standard shape that armada-circuits builds is 8 inputs and
+  4 outputs (`scripts/compile.sh` `SHAPES`, entry `"8,4"`). The approved Lean model admits `N ≤ 8` for an owned spend.
+- Owned circuits: one shape for every `N` from 1 to 8 inputs and every `M` from 1 to 4 outputs, the same bounds as the
+  standard set. A shape that does not fit a hard limit (the ceremony's powers of tau, the transaction gas cap of
+  2^24) is reported with the measurement, not dropped silently. `arx-bf1` asked only for `N`x1 and is replaced.
+- Armada layer (design choice D1 of `armada-nitro-spec` `docs/armada-nitro-theorems.md`): no limit on the notes per
+  channel below what the pool executes. The rebuild applies this.

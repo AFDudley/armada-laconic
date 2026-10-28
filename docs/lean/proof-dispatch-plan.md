@@ -51,6 +51,15 @@ Result (2026-10-28, agent `LeanExophialSetup`):
 - A change under `scripts/` merges only by `exophial integrate --branch`. `exophial apply` refuses it as acceptance
   machinery.
 - The supervisor's `ORACLE_ENV` has an `armada-lean` entry (`lake:lean:elan`, `.elan`). Its route is Sonnet.
+- The Lean worker rules reach each worker through `.exophial/doctrine/worker_base.md` in the armada-lean checkout.
+  exophial puts that file into every worker prompt (`dispatcher.py:947-950`, `doctrine/__init__.py:56-87`). The file
+  is a copy of the wheel's doctrine plus a section "Lean proof work". `.gitignore` excludes it, so it is not in git:
+  a new clone loses it, and a new exophial wheel's doctrine does not reach it.
+
+Phase 1 filing (2026-10-28, agent `PoolPebbles`): the 15 pebbles `aln-9b1` … `aln-1d9` are filed in the order below.
+Each pebble depends on the one before it. The dispatcher skips a pebble with an open dependency (`bus.ready_pebbles`
+wraps `pb ready`, `bus.py:690-727`). All 15 are in the supervisor queue. Review each derived spec
+(`contracts/specs/derived-<id>.spec.json`) before its predecessor merges.
 
 ## Phase 1. Pool proofs (serial, Sonnet)
 

@@ -87,8 +87,15 @@ not the repaired, Nitro spec. It waits for a rebuild on `main`.
 - **Documentation.**
   - `engineering/build-plan.md`: S3 omits N9 (9 points). S5 uses the old N1–N8 sizes (43), not the split briefs (50).
   - The site link to this note is broken because `notes/` is not rendered.
-- **Cleanup in armada-nitro.** Old worker worktrees under `.worktrees/`, `wip/arn-*` and `hand/*` branches, and the
-  `backup/main-before-reset-2026-10-1*` branches.
+- **Branch cleanup, 2026-10-28.** Deleted branches survive as `archive/<name>` tags on each fork. Left for a decision:
+  - armada-poc's fork has 153 branches with no local copy (`brent/*`, `iskay/*`, `feature/*`, …). armada-sdk's fork
+    has 19 such branches.
+  - Unclassified branches: armada-nitro `arn765-abl`, `backup/main-before-reset-2026-10-13`, `docs/r1-single-chunk`,
+    `epic/arn-46d`, `hand/e16-2026-10-14`, `migrate/briefguards2`, `task/arn-46d1-rebase`; armada-poc
+    `design/interactive-baseline`, `design/rendered-baseline`, `docs/design-system-policy`, `exo/drop-license-check`;
+    armada-circuits `ceremony/1x2-0001-iskay`, `disclosure-circuit`, `docs/n6-battleship-brief`, `feat/public-ceremony`.
+  - Worktrees with uncommitted changes: armada-nitro `worker-arn-781`, `worker-arn-bd4`; armada-poc `hand/arp-caf-e3`,
+    `worker-arp-dec`; armada-circuits `.scratch/cfg-sonnet`, `.scratch/n5fix`, `.scratch/probe-circom`.
 
 ## 4. Questions to the operator
 

@@ -86,3 +86,19 @@ adjudicator store whole outcomes. That was wrong:
   representation map relates them under the existing no-collision hypothesis. The bytecode keeps go-nitro's
   fingerprint. The game-transfer argument must allow a bounded number of failed honest calls (at most the entries plus
   the guarantees of the channel), instead of requiring that every honest call succeeds.
+
+## O3: which rules a fund-holding channel runs (answered from the record, not a question)
+
+The coordinator asked the operator whether a hub-user channel runs the consensus rules or N5's hidden-balance app.
+The decision record answers it, and the coordinator did not search it first:
+
+- `labbook/2026-10-18-contract-owned-notes-and-zk-channel-apps.md` decisions 13-15: hidden channel balances need a
+  circuit, and a generic ZK `IForceMoveApp` holds the rules, because `stateIsSupported` is the only place app logic
+  lives. Decision 20: hubs swap `waUSDC` inside a channel in private. `build-plan.md` S3: "a generic ZK
+  `IForceMoveApp` lets a channel hide its balances"; C5 gates a hidden-balance `waUSDC` swap.
+- So a channel that holds funds with hidden balances runs the ZK app (N5's hidden-balance ledger circuit through
+  `ZkForceMoveApp`), not `consensusRules`.
+- Consequence: the approved Nitro Liveness theorems assume `apps c.appDef = consensusRules` (10 theorems) or
+  `satpVirtualRules`. They do not cover a hidden-balance channel. The Armada-layer rebuild (`armada-nitro-spec`) must
+  state the liveness of hidden-balance channels, and at bytecode level that needs the ZK app's own certificate, with
+  Groth16 trusted. This is a finding for the rebuild.

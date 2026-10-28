@@ -26,8 +26,8 @@ not the repaired, Nitro spec. It waits for a rebuild on `main`.
 (`labbook/2026-10-28-liveness-refinement-design.md` §(e)).
 
 **Next steps** (`docs/lean/proof-dispatch-plan.md`; operator rulings 2026-10-28).
-1. Phases 1 and 2 need the supervisor and the watcher running (`operating-rules.md` §4). Then file one pebble per
-   theorem with `exophial intake`, in the plan's order, with the predicate that the plan gives.
+1. Phase 1 runs: the pool pebbles are filed and queued (2026-10-28). The supervisor runs; check with
+   `pgrep -af supervisor.py` (match the command line `python3 supervisor.py`, not a path).
 2. Phase 1: the pool proofs, one at a time, in the plan's order. Phase 2: the Nitro Liveness proofs, at the same time.
    A counterexample stops the work on that statement (`docs/process.md` 8.3).
 3. Phase 3: the Qwen experiments. No Lean work goes to Qwen before their result.
@@ -55,8 +55,10 @@ not the repaired, Nitro spec. It waits for a rebuild on `main`.
   - G7b-spend `arn-d62` failed its gate on 2026-10-21. Its worktree is kept.
   - Open: the replacement of the live armada-1 deployment and the move of ARM holders.
 - **F2** (husband `HusbandF2c`, also E11): N9 waits for N3. **F5 client:** waits for N3.
-- **Dispatch.** Before you queue work, start the supervisor and the watcher (`operating-rules.md` §4). On 2026-10-27
-  neither ran.
+- **Dispatch.** One supervisor only. A second copy dispatches from the same queue. The record of 2026-10-27 that no
+  supervisor ran was wrong: its `pgrep` pattern did not match `python3 supervisor.py`. A supervisor started on
+  2026-10-25 ran until 2026-10-28, with code that did not watch armada-lean. It was stopped, and the current one
+  started at 2026-10-28 14:04Z.
 - **Gates.** armada-circuits has no `.exophial/gate/Dockerfile` on `integrated`. It needs one before its next gated
   merge. The armada-sdk Dockerfile (`c2a04b1`) is the closest pattern. The armada-poc gate omits `test:config`.
 

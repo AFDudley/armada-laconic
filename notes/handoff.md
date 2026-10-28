@@ -26,19 +26,19 @@ Verify only in a separate tree, for example `armada-lean-nitro-theorems/.scratch
 
 **Waits for the operator.** Nothing on this track.
 
-**Next steps, in order** (operator, 2026-10-28: the pool proofs come before the Nitro proofs).
-1. Prove the `sorry` theorems of `pool-symbolic` (`grep -rn sorry ArmadaLean/`). Their types are approved. A
-   counterexample stops the work on that statement (`docs/process.md` 8.3).
-2. Review the executable operations of the Nitro and Armada layers for composition, typed state and footprints. They
-   are the input of the Lean → Stele translation (`engineering/build-plan.md` "Verification chain"). Make the changes
-   that the review finds before any Nitro or Armada proofs. A change to an approved theorem type goes back to the
-   operator.
-3. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
+**Next steps** (`docs/lean/proof-dispatch-plan.md`; operator rulings 2026-10-28).
+1. Phase 0: an exophial instance for Lean. One new clone each for `pool-symbolic` and `nitro-proofs`, a Lean gate
+   container, Sonnet workers on the omp backend.
+2. Phase 1: the pool proofs, one at a time, in the plan's order. Phase 2: the Nitro Liveness proofs, at the same time.
+   A counterexample stops the work on that statement (`docs/process.md` 8.3).
+3. Phase 3: the Qwen experiments. No Lean work goes to Qwen before their result.
+4. Review the executable operations of the Nitro and Armada layers for composition, typed state and footprints. They
+   are the input of the Lean → Stele translation (`engineering/build-plan.md` "Verification chain"). A change to an
+   approved theorem type goes back to the operator.
+5. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
    parameter `E`. Channels follow the `ledger` and `virtual` kinds. Apply the pending payee-key rulings
    (`payout_spendable`, `payment_note_only_payee`, no ciphertexts). Then give its theorem types to the operator.
-4. Proofs: Nitro Liveness, then the Armada layer. Some approved Nitro types had no review of their Lean text. A
-   counterexample stops the work on that statement.
-5. File the armada-circuits need: owned circuits with more than one input (merges inside a channel). This needs an
+6. File the armada-circuits need: owned circuits with more than one input (merges inside a channel). This needs an
    operator order (`operating-rules.md` §5). `owned_merge_can_happen` holds for the deployed pool only with them.
 
 **Findings of 2026-10-26/27** (lab book): `2026-10-27-gonitro-reclaim-dos.md`, `2026-10-27-payout-griefing.md`,

@@ -134,6 +134,7 @@ Read these documents. This file does not repeat them.
   | armada-nitro | `cargo:rustc:forge:cast:anvil:laconic-so` | `.cargo:.rustup:.foundry:.svm:deployments:src/stack-orchestrator` |
   | armada-poc | `forge:cast:anvil:node:npx:npm` | `.foundry:.svm` |
   | armada-circuits | `node:npx:npm:circomspect` | — |
+  | armada-lean | `lake:lean:elan` | `.elan` |
 
   A binary in `node_modules/.bin` is not on PATH. Do not list it.
 - `exophial init` takes no `-e` flag. To set a prefix or languages, run the packaged play:
@@ -151,6 +152,11 @@ All repositories are under `~/code/git_puller/repos/`.
   if a modified file equals the pre-merge base, restore it with `git checkout -- <file>` (`exo-cba`).
 - armada-laconic: commit to `main`. Push with `git push AFDudley.github.com HEAD:main`. The remote URL holds a token. Do
   not print it.
+- armada-lean (prefix `aln`): exophial owns `integrated`, and the fork's `main` follows it through
+  `.github/workflows/ff-main-from-integrated.yml`. Push to the ship-armada remote is disabled. A change under
+  `scripts/` merges only by `exophial integrate --branch`, because `exophial apply` refuses acceptance machinery.
+  Old branches survive as `archive/<name>` tags.
+- `atlas` is a branch that exophial reserves (`integrator.py:198-203`). Never delete it.
 - armada-poc: the HTTPS remote `fork` uses a `gh` token without `workflow` scope. A push that touches
   `.github/workflows/` fails. Push over SSH: `git push git@github.com:AFDudley/armada-poc.git integrated:integrated`.
 - ship-armada repositories give read access only. Open pull requests from the forks. `gh pr edit` fails there with a

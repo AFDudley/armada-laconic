@@ -3,8 +3,9 @@
 This file applies `docs/process.md` to Lean 4. It does not repeat that file.
 Read `docs/process.md` first.
 
-Mathlib: the specification branches (`nitro-proofs`, `pool-symbolic`, `armada-nitro-spec`) require Mathlib
-`v4.33.1` on toolchain `leanprover/lean4:v4.33.1`. Use Mathlib where it makes sense (operator ruling, 2026-10-27).
+Mathlib: the specification trunk (armada-lean `integrated`, mirrored to the fork's `main`) and the branch
+`armada-nitro-spec` require Mathlib `v4.33.1` on toolchain `leanprover/lean4:v4.33.1`. Use Mathlib where it makes
+sense (operator ruling, 2026-10-27).
 Before you write a general definition or lemma (one whose statement names no project type), search Mathlib for it.
 `verification.md` §6a states the check.
 

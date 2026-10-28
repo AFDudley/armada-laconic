@@ -3,13 +3,16 @@
 Every check below is a command. A worker runs the command. The command's exit
 code and output decide. No check is satisfied by a report.
 
-Worktree: `~/code/git_puller/repos/armada-lean-adjudicator-v4` (branch
-`adjudicator-model-v4`). Toolchain: `~/.elan/bin/lake`, Lean `v4.33.1`.
-Baseline commit for the reduction: `68f49f6`. Scratch files go in `.scratch/`
-inside the worktree. Never `/tmp`.
+**Current check (2026-10-28).** In armada-lean, the gate runs `scripts/check.sh` on `integrated`
+(`~/code/git_puller/repos/armada-lean`). It replaces the `.scratch/` scripts of section 1. It compares
+statement texts with the committed `scripts/sigs-baseline.tsv`, because the gate container has no `.git`.
+`scripts/check.sh --json <theorem>` prints one JSON object for a pebble's observation. `scripts/declsizes.py`
+is the size script of section 2. The checks that sections 1 to 8 describe stay the rules.
 
-All scripts in this file were run on `68f49f6` on 2026-10-26. The full
-check (section 1) takes 3 s when the build is current.
+The scripts and examples below were written for the old worktree
+`~/code/git_puller/repos/armada-lean-adjudicator-v4` (branch `adjudicator-model-v4`, now tag
+`archive/adjudicator-model-v4`). They were run on `68f49f6` on 2026-10-26. Toolchain: `~/.elan/bin/lake`,
+Lean `v4.33.1`. Scratch files go in `.scratch/` inside the worktree. Never `/tmp`.
 
 ## 1. The acceptance script
 

@@ -215,6 +215,11 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
 <td><code>node:npx:npm:circomspect</code></td>
 <td>—</td>
 </tr>
+<tr>
+<td>armada-lean</td>
+<td><code>lake:lean:elan</code></td>
+<td><code>.elan</code></td>
+</tr>
 </tbody>
 </table>
 <p>A binary in <code>node_modules/.bin</code> is not on PATH. Do not list it.
@@ -231,6 +236,11 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
   if a modified file equals the pre-merge base, restore it with <code>git checkout -- &lt;file&gt;</code> (<code>exo-cba</code>).</li>
 <li>armada-laconic: commit to <code>main</code>. Push with <code>git push AFDudley.github.com HEAD:main</code>. The remote URL holds a token. Do
   not print it.</li>
+<li>armada-lean (prefix <code>aln</code>): exophial owns <code>integrated</code>, and the fork's <code>main</code> follows it through
+  <code>.github/workflows/ff-main-from-integrated.yml</code>. Push to the ship-armada remote is disabled. A change under
+  <code>scripts/</code> merges only by <code>exophial integrate --branch</code>, because <code>exophial apply</code> refuses acceptance machinery.
+  Old branches survive as <code>archive/&lt;name&gt;</code> tags.</li>
+<li><code>atlas</code> is a branch that exophial reserves (<code>integrator.py:198-203</code>). Never delete it.</li>
 <li>armada-poc: the HTTPS remote <code>fork</code> uses a <code>gh</code> token without <code>workflow</code> scope. A push that touches
   <code>.github/workflows/</code> fails. Push over SSH: <code>git push git@github.com:AFDudley/armada-poc.git integrated:integrated</code>.</li>
 <li>ship-armada repositories give read access only. Open pull requests from the forks. <code>gh pr edit</code> fails there with a

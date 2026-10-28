@@ -14,15 +14,15 @@ The brief format and the search rule are in `worker-briefs.md`. The checks are i
 No exophial instance exists for `armada-lean` today.
 
 Decisions:
-1. **One trunk, one instance.** The pool and Nitro specifications merge into one trunk: branch `spec`, which becomes
-   the `main` of the AFDudley fork (operator, 2026-10-28: "clean up all the branches … make sure that you're working
-   in a consistent system"). The Nitro files import only Nitro files and Mathlib, so the merge does not couple them.
-   The exophial instance lives in the clone `~/code/git_puller/repos/armada-lean`. Exophial owns `integrated` there.
-   The pool pebbles and the Nitro pebbles run in this one instance. Dependency edges keep the pool pebbles in order.
-   `armada-nitro-spec` stays a separate branch until it is rebuilt on `spec`.
-2. **The gate is the Lean check.** `gate.command` runs `lake build`, then `.scratch/check.sh` from `verification.md`
-   section 1. The script moves from `.scratch/` into the tracked tree, because the gate container sees only tracked
-   files. The script checks: no new `sorry`, no new axiom, no change of an approved statement text, and the
+1. **One trunk, one instance.** The pool and Nitro specifications are merged into one trunk (merge `62197f4`). In the
+   clone `~/code/git_puller/repos/armada-lean`, exophial owns `integrated`, and the fork's `main` follows it (operator,
+   2026-10-28: "clean up all the branches … make sure that you're working in a consistent system"). The Nitro files
+   import only Nitro files and Mathlib, so the merge does not couple them. The pool pebbles and the Nitro pebbles run
+   in this one instance. Dependency edges keep the pool pebbles in order. `armada-nitro-spec` stays a separate branch
+   until it is rebuilt on `integrated`.
+2. **The gate is the Lean check.** `gate.command` runs `lake build`, then `scripts/check.sh`, which replaces the
+   `.scratch/check.sh` of `verification.md` section 1. The script is in the tracked tree, because the gate container
+   sees only tracked files. It checks: no new `sorry`, no new axiom, no change of an approved statement text, and the
    non-vacuity witnesses (`verification.md` §5a).
 3. **The gate container.** `.exophial/gate/Dockerfile` installs elan and `leanprover/lean4:v4.33.1`, and runs
    `lake exe cache get` at build time. The gate then runs offline. The armada-sdk Dockerfile (`c2a04b1`) is the
@@ -54,7 +54,7 @@ Result (2026-10-28, agent `LeanExophialSetup`):
 
 ## Phase 1. Pool proofs (serial, Sonnet)
 
-Trunk `spec`, pool files (from `pool-symbolic`, tag `pool-symbolic-approved-2026-10-28`). Every type is approved
+Trunk `integrated`, pool files (from the old branch `pool-symbolic`, tag `pool-symbolic-approved-2026-10-28`). Every type is approved
 (`labbook/2026-10-28-pool-symbolic-types-approval.md`). The order puts
 each lemma before the theorems that use it. The uses come from the doc comments in `ArmadaLean/PoolSafety.lean`
 (lines 777, 1527, 1679, 1758, 1858-1859). The order inside each group is `[INFERENCE]`.
@@ -82,7 +82,7 @@ A pebble starts only after the one before it merges. A counterexample stops that
 
 ## Phase 2. Nitro proofs (Sonnet, at the same time as Phase 1)
 
-Trunk `spec`, Nitro files (from `nitro-proofs`, tag `nitro-proofs-approved-2026-10-28`). The open proofs are the Liveness theorems
+Trunk `integrated`, Nitro files (from the old branch `nitro-proofs`, tag `nitro-proofs-approved-2026-10-28`). The open proofs are the Liveness theorems
 in `ArmadaLean/Nitro/Liveness.lean`. The re-audit in `docs/nitro-repair-2026-10-27.md` §3 classifies each one as sound
 or unknown. Start with the theorems marked sound. The order of the rest comes from the dependency of each proof.
 

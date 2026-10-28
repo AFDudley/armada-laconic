@@ -174,8 +174,8 @@ it ("write the specification, then derive the program from it").
   (`anti-patterns.md` P6).
 - A brief edits one file, or one small group of declarations that one build
   checks. `reduction-plan.md` gives the size limits used for execution.
-- The reader runs `.scratch/check.sh` before reporting. A report with no
-  script output is a failed run, whoever wrote it.
+- The reader runs `scripts/check.sh` (armada-lean, `verification.md` "Current check") before reporting. A report
+  with no script output is a failed run, whoever wrote it.
 - The reader does not write a plan, change a statement text, add an axiom, or
   add an allowlist name. These are the operator's and the coordinator's
   decisions (`docs/process.md` 8.3; `verification.md` sections 3 and 4).
@@ -190,9 +190,8 @@ it ("write the specification, then derive the program from it").
 # Brief <STEP-ID>: <one-line title>
 
 ## Worktree and branch
-<worktree path>, branch <branch>.
-Run `git branch --show-current` first. Expected: <branch>.
-Baseline for the signature check: <SHA>.
+The exophial worker worktree of armada-lean, cut from `integrated`.
+Run `git branch --show-current` first. Expected: the worker branch exophial names.
 
 ## Depends on
 <step ids, each with its commit sha>, or "none".
@@ -217,19 +216,21 @@ in docs/lean/worker-briefs.md, through a scout or web_search. Report each one.
 cd <worktree path>
 <edit commands>
 ~/.elan/bin/lake build
-.scratch/check.sh <SHA> [<allowlist>]
+scripts/check.sh
+scripts/check.sh --json <NAME>
 
 ## Acceptance (all must hold)
-- `.scratch/check.sh <SHA>` prints EXIT 0.
+- `scripts/check.sh` exits 0.
+- `scripts/check.sh --json <NAME>`: `<NAME>` is not in `sorry`.
 - D<k>: <command> prints <expected>.
-- `python3 .scratch/declsizes.py <FILE> <NAME>` prints LINES ≤ <N>.
+- `python3 scripts/declsizes.py <FILE> <NAME>` prints LINES ≤ <N>.
 - <other targets>
 
 ## Report
-Commit sha. Full output of `.scratch/check.sh`. The numbers from each
+Commit sha. Full output of `scripts/check.sh`. The numbers from each
 acceptance command. Each search, what it found, and what was used. If a
-declaration still carries `sorry`: its name and the first error line from
-`.scratch/check/build.log`.
+declaration still carries `sorry`: its name and the first error line of
+`lake build`.
 
 ## Do not
 Change any theorem text. Add an axiom. Rebase. Force-push. Edit a file not

@@ -88,8 +88,8 @@ Expected: at least one hit inside the body of the named definition (the
 brief gives the line range after the edit, or says "between the lines
 `def DepositStep` and the next `def`").
 
-**D4. No `True`/`False` body and no signature change.** `.scratch/check.sh`
-sections 2 and 4 (`verification.md`).
+**D4. No `True`/`False` body and no signature change.** `scripts/check.sh`
+(armada-lean): its signature and non-vacuity checks (`verification.md` sections 2 and 4).
 
 **D5. A file stays under N lines; a declaration stays under N lines.**
 

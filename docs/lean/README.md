@@ -15,10 +15,12 @@ Two layers:
 2. **Execution.** `reduction-plan.md`. The proof-size reduction broken into
    steps sized for the local 5090 worker.
 
-Pins: branch `adjudicator-model-v4` at `68f49f6`; branch `pool-model` at
-`7f2d1ec`; toolchain `leanprover/lean4:v4.33.1`; no Mathlib. Every Lean
-example in these files was type-checked on that toolchain on 2026-10-26
-unless marked `[INFERENCE]`.
+Mathlib: the specification branches (`nitro-proofs`, `pool-symbolic`, `armada-nitro-spec`) require Mathlib
+`v4.33.1` on toolchain `leanprover/lean4:v4.33.1`. Use Mathlib where it makes sense (operator ruling, 2026-10-27).
+
+Examples: most Lean examples in these files come from branch `adjudicator-model-v4` at `68f49f6` and branch
+`pool-model` at `7f2d1ec`, which had no Mathlib. They were type-checked on 2026-10-26 unless marked `[INFERENCE]`.
+`adjudicator-model-v4` is now reference only. The rules hold for the current branches.
 
 ## Reading order
 

@@ -3,11 +3,15 @@
 This file applies `docs/process.md` to Lean 4. It does not repeat that file.
 Read `docs/process.md` first.
 
-Pins: `AFDudley/armada-lean`, branch `adjudicator-model-v4` at `68f49f6`,
-branch `pool-model` at `7f2d1ec`, toolchain `leanprover/lean4:v4.33.1`, no Mathlib.
-Every Lean example below was type-checked on `v4.33.1` on 2026-10-26 unless the
-example is marked `[INFERENCE]`. The check command was
-`~/.elan/bin/lake env lean <file>` inside the adjudicator worktree.
+Mathlib: the specification branches (`nitro-proofs`, `pool-symbolic`, `armada-nitro-spec`) require Mathlib
+`v4.33.1` on toolchain `leanprover/lean4:v4.33.1`. Use Mathlib where it makes sense (operator ruling, 2026-10-27).
+Before you write a general definition or lemma (one whose statement names no project type), search Mathlib for it.
+`verification.md` §6a states the check.
+
+Examples: `AFDudley/armada-lean`, branch `adjudicator-model-v4` at `68f49f6` (now reference only) and branch
+`pool-model` at `7f2d1ec`. Those branches had no Mathlib. Every Lean example below was type-checked on `v4.33.1` on
+2026-10-26 unless the example is marked `[INFERENCE]`. The check command was `~/.elan/bin/lake env lean <file>`
+inside the adjudicator worktree.
 
 Each rule has four parts: the rule, a Lean example, the project declaration
 that shows the rule or breaks it, and the source that justifies it.

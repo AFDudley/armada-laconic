@@ -27,8 +27,11 @@ Read these documents. This file does not repeat them.
 - Use the terms of the papers. Do not invent type names. A different construction is a different type. Example: the
   channel kinds are `ledger` and `virtual` (SATP §1).
 - The symbolic layer contains no contract layout and no encoding.
-- Use Mathlib wherever it applies. The "no Mathlib" pins in `docs/lean/README.md` and `docs/lean/writing-lean.md`
-  describe the old `adjudicator-model-v4` branch.
+- Use Mathlib where it makes sense (operator ruling, 2026-10-27). All specification branches require Mathlib
+  `v4.33.1`. Before a worker writes a general definition or lemma, it searches Mathlib (`docs/lean/worker-briefs.md`).
+- Lean work runs through exophial (operator, 2026-10-28). Workers run on Sonnet. The pool proofs run one at a time,
+  and the Nitro proofs run at the same time as the pool proofs. Qwen on the 5090 had difficulty with Lean, partly
+  because of a bad system prompt. Experiments decide whether Qwen can write Lean before any Lean work goes to it.
 - The operator decides theorem types. If the papers determine the fix for a defect, the coordinator fixes it and does
   not ask.
 - Do not suggest nitrolite.

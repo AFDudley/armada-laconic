@@ -1,5 +1,8 @@
 # Proof-size reduction plan
 
+Status (2026-10-28): this plan targets `adjudicator-model-v4`, which is now reference only. Its worker constraints
+(Qwen on the 5090) do not apply to current Lean work. `worker-briefs.md` "Dispatch" states the current rule.
+
 This file is the execution layer. It breaks the reduction described in
 `labbook/2026-10-26-lean-adjudicator-proof-size.md` into steps sized for the
 5090 worker: one file or one small group of declarations, at most 9 points,

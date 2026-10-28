@@ -89,8 +89,11 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
 <li>Use the terms of the papers. Do not invent type names. A different construction is a different type. Example: the
   channel kinds are <code>ledger</code> and <code>virtual</code> (SATP §1).</li>
 <li>The symbolic layer contains no contract layout and no encoding.</li>
-<li>Use Mathlib wherever it applies. The "no Mathlib" pins in <code>docs/lean/README.md</code> and <code>docs/lean/writing-lean.md</code>
-  describe the old <code>adjudicator-model-v4</code> branch.</li>
+<li>Use Mathlib where it makes sense (operator ruling, 2026-10-27). All specification branches require Mathlib
+  <code>v4.33.1</code>. Before a worker writes a general definition or lemma, it searches Mathlib (<code>docs/lean/worker-briefs.md</code>).</li>
+<li>Lean work runs through exophial (operator, 2026-10-28). Workers run on Sonnet. The pool proofs run one at a time,
+  and the Nitro proofs run at the same time as the pool proofs. Qwen on the 5090 had difficulty with Lean, partly
+  because of a bad system prompt. Experiments decide whether Qwen can write Lean before any Lean work goes to it.</li>
 <li>The operator decides theorem types. If the papers determine the fix for a defect, the coordinator fixes it and does
   not ask.</li>
 <li>Do not suggest nitrolite.</li>

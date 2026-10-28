@@ -6,6 +6,42 @@ must be executable with no judgment call. It names the file, the
 declaration, the command and the acceptance script. A brief that needs the
 reader's judgment to fill a gap gets a different result from each reader.
 
+## Dispatch
+
+Lean work runs through exophial, and the workers run on Sonnet (operator, 2026-10-28;
+`engineering/operating-rules.md` §1). The worker backend is `omp`, because the
+search rule below needs omp's `task` and `web_search` tools. The pool proofs run
+one at a time. The Nitro proofs run at the same time as the pool proofs. No
+Lean work goes to Qwen on the 5090 until the experiments in
+`engineering/operating-rules.md` §1 show that Qwen can write Lean.
+
+Each worker works in its own worktree of the branch that the brief names. It
+merges and never rebases (`anti-patterns.md` P4).
+
+## Search before proving, and keep the context clean
+
+Use Mathlib where it makes sense (operator ruling, 2026-10-27). Before a
+worker writes a general definition or lemma (one whose statement names no
+project type), it searches for an existing one:
+
+1. In Lean, inside the worktree: `exact?`, `apply?`, `rw?` and `simp?` in a
+   trial file (`lake env lean .scratch/trial.lean`).
+2. In the Mathlib source (`.lake/packages/mathlib/`), and on Loogle
+   (loogle.lean-lang.org) and LeanSearch (leansearch.net) for a lemma by
+   type or by description.
+3. On the internet, for an existing Lean proof of the same fact (a Merkle
+   tree, list permutation and removal, a hash injectivity argument).
+
+The worker does not read search results in its own context. It spawns a
+`scout` subagent (omp `task` tool) for a search of code or of the Mathlib
+source, or it uses `web_search` (Gemini) for the internet. It takes back
+only the answer: the declaration name, its file, its full signature, and the
+source URL.
+
+The report lists each search, what it found, and what the worker used. Each
+general lemma written by hand states why no library lemma fits
+(`verification.md` §6a).
+
 ## The acceptance tests the design
 
 "`lake build` passes with zero `sorry`" is necessary. It is not sufficient.
@@ -154,8 +190,8 @@ it ("write the specification, then derive the program from it").
 # Brief <STEP-ID>: <one-line title>
 
 ## Worktree and branch
-~/code/git_puller/repos/armada-lean-adjudicator-v4, branch adjudicator-model-v4.
-Run `git branch --show-current` first. Expected: adjudicator-model-v4.
+<worktree path>, branch <branch>.
+Run `git branch --show-current` first. Expected: <branch>.
 Baseline for the signature check: <SHA>.
 
 ## Depends on
@@ -164,6 +200,10 @@ Baseline for the signature check: <SHA>.
 ## Read first
 docs/lean/writing-lean.md rules <n, m>. docs/lean/verification.md section 1.
 <file:line-range> for each declaration below.
+
+## Search first
+For each general lemma the proof needs: the searches of "Search before proving"
+in docs/lean/worker-briefs.md, through a scout or web_search. Report each one.
 
 ## Change
 1. In <FILE>, declaration <NAME> (<start line> at <SHA>): <exact edit>.
@@ -174,7 +214,7 @@ docs/lean/writing-lean.md rules <n, m>. docs/lean/verification.md section 1.
 2. ...
 
 ## Commands
-cd ~/code/git_puller/repos/armada-lean-adjudicator-v4
+cd <worktree path>
 <edit commands>
 ~/.elan/bin/lake build
 .scratch/check.sh <SHA> [<allowlist>]
@@ -187,15 +227,16 @@ cd ~/code/git_puller/repos/armada-lean-adjudicator-v4
 
 ## Report
 Commit sha. Full output of `.scratch/check.sh`. The numbers from each
-acceptance command. If a declaration still carries `sorry`: its name and the
-first error line from `.scratch/check/build.log`.
+acceptance command. Each search, what it found, and what was used. If a
+declaration still carries `sorry`: its name and the first error line from
+`.scratch/check/build.log`.
 
 ## Do not
-Change any theorem text in Safety.lean. Add an axiom. Rebase. Force-push.
-Edit a file not named above. Write a plan.
+Change any theorem text. Add an axiom. Rebase. Force-push. Edit a file not
+named above. Write a plan. Read search results in your own context.
 ```
 
-## A filled example (step B0 of `reduction-plan.md`)
+## A filled example (step B0 of `reduction-plan.md`, on the old `adjudicator-model-v4` branch)
 
 ```
 # Brief B0: six frame lemmas by grind

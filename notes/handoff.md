@@ -89,7 +89,6 @@ Verify only in a separate tree, for example `armada-lean-nitro-theorems/.scratch
 - **Documentation.**
   - `engineering/build-plan.md`: S3 omits N9 (9 points). S5 uses the old N1–N8 sizes (43), not the split briefs (50).
   - The site link to this note is broken because `notes/` is not rendered.
-  - `docs/lean/README.md` and `docs/lean/writing-lean.md` pin `adjudicator-model-v4` and "no Mathlib".
 - **Cleanup in armada-nitro.** Old worker worktrees under `.worktrees/`, `wip/arn-*` and `hand/*` branches, and the
   `backup/main-before-reset-2026-10-1*` branches.
 

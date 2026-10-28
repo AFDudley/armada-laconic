@@ -52,3 +52,15 @@ The full report is `labbook/2026-10-28-liveness-refinement-design.md` (agent `Li
 - **O7, adversary-enabledness theorems.** They stay at Lean level. The simulation and end-to-end tests check them
   again on the deployed code.
 - **O2 and O3** wait for a fuller explanation to the operator.
+
+## The EVMLean precompile defect: confirmed, not filed, not fixed (agent `EvmleanPrecompile`)
+
+- `totallySafePerformIO` is a plain `def` with body `Inhabited.default` and the attribute
+  `@[implemented_by unsafePerformIO]` (EVMLean `Ethereum/PerformIO.lean:6-7`, local `bcca6b1`). The kernel sees only
+  `Inhabited.default`.
+- `theorem (d : String) : blobSNARKV d = "" := rfl` and the same for `blobECDSARECOVER` type-check. `#print axioms`
+  lists only `propext`, `Classical.choice`, `Quot.sound`.
+- Upstream: `lefterislazar/EVMLean` and `argotorg/EquiVM` have no issue or pull request about it (searched all states
+  for totallySafePerformIO, SNARKV, ECDSARECOVER, ecrecover, precompile, performIO, rfl). The upstream EVMLean
+  default branch (`a91ce83`) still wraps both calls in `totallySafePerformIO` with the same body.
+- Per the operator's answer to O6, nobody is notified. A fix, if we make one, goes upstream as a pull request.

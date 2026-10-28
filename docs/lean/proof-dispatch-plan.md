@@ -33,7 +33,24 @@ Decisions:
    gate passes. Under the intake contract, the pebble states no remedy. The brief's search rule and design checks go
    into the spec's acceptance.
 
-Acceptance of Phase 0: in each new clone, one trivial pebble runs end to end and merges through the gate.
+Acceptance of Phase 0: the gate passes in its container on `integrated`, and the intake dry-run of the first pool
+pebble is accepted.
+
+Result (2026-10-28, agent `LeanExophialSetup`):
+- `armada-lean` is an exophial instance, prefix `aln`. The checkout is on `integrated`. The fork's `main` follows
+  `integrated` through `.github/workflows/ff-main-from-integrated.yml`. Push to ship-armada is disabled.
+- Config: `dispatcher.backend: omp`, `max_workers: 2`, default worker `claude-sonnet-5`,
+  `gate.command: lake build && scripts/check.sh`, gate timeout 1800 s. The cold gate image builds in about 7 min.
+  The gate itself runs in about 13 s.
+- `scripts/check.sh` compares theorem statements with the committed `scripts/sigs-baseline.tsv`, because the gate
+  container has no `.git`. A check against `git show` passed every change in the container, so it was replaced.
+- A pebble's observation is `scripts/check.sh --json <theorem>`. It prints one JSON object with `sorry` (a list of
+  names) and `theorem_under_test`. The predicate is
+  `{"observe": "stdout_json", "op": "not_member", "elem": "theorem_under_test", "collection": "sorry"}`.
+  The intake dry-run for `leaf_has_merkle_witness` with this predicate was accepted.
+- A change under `scripts/` merges only by `exophial integrate --branch`. `exophial apply` refuses it as acceptance
+  machinery.
+- The supervisor's `ORACLE_ENV` has an `armada-lean` entry (`lake:lean:elan`, `.elan`). Its route is Sonnet.
 
 ## Phase 1. Pool proofs (serial, Sonnet)
 

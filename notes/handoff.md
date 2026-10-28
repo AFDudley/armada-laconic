@@ -12,21 +12,22 @@ The plan is `engineering/build-plan.md`. Decisions are in `labbook/`.
 The old adjudicator model `adjudicator-model-v4` is reference only. Do not extend it
 (`labbook/2026-10-26-adjudicator-layout-audit.md`).
 
-`github.com/AFDudley/armada-lean` has one trunk, `main`, in the clone `~/code/git_puller/repos/armada-lean`. It holds the
-pool model and the repaired Nitro specification (merge `62197f4`). Approval tags: `pool-symbolic-approved-2026-10-28`
+`github.com/AFDudley/armada-lean` has one trunk, in the clone `~/code/git_puller/repos/armada-lean`. It is an exophial
+instance (prefix `aln`): exophial owns `integrated`, and the fork's `main` follows it. The trunk holds
+the pool model and the repaired Nitro specification (merge `62197f4`). Approval tags: `pool-symbolic-approved-2026-10-28`
 (`labbook/2026-10-28-pool-symbolic-types-approval.md`), `nitro-proofs-approved-2026-10-28`
 (`labbook/2026-10-28-nitro-repaired-types-approval.md`), `nitro-theorems-approved-2026-10-27`. Old branches survive as
 `archive/*` tags. `armada-nitro-spec` (worktree `armada-lean-armada-nitro-spec`) is the Armada layer on the approved,
 not the repaired, Nitro spec. It waits for a rebuild on `main`.
 
-**In flight.** Phase 0: the exophial instance for `armada-lean` (prefix `aln`).
+**In flight.** Nothing. Phase 0 is done (`docs/lean/proof-dispatch-plan.md`, "Result").
 
 **Waits for the operator.** The 7 open questions of the liveness design
 (`labbook/2026-10-28-liveness-refinement-design.md` §(e)).
 
 **Next steps** (`docs/lean/proof-dispatch-plan.md`; operator rulings 2026-10-28).
-1. Phase 0: the exophial instance on the `armada-lean` trunk, a Lean gate container, Sonnet workers on the omp
-   backend.
+1. Phases 1 and 2 need the supervisor and the watcher running (`operating-rules.md` §4). Then file one pebble per
+   theorem with `exophial intake`, in the plan's order, with the predicate that the plan gives.
 2. Phase 1: the pool proofs, one at a time, in the plan's order. Phase 2: the Nitro Liveness proofs, at the same time.
    A counterexample stops the work on that statement (`docs/process.md` 8.3).
 3. Phase 3: the Qwen experiments. No Lean work goes to Qwen before their result.

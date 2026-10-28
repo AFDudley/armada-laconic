@@ -64,3 +64,25 @@ The full report is `labbook/2026-10-28-liveness-refinement-design.md` (agent `Li
   for totallySafePerformIO, SNARKV, ECDSARECOVER, ecrecover, precompile, performIO, rfl). The upstream EVMLean
   default branch (`a91ce83`) still wraps both calls in `totallySafePerformIO` with the same body.
 - Per the operator's answer to O6, nobody is notified. A fix, if we make one, goes upstream as a pull request.
+
+## Correction: O2 as first explained was wrong (coordinator, 2026-10-28)
+
+The coordinator told the operator that with go-nitro fingerprints an adversary can make an honest payout stale in
+every round through credits, so the payout Liveness theorems fail at bytecode level, and recommended that the
+adjudicator store whole outcomes. That was wrong:
+
+- A transfer rewrites only the paying channel's fingerprint (`MultiAssetHolder.sol:205`, `channelId` is
+  `fromChannelId`). A credit into a channel only adds to `holdings[asset][destination]` (`:448`). So a credit does not
+  change the receiving channel's fingerprint, and go-nitro computes the payout from the holdings at run time.
+- So a fingerprint-checked transfer on channel `c` goes stale only through a payout from `c` or a reclaim against `c`.
+  Each entry is paid in full once, so the count is bounded by `c`'s entries and guarantees. The payout-griefing entry
+  already says this (`labbook/2026-10-27-payout-griefing.md:14`).
+- After finalization no deadline runs. A bounded number of stale calls delays a payout and costs gas. It does not stop
+  the payout. The new outcome is public in the calldata of the call that made the old one stale.
+- The unbounded staleness through credits belongs to the Armada payout: its pool-spend proof fixes the amounts and
+  reads the Merkle root at call time (`PoolSpend.sol:87-92`). Store-or-fingerprint does not change that.
+- The design report's claim (`2026-10-28-liveness-refinement-design.md` §(e) O2: "P-ENC fails … the Liveness theorem
+  types change") is wrong for the same reason. The model's stored outcome is an abstraction of the fingerprint: the
+  representation map relates them under the existing no-collision hypothesis. The bytecode keeps go-nitro's
+  fingerprint. The game-transfer argument must allow a bounded number of failed honest calls (at most the entries plus
+  the guarantees of the channel), instead of requiring that every honest call succeeds.

@@ -102,6 +102,13 @@ Risks that the operator accepted by running Phase 2 now:
 
 In each case a proof that breaks is redone, and a counterexample goes to the operator.
 
+Phase 2 filing (2026-10-28): the 11 theorems marked sound are filed in the §3 table order. The pebbles are `aln-852`,
+`aln-ceb`, `aln-4d7`, `aln-809`, `aln-b42`, `aln-069`, `aln-fd8`, `aln-802`, `aln-d1a`, `aln-743` and `aln-c03`.
+All 11 proofs are in `Liveness.lean`, so each pebble depends on the one before it. The filing script is
+`armada-lean/.scratch/file_nitro_phase2.py`. Each body names the `scripts/check.sh --json` field `theorem_in_sorry`.
+A spec derivation can state this field with `eq`; it cannot state "not in the `sorry` array" (`aln-4dc` gate, 2026-10-28).
+The Nitro chain and the pool chain edit different files and run at the same time.
+
 ## Phase 3. Qwen experiments
 
 Question: can Qwen on the 5090 write Lean for this project, with a correct setup?

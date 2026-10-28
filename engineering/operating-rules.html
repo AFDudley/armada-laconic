@@ -188,44 +188,14 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
 <li>Token: <code>CLAUDE_CODE_OAUTH_TOKEN="$(python3 ~/code/git_puller/repos/exophial/.scratch/oauth_token.py)" exophial ...</code>.
   The helper picks the Anthropic account with the most headroom. Do not print the token.</li>
 <li>Set <code>TMPDIR=&lt;repo&gt;/.scratch</code> for <code>exophial dispatch</code>, <code>apply</code>, <code>integrate</code>, <code>intake</code> and <code>specify</code>.</li>
-<li>The grader runs each oracle in a sealed HOME and reads the oracle variables from the caller's environment. The
-  supervisor sets them per repo (<code>ORACLE_ENV</code>):</li>
-</ul>
-<table>
-<thead>
-<tr>
-<th>Repo</th>
-<th><code>EXOPHIAL_ORACLE_TOOLCHAIN_BINARIES</code></th>
-<th><code>EXOPHIAL_ORACLE_DATA_DIRS</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>armada-nitro</td>
-<td><code>cargo:rustc:forge:cast:anvil:laconic-so</code></td>
-<td><code>.cargo:.rustup:.foundry:.svm:deployments:src/stack-orchestrator</code></td>
-</tr>
-<tr>
-<td>armada-poc</td>
-<td><code>forge:cast:anvil:node:npx:npm</code></td>
-<td><code>.foundry:.svm</code></td>
-</tr>
-<tr>
-<td>armada-circuits</td>
-<td><code>node:npx:npm:circomspect</code></td>
-<td>—</td>
-</tr>
-<tr>
-<td>armada-lean</td>
-<td><code>lake:lean:elan</code></td>
-<td><code>.elan</code></td>
-</tr>
-</tbody>
-</table>
-<p>A binary in <code>node_modules/.bin</code> is not on PATH. Do not list it.
-- <code>exophial init</code> takes no <code>-e</code> flag. To set a prefix or languages, run the packaged play:
+<li>The grader runs each oracle in a sealed HOME and reads the oracle variables (<code>EXOPHIAL_ORACLE_TOOLCHAIN_BINARIES</code>,
+  <code>EXOPHIAL_ORACLE_DATA_DIRS</code>) from the caller's environment. The supervisor sets them per repo in <code>ORACLE_ENV</code>
+  (<code>.scratch/supervise/supervisor.py</code>). That dict is the record. A repo must also be in its <code>WATCHED</code> tuple, or the
+  supervisor drops the repo's queue entries. A binary in <code>node_modules/.bin</code> is not on PATH. Do not list it.</li>
+<li><code>exophial init</code> takes no <code>-e</code> flag. To set a prefix or languages, run the packaged play:
   <code>~/.local/share/uv/tools/exophial/bin/ansible-playbook &lt;exophial&gt;/ansible/init.yml -e exo_target_repo=&lt;repo&gt;
-  -e exo_pebble_prefix=&lt;p&gt; -e '{"exo_languages_override": ["typescript"]}'</code> (JSON form for lists).</p>
+  -e exo_pebble_prefix=&lt;p&gt; -e '{"exo_languages_override": ["typescript"]}'</code> (JSON form for lists).</li>
+</ul>
 <h2 id="7-git-and-repositories">7. Git and repositories</h2>
 <p>All repositories are under <code>~/code/git_puller/repos/</code>.</p>
 <ul>

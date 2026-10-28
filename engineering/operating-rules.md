@@ -126,17 +126,10 @@ Read these documents. This file does not repeat them.
 - Token: `CLAUDE_CODE_OAUTH_TOKEN="$(python3 ~/code/git_puller/repos/exophial/.scratch/oauth_token.py)" exophial ...`.
   The helper picks the Anthropic account with the most headroom. Do not print the token.
 - Set `TMPDIR=<repo>/.scratch` for `exophial dispatch`, `apply`, `integrate`, `intake` and `specify`.
-- The grader runs each oracle in a sealed HOME and reads the oracle variables from the caller's environment. The
-  supervisor sets them per repo (`ORACLE_ENV`):
-
-  | Repo | `EXOPHIAL_ORACLE_TOOLCHAIN_BINARIES` | `EXOPHIAL_ORACLE_DATA_DIRS` |
-  |---|---|---|
-  | armada-nitro | `cargo:rustc:forge:cast:anvil:laconic-so` | `.cargo:.rustup:.foundry:.svm:deployments:src/stack-orchestrator` |
-  | armada-poc | `forge:cast:anvil:node:npx:npm` | `.foundry:.svm` |
-  | armada-circuits | `node:npx:npm:circomspect` | — |
-  | armada-lean | `lake:lean:elan` | `.elan` |
-
-  A binary in `node_modules/.bin` is not on PATH. Do not list it.
+- The grader runs each oracle in a sealed HOME and reads the oracle variables (`EXOPHIAL_ORACLE_TOOLCHAIN_BINARIES`,
+  `EXOPHIAL_ORACLE_DATA_DIRS`) from the caller's environment. The supervisor sets them per repo in `ORACLE_ENV`
+  (`.scratch/supervise/supervisor.py`). That dict is the record. A repo must also be in its `WATCHED` tuple, or the
+  supervisor drops the repo's queue entries. A binary in `node_modules/.bin` is not on PATH. Do not list it.
 - `exophial init` takes no `-e` flag. To set a prefix or languages, run the packaged play:
   `~/.local/share/uv/tools/exophial/bin/ansible-playbook <exophial>/ansible/init.yml -e exo_target_repo=<repo>
   -e exo_pebble_prefix=<p> -e '{"exo_languages_override": ["typescript"]}'` (JSON form for lists).

@@ -36,3 +36,19 @@ The full report is `labbook/2026-10-28-liveness-refinement-design.md` (agent `Li
   fingerprints, built-in versus external application contracts, token liveness, the target chain's gas limits, a report
   of the precompile defect to the EVMLean and EquiVM maintainers, and whether adversary-enabledness theorems must reach
   bytecode.
+
+## Operator answers to the open questions (2026-10-28)
+
+- **O1, input-size bounds.** They need EVM measurements. They are decided when the gas of each operation is measured,
+  not before.
+- **O4, token liveness.** The proofs trust the token contract. This is residual trust: a token with a blocklist or a
+  pause (for example USDC) can block a payout, and no proof removes it.
+- **O5, gas limits.** Use current mainnet. Measured on 2026-10-28: block 26291702 has `gasLimit` 60,000,000
+  (`eth_getBlockByNumber` on `ethereum-rpc.publicnode.com`). The per-transaction cap is 2^24 = 16,777,216 gas
+  (EIP-7825, active since Fusaka). Every operation's gas threshold must fit the transaction cap. The cap is the
+  binding limit. Whether a later fork changed the cap was not checked `[INFERENCE]`.
+- **O6, the EVMLean precompile defect.** Do not notify the maintainers. Check that nobody has filed it. If we fix it,
+  we submit the fix.
+- **O7, adversary-enabledness theorems.** They stay at Lean level. The simulation and end-to-end tests check them
+  again on the deployed code.
+- **O2 and O3** wait for a fuller explanation to the operator.

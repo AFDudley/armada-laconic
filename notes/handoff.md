@@ -12,23 +12,21 @@ The plan is `engineering/build-plan.md`. Decisions are in `labbook/`.
 The old adjudicator model `adjudicator-model-v4` is reference only. Do not extend it
 (`labbook/2026-10-26-adjudicator-layout-audit.md`).
 
-Branches in `github.com/AFDudley/armada-lean`. Each has a worktree at `~/code/git_puller/repos/armada-lean-<branch>`.
-Verify only in a separate tree, for example `armada-lean-nitro-theorems/.scratch/v`.
+`github.com/AFDudley/armada-lean` has one trunk, `main`, in the clone `~/code/git_puller/repos/armada-lean`. It holds the
+pool model and the repaired Nitro specification (merge `62197f4`). Approval tags: `pool-symbolic-approved-2026-10-28`
+(`labbook/2026-10-28-pool-symbolic-types-approval.md`), `nitro-proofs-approved-2026-10-28`
+(`labbook/2026-10-28-nitro-repaired-types-approval.md`), `nitro-theorems-approved-2026-10-27`. Old branches survive as
+`archive/*` tags. `armada-nitro-spec` (worktree `armada-lean-armada-nitro-spec`) is the Armada layer on the approved,
+not the repaired, Nitro spec. It waits for a rebuild on `main`.
 
-| Branch | Contents |
-|---|---|
-| `nitro-proofs` | the repaired Nitro specification; channel kinds `ledger` and `virtual`; tag `nitro-proofs-approved-2026-10-28` (operator approval, `labbook/2026-10-28-nitro-repaired-types-approval.md`) |
-| `nitro-theorems` | the Nitro theorem types that the operator approved before the repair; tag `nitro-theorems-approved-2026-10-27` |
-| `pool-symbolic` | the pool model without contract layout; every theorem type approved (`labbook/2026-10-28-pool-symbolic-types-approval.md`) |
-| `armada-nitro-spec` | the Armada layer on the approved, not the repaired, Nitro spec; `docs/verification-chain.md` |
+**In flight.** Phase 0: the exophial instance for `armada-lean` (prefix `aln`).
 
-**In flight.** Nothing.
-
-**Waits for the operator.** Nothing on this track.
+**Waits for the operator.** The 7 open questions of the liveness design
+(`labbook/2026-10-28-liveness-refinement-design.md` §(e)).
 
 **Next steps** (`docs/lean/proof-dispatch-plan.md`; operator rulings 2026-10-28).
-1. Phase 0: an exophial instance for Lean. One new clone each for `pool-symbolic` and `nitro-proofs`, a Lean gate
-   container, Sonnet workers on the omp backend.
+1. Phase 0: the exophial instance on the `armada-lean` trunk, a Lean gate container, Sonnet workers on the omp
+   backend.
 2. Phase 1: the pool proofs, one at a time, in the plan's order. Phase 2: the Nitro Liveness proofs, at the same time.
    A counterexample stops the work on that statement (`docs/process.md` 8.3).
 3. Phase 3: the Qwen experiments. No Lean work goes to Qwen before their result.

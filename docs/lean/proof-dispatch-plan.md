@@ -11,14 +11,15 @@ The brief format and the search rule are in `worker-briefs.md`. The checks are i
 
 ## Phase 0. Set up exophial for Lean
 
-No exophial instance exists for `armada-lean` today. The checkouts `armada-lean-pool-symbolic` and
-`armada-lean-nitro-proofs` have no `.exophial/` directory.
+No exophial instance exists for `armada-lean` today.
 
 Decisions:
-1. **One instance per line of work, in a new clone.** Make `armada-lean-exo-pool` and `armada-lean-exo-nitro`.
-   Each new clone tracks one branch of the AFDudley fork (`pool-symbolic`, `nitro-proofs`). The existing checkouts
-   stay untouched, so a mistake in the setup cannot damage them. Exophial owns `integrated` in each new clone.
-   The clone's push configuration maps its trunk to the fork branch.
+1. **One trunk, one instance.** The pool and Nitro specifications merge into one trunk: branch `spec`, which becomes
+   the `main` of the AFDudley fork (operator, 2026-10-28: "clean up all the branches … make sure that you're working
+   in a consistent system"). The Nitro files import only Nitro files and Mathlib, so the merge does not couple them.
+   The exophial instance lives in the clone `~/code/git_puller/repos/armada-lean`. Exophial owns `integrated` there.
+   The pool pebbles and the Nitro pebbles run in this one instance. Dependency edges keep the pool pebbles in order.
+   `armada-nitro-spec` stays a separate branch until it is rebuilt on `spec`.
 2. **The gate is the Lean check.** `gate.command` runs `lake build`, then `.scratch/check.sh` from `verification.md`
    section 1. The script moves from `.scratch/` into the tracked tree, because the gate container sees only tracked
    files. The script checks: no new `sorry`, no new axiom, no change of an approved statement text, and the
@@ -36,7 +37,8 @@ Acceptance of Phase 0: in each new clone, one trivial pebble runs end to end and
 
 ## Phase 1. Pool proofs (serial, Sonnet)
 
-Branch `pool-symbolic`. Every type is approved (`labbook/2026-10-28-pool-symbolic-types-approval.md`). The order puts
+Trunk `spec`, pool files (from `pool-symbolic`, tag `pool-symbolic-approved-2026-10-28`). Every type is approved
+(`labbook/2026-10-28-pool-symbolic-types-approval.md`). The order puts
 each lemma before the theorems that use it. The uses come from the doc comments in `ArmadaLean/PoolSafety.lean`
 (lines 777, 1527, 1679, 1758, 1858-1859). The order inside each group is `[INFERENCE]`.
 
@@ -63,7 +65,7 @@ A pebble starts only after the one before it merges. A counterexample stops that
 
 ## Phase 2. Nitro proofs (Sonnet, at the same time as Phase 1)
 
-Branch `nitro-proofs`, approved at tag `nitro-proofs-approved-2026-10-28`. The open proofs are the Liveness theorems
+Trunk `spec`, Nitro files (from `nitro-proofs`, tag `nitro-proofs-approved-2026-10-28`). The open proofs are the Liveness theorems
 in `ArmadaLean/Nitro/Liveness.lean`. The re-audit in `docs/nitro-repair-2026-10-27.md` §3 classifies each one as sound
 or unknown. Start with the theorems marked sound. The order of the rest comes from the dependency of each proof.
 
@@ -79,8 +81,11 @@ In each case a proof that breaks is redone, and a counterexample goes to the ope
 Question: can Qwen on the 5090 write Lean for this project, with a correct setup?
 
 1. Read the system prompt and the tools that the earlier Qwen Lean runs received. Record what was wrong with them.
-   No written record of those runs exists in armada-laconic (search of `labbook`, `docs`, `engineering`, `notes` on
-   2026-10-28).
+   Result of the search (2026-10-28): no written record exists in armada-laconic (`labbook`, `docs`, `engineering`,
+   `notes`). The ingest-sessions index has no Lean session whose model is Qwen: 13 queries, and every armada-lean
+   session found ran `claude-sonnet-5` or `claude-opus-*` (agent `QwenLeanHistory`). The one Lean brief written for
+   Qwen, `reduction-plan.md`, gave it only `bash`, `grep` and `glob`: no scout and no web search. The earlier Qwen
+   runs were probably outside the index, or were not Lean runs `[INFERENCE]`. The operator's account is the evidence.
 2. Fix the setup: the omp backend with the Lean tools, the brief format of `worker-briefs.md`, and a scout for search.
 3. Run Qwen on pebbles that Sonnet already solved, through the same exophial gate. Use 3 sizes: a one-line frame lemma,
    a mid-size lemma, and a can-happen theorem.

@@ -17,27 +17,25 @@ Verify only in a separate tree, for example `armada-lean-nitro-theorems/.scratch
 
 | Branch | Contents |
 |---|---|
-| `nitro-proofs` | the repaired Nitro specification; channel kinds `ledger` and `virtual` |
+| `nitro-proofs` | the repaired Nitro specification; channel kinds `ledger` and `virtual`; tag `nitro-proofs-approved-2026-10-28` (operator approval, `labbook/2026-10-28-nitro-repaired-types-approval.md`) |
 | `nitro-theorems` | the Nitro theorem types that the operator approved before the repair; tag `nitro-theorems-approved-2026-10-27` |
 | `pool-symbolic` | the pool model without contract layout |
 | `armada-nitro-spec` | the Armada layer on the approved, not the repaired, Nitro spec; `docs/verification-chain.md` |
 
 **In flight.** Nothing.
 
-**Waits for the operator.** Approval of the repaired Nitro theorem types against the tag. Evidence: `nitro-proofs`
-`docs/nitro-repair-2026-10-27.md` §4 and §6. Most changes apply rulings already given. Recommendation: review only the
-substantive changes (Liveness hypotheses G1–G16, the 2ε clock bound, Turbo restricted to transfers).
+**Waits for the operator.** Nothing on this track.
 
 **Next steps, in order.**
-1. The operator approves the repaired Nitro types. Tag the approved commit.
-2. Review the executable operations of the Nitro and Armada layers for composition, typed state and footprints. They
+1. Review the executable operations of the Nitro and Armada layers for composition, typed state and footprints. They
    are the input of the Lean → Stele translation (`engineering/build-plan.md` "Verification chain"). Make the changes
-   that the review finds before any more proofs.
-3. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
+   that the review finds before any more proofs. A change to an approved theorem type goes back to the operator.
+2. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
    parameter `E`. Channels follow the `ledger` and `virtual` kinds. Apply the pending payee-key rulings
    (`payout_spendable`, `payment_note_only_payee`, no ciphertexts). Then give its theorem types to the operator.
-4. Proofs: Nitro Liveness, then the pool, then the Armada layer.
-5. File the armada-circuits need: owned circuits with more than one input (merges inside a channel). This needs an
+3. Proofs: Nitro Liveness, then the pool, then the Armada layer. Some approved types had no review of
+   their Lean text. A counterexample stops the work on that statement (`docs/process.md` 8.3).
+4. File the armada-circuits need: owned circuits with more than one input (merges inside a channel). This needs an
    operator order (`operating-rules.md` §5).
 
 **Findings of 2026-10-26/27** (lab book): `2026-10-27-gonitro-reclaim-dos.md`, `2026-10-27-payout-griefing.md`,
@@ -94,8 +92,6 @@ substantive changes (Liveness hypotheses G1–G16, the 2ε clock bound, Turbo re
 
 ## 4. Questions to the operator
 
-- Next step 2 can change theorem types after step 1 approves them. Do step 2 first, or limit it to changes that keep
-  the approved types?
 - `supervisor.py` replaces scheduling that exophial lacks (host-wide limits, quota, local versus cloud routing). Move
   it into exophial as a feature?
 - Give the S7 proof gate job to a husband?

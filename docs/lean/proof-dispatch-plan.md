@@ -106,13 +106,20 @@ In each case a proof that breaks is redone, and a counterexample goes to the ope
 
 Question: can Qwen on the 5090 write Lean for this project, with a correct setup?
 
-1. Read the system prompt and the tools that the earlier Qwen Lean runs received. Record what was wrong with them.
-   Result of the search (2026-10-28): no written record exists in armada-laconic (`labbook`, `docs`, `engineering`,
-   `notes`). The ingest-sessions index has no Lean session whose model is Qwen: 13 queries, and every armada-lean
-   session found ran `claude-sonnet-5` or `claude-opus-*` (agent `QwenLeanHistory`). The one Lean brief written for
-   Qwen, `reduction-plan.md`, gave it only `bash`, `grep` and `glob`: no scout and no web search. The earlier Qwen
-   runs were probably outside the index, or were not Lean runs `[INFERENCE]`. The operator's account is the evidence.
-2. Fix the setup: the omp backend with the Lean tools, the brief format of `worker-briefs.md`, and a scout for search.
+1. Find the earlier Qwen Lean and Bend2 runs. Result (2026-10-28, agents `QwenLeanHistory` and `QwenFailureSearch`,
+   transcripts in session `01a17f58`): no record on this host shows a Qwen run on Lean or Bend2 work. The search read
+   the `resolvedModel` of each omp `session_init` record (319 Qwen sessions; none had a Lean or Bend2 task), the ten
+   lean-mend worker transcripts (all `claude-sonnet-5`), the exophial3 and exophial4 dispatcher logs, the router and
+   vLLM logs, and the Bend2 and Lean lab books. A grep for "qwen" alone is useless: the `CLAUDE.md` text in every
+   system prompt matches it. The Qwen failures on record are other work:
+   - session `01a087c0` (exophial3, 2026-09-09): a Qwen judge call looped about 60 times on the inherited atlas MCP
+     tool `work_preflight`, because that server's instructions say to call it before work and before any answer. The
+     fix isolated the judge from MCP servers.
+   - exophial4 `4ex-87f`, `4ex-2b4`, `4ex-87e` (Python intake code): timeouts after 3600 s with no output, and one
+     handoff that failed schema validation.
+   The one Lean brief written for Qwen, `reduction-plan.md`, gave it only `bash`, `grep` and `glob`.
+2. Fix the setup: the omp backend with the Lean tools, the brief format of `worker-briefs.md`, a scout for search, no
+   inherited MCP servers, and a gate check instead of a bare timeout as the end of a run.
 3. Run Qwen on pebbles that Sonnet already solved, through the same exophial gate. Use 3 sizes: a one-line frame lemma,
    a mid-size lemma, and a can-happen theorem.
 4. Record for each run: pass or fail at the gate, peak context, turns, wall time, and the failure mode.

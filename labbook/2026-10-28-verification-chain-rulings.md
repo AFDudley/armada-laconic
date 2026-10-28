@@ -102,3 +102,18 @@ The decision record answers it, and the coordinator did not search it first:
   `satpVirtualRules`. They do not cover a hidden-balance channel. The Armada-layer rebuild (`armada-nitro-spec`) must
   state the liveness of hidden-balance channels, and at bytecode level that needs the ZK app's own certificate, with
   Groth16 trusted. This is a finding for the rebuild.
+
+### Correction to the O3 consequence above
+
+The consequence above overstated the gap. Classified by the rules each theorem assumes (armada-lean `integrated`,
+`ArmadaLean/Nitro/Liveness.lean`): 19 theorems hold for any `apps` (payouts, Turbo, the funding and sub-channel
+theorems, and the general dichotomy `finalizable_or_two_enabled` / `single_enabled_is_finalizable` of Nitro 2019
+§4.4); 5 read no app; 6 assume `consensusRules`; 4 assume `satpVirtualRules`. The Armada layer
+(`armada-nitro-spec`, `ArmadaNitro/Liveness.lean`) states its payout and funding theorems for any `apps` too, and fixes
+`satpVirtualRules` only in the two SATP theorems. So a hidden-balance channel is covered by every app-generic theorem.
+
+Not covered for a hidden-balance channel: the 6 consensus-specific finalization theorems (`latest_state_finalizable`,
+`conclusion_proof_finalizable`, `consensus_enabled_outcomes`, `late_observer_can_checkpoint`,
+`concluded_universally_finalizable`, `participant_can_prevent_cycles`). The papers state those for the consensus game
+only. A ZK-app analogue would be a new theorem about the app's own rules. Whether one is wanted is open. The earlier
+statement "10 theorems assume `consensusRules`" was wrong: 6 assume `consensusRules` and 4 assume `satpVirtualRules`.

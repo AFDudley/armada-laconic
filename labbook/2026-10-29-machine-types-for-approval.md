@@ -118,3 +118,14 @@ combine the two forms.
 2. Approved: the restated types and state domains (§3). The four pool can-happen theorems replace the originals.
 3. Caller rule: only `q`'s own honest moves may submit an on-chain call with caller `q`. An adversary call has a
    caller outside the participants of the channel it touches. This closes §4.
+
+## Synchrony by construction (operator, 2026-10-29)
+
+- Finding: `Views.Consistent` conjunct 2 (`Strategy.lean:270-273`) requires every sent state to be in the `received`
+  list of every `Participant`, an unbounded type. A reachable network delivers to finitely many, so the conjunct
+  holds only if nothing was sent. The multi-view theorems were vacuous. The model also has no recipients: `.send`
+  appends only to the sender's `sent`.
+- Approved: the network is synchronous by construction. An honest send puts the state in the `received` list of
+  every other participant of its channel in the same step. Conjunct 2, scoped to recipients, becomes an invariant of
+  the machine, as conjunct 3 did. The asynchronous system (needed later) is the same machine with send and delivery
+  as separate steps. Theorems choose the machine.

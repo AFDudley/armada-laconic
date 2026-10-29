@@ -111,3 +111,10 @@ combine the two forms.
 3. §4: who may submit an on-chain call as a participant `q` in the network. The coordinator recommends: only `q`'s
    own honest moves (a call is a signed transaction from `q`'s key), so an adversary call has a caller outside the
    participants of the channel it touches. Defer, or rule now.
+
+## Result (operator, 2026-10-29)
+
+1. Approved: `Machine` and the four machines that instantiate it (§1).
+2. Approved: the restated types and state domains (§3). The four pool can-happen theorems replace the originals.
+3. Caller rule: only `q`'s own honest moves may submit an on-chain call with caller `q`. An adversary call has a
+   caller outside the participants of the channel it touches. This closes §4.

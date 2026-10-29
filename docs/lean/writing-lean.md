@@ -387,8 +387,15 @@ one graph") and the Literate Code Principle in `~/.claude/CLAUDE.md`.
   proof needs is a lemma in `Lemmas.lean`, not a theorem. Operator ruling,
   2026-10-27.
 - A statement text in `Safety.lean` changes only with the operator's approval.
-  A step-level statement may gain a `Reachable …` hypothesis when its proof
-  needs an invariant. List each one.
+- Reachability is decided when a theorem is typed, never when it is proved (operator ruling 2026-10-29,
+  `labbook/2026-10-29-nitro-reachability-ruling.md`). Every theorem over a system state (`PoolState`, `Adjudicator E`,
+  `NetworkState E`, `Views E`) does one of two things:
+  - it takes a reachability hypothesis (`Reachable`, `ReachableSigned`, or the reachable-network predicate); or
+  - it is listed in `scripts/reach-exempt.tsv` with its reason, for example "holds for every state; the generality
+    makes it stronger".
+  `scripts/check.sh` fails on a theorem that does neither. A non-vacuity witness proves that its state is reachable.
+  The type-approval record gives the state domain of each type, and the operator rules on it with the type. A
+  reviewer of a type asks: can the hypotheses all hold in a state that no history produces?
 - A definition is never replaced by `True`, `False` or a constant. That makes a
   statement vacuous. `verification.md` has the check.
 - Numeric arithmetic on a hash or an address is forbidden. `self`, commitments

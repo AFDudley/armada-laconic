@@ -34,6 +34,9 @@ Read these documents. This file does not repeat them.
   because of a bad system prompt. Experiments decide whether Qwen can write Lean before any Lean work goes to it.
 - The operator decides theorem types. If the papers determine the fix for a defect, the coordinator fixes it and does
   not ask.
+- A theorem type sent for approval carries its state domain: "reachable" (and which predicate) or "every state,
+  because …". The operator rules on the domain with the type. Reachability is never added after proving starts
+  (operator ruling 2026-10-29; `docs/lean/writing-lean.md` §11; gate `scripts/reach.py` in armada-lean).
 - Do not suggest nitrolite.
 - Do not propose pool contract changes until the Lean work is complete.
 - eprint.iacr.org blocks `curl` (Cloudflare). The papers are in armada-nitro `docs/references/nitro/sources/`. Do not

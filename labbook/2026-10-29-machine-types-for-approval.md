@@ -129,3 +129,21 @@ combine the two forms.
   every other participant of its channel in the same step. Conjunct 2, scoped to recipients, becomes an invariant of
   the machine, as conjunct 3 did. The asynchronous system (needed later) is the same machine with send and delivery
   as separate steps. Theorems choose the machine.
+
+## Time bounds per pending action (operator, 2026-10-29)
+
+- Finding (`aln-c03`): the game bounds the adversary's clock advance per honest MOVE (`Threat.Round`,
+  `Strategy.lean:127`: `now' < now + T.ε` each round). A strategy that must challenge two channels then needs two
+  rounds, and the second challenge can land almost `2·T.ε` after the start. SATP Protocol 3.3 and Theorem 3.1
+  (SATP:480-493) challenge both ledgers together; the time bound is the maximum, not the sum. go-nitro submits each
+  channel's challenge as an independent transaction (`protocols/directdefund/directdefund.go:331-368`).
+- Rejected: more time slack in the theorem (it proves a weaker statement about a protocol that does not exist), and
+  an atomic batch move (it forbids the adversary to order or front-run between our calls).
+- Approved: Lamport's explicit-time form. Each honest on-chain call issued at time `t` is pending with deadline
+  `t + ε`; the `Tick` step is disabled while it would pass a pending deadline; the adversary orders all events and
+  may front-run. Sources: Abadi and Lamport, "An Old-Fashioned Recipe for Real Time" (TOPLAS 1994); Lamport,
+  "Real-Time Model Checking is Really Simple" (CHARME 2005): "An upper-bound timing constraint on when an action A
+  must occur is expressed by an enabling condition on the Tick action"; Merritt, Modugno and Tuttle, time-constrained
+  automata (1991), boundmap upper bounds per task (MIT 6.852 lecture 25); Sprites (arXiv 1702.05812v2 §I), the
+  on-chain round ∆ bounds each published response, and the adversary may reorder and front-run.
+- Asynchronous delivery later uses the same form: a delivery timer per message (MMT's channel example).

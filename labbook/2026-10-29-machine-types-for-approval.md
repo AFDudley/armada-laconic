@@ -147,3 +147,9 @@ combine the two forms.
   automata (1991), boundmap upper bounds per task (MIT 6.852 lecture 25); Sprites (arXiv 1702.05812v2 §I), the
   on-chain round ∆ bounds each published response, and the adversary may reorder and front-run.
 - Asynchronous delivery later uses the same form: a delivery timer per message (MMT's channel example).
+- Approved (operator, 2026-10-29): the game text on `draft/explicit-time` at `66428e6` (`Strategy.lean`):
+  `Reaction` (several calls and sends), `HonestMove.react`, `AdvMove.land`, `Threat.RoundSeq` (`nil` only with
+  nothing pending; `land` any pending call in any order; `tick` gated by `pending = [] ∨ now + dt < t + ε`; `other`
+  for every other adversary move), and `Threat.Round` with the outer bound `now' < now + ε` as the reaction time.
+  `Threat.Round.single` proves a one-call reaction is the old game with the adversary's moves on either side of the
+  call. Next: port the merged Liveness proofs and `NonVacuity.lean`; re-specify `aln-c03`.

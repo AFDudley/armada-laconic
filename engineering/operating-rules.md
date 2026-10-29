@@ -111,6 +111,14 @@ Read these documents. This file does not repeat them.
 - State the search scope of every claim that something does not exist.
 - A spec is graded from the base commit. A comment added after derivation does not change the spec. Close the pebble
   and file it again.
+- A filing body states observations only. It names no predicate, no field to compare and no oracle shape: the spec
+  derivation designs the check. `--cites` quotes a committed rule, not a declaration line. Lean example: cite
+  `docs/how-to-verify.md` ("A proof can be faked with `sorry` …").
+- An adversarial `reviewer` agent approves the exact intake argv before it is filed (section 10).
+- When a derivation escalates or derives a wrong check, correct the filing form, close the pebble and file it again.
+  Do not add notes that name fields or spec shapes: a note reaches the derivation as a remedy. Do not change the repo
+  to fit one derivation. 2026-10-28: the Lean filings stated a predicate, and five derivations escalated or
+  invented fields (`docs/lean/proof-dispatch-plan.md`, Phase 0 result, correction).
 - Merge paths:
   - a worker pebble: intake, estimate, spec review, queue;
   - critical-severity Solidity: the spec derives with `forge_mutation_gated_test` (exophial `docs/ORACLES.md`). If

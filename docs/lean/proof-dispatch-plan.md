@@ -44,10 +44,14 @@ Result (2026-10-28, agent `LeanExophialSetup`):
   The gate itself runs in about 13 s.
 - `scripts/check.sh` compares theorem statements with the committed `scripts/sigs-baseline.tsv`, because the gate
   container has no `.git`. A check against `git show` passed every change in the container, so it was replaced.
-- A pebble's observation is `scripts/check.sh --json <theorem>`. It prints one JSON object with `sorry` (a list of
-  names) and `theorem_under_test`. The predicate is
-  `{"observe": "stdout_json", "op": "not_member", "elem": "theorem_under_test", "collection": "sorry"}`.
-  The intake dry-run for `leaf_has_merkle_witness` with this predicate was accepted.
+- `scripts/check.sh --json <theorem>` prints one JSON object with `sorry` (a list of names), `theorem_under_test` and
+  `theorem_in_sorry`. A filing names this command in `--how-to-see` as the observation. It does not name a predicate,
+  a field to compare, or an oracle shape: the spec derivation designs the check (`skill://exophial-defect-forking`,
+  "No remedy ANYWHERE on the pebble").
+- Correction (2026-10-29): the Phase 1 and Phase 2 filings stated a predicate in `--constraints` and cited the
+  theorem's declaration line instead of a rule. Both break the intake contract. The derivations that followed
+  escalated or invented fields (`aln-4dc`, `aln-f9c`, `aln-3ac`, `aln-83f`, `aln-743`). The coordinator then added
+  notes that named fields and spec shapes. Those notes are remedies on the bus and break the same rule.
 - A change under `scripts/` merges only by `exophial integrate --branch`. `exophial apply` refuses it as acceptance
   machinery.
 - The supervisor's `ORACLE_ENV` has an `armada-lean` entry (`lake:lean:elan`, `.elan`). Its route is Sonnet.
@@ -105,8 +109,8 @@ In each case a proof that breaks is redone, and a counterexample goes to the ope
 Phase 2 filing (2026-10-28): the 11 theorems marked sound are filed in the §3 table order. The pebbles are `aln-852`,
 `aln-ceb`, `aln-4d7`, `aln-809`, `aln-b42`, `aln-069`, `aln-fd8`, `aln-802`, `aln-d1a`, `aln-743` and `aln-c03`.
 All 11 proofs are in `Liveness.lean`, so each pebble depends on the one before it. The filing script is
-`armada-lean/.scratch/file_nitro_phase2.py`. Each body names the `scripts/check.sh --json` field `theorem_in_sorry`.
-A spec derivation can state this field with `eq`; it cannot state "not in the `sorry` array" (`aln-4dc` gate, 2026-10-28).
+`armada-lean/.scratch/file_nitro_phase2.py`. These bodies stated a predicate, which breaks the intake contract (Phase 0
+result, correction). The script now files observations only and cites `docs/how-to-verify.md`. Use it for later filings.
 The Nitro chain and the pool chain edit different files and run at the same time.
 
 ## Phase 3. Qwen experiments

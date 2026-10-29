@@ -45,3 +45,12 @@
   each chain is its own machine with its own clock and finality, and the system composes them by interleaving
   (`Machine.interleave` in draft `757d843`, deleted while unused, restored with its first cross-chain user). The
   cross-chain theorems carry their own finality and relay assumptions over the composed system's reachable states.
+- The network machine (draft `draft/reachable-network`) has one shared chain, so conjunct 1 of `Views.Consistent`
+  holds by construction. Rulings on the other two conjuncts (operator, 2026-10-29):
+  - Conjunct 2 ("what `p` sent, every other participant received") is false in reachable states with a message in
+    flight. It is a synchrony assumption. The proofs written now assume synchrony: `hv : v.Consistent` stays, and for
+    a reachable network it means "every sent state has been delivered". Asynchronous delivery is needed later and
+    gets its own theorems.
+  - Conjunct 3 ("a received signature is on a state its signer sent") is unforgeability (SATP:168). It goes into the
+    network step: every proof state of every on-chain operation, honest or adversary, is `Sendable`, as the chain's
+    `ReachableSigned` (`Adjudicator.lean:331`) already requires. It is then an invariant, not a hypothesis.

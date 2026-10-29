@@ -25,3 +25,18 @@
 - The definition and the restated theorem types need operator approval of their Lean text before any proof pebble.
 - The 6 Nitro proofs already merged hold for every state, so they still hold with the added hypothesis.
 - `aln-852`, `aln-ceb` and `aln-d1a` wait for the restated types.
+
+## Generic state: `Machine` and `System` (operator, 2026-10-29)
+
+- Reachability is defined once, generically. A `Machine` is one reactive component (motif #13; Abrial 2010, Event-B
+  `MACHINE`): states, initial states, one step relation. `Machine.Reachable` and one invariant principle
+  (`Machine.invariant`) serve every machine (`docs/process.md` Stratum 2, and 4.4 on parallel inductions).
+- Hierarchy (operator): a system contains plants, and a plant contains machines. A `System` is a composition of
+  machines. Its reachable states are those of the composed machine. The network game is a system: the chain, one view
+  per participant and the adversary step together. Network reachability is the composed machine's `Reachable`, not a
+  separate predicate.
+- Not "statechart": a statechart adds hierarchy to a flat machine (`docs/process.md` Stratum 4 draws flat first).
+- Each type sent for approval gives its state domain (`engineering/operating-rules.md` §1). The four pool can-happen
+  theorems (`PoolSafety.lean:639-794`) start from an arbitrary state; `docs/process.md:130` requires "built by real
+  steps from genesis". Their restated form goes to the operator with the `Machine` text.
+- `Machine` and `System` get glossary entries with this source when the Lean text is approved.

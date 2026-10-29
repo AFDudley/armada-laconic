@@ -153,3 +153,19 @@ combine the two forms.
   for every other adversary move), and `Threat.Round` with the outer bound `now' < now + ε` as the reaction time.
   `Threat.Round.single` proves a one-call reaction is the old game with the adversary's moves on either side of the
   call. Next: port the merged Liveness proofs and `NonVacuity.lean`; re-specify `aln-c03`.
+
+## D10: no deposits in network histories; wallets (operator, 2026-10-29)
+
+- Finding (`FalseTheoremReaudit`, scratch lemma `network_balances_zero`, type-checked): no `Nitro.network`-reachable
+  state holds a positive balance. `HonestMove.Feasible` forbids an honest deposit (D3, `Strategy.lean:74`), and the
+  caller rule removes every adversary on-chain call, so nobody deposits. Every network theorem about funds held only
+  with zero coins.
+- D3's ground is a statement about strategies: Nitro §5.2 (Nitro:779-786) analyses strategies "ignoring deposits and
+  withdrawals. Deposits and withdrawals cannot be required as part of a strategy and cannot help as part of a
+  counter-strategy." Funding is a deposit in the history before any strategy (Nitro:395-398).
+- Ruling: participants cannot create coins, but they bring their own balances of arbitrary size. Each participant
+  has a wallet. The machines' initial state gives each wallet an arbitrary amount, and a deposit (into a ledger
+  channel only) debits the depositor's wallet. Histories admit deposits; honest strategies keep D3 (Nitro §5.2).
+- The re-audit found the other four "false" theorems true under the current model (argument, not proved):
+  `funding_point_universally_finalizable`, `satp_peers_can_finalize`, `satp_theorem_3_2`, `satp_end_user_recovers`.
+  Report: `.scratch/false-theorem-reaudit.md`.

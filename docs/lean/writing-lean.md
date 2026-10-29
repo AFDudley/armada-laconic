@@ -388,14 +388,20 @@ one graph") and the Literate Code Principle in `~/.claude/CLAUDE.md`.
   2026-10-27.
 - A statement text in `Safety.lean` changes only with the operator's approval.
 - Reachability is decided when a theorem is typed, never when it is proved (operator ruling 2026-10-29,
-  `labbook/2026-10-29-nitro-reachability-ruling.md`). Every theorem over a system state (`PoolState`, `Adjudicator E`,
-  `NetworkState E`, `Views E`) does one of two things:
-  - it takes a reachability hypothesis (`Reachable`, `ReachableSigned`, or the reachable-network predicate); or
+  `labbook/2026-10-29-nitro-reachability-ruling.md`). Every theorem over a system state (a state type of a declared
+  `Machine`; `ArmadaLean/Machines.lean` lists them) does one of two things:
+  - it takes a reachability hypothesis (`Machine.Reachable` of its machine, `Reachable`, or `ReachableSigned`); or
   - it is listed in `scripts/reach-exempt.tsv` with its reason, for example "holds for every state; the generality
     makes it stronger".
   `scripts/check.sh` fails on a theorem that does neither. A non-vacuity witness proves that its state is reachable.
-  The type-approval record gives the state domain of each type, and the operator rules on it with the type. A
-  reviewer of a type asks: can the hypotheses all hold in a state that no history produces?
+  The type-approval record gives the state domain of each type, and the operator rules on it with the type.
+- A reviewer of a type or of a game definition asks three questions:
+  - Can the hypotheses all hold in a state that no history produces?
+  - Can the honest player make a move that no adversary round can follow? If yes, `UnbeatableIn.move` holds
+    vacuously and every goal is provable. `Threat.Round.exists` (`Strategy.lean`) must stay proved (defect of
+    2026-10-29, `labbook/2026-10-29-machine-types-for-approval.md`).
+  - Does a witness for a theorem about funds use a positive amount? A witness with zero coins shows only that the
+    hypotheses hold together, not that the theorem says anything about money (D10, same record).
 - A definition is never replaced by `True`, `False` or a constant. That makes a
   statement vacuous. `verification.md` has the check.
 - Numeric arithmetic on a hash or an address is forbidden. `self`, commitments

@@ -65,6 +65,12 @@ Each pebble depends on the one before it. The dispatcher skips a pebble with an 
 wraps `pb ready`, `bus.py:690-727`). All 15 are in the supervisor queue. Review each derived spec
 (`contracts/specs/derived-<id>.spec.json`) before its predecessor merges.
 
+Phase 1 result (2026-10-29): all 15 pool theorems are proved and merged; the last, `aln-1d9`, closed at 04:54Z. On
+`integrated`, `scripts/check.sh --json` lists no pool theorem in `sorry`, and build, axioms, signatures and non-vacuity
+pass. Two pebbles did not merge through their own worker run. `aln-4dc`: its spec read a field that `check.sh` does
+not print, and `exophial apply` merged the worker's proof. `aln-91b`: the first worker stopped on a revoked OAuth
+token, and a second worker proved it.
+
 ## Phase 1. Pool proofs (serial, Sonnet)
 
 Trunk `integrated`, pool files (from the old branch `pool-symbolic`, tag `pool-symbolic-approved-2026-10-28`). Every type is approved

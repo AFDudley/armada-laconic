@@ -40,3 +40,8 @@
   theorems (`PoolSafety.lean:639-794`) start from an arbitrary state; `docs/process.md:130` requires "built by real
   steps from genesis". Their restated form goes to the operator with the `Machine` text.
 - `Machine` and `System` get glossary entries with this source when the Lean text is approved.
+- Cross-chain activities get their own proofs later (operator, 2026-10-29). Within one chain the participants share
+  the chain state, so the network machine has one chain (Stratum 1.2). Between chains nothing is shared or atomic:
+  each chain is its own machine with its own clock and finality, and the system composes them by interleaving
+  (`Machine.interleave` in draft `757d843`, deleted while unused, restored with its first cross-chain user). The
+  cross-chain theorems carry their own finality and relay assumptions over the composed system's reachable states.

@@ -153,6 +153,11 @@ combine the two forms.
   for every other adversary move), and `Threat.Round` with the outer bound `now' < now + ε` as the reaction time.
   `Threat.Round.single` proves a one-call reaction is the old game with the adversary's moves on either side of the
   call. Next: port the merged Liveness proofs and `NonVacuity.lean`; re-specify `aln-c03`.
+- Defect found during the port (2026-10-29): a reaction with `calls = [Op.tick ε]` admits no round (the tick must
+  land, so `now' ≥ now + ε`, while `Threat.Round` requires `now' < now + ε`), so `UnbeatableIn.move` holds vacuously
+  and every `Unbeatable` goal is provable. The old game applied the honest move after the round and had no such
+  move. Fix (restores the approved meaning): `Op.tick` is not an honest call, and `Threat.Round.exists` proves that
+  every feasible honest move admits a round. Any game change must keep that lemma proved.
 
 ## D10: no deposits in network histories; wallets (operator, 2026-10-29)
 

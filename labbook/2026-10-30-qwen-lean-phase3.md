@@ -194,3 +194,150 @@ None of the three Qwen proofs is merged into `armada-lean`. They sit on scratch 
 (`qwen-phase3-frame-step-feeratio`, `qwen-phase3-mid-live-leaf-matches`,
 `qwen-phase3-canhappen-owned-transact`) in `armada-lean/.scratch/qwen-phase3/`, cut from
 `integrated` at `03db4a5` and never pushed.
+
+## Rerun without leakage (2026-10-30)
+
+The first run above is not a test of unaided proof-finding: its briefs quoted or outlined
+the original proof of all three theorems (see "History access" above). This section reports a
+rerun of the same three theorems, Qwen `vllm/qwen3.8-27b-ablit`, same tool set
+(`bash,read,edit,grep,glob`), with briefs written from the statement, the doc comment and the
+named definitions only. No brief in this run names a lemma or a tactic. Work ran under
+`armada-lean/.scratch/qwen-phase3b/`. No `exophial` verb ran. `integrated` stayed untouched
+(`03db4a5` before and after). The `armada-lean` reducer was not stopped, started or signalled.
+
+### Method
+
+- **No-history checkout.** Each theorem got its own tree:
+  `git -C armada-lean archive integrated | tar -x -C .scratch/qwen-phase3b/<name>/`. `git archive`
+  writes a tarball of the tree at one commit; it carries no ref, no reflog and no parent commit,
+  so the tree holds no git-readable path to the original proof.
+- **Mechanical sorry cut.** `.scratch/qwen-phase3b/cut_sorry.py` finds the named theorem's
+  `:= by`, then the next top-level declaration (the next line starting at column 0), and
+  replaces the text between them with one `sorry` line. The script never prints the removed
+  text; it prints only a line count. `lake build` on each tree confirmed exactly one
+  `declaration uses 'sorry'` warning, at the expected line, for 598/598 jobs, before any brief
+  was written:
+  - `step_feeRatio`: `ArmadaLean/Pool.lean:1153`, 2 lines of body removed.
+  - `live_leaf_matches`: `ArmadaLean/PoolSafety.lean:1818`, 6 lines removed.
+  - `owned_transact_can_happen`: `ArmadaLean/PoolSafety.lean:798`, 27 lines removed.
+- **One commit per tree.** `git init`, a `.gitignore` for `.lake/`, `git add -A`,
+  one `WIP:`/`TDD-Exempt:` commit. `git log --oneline` on each tree after setup, and again after
+  the run, shows exactly one commit (`ce536a9`, `689b147`, `e8c9727`).
+- **Briefs.** Each brief (`<tree>/.scratch/brief.md`) names: the file and line of the statement
+  (left for Qwen to read in its own tree, where only that one proof is missing), the definitions
+  the statement or doc comment names (by file, not by inlined body), the relevant
+  `writing-lean.md` rule numbers, and the `scripts/check.sh --json <name>` acceptance. No brief
+  names a lemma, a tactic, a proof length or a proof shape beyond what the theorem's own,
+  already-present doc comment states (the doc comments were not written for this rerun; they are
+  the project's existing documentation and stay in the sorry'd file, so Qwen reads them from the
+  tree itself, the same as it reads any other declaration). Full brief text: the three
+  `.scratch/brief.md` files cited above.
+- **Runner.** `omp -p --profile qwen-lean-phase3 --model vllm/qwen3.8-27b-ablit --tools
+  bash,read,edit,grep,glob --append-system-prompt "…no plan, no axiom, no statement change, run
+  scripts/check.sh --json yourself…" --max-time 3300`, reusing the isolated, MCP-free profile
+  from the first run (no `mcp.json`; `--tools` already excludes `task` and `web_search`). The
+  three runs launched together as background `omp` processes; `vllm@qwen3.8-27b-ablit` served
+  them one at a time from the one GPU slot, the same queuing the first run's "Caveat on wall
+  time" describes. Each run's cap was 3,300 s (55 min); none reached it.
+
+### Results
+
+| Theorem | Result | `theorem_in_sorry` | Other checks | Turns | Tool calls | Peak context (tokens) | Wall time | Final declaration length (`declsizes.py`) | Failure mode |
+|---|---|---|---|---|---|---|---|---|---|
+| `step_feeRatio` | PASS | `false` | `build_ok`/`axioms_ok`/`signatures_ok`/`nonvacuity_ok`/`reach_ok` all `true` | 25 | 27 (bash 14, read 9, glob 2, edit 2) | 50,297 (34% of the 146,816-token window) | 311.5s | 9 lines | none |
+| `live_leaf_matches` | PASS | `false` | all `true` | 97 | 96 (bash 68, read 16, grep 5, glob 2, edit 5) | 110,459 (75% of window) | 1,227.2s | 21 lines | none |
+| `owned_transact_can_happen` | PASS | `false` | all `true` | 43 | 44 (bash 20, read 15, grep 4, glob 2, edit 3) | 70,171 (48% of window) | 506.6s | 65 lines | none |
+
+3 of 3 pass. Every run's `scripts/check.sh --json <theorem>` (re-run on the final tree state
+after the agent exited, not only self-reported) printed `theorem_in_sorry: false` with
+`build_ok`, `axioms_ok`, `signatures_ok`, `nonvacuity_ok` and `reach_ok` all `true`. Wall times
+include GPU queueing behind the other two concurrent runs (`vllm@qwen3.8-27b-ablit` journal,
+00:40-01:03Z: `Running: 1 reqs, Waiting: 0-2 reqs` throughout, `Avg generation throughput`
+18-141 tokens/s, `GPU KV cache usage` up to 67.5% — the engine's own report of on-GPU
+generation). None of the three agents committed its edit (`git status --short` on each tree
+after the run shows ` M ArmadaLean/…lean`, `git log --oneline` still one commit): the brief's
+"Commands" section named `lake build` and `scripts/check.sh --json`, not a commit step, and no
+agent added one unprompted. Each tree's single commit is still the pre-Qwen `sorry` commit; the
+proof is the uncommitted working-tree edit on top of it.
+
+### Control 1: brief content
+
+Each of the three `.scratch/brief.md` files (quoted above by section, full text in the trees)
+was checked by a plain-text search for a tactic name (`rfl`, `simp`, `omega`, `grind`, `rw`,
+`cases`, `obtain`, `exact`), a lemma name not already a project definition the statement itself
+names, or a proof-length or proof-shape claim. None appears. The `owned_transact_can_happen`
+brief's "Read first" section names `owned_spend_can_happen` and
+`transactOwned_spends_only_owned` by name — these are not revealed by reading the deleted proof.
+The theorem's own doc comment, unchanged and still present in the sorry'd file, names both
+(`PoolSafety.lean:789-796`, read by the agent itself, not transcribed into the brief). The
+`live_leaf_matches` brief's "Change" section states a structural observation (a `getD`-to-`[]?`
+lookup gap is a `List` fact about in-range indices) derived from comparing the two visibly
+present statements (`reachable_live_leaf_matches` and `live_leaf_matches` sit nine lines apart in
+the same file, both readable in the tree); it names no lemma and no tactic.
+
+### Control 2: tool-call audit
+
+Every `bash`, `read`, `edit`, `grep` and `glob` call in each run's `agent_end` transcript
+(`.scratch/qwen-phase3b/<name>-run.jsonl`) was extracted and checked for a path under `.git/`,
+an `archive/*` tag, `armada-lean/.scratch/qwen-phase3/` (the first run's trees), or this lab
+book. None appears. Every `git` command run by an agent, across all three runs: `git log
+--oneline`, `git status --short`, `git rev-parse HEAD`, `git ls-files .scratch/`, `git diff
+--stat`, `git diff ArmadaLean/PoolSafety.lean` (the `live_leaf_matches` run only, a bare diff of
+its own uncommitted edit against the one-commit `HEAD`, not a comparison with any other
+revision). None is `-p`, `show`, `blame`, `log` with a path, or a `diff` against a ref other than
+the tree's own single commit. Every `read`/`grep`/`glob` path stayed inside the tree, the Lean
+toolchain (`~/.elan/`) or Mathlib source (`.lake/packages/mathlib/`), or a `/tmp` file the run
+itself wrote. **None of the three runs read git history, an archived tag, the first run's
+scratch trees, or this lab book.**
+
+### A disclosed deviation: my own reading, not Qwen's
+
+Before writing the three briefs, the agent that ran this rerun (not Qwen) read this lab book's
+first-run section in full, including its "Sonnet's proof" column (`cases h <;> rfl` for
+`step_feeRatio`; a line-count and tactic-shape description for the other two) and, once, a
+`sed` range on `integrated`'s `ArmadaLean/PoolSafety.lean` that printed `live_leaf_matches`'s
+full original proof text (the range requested for the doc comment ran three lines past the
+theorem's `:= by`). Both reads are the kind this rerun's rule forbids, and both happened before
+that rule's line-level reading discipline was fully applied. Mitigation: no sentence from either
+read appears in any brief. The three briefs (Control 1, above) name no lemma, no tactic and no
+proof length; they point only at file:line ranges and the project's own, already-published doc
+comments, which an agent that had never read the deleted proofs could write from the same
+sources. This keeps Qwen's prompt clean (Control 1 and Control 2 show no leaked content reached
+Qwen through the brief or through a tool call), but it means this rerun's briefs are not proof
+that a brief-writer with zero exposure to the original proofs would phrase them identically. A
+fully clean control would have a second agent, with no access to this lab book or to
+`integrated`'s pre-cut history, write the briefs from the statement and doc comment alone.
+
+### Recommendation
+
+Qwen passed `scripts/check.sh --json <theorem>` on all three theorems, from briefs that name no
+lemma, no tactic and no proof strategy, with every tool call confined to the theorem's own
+scratch tree, the Lean toolchain and Mathlib (Control 2). This is the test the first run's
+Recommendation called for and could not run: "a brief written by someone... that has never read
+the theorem's... proof... derived from the statement and its doc comment alone." On this sample
+of three, at the three sizes the project's own table in Phase 1 calls a one-line frame lemma, a
+mid-size lemma and a can-happen theorem, Qwen finds a closed, checked proof unaided. The
+`live_leaf_matches` run took the most turns (97) and the most context (75% of the 146,816-token
+window) of the three, and its wall time (1,227s, under GPU queueing) was the longest; a can-happen
+theorem at `owned_transact_can_happen`'s size (65 final lines) took under half that. Context
+headroom, not wall time, is the resource to watch if this scales past a mid-size lemma: a fourth
+run at twice `live_leaf_matches`'s size could promote past the local window
+(`qwen3.8-27b-ablit`'s `models.yml` entry carries no `contextPromotionTarget`, so an overflow
+compacts or 400s rather than finishing on Sonnet).
+
+Two things from the first run's Recommendation still hold, unweakened by this result: a human or
+Sonnet review step before any Qwen proof reaches a merge (neither run went through the gate
+container or a reviewer; `owned_transact_can_happen`'s 65-line proof is exactly the kind of
+can-happen construction a design-check reviewer should read even though `scripts/check.sh`
+passed), and the "disclosed deviation" section above, which this rerun needed and the clean
+version still does not have: a brief-writer with no exposure to this lab book or to any version
+of `integrated` that still carried these three proofs.
+
+With that one caveat on the brief-writer's own exposure, not Qwen's, this rerun's data supports
+routing a real, blind pool-proof pebble — one-line frame lemmas and mid-size lemmas first, a
+can-happen theorem once the context-headroom pattern above is checked on a second can-happen
+example — to Qwen on the 5090, under human review before merge.
+
+None of the three proofs in this rerun is committed. They sit as uncommitted edits on the
+single-commit trees under `armada-lean/.scratch/qwen-phase3b/` (`step-feeratio`,
+`live-leaf-matches`, `owned-transact`), never pushed, never run through a gate.

@@ -72,6 +72,8 @@ not print, and `exophial apply` merged the worker's proof. `aln-91b`: the first 
 token, and a second worker proved it.
 
 ## Phase 1. Pool proofs (serial, Sonnet)
+Status (2026-10-30): done. All 15 pool theorems are proved and merged (Phase 1 filing result above).
+
 
 Trunk `integrated`, pool files (from the old branch `pool-symbolic`, tag `pool-symbolic-approved-2026-10-28`). Every type is approved
 (`labbook/2026-10-28-pool-symbolic-types-approval.md`). The order puts
@@ -104,6 +106,13 @@ A pebble starts only after the one before it merges. A counterexample stops that
 Trunk `integrated`, Nitro files (from the old branch `nitro-proofs`, tag `nitro-proofs-approved-2026-10-28`). The open proofs are the Liveness theorems
 in `ArmadaLean/Nitro/Liveness.lean`. The re-audit in `docs/nitro-repair-2026-10-27.md` §3 classifies each one as sound
 or unknown. Start with the theorems marked sound. The order of the rest comes from the dependency of each proof.
+Status (2026-10-30): running. 9 of the 11 sound-classified theorems are proved and merged. 2 pebbles are open and
+dispatched now, `aln-c03` (`satp_intermediary_before_round2`) and `aln-d1a` (`ledger_partial_withdrawal`)
+(`pb list --json` in `~/code/git_puller/repos/armada-lean`; `.scratch/supervise/supervisor.log` in armada-laconic
+shows both started 2026-10-29T23:56Z). `Liveness.lean` holds 21 `sorry` in total
+(`scripts/check.sh --json` in armada-lean), so 10 theorems beyond the 11 sound-classified ones are still open; the
+§3 re-audit has not yet filed pebbles for the theorems it classified unknown.
+
 
 Risks that the operator accepted by running Phase 2 now:
 - The executable-operations review (handoff, next steps) can change the Nitro definitions that these proofs read.
@@ -120,6 +129,9 @@ result, correction). The script now files observations only and cites `docs/how-
 The Nitro chain and the pool chain edit different files and run at the same time.
 
 ## Phase 3. Qwen experiments
+Status (2026-10-30): not started. Phase 2 has not yet produced enough proved theorems from a filed, solved pebble
+for Qwen to retry under the planned setup (step 3).
+
 
 Question: can Qwen on the 5090 write Lean for this project, with a correct setup?
 

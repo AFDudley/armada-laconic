@@ -13,32 +13,36 @@ The old adjudicator model `adjudicator-model-v4` is reference only. Do not exten
 (`labbook/2026-10-26-adjudicator-layout-audit.md`).
 
 `github.com/AFDudley/armada-lean` has one trunk, in the clone `~/code/git_puller/repos/armada-lean`. It is an exophial
-instance (prefix `aln`): exophial owns `integrated`, and the fork's `main` follows it. The trunk holds
-the pool model and the repaired Nitro specification (merge `62197f4`). Approval tags: `pool-symbolic-approved-2026-10-28`
-(`labbook/2026-10-28-pool-symbolic-types-approval.md`), `nitro-proofs-approved-2026-10-28`
-(`labbook/2026-10-28-nitro-repaired-types-approval.md`), `nitro-theorems-approved-2026-10-27`. Old branches survive as
-`archive/*` tags. `armada-nitro-spec` (worktree `armada-lean-armada-nitro-spec`) is the Armada layer on the approved,
-not the repaired, Nitro spec. It waits for a rebuild on `main`.
+instance (prefix `aln`): exophial owns `integrated`, and the fork's `main` follows it. Approval tags:
+`pool-symbolic-approved-2026-10-28` (`labbook/2026-10-28-pool-symbolic-types-approval.md`),
+`nitro-proofs-approved-2026-10-28` (`labbook/2026-10-28-nitro-repaired-types-approval.md`),
+`nitro-theorems-approved-2026-10-27`. `armada-nitro-spec` (worktree `armada-lean-armada-nitro-spec`) is the Armada
+layer on the approved, not the repaired, Nitro spec. It waits for a rebuild on `main`.
 
-**In flight.** Nothing. Phase 0 is done (`docs/lean/proof-dispatch-plan.md`, "Result").
+**In flight.** Phase 1 (pool proofs) is done. Phase 2 (Nitro Liveness proofs) runs: check with
+`scripts/check.sh --json` in `~/code/git_puller/repos/armada-lean` for the current `sorry` list, and
+`pgrep -af supervisor.py` for the dispatcher (match the command line `python3 supervisor.py`, not a path).
 
 **Waits for the operator.** The 7 open questions of the liveness design
 (`labbook/2026-10-28-liveness-refinement-design.md` §(e)).
 
 **Next steps** (`docs/lean/proof-dispatch-plan.md`; operator rulings 2026-10-28).
-1. Phase 1 runs: the pool pebbles are filed and queued (2026-10-28). The supervisor runs; check with
-   `pgrep -af supervisor.py` (match the command line `python3 supervisor.py`, not a path).
-2. Phase 1: the pool proofs, one at a time, in the plan's order. Phase 2: the Nitro Liveness proofs, at the same time.
-   A counterexample stops the work on that statement (`docs/process.md` 8.3).
-3. Phase 3: the Qwen experiments. No Lean work goes to Qwen before their result.
-4. Review the executable operations of the Nitro and Armada layers for composition, typed state and footprints. They
+1. Phase 2 continues, one Liveness pebble at a time. A counterexample stops the work on that statement
+   (`docs/process.md` 8.3).
+2. Phase 3 (Qwen experiments) starts once Phase 2 clears enough proved theorems to give Qwen a solved pebble to
+   retry. No Lean work goes to Qwen before that.
+3. Review the executable operations of the Nitro and Armada layers for composition, typed state and footprints. They
    are the input of the Lean → Stele translation (`engineering/build-plan.md` "Verification chain"). A change to an
    approved theorem type goes back to the operator.
-5. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
+4. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
    parameter `E`. Channels follow the `ledger` and `virtual` kinds. Apply the pending payee-key rulings
    (`payout_spendable`, `payment_note_only_payee`, no ciphertexts). Then give its theorem types to the operator.
-6. File the armada-circuits need: owned circuits with more than one input (merges inside a channel). This needs an
+5. File the armada-circuits need: owned circuits with more than one input (merges inside a channel). This needs an
    operator order (`operating-rules.md` §5). `owned_merge_can_happen` holds for the deployed pool only with them.
+6. Three open exophial defects affect Phase 2 dispatch reliability: `exo-a72c` (credential revocation mid-run,
+   decomposed into `.1` closed and `.2` parked on a gate the reducer found nondeterministic), `exo-c7d6` (W5
+   container worker-clone fetch, gate-failed), `exo-c310` (capture-commit scope, parked on a replay check that reads
+   shared refs). Track each with `pb show <id>` in `~/code/git_puller/repos/exophial`.
 
 **Findings of 2026-10-26/27** (lab book): `2026-10-27-gonitro-reclaim-dos.md`, `2026-10-27-payout-griefing.md`,
 `2026-10-27-nitro-liveness-game-defects.md`, `2026-10-26-utxo-channel-formalizations.md`, `2026-10-27-bend2-to-evm.md`.
@@ -55,12 +59,10 @@ not the repaired, Nitro spec. It waits for a rebuild on `main`.
   - G7b-spend `arn-d62` failed its gate on 2026-10-21. Its worktree is kept.
   - Open: the replacement of the live armada-1 deployment and the move of ARM holders.
 - **F2** (husband `HusbandF2c`, also E11): N9 waits for N3. **F5 client:** waits for N3.
-- **Dispatch.** One supervisor only. A second copy dispatches from the same queue. The record of 2026-10-27 that no
-  supervisor ran was wrong: its `pgrep` pattern did not match `python3 supervisor.py`. A supervisor started on
-  2026-10-25 ran until 2026-10-28, with code that did not watch armada-lean. It was stopped, and the current one
-  started at 2026-10-28 14:04Z.
-- **Gates.** armada-circuits has no `.exophial/gate/Dockerfile` on `integrated`. It needs one before its next gated
-  merge. The armada-sdk Dockerfile (`c2a04b1`) is the closest pattern. The armada-poc gate omits `test:config`.
+- **Dispatch.** One supervisor runs (`pgrep -af supervisor.py`), queue at
+  `.scratch/supervise/queue.jsonl`, log at `.scratch/supervise/supervisor.log`.
+- **Gates.** armada-circuits now has `.exophial/gate/Dockerfile` on `integrated`. The armada-poc gate still omits
+  `test:config`.
 
 ## 3. Open items with no other record
 
@@ -90,6 +92,10 @@ not the repaired, Nitro spec. It waits for a rebuild on `main`.
 - **Documentation.**
   - `engineering/build-plan.md`: S3 omits N9 (9 points). S5 uses the old N1–N8 sizes (43), not the split briefs (50).
   - The site link to this note is broken because `notes/` is not rendered.
+- **AFDudley forks push over SSH.** Every repo's `AFDudley.github.com` (or `fork`) remote push URL is `git@github.com:AFDudley/<repo>.git`. `armada-client` is the one exception: its only remote, `origin`, still pushes over HTTPS.
+- **armada-circuits `integrated` tip.** `9699ba9` adds `ff-main-from-integrated`. `main` is 36 commits behind it
+  (`git log --oneline main..9699ba9` in `~/code/git_puller/repos/armada-circuits`); the workflow has not caught
+  `main` up yet.
 - **Branch cleanup, 2026-10-28.** Deleted branches survive as `archive/<name>` tags on each fork. Left for a decision:
   - armada-poc's fork has 153 branches with no local copy (`brent/*`, `iskay/*`, `feature/*`, …). armada-sdk's fork
     has 19 such branches.

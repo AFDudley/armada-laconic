@@ -37,8 +37,8 @@ layer on the approved, not the repaired, Nitro spec. It waits for a rebuild on `
 4. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
    parameter `E`. Channels follow the `ledger` and `virtual` kinds. Apply the pending payee-key rulings
    (`payout_spendable`, `payment_note_only_payee`, no ciphertexts). Then give its theorem types to the operator.
-5. File the armada-circuits need: owned circuits with more than one input (merges inside a channel). This needs an
-   operator order (`operating-rules.md` §5). `owned_merge_can_happen` holds for the deployed pool only with them.
+5. Done: armada-circuits `arx-213` merged the owned circuits with more than one input (32 shapes, N=1..8 by
+   M=1..4). `owned_merge_can_happen` holds for the deployed pool with them.
 6. Three open exophial defects affect Phase 2 dispatch reliability: `exo-a72c` (credential revocation mid-run,
    decomposed into `.1` closed and `.2` parked on a gate the reducer found nondeterministic), `exo-c7d6` (W5
    container worker-clone fetch, gate-failed), `exo-c310` (capture-commit scope, parked on a replay check that reads

@@ -174,3 +174,16 @@ combine the two forms.
 - The re-audit found the other four "false" theorems true under the current model (argument, not proved):
   `funding_point_universally_finalizable`, `satp_peers_can_finalize`, `satp_theorem_3_2`, `satp_end_user_recovers`.
   Report: `.scratch/false-theorem-reaudit.md`.
+
+## App property for the determinacy theorems (operator, 2026-10-30)
+
+- Finding (`aln-6ca`, Opus; Lean counterexample `docs/counterexamples/finalizable_or_two_enabled.lean` on
+  `worker/aln-6ca` at `31f46dd`): `finalizable_or_two_enabled` is false for an arbitrary app. An app that supports
+  every state with any proof lets either side checkpoint at a higher turn in every round, so nothing finalizes and
+  nothing is enabled. Nitro states the result for ForceMove channels (Nitro:631-658); ForceMove:1379-1381: each
+  response increases the turn number, "this prevents the game from stalling indefinitely".
+- Ruling: constrain the app being evaluated, not the channel. Property:
+  `Rules.NoUnilateralSupport r := ∀ c proof candidate, r.supports c proof candidate = true → ∀ q ∈ c.participants,
+  ∃ ss ∈ proof, q ∈ ss.signers`. `finalizable_or_two_enabled` and `single_enabled_is_finalizable` take
+  `(happ : (apps c.appDef).NoUnilateralSupport)`. Each app we evaluate proves the property once
+  (`consensusRules`, `forceMoveRules`; later the ZK channel app). The counterexample app fails it.

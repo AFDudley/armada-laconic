@@ -21,42 +21,71 @@ layer on the approved, not the repaired, Nitro spec. It waits for a rebuild on `
 
 **In flight.** Phase 1 (pool proofs) is done. Phase 2 (Nitro Liveness proofs) runs: check with
 `scripts/check.sh --json` in `~/code/git_puller/repos/armada-lean` for the current `sorry` list, and
-`pgrep -af supervisor.py` for the dispatcher (match the command line `python3 supervisor.py`, not a path).
+`pgrep -af supervisor.py` for the dispatcher (match the command line `python3 supervisor.py`, not a path). The 19
+Liveness pebbles are chained (log `armada-lean/.scratch/plan/husbandry-liveness.md`). `HusbandLiveness` filed them and
+is not running. The coordinator acted as husband on 2026-10-30. Operating rules §3 gives parks to a husband.
 
-**Waits for the operator.** The 7 open questions of the liveness design
-(`labbook/2026-10-28-liveness-refinement-design.md` §(e)).
+- `aln-cc8` (`funding_point_universally_finalizable`) is false as stated. The Lean counterexample is
+  `docs/counterexamples/funding_point_universally_finalizable.lean` on `worker/aln-cc8` (`3235226`). A participant
+  signs two states at one turn, and the next mover chooses. ForceMove §3.1.5 (ForceMove:782-794) permits these
+  "alternative moves". So this is a statement gap (`docs/process.md`, "Model defect or statement gap?"). The repair
+  in `docs/nitro-repair-2026-10-27.md` §7 on that branch (option (a), a gate on honest sends) follows go-nitro client
+  code, not the paper. Do not use it.
+- `aln-6ca` and `aln-78b` take `Rules.NoUnilateralSupport` (operator, 2026-10-30; merged `48d483e`). Both specs
+  were refreshed after the merge.
+- `aln-2ed` and `aln-6ca` parked on 2026-10-30. Their causes are not yet read.
+- `arn-5c3` and `arn-d62` (armada-nitro, G7) wait for `exo-7ea`. `arn-5c3` passed a host fixturenet run on
+  `worker/arn-5c3` (`b9b313c6`; log `armada-nitro/.scratch/plan/husbandry-G7.md`). `arn-d62` has an untested fix.
+
+**Waits for the operator.**
+1. The statement of `funding_point_universally_finalizable`. The source supports a hypothesis that `p` made no
+   alternative moves on `c` before the funding point.
+2. O2 and O3 of the liveness design wait for a fuller explanation (`labbook/2026-10-28-verification-chain-rulings.md`).
+   O1 and O4-O7 are answered there.
+3. Phase 3: correct the Qwen lab book entry about the `live_leaf_matches` brief (it named the proof's lemmas and
+   strategy), and rerun that theorem with a bare brief.
+4. armada-poc `sync/upstream-2026-10-30` (`8813d21a`, fork only; report `.scratch/poc-upstream-sync.md`): merge it,
+   and accept or change two points: the yield vault takes upstream `LOCKED_SHARES`, and `verifyOwned` becomes
+   virtual.
+5. armada-circuits `integrated` `9699ba9` is not pushed. Push with the next merge there, or use the push verb that the
+   exophial coordinator offered.
 
 **Next steps** (`docs/lean/proof-dispatch-plan.md`; operator rulings 2026-10-28).
 1. Phase 2 continues, one Liveness pebble at a time. A counterexample stops the work on that statement
-   (`docs/process.md` 8.3).
-2. Phase 3 (Qwen experiments) starts once Phase 2 clears enough proved theorems to give Qwen a solved pebble to
-   retry. No Lean work goes to Qwen before that.
-3. Review the executable operations of the Nitro and Armada layers for composition, typed state and footprints. They
-   are the input of the Lean → Stele translation (`engineering/build-plan.md` "Verification chain"). A change to an
-   approved theorem type goes back to the operator.
+   (`docs/process.md` 8.3). Before a type question goes to the operator, read every source passage it cites in full.
+   The paper decides honest behaviour. go-nitro client code does not (`docs/lean/writing-lean.md` §10).
+2. Review the merged Opus proofs against `docs/lean/verification.md` §6a (size per declaration, duplicated blocks,
+   library first): `finalizable_unique`, `satp_intermediary_before_round2`, `ledger_partial_withdrawal`.
+3. The executable-operations review is done. Reports: `.scratch/ops-review-nitro.md`, `.scratch/ops-review-pool.md`.
+   The cleanup merged (`cfae60e`). Open: an API per operation, with exact-effect and frame lemmas (`writing-lean.md`
+   §3 and §6, `verification.md` §6a). After that, remove the `simp only [Network.applyAdv, Network.land]` unfold that
+   the cleanup added in `Network.applyAdv_chain_reachable`. `Machine.interleave` stays out until the first
+   cross-chain user (`labbook/2026-10-29-nitro-reachability-ruling.md`).
 4. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
    parameter `E`. Channels follow the `ledger` and `virtual` kinds. Apply the pending payee-key rulings
    (`payout_spendable`, `payment_note_only_payee`, no ciphertexts). Then give its theorem types to the operator.
-5. Done: armada-circuits `arx-213` merged the owned circuits with more than one input (32 shapes, N=1..8 by
-   M=1..4). `owned_merge_can_happen` holds for the deployed pool with them.
-6. Three open exophial defects affect Phase 2 dispatch reliability: `exo-a72c` (credential revocation mid-run,
-   decomposed into `.1` closed and `.2` parked on a gate the reducer found nondeterministic), `exo-c7d6` (W5
-   container worker-clone fetch, gate-failed), `exo-c310` (capture-commit scope, parked on a replay check that reads
-   shared refs). Track each with `pb show <id>` in `~/code/git_puller/repos/exophial`.
+5. Update the stale records: the status lines of `docs/lean/proof-dispatch-plan.md` (Phase 2 and Phase 3); the
+   status paragraph of the armada-lean `README.md`; `docs/nitro-repair-2026-10-27.md` §3 for the three new results;
+   a note in `labbook/2026-10-28-verification-chain-rulings.md` (O3 correction) that the two determinacy theorems
+   now take `NoUnilateralSupport` (`labbook/2026-10-29-machine-types-for-approval.md`, "App property").
+6. Open exophial defects: `exo-a72c`, `exo-c7d6`, `exo-c310`, and `exo-7ea` (a pebble keeps the base of its first
+   claim). Track each with `pb show <id>` in `~/code/git_puller/repos/exophial`. The installed build has the fix that
+   stops a collided pebble from parking as STALLED.
 
 **Findings of 2026-10-26/27** (lab book): `2026-10-27-gonitro-reclaim-dos.md`, `2026-10-27-payout-griefing.md`,
 `2026-10-27-nitro-liveness-game-defects.md`, `2026-10-26-utxo-channel-formalizations.md`, `2026-10-27-bend2-to-evm.md`.
 
 ## 2. Other tracks
 
-- **Paused (operator ruling, 2026-10-26).** All E11 work waits until the Lean work is complete. Do not queue an E11
-  pebble.
+- **E11 pause (operator ruling, 2026-10-26)**: all E11 work waits until the Lean work is complete. Conflict: the E11
+  Aave yield gate merged on armada-nitro (`fddf4337`, bus `arn-0a2`; `arn-273` closed). No record of a lifted pause
+  was found in `labbook/` or this note. Ask the operator whether the pause still holds before an E11 pebble is queued.
 - **F4 collateral** is replaced by the Lean work.
 - **F3 governance** (husband `HusbandF3j`):
   - `arp-6cc` (E2) and `arp-445.1` (E5) are closed, but armada-poc `integrated` has no merge commit for them. The
     husband must find out why.
   - `arp-acf` (E3 follow-up) and E7 (treasury ARM in the payout divisor) wait for operator rulings.
-  - G7b-spend `arn-d62` failed its gate on 2026-10-21. Its worktree is kept.
+  - G7 (`arn-5c3`, `arn-d62`): held for `exo-7ea` (section 1, "In flight").
   - Open: the replacement of the live armada-1 deployment and the move of ARM holders.
 - **F2** (husband `HusbandF2c`, also E11): N9 waits for N3. **F5 client:** waits for N3.
 - **Dispatch.** One supervisor runs (`pgrep -af supervisor.py`), queue at

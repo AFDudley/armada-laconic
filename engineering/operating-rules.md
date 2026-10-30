@@ -145,6 +145,17 @@ Read these documents. This file does not repeat them.
   `~/.local/share/uv/tools/exophial/bin/ansible-playbook <exophial>/ansible/init.yml -e exo_target_repo=<repo>
   -e exo_pebble_prefix=<p> -e '{"exo_languages_override": ["typescript"]}'` (JSON form for lists).
 
+## 6a. Reading sessions
+
+- Read omp and Claude Code sessions through ingest_sessions (operator, 2026-10-30), not by grepping raw JSONL. The
+  database is Postgres on `127.0.0.1:5433` (container `ingest-pg`). Read-only access:
+  `cd ~/code/git_puller/repos/ingest_sessions/ingest_sessions && uv run python -c 'import psycopg; from ingest_sessions
+  import db; c = psycopg.connect(db._dsn(role="ro")); ...'`. Tables: `sessions`, `records`, `summaries`, `history`.
+  The MCP server (`ingest-sessions-server`, port 8741) ingests new sessions and serves the `query` tool.
+- After a host crash, check `systemctl --user is-active ingest-sessions` (with `XDG_RUNTIME_DIR=/run/user/$(id -u)`).
+  On 2026-10-29 it failed its start with `dependency` because `ingest-pg` came up 8 s later, and nothing restarted it.
+  `max(modified)` in `sessions` shows when ingestion stopped.
+
 ## 7. Git and repositories
 
 All repositories are under `~/code/git_puller/repos/`.

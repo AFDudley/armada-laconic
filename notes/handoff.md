@@ -42,8 +42,8 @@ is not running. The coordinator acted as husband on 2026-10-30. Operating rules 
    alternative moves on `c` before the funding point.
 2. O2 and O3 of the liveness design wait for a fuller explanation (`labbook/2026-10-28-verification-chain-rulings.md`).
    O1 and O4-O7 are answered there.
-3. Phase 3: correct the Qwen lab book entry about the `live_leaf_matches` brief (it named the proof's lemmas and
-   strategy), and rerun that theorem with a bare brief.
+3. Phase 3: rerun `live_leaf_matches` with a bare brief from a fresh agent. Its first brief named the proof's lemmas
+   and strategy (correction in `labbook/2026-10-30-qwen-lean-phase3.md`, Control 1).
 4. armada-poc `sync/upstream-2026-10-30` (`8813d21a`, fork only; report `.scratch/poc-upstream-sync.md`): merge it,
    and accept or change two points: the yield vault takes upstream `LOCKED_SHARES`, and `verifyOwned` becomes
    virtual.
@@ -64,11 +64,7 @@ is not running. The coordinator acted as husband on 2026-10-30. Operating rules 
 4. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
    parameter `E`. Channels follow the `ledger` and `virtual` kinds. Apply the pending payee-key rulings
    (`payout_spendable`, `payment_note_only_payee`, no ciphertexts). Then give its theorem types to the operator.
-5. Update the stale records: the status lines of `docs/lean/proof-dispatch-plan.md` (Phase 2 and Phase 3); the
-   status paragraph of the armada-lean `README.md`; `docs/nitro-repair-2026-10-27.md` §3 for the three new results;
-   a note in `labbook/2026-10-28-verification-chain-rulings.md` (O3 correction) that the two determinacy theorems
-   now take `NoUnilateralSupport` (`labbook/2026-10-29-machine-types-for-approval.md`, "App property").
-6. Open exophial defects: `exo-a72c`, `exo-c7d6`, `exo-c310`, and `exo-7ea` (a pebble keeps the base of its first
+5. Open exophial defects: `exo-a72c`, `exo-c7d6`, `exo-c310`, and `exo-7ea` (a pebble keeps the base of its first
    claim). Track each with `pb show <id>` in `~/code/git_puller/repos/exophial`. The installed build has the fix that
    stops a collided pebble from parking as STALLED.
 

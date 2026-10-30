@@ -57,6 +57,11 @@ Read these documents. This file does not repeat them.
 - `pool/5090` and `pool/5090-local` both run `vllm/qwen3.8-27b-ablit` (window 146,816 tokens). `pool/5090` promotes to
   `anthropic/claude-sonnet-5` when the window overflows. `pool/5090-local` does not promote. A worker on
   `pool/5090-local` that outgrows the window fails, and the husband merges that chunk by hand.
+- Local-model subagents use the `build-pool` agent (`pool/27b-class`; operator, 2026-10-30). The `sonic` agent has
+  no model override in `~/.omp/agent/config.yml`, so it runs on the session default (Opus). 2026-10-30: four
+  "Qwen" cleanup steps ran on Opus as `sonic`; their session files show `claude-opus-5-5`, and vLLM logged 0
+  requests. Confirm local use from the vLLM journal (`journalctl -u vllm@qwen3.8-27b-ablit | grep 'POST
+  /v1/chat/completions'`), not from one `nvidia-smi` sample: GPU use reads 0% while the agent waits on a build.
 
 ### What Qwen on the 5090 did (measured 2026-10-20)
 

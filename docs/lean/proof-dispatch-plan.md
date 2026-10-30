@@ -106,12 +106,15 @@ A pebble starts only after the one before it merges. A counterexample stops that
 Trunk `integrated`, Nitro files (from the old branch `nitro-proofs`, tag `nitro-proofs-approved-2026-10-28`). The open proofs are the Liveness theorems
 in `ArmadaLean/Nitro/Liveness.lean`. The re-audit in `docs/nitro-repair-2026-10-27.md` §3 classifies each one as sound
 or unknown. Start with the theorems marked sound. The order of the rest comes from the dependency of each proof.
-Status (2026-10-30): running. 9 of the 11 sound-classified theorems are proved and merged. 2 pebbles are open and
-dispatched now, `aln-c03` (`satp_intermediary_before_round2`) and `aln-d1a` (`ledger_partial_withdrawal`)
-(`pb list --json` in `~/code/git_puller/repos/armada-lean`; `.scratch/supervise/supervisor.log` in armada-laconic
-shows both started 2026-10-29T23:56Z). `Liveness.lean` holds 21 `sorry` in total
-(`scripts/check.sh --json` in armada-lean), so 10 theorems beyond the 11 sound-classified ones are still open; the
-§3 re-audit has not yet filed pebbles for the theorems it classified unknown.
+Status (2026-10-30, `integrated` `9180670`): running. All 11 sound-classified theorems are proved and merged, and so is
+`finalizable_unique` (Opus, `aln-a14`). `scripts/check.sh --json` in armada-lean lists 18 `sorry`, all in
+`Liveness.lean`. The 19 theorems that the §3 re-audit did not class as sound are filed as one chain (`aln-a14` …
+`aln-223`; log `armada-lean/.scratch/plan/husbandry-liveness.md`). Results so far:
+- `finalizable_or_two_enabled` was false for an arbitrary app. Its counterexample is
+  `docs/counterexamples/finalizable_or_two_enabled.lean`. The operator ruled (2026-10-30) that it and
+  `single_enabled_is_finalizable` take `Rules.NoUnilateralSupport` (merged `48d483e`). Both are open again.
+- `funding_point_universally_finalizable` is false as stated: a participant can make alternative moves (ForceMove
+  §3.1.5). Its counterexample is on `worker/aln-cc8` (`3235226`). The statement waits for the operator.
 
 
 Risks that the operator accepted by running Phase 2 now:
@@ -129,8 +132,11 @@ result, correction). The script now files observations only and cites `docs/how-
 The Nitro chain and the pool chain edit different files and run at the same time.
 
 ## Phase 3. Qwen experiments
-Status (2026-10-30): not started. Phase 2 has not yet produced enough proved theorems from a filed, solved pebble
-for Qwen to retry under the planned setup (step 3).
+Status (2026-10-30): steps 2-4 ran on three solved pool theorems (`labbook/2026-10-30-qwen-lean-phase3.md`). Qwen
+passed `scripts/check.sh --json` on all three, in scratch trees, with no gate run and no commit. The
+`live_leaf_matches` brief named the lemmas and the strategy of the proof (correction in that entry), so that run is
+not a clean result. The ruling on whether Qwen takes Lean pebbles is open. Separately, the operator ordered the
+mechanical cleanup of 2026-10-30 onto the 5090 through `build-pool` (`engineering/operating-rules.md` §2).
 
 
 Question: can Qwen on the 5090 write Lean for this project, with a correct setup?

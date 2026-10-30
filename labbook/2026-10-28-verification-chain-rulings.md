@@ -118,6 +118,11 @@ Not covered for a hidden-balance channel: the 6 consensus-specific finalization 
 only. A ZK-app analogue would be a new theorem about the app's own rules. Whether one is wanted is open. The earlier
 statement "10 theorems assume `consensusRules`" was wrong: 6 assume `consensusRules` and 4 assume `satpVirtualRules`.
 
+Later change (operator, 2026-10-30): `finalizable_or_two_enabled` and `single_enabled_is_finalizable` no longer hold
+for any `apps`. They take `(happ : (apps c.appDef).NoUnilateralSupport)`, because the dichotomy is false for an app
+that supports states with no signature (`labbook/2026-10-29-machine-types-for-approval.md`, "App property"). An app
+that a hidden-balance channel runs must prove `NoUnilateralSupport` before these two theorems apply to it.
+
 ## Ruling: no limit on inputs or outputs below the system's hard limits (operator, 2026-10-28)
 
 "The hard limits of inputs and outputs are technical constraints of the system, we shouldn't needlessly constrain it

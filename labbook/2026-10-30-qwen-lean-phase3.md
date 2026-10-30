@@ -275,6 +275,13 @@ lookup gap is a `List` fact about in-range indices) derived from comparing the t
 present statements (`reachable_live_leaf_matches` and `live_leaf_matches` sit nine lines apart in
 the same file, both readable in the tree); it names no lemma and no tactic.
 
+**Correction (coordinator, 2026-10-30).** The `live_leaf_matches` claim above is wrong. The brief's "Change" section
+(`armada-lean/.scratch/qwen-phase3b/live-leaf-matches/.scratch/brief.md:32-38`) names the two lemmas the proof
+uses, `reachable_live_leaf_matches` and `reachable_live_spent_invariant`, and says what they give. It also states
+the remaining step: the gap between the `getD` lookup and the `[pos]?` lookup. That is the proof's strategy. So
+the `live_leaf_matches` run is not a test of unaided proof-finding, and the Recommendation below, "from briefs that
+name no lemma, no tactic and no proof strategy", holds for `step_feeRatio` and `owned_transact_can_happen` only.
+
 ### Control 2: tool-call audit
 
 Every `bash`, `read`, `edit`, `grep` and `glob` call in each run's `agent_end` transcript

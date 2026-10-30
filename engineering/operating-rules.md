@@ -131,6 +131,14 @@ Read these documents. This file does not repeat them.
 - Fixturenet grading (operator ruling, 2026-10-25), interim: a recorded host run grades a fixturenet pebble, and
   `exophial apply` merges it. The commit quotes each fixturenet clause with the host command, the tested sha and the
   verdict lines. The coordinator closes the original pebble as superseded.
+- A pebble keeps the base recorded at its first claim, and grading reads the spec and the repo config at that base
+  (exophial coordinator, 2026-10-30; `exo-7ea`). A rebase of the branch does not move it. If the base predates a
+  needed change (a refreshed spec, an `environment_command`), the recovery is the one the coordinator names:
+  refresh the spec, rebase in the kept worktree, then unpark, so the unpark records the new merge-base. When no
+  route exists (`arn-5c3`, `arn-d62`: base before `environment_command`), hold the pebble until the exophial fix
+  merges. Never hand-merge, never hand-write a base-sha, and never rename a branch to mint a new identity.
+- A spec derived before an approved type change still checks the old statement text. Refresh it
+  (`exophial specify --refresh`) before that pebble is graded (`aln-c03`, 2026-10-30).
 
 ## 6. Environment for exophial commands
 

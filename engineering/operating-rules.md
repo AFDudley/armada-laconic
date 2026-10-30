@@ -110,6 +110,11 @@ Read these documents. This file does not repeat them.
 - A reducer keeps the exophial code that it loaded at start. Before you trust a verdict after an exophial install,
   compare `Starting reducer` in `.exophial/logs/dispatcher.log` with the install time. Do not stop a reducer that has
   a live worker. Let it drain, then unpark.
+- `exophial self-update` restarts the repo's reducer with the caller's environment. A plain shell has no
+  `EXOPHIAL_ORACLE_*` variables and no `~/.elan/bin` on `PATH`, so the oracle cannot find `lake`. On 2026-10-30 such
+  a restart parked `aln-2ed`, whose proof was complete ("cannot resolve these declared binaries via shutil.which").
+  Run the update with the repo's `ORACLE_ENV` and `PATH_PREFIX` from `supervisor.py`, or stop the reducer after the
+  update and let the supervisor start the next one.
 - A reducer that grades against a known-faulty oracle blocks the other pebbles of its repo (example: `exo-b9b`). Stop
   it with `exophial stop`. Check its worktree for a left-over mutant with `git status`. Queue the other pebbles again.
 

@@ -72,8 +72,21 @@ moves that computation into the build.
 
 ## 4. Open decisions (operator)
 
-1. **Scope of `looseHypothesis`.** Spec theorems only, or every declaration? Proposal: spec theorems only. Helper
-   lemmas keep the Mathlib style; `repeatedPremise` still catches a helper premise that spreads.
+1. **Scope: every declaration, helpers included.** An earlier draft exempted helper lemmas. *Functional
+   Programming in Lean* does not support that exemption:
+   - §5.2 "Subtypes": subtypes belong *inside* a library — "it's a good idea to use them internally to a
+     library, providing an API to users that automatically ensures that all invariants are satisfied, with any
+     necessary proofs being internal to the library." Helper lemmas are the library's internals.
+   - §7.5 "Pitfalls … Pros and Cons": "In idiomatic Lean code, indexed datatypes are not used very often.
+     Instead, subtypes and explicit propositions are typically used to enforce important invariants." The book's
+     line is between indexed families and subtypes/propositions, not between helpers and theorems.
+   - "Interlude: Evidence as Arguments": a proof argument is the idiomatic way to state one operation's own
+     precondition (`def third (xs : List α) (ok : xs.length > 2)`).
+
+   Proposal: the criterion is repetition, not the declaration's role. A precondition that one declaration alone
+   needs may be a proof argument ("evidence as argument"). A condition that two or more declarations need is a
+   type, in helpers and spec theorems alike (`repeatedPremise`, all declarations). `looseHypothesis` then
+   applies to every declaration, with the same single-use exception.
 2. **The one exception to rule 2.** The design says "no allow-list". Rule 2 needs one narrow exception: a
    condition the source states for that theorem alone. Proposal: the exception is the theorem's own source
    citation, which the spec module already parses (`spec_lib.py`); the citation sentence must name the

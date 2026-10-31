@@ -85,7 +85,7 @@ inputs, and no brief told an author to read the sources below.
 |---|---|
 | `Reachable.lean` | `ReachableState M`, `ReachableNetwork apps Ts`, `ReachableViews` (the spec-module work defines the first two; they move here) |
 | `Channel.lean` | `LedgerChannel apps` (one encoding of "ledger": `kind` and `appDef` must agree), `TimedChannel ε := 2 * ε ≤ challengeDuration` (operator ruling 2026-10-31: `2·ε` is sufficient for the proofs; the factor comes from the round model, `docs/nitro-repair-2026-10-27.md:38-42`. Nitro's "sensible channel timeouts" (Nitro:552-555) become a separate requirement only when the blockchain itself is fully modelled: block times, congestion, censorship) |
-| `Outcome.lean` | outcome refinements, for example guarantees with external peers (`hog`) |
+| `Outcome.lean` | outcome refinements, for example guarantees with external peers (`hog`); `TurboOutcomeNetwork` (operator ruling 2026-10-31): an on-chain state whose outcome network (Nitro:790-791, "the network of outcomes … where the nodes are channels and the edges represent" allocations) is a DAG and uses only allocations among ledger channels and external destinations, with no virtual channels and no guarantees (Turbo scope, Nitro:732-734 and footnote 5, :1102-1104). The Turbo theorems take it instead of a raw state plus `IsDAG`. Reason: `turbo_value_achievable` is false on a state with a virtual channel (`worker/aln-eb2` `986c203`) |
 | `Construction.lean` | `LedgerWithSub.In n` and the other paper constructions |
 | `Honest.lean` | own-signing records: a participant's view together with the fact that it followed the protocol (`MadeNoAlternativeSetupMoves`) |
 

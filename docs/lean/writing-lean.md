@@ -157,6 +157,18 @@ live in the pool") cannot live in the holding's own type. It comes from a pool
 theorem (rule 1). The holding's type carries only the facts the adjudicator
 decides: its asset, its random `r`, and its positive value.
 
+**Statement inputs too.** The rule also applies to a theorem's inputs. When
+more than one theorem needs the same fact about an input, the fact is a refined
+type (`{c : FixedPart // 2 * ε ≤ c.challengeDuration}`, or a `structure`), not
+a `Prop` argument that each theorem repeats. A theorem that takes the raw type
+then states, by its type, that it holds for every value. Nitro broke this rule.
+Separate repairs added `hχk`, `hχopen`, `hχsent`, the `2·ε` timeout premises
+and own-signing premises one theorem at a time, so the same fact was decided
+differently in different theorems, and a theorem that omitted a premise still
+type-checked (operator, 2026-10-31). The Limit above still applies: "χ is still
+open" depends on the chain state, so it is a reachable-state fact, not a fact
+about the channel's own type.
+
 **Source.** `docs/process.md` Stratum 1 (Minsky 2011, "make illegal states
 unrepresentable"). Bird and Paterson 1999 for the scoped case.
 
@@ -388,13 +400,14 @@ one graph") and the Literate Code Principle in `~/.claude/CLAUDE.md`.
   2026-10-27.
 - A statement text in `Safety.lean` changes only with the operator's approval.
 - Reachability is decided when a theorem is typed, never when it is proved (operator ruling 2026-10-29,
-  `labbook/2026-10-29-nitro-reachability-ruling.md`). Every theorem over a system state (a state type of a declared
-  `Machine`; `ArmadaLean/Machines.lean` lists them) does one of two things:
-  - it takes a reachability hypothesis (`Machine.Reachable` of its machine, `Reachable`, or `ReachableSigned`); or
-  - it is listed in `scripts/reach-exempt.tsv` with its reason, for example "holds for every state; the generality
-    makes it stronger".
-  `scripts/check.sh` fails on a theorem that does neither. A non-vacuity witness proves that its state is reachable.
-  The type-approval record gives the state domain of each type, and the operator rules on it with the type.
+  `labbook/2026-10-29-nitro-reachability-ruling.md`). Reachability is a type, not a hypothesis (operator ruling
+  2026-10-31, rule 4): a theorem over a system state (a state type of a declared `Machine`;
+  `ArmadaLean/Machines.lean` lists them) takes the reachable-state subtype of its machine. A theorem that holds
+  for every state takes the raw state type, and its doc comment gives the reason, for example "holds for every
+  state; the generality makes it stronger". Until the spec-module check replaces `scripts/check.sh`, the old
+  form (a `Reachable` hypothesis, or a row in `scripts/reach-exempt.tsv`) stays valid. A non-vacuity witness
+  proves that its state is reachable. The type-approval record gives the state domain of each type, and the
+  operator rules on it with the type.
 - A reviewer of a type or of a game definition asks three questions:
   - Can the hypotheses all hold in a state that no history produces?
   - Can the honest player make a move that no adversary round can follow? If yes, `UnbeatableIn.move` holds

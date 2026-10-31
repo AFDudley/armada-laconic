@@ -67,6 +67,16 @@ Batteries environment linters (`@[env_linter]`,
 | `looseHypothesis` | A spec theorem has a hypothesis whose only free variable is one data binder, and the theorem's source citation does not state it. | 2 | Single-input checks. |
 | `aliasHypothesis` | A hypothesis is `x = f y` where `x` is a binder of the same theorem. | 3 | `hvn`-style duplicates. |
 | reachability | Already designed in the spec module (reachable-state types). | 3 | Raw state plus `Reachable` hypothesis. |
+| `decisionScope` | An `omega` call whose goal context holds more than N arithmetic hypotheses (`≤`, `<`, `=`, `≠` and their `∧`/`∨`/`¬` over `Nat`/`Int`), or a `decide` call whose goal has a free variable or exceeds a term-size bound, or any `decide +kernel` / `native_decide`. N and the bound come from measuring the trunk. | 4a.5 | Blow-up risk of decision procedures. |
+| `linter.flexible` (Mathlib, `Mathlib/Tactic/Linter/FlexibleLinter.lean`) | A rigid tactic (`rw`, `exact`, …) acts on the output of a flexible one (`simp`, `split`, `norm_cast`, …). | 4a.5 | Non-terminal searches. Mathlib's own linter; enabled, not rewritten. |
+
+`decisionScope` reads the elaborated tactic info tree (each `omega`/`decide` node's goal and local context), on
+the pattern of Mathlib's flexible linter. It is static and deterministic: it bounds the INPUT of the procedure,
+which is what drives its blow-up (`omega` reads every arithmetic hypothesis in scope; `decide` evaluates the whole
+computation). The fix it asks for is a smaller scope (`clear`, or the call inside a small `have`) or a layer
+lemma, not a hand-written arithmetic proof. Time is still measured, but outside the gate: a periodic profile
+(`lake env lean -Dprofiler=true`) lists the most expensive calls, because wall time is too noisy to gate on and
+kernel time is not counted in heartbeats.
 
 `repeatedPremise` is the strongest signal. The premise analysis already computes its clusters
 (`armada-lean/.scratch/hyp_analysis.py`, Lean-elaborated binder types, conjunction normalization). The linter

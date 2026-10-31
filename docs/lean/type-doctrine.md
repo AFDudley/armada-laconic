@@ -135,6 +135,7 @@ Rules:
 3. **Dispatch the layer before the theorems that need it.** A worker proves a layer's API as its own unit of work;
    theorem workers then compose. A worker that needs a fact the layer below lacks reports it; it does not prove
    it locally on its branch.
+
 ## 5. Order of work
 
 1. Merge the spec module (`draft/spec-module-2`): statement protection and reachable-state types.

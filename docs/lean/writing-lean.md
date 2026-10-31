@@ -142,11 +142,12 @@ example (x y : PosNat) : 0 < (x.add y).val := (x.add y).pos
 
 **In the project.** `AdjudicatorState.self` (`State.lean:92`) follows the rule:
 `self = Term.keccak selfInputs` by construction, so "self is an address" needs
-no hypothesis. `HoldingWellFormed` (`Lemmas.lean:3997-4004`) breaks the rule. A
-holding is free data `((treeNumber, position), commitment)`
-(`State.lean:62`). The predicate restates five facts about it and
-`holdingWellFormed_step` (`Lemmas.lean:4741`, 169 lines) re-proves them for
-every call. Its closure is 26 declarations and 1,866 lines. exophial4's
+no hypothesis. `HoldingWellFormed` (`Lemmas.lean:3997-4004` of the retired
+`adjudicator-model-v4`, commits `ce6f4ad`/`3feb0b0`; not on the current trunk)
+broke the rule. A holding was free data `((treeNumber, position), commitment)`
+(`State.lean:62`). The predicate restated five facts about it and
+`holdingWellFormed_step` (`Lemmas.lean:4741`, 169 lines) re-proved them for
+every call. Its closure was 26 declarations and 1,866 lines. exophial4's
 `drs.bend` went from 4,349 lines and 153 laws to 665 lines when scope became a
 type (`~/code/git_puller/repos/exophial4/docs/labbook/a-scoped-drs-type.md`;
 665 lines verified on disk; "1 law" after the change is the coordinator's figure

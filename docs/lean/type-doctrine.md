@@ -78,6 +78,14 @@ lemma, not a hand-written arithmetic proof. Time is still measured, but outside 
 (`lake env lean -Dprofiler=true`) lists the most expensive calls, because wall time is too noisy to gate on and
 kernel time is not counted in heartbeats.
 
+Measured (TypeLinters, `ArmadaLean/Lint/DecisionScope.lean`, `draft/refined-types` `4188271`): `omega` consumes at
+most 13 hypotheses on the trunk (p90 7.2, p50 5); `decide` goals reach size 293 (p90 151). Bounds set to the trunk's
+own maxima: `maxOmegaHyps = 13`, `maxDecideSize = 300`; the trunk has 0 findings. Over 137 `omega` calls paired with
+profiler time, hypothesis count and time correlate weakly (Pearson r ≈ 0.13): today's calls are all small, and the
+slowest (`cover_pay`, 287 ms) consumes 11. The bound therefore stops growth; it does not rank today's cost. It
+already found one regression: `NonVacuity.lean:2660` on `draft/refined-types`, `unfold Route.LedgerAfterRound2;
+decide`, size 21,601 (74 times the trunk maximum). Mathlib's `linter.flexible`: 157 findings on the trunk.
+
 `repeatedPremise` is the strongest signal. The premise analysis already computes its clusters
 (`armada-lean/.scratch/hyp_analysis.py`, Lean-elaborated binder types, conjunction normalization). The linter
 moves that computation into the build.
@@ -218,6 +226,16 @@ Rules:
    calls over 50 ms: 10 in `Lemmas` (1.70 s together), 1 in `PoolSafety`, none at top level in `Liveness`. The
    profiler charges a nested tactic to the enclosing one (`Liveness`: `refine` 12.0 s over 18 calls), so the
    cost inside those blocks is not attributed yet.
+   Recorded (`draft/record-searches`, armada-lean `0c9b07e`): 1,192 of 1,269 search calls recorded with `says`,
+   77 left as written (32 combinator sites with a different result per goal; 45 that did not reproduce);
+   `scripts/verify_says.sh` passes on the whole tree and fails on a deliberately wrong recording. Effect, same
+   machine, two runs each: `simp` time per file falls by about 40% (`Liveness` 2.25-2.31 s → 1.29-1.44 s,
+   `Safety` 0.59-0.71 s → 0.30-0.37 s); total tactic time and a clean build (45.5-49.8 s → 41.4-47.7 s) change
+   within run-to-run noise. Search was not the main cost; the long proofs are (§4a).
+   Pitfall found: Mathlib's `says` re-runs every recorded search when the environment variable `CI` is set, and
+   agent shells set `CI=true`. The first measurement was therefore slower than the trunk. Fixed twice:
+   `leanOptions := #[⟨`weak.says.no_verify_in_CI, true⟩]` in `lakefile.lean` (builds), and `unset CI` in
+   `/home/rix/bin/lean-run` (direct `lake env lean` runs).
 
 ## 5. Order of work
 

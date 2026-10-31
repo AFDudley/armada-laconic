@@ -132,8 +132,11 @@ from a layer of facts about channels, finalization, redistribution, notes or poo
   `HoldingWellFormed` here; that predicate belongs to the retired `adjudicator-model-v4` (commits `ce6f4ad`,
   `3feb0b0`, on no current branch), not to the trunk Pool model.
 
-[INFERENCE] The count is an approximation: a proof that uses only lemmas about an operation does not name it; a
-`simp` that unfolds it does.
+The counts are upper bounds (AuditNitroSafety, 2026-10-31). A proof that correctly uses a per-call lemma, for
+example `obtain ⟨…⟩ := Adjudicator.transfer_some h`, still names `Adjudicator.transfer` in its proof term,
+because the lemma's instantiated type mentions it. The audit built its violation lists by reading the proofs.
+`layerDiscipline` must instead report a proof that UNFOLDS a base operation: its proof term names the
+operation's equation or match lemmas (`<op>.eq_1`, `<op>.eq_def`, `<op>.match_<n>`) or its `casesOn`.
 
 [INFERENCE] Why it happened: the work went top-down from approved statements, and each proof was dispatched as
 one independent pebble on its own branch. No unit of work owned a middle layer, so each worker went down to the

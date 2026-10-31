@@ -39,6 +39,25 @@ replayable ReceiptApp, `appsAll`/`appsU`, and Rock-Paper-Scissors without the de
 one is participant-level: a compliant app, a correct model, and a participant whose own signatures remove its claim.
 The counterexample file is kept in armada-lean `docs/counterexamples/` as that example.
 
+## Own-violations are IR violations (operator, 2026-10-31)
+
+A participant that signs what the protocol tells it not to sign violates its own individual rationality
+(`labbook/2026-10-30-app-classes-ic-ir.md` §2). The papers assume protocol-following participants, so they never state
+these premises; more instances are expected. Each is handled the same way: a premise on what that participant itself
+signed, never on the others, with the example recorded as an own-violation.
+
+Second instance, `satp_end_user_recovers` (pebble `aln-223`; Opus counterexample
+`docs/counterexamples/satp_end_user_recovers.lean` on `worker/aln-223`, `96f61c2`, checked by the coordinator): Alice's
+latest `L0` allocation `o` holds a second guarantee `Vx` that names the virtual channel `r.V` as a peer. A reclaim of
+`Vx` raises `r.V`'s entry, and `reclaim L0 r.V` never succeeds again. SATP Protocol 3.1 Round 2 (SATP:411-418) has
+each participant sign only guarantees `G(a0 + b0, [P_i, P_{i+1}])`, whose peers are participants. Approved premise:
+every guarantee in `o` names external destinations as its peers,
+`∀ e ∈ o, ∀ x ps, e.item = .guarantee x ps → ∀ d ∈ ps, d.isExternal = true`. State domain unchanged.
+
+Separate, open: the model's `Allocation.addTo` turns the item into `.alloc`; go-nitro `compute_reclaim_effects`
+(`MultiAssetHolder.sol:340-352`) keeps `allocationType` and adds only to `amount`. Changing `addTo` changes an
+approved definition and does not repair the theorem.
+
 ## Next
 
 The statement change merges with `exophial integrate --branch` (it changes `scripts/sigs-baseline.tsv`). Pebble

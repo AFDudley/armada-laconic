@@ -162,6 +162,20 @@ Rules:
 3. **Dispatch the layer before the theorems that need it.** A worker proves a layer's API as its own unit of work;
    theorem workers then compose. A worker that needs a fact the layer below lacks reports it; it does not prove
    it locally on its branch.
+4. **Seal a layer once its API exists.** Mathlib's style guide, "Transparency and API design": "Central to Lean
+   being a practically performant proof assistant is avoiding checking of definitional equality for very large
+   terms … irreducible definitions are never unfolded unless the user explicitly requests it (e.g using the
+   unfold tactic, or by using the unseal command)"; the cost it names is the need to "recycle API lemmas"
+   (<https://leanprover-community.github.io/contribute/style.html>). Here that cost is the point: once a
+   layer's exact-effect and frame lemmas exist (Waves 1-2 of `audit-2026-10-31.md`), mark its base definitions
+   `@[irreducible]` (or `seal` them after their API). A higher-layer proof that unfolds them then fails to
+   elaborate, so Lean enforces rule 1 itself, and `layerDiscipline` becomes a check that nothing unseals them.
+   A non-vacuity witness that needs computation (`decide`, `rfl`) uses an explicit, local `unseal` in its own
+   section; the spec check lists every `unseal`.
+5. **Keep each search small.** Same sources: one normal form per concept, with `@[simp]` lemmas that rewrite to
+   it (style guide, "Normal forms"); no non-terminal `simp` — use `simp only [...]` or `simpa`
+   (<https://leanprover-community.github.io/extras/simp.html>, "Non-terminal simps"); measure heavy proofs
+   before and after a change (style guide, "Profiling for performance").
 
 ## 5. Order of work
 

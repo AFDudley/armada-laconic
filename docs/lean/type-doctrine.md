@@ -127,8 +127,10 @@ So 34 of 91 Nitro and 12 of 44 Pool spec-level theorems are proved by reasoning 
 from a layer of facts about channels, finalization, redistribution, notes or pool steps. Other symptoms:
 - Nitro: `consensus_round_safe_core` (536 lines), 48 declarations over 60 lines, duplicated 81-99 line blocks,
   `satp_peers_can_finalize` (249 lines), `turbo_value_upper_bound` (1,812 added lines on its branch).
-- Pool: `HoldingWellFormed` re-proved for every call by `holdingWellFormed_step` (169 lines; closure 26
-  declarations, 1,866 lines; `writing-lean.md` §4).
+- Pool: the 12 descents trace mainly to `markSpent_succeeds` called inline instead of through a per-call wrapper
+  (8 of 12; audit `armada-lean/.scratch/audit-wt/.scratch/audit/pool.md` §4). An earlier draft cited
+  `HoldingWellFormed` here; that predicate belongs to the retired `adjudicator-model-v4` (commits `ce6f4ad`,
+  `3feb0b0`, on no current branch), not to the trunk Pool model.
 
 [INFERENCE] The count is an approximation: a proof that uses only lemmas about an operation does not name it; a
 `simp` that unfolds it does.

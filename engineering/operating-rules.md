@@ -169,7 +169,16 @@ Read these documents. This file does not repeat them.
   Fix (2026-10-31): `/etc/systemd/system/user@1001.service.d/10-restart-on-oomd-kill.conf` sets
   `Restart=on-failure`, `RestartSec=2s`; revert by removing it and `sudo systemctl daemon-reload`. Services without
   their own restart policy (`ingest-sessions`) still need a manual start. Commands that run podman need
-  `XDG_RUNTIME_DIR=/run/user/1001`. The watcher wakes on `supervisor_down`. The pressure itself is not fixed.
+  `XDG_RUNTIME_DIR=/run/user/1001`. The watcher wakes on `supervisor_down`.
+- Process management (operator, 2026-10-31: the user manager must not be killed; heavy work is bounded):
+  - `init.scope` of `user@1001.service` has `ManagedOOMPreference=omit` (`~/.config/systemd/user/init.scope.d/50-oomd-omit.conf`;
+    cgroup xattr `user.oomd_omit=1`), so `systemd-oomd` never picks the user manager.
+  - Every Lean command runs through `~/bin/lean-run <cmd>` (for example `lean-run lake build`): a scope in
+    `lean.slice` (`~/.config/systemd/user/lean.slice`: `MemoryHigh=48G`, `MemoryMax=64G`,
+    `ManagedOOMMemoryPressure=kill`; per scope 12G/16G), at most 4 at once. Agent briefs must say so.
+  - Measured: `lake env lean ArmadaLean/Nitro/Liveness.lean` 1.78 GiB peak RSS; warm `lake build` 0.44 GiB.
+  - Gate and worker containers still run outside any bounded slice: exophial's podman argv has no `--cgroup-parent`
+    (sent to the exophial coordinator).
 
 ## 6a. Reading sessions
 

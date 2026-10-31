@@ -1,16 +1,43 @@
-# Handoff to the forked coordinator (pane w3:p4): typing work and husbands
+# Handoff to the forked coordinator (pane w3:p4): everything
 
-Date: 2026-10-31. From the coordinator in pane w3:p1 (session 01a1888d). Operator order: the typing work, the
-husbands and related work move to w3:p4.
+Date: 2026-10-31. From the coordinator in pane w3:p1 (session 01a1888d). Operator order: all work moves to
+w3:p4, except the one worker still running in w3:p1.
 
 ## Division of work
 
-- **w3:p4 owns:** the type doctrine and the typed library, the spec module, the premise analysis, Lean
-  husbandry of parked pebbles, and the open operator questions listed below.
-- **w3:p1 keeps:** every merge and every exophial command (`apply`, `integrate`, filing), the exophial
-  coordinator liaison (pane w6:p1), the host process limits (`lean.slice`, `exophial-gate.slice`, oomd), and
-  the running `satp_theorem_3_2` proof (`ProveSatp32`). Send a branch to w3:p1 when it is ready; w3:p1
-  verifies it (`lean-run scripts/check.sh --json`, baseline diff) and merges it.
+- **w3:p4 owns everything:** the type doctrine and the typed library, the spec module, the premise analysis,
+  Lean husbandry of parked pebbles, the open operator questions, every merge and every exophial command
+  (`apply`, `integrate`, filing; read `operating-rules.md` §5-§6 and the `exophial-before-use` rule first),
+  the exophial coordinator liaison (pane w6:p1), and the host process limits (operating rules §6).
+- **w3:p1 keeps only `ProveSatp32`** (the `satp_theorem_3_2` proof) until it finishes. w3:p1 forwards each
+  branch it reports (`draft/participant-noland`, then `draft/prove-satp-theorem-3-2b`) to w3:p4 for
+  verification and merge. Its state: `docs/wip/satp_theorem_3_2/HANDOFF.md` on its branch.
+
+## Merge queue at handoff (armada-lean, one `apply` at a time)
+
+- In flight from w3:p1 (job started before the handoff; its results go to w3:p4 by message):
+  `draft/w1-step-frame` (9b70d05), then `draft/w1-peel-validmove` (8d8074c). Logs:
+  `armada-lean/.scratch/apply-<branch>.log`.
+- Next: `draft/participant-noland` (`ProveSatp32`, 7edd4f8 before rebase; model repair: `Nitro.participant`
+  third disjunct excludes `.land`, operator ruling 2026-10-31; invariant `participant_received_unforged`;
+  ported helpers). Rebase onto the trunk after the two above, verify, `apply`.
+- Other repos: `draft/cgroup-parent` (one commit each, sets `dispatcher.cgroup_parent: exophial-gate.slice`) in
+  armada-poc, armada-circuits, armada-nitro: `integrate --branch` each. armada-poc `sync/upstream-2026-10-30`
+  (8813d21a): last gate hit the repo's 300 s gate timeout during the first image build. armada-circuits
+  `draft/inputs-distinct` (a505b9f): verified by its agent; changes all 51 shapes' keys.
+- How w3:p1 verified a branch before merging: based on `integrated`; `/home/rix/bin/lean-run scripts/check.sh
+  --json` all `_ok` true; `git diff integrated -- scripts/sigs-baseline.tsv` (empty, or only approved rows);
+  `#print axioms` on new proofs. `apply` for `ArmadaLean/`-only changes, `integrate --branch` when `scripts/`,
+  `tests/`, `.exophial/` or `contracts/specs/` change. Send any exophial refusal's log path to w6:p1.
+
+## Host limits (set up by w3:p1 today; details in operating rules §6)
+
+- `~/.config/systemd/user/lean.slice` (MemoryHigh 48G, MemoryMax 64G), used by `/home/rix/bin/lean-run`
+  (max 4 concurrent). `~/.config/systemd/user/exophial-gate.slice` (MemoryHigh 40G, MemoryMax 56G), used by
+  exophial through `dispatcher.cgroup_parent`. `init.scope` of `user@1001.service` has
+  `ManagedOOMPreference=omit`; `/etc/systemd/system/user@1001.service.d/10-restart-on-oomd-kill.conf`.
+- The supervisor (`armada-laconic/.scratch/supervise/supervisor.py`) runs; its watcher (`watch.py`) was
+  restarted by w3:p1 each hour. Restart it from w3:p4: `WATCH_IDLE_S=86400 python3 watch.py` in that directory.
 
 ## Typing work
 

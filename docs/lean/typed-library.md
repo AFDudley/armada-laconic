@@ -84,7 +84,7 @@ inputs, and no brief told an author to read the sources below.
 | File | Types |
 |---|---|
 | `Reachable.lean` | `ReachableState M`, `ReachableNetwork apps Ts`, `ReachableViews` (the spec-module work defines the first two; they move here) |
-| `Channel.lean` | `LedgerChannel apps` (one encoding of "ledger": `kind` and `appDef` must agree), `TimedChannel ε` (the timeout bound, after the operator rules on the factor) |
+| `Channel.lean` | `LedgerChannel apps` (one encoding of "ledger": `kind` and `appDef` must agree), `TimedChannel ε := 2 * ε ≤ challengeDuration` (operator ruling 2026-10-31: `2·ε` is sufficient for the proofs; the factor comes from the round model, `docs/nitro-repair-2026-10-27.md:38-42`. Nitro's "sensible channel timeouts" (Nitro:552-555) become a separate requirement only when the blockchain itself is fully modelled: block times, congestion, censorship) |
 | `Outcome.lean` | outcome refinements, for example guarantees with external peers (`hog`) |
 | `Construction.lean` | `LedgerWithSub.In n` and the other paper constructions |
 | `Honest.lean` | own-signing records: a participant's view together with the fact that it followed the protocol (`MadeNoAlternativeSetupMoves`) |

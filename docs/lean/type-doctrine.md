@@ -8,18 +8,23 @@ design it enforces is `docs/lean/typed-library.md` (approved 2026-10-31).
 `writing-lean.md` §4 said "A property goes in a type when the type can carry it" before the Nitro model was
 written. The models that wrote the model did not follow it. A prose rule that no tool checks did not hold.
 
-Measured on armada-lean `integrated` at `afda79b` with a Lean metaprogram that walks every `ArmadaLean`
-declaration (`forallMetaTelescope` over each theorem type; structure fields by `getStructureFieldsFlattened`):
+Measured on armada-lean `integrated` at `afda79b` with a Lean metaprogram (`forallMetaTelescope` over each
+theorem type; structure fields by `getStructureFieldsFlattened`). The first column counts declarations in the
+`ArmadaLean` namespace, which holds the Nitro theorems. The Pool modules (`ArmadaLean/*.lean` outside
+`ArmadaLean/Nitro/`) declare their theorems at the root namespace; the second column selects them by module.
 
-| Measure | Count |
-|---|---|
-| Theorems | 937 |
-| Hypotheses (`Prop` binders) | 1,485 |
-| Data binders | 4,952 |
-| Data binders of a `Subtype` type (after `whnfR`) | 0 |
-| Structures | 22 |
-| Structures with a proof field | 6 (13 proof fields, 53 data fields) |
-| Type classes | 0 |
+| Measure | Nitro (namespace `ArmadaLean`) | Pool (modules outside `Nitro/`) |
+|---|---|---|
+| Theorems | 937 | 281 |
+| Hypotheses (`Prop` binders) | 1,485 | 367 |
+| Data binders | 4,952 | 1,181 |
+| Data binders of a `Subtype` type (after `whnfR`) | 0 | 0 |
+| Structures | 22 (all modules) | |
+| Structures with a proof field | 6 (13 proof fields, 53 data fields) | |
+| Type classes | 0 | 0 |
+
+Linters must select declarations by module, not by namespace: a namespace filter misses the Pool and
+declarations such as `Nitro.network_received_voucher_signers`.
 
 The premise analysis (`armada-lean/.scratch/hyp-analysis.md`, 89 in-scope Nitro theorems) found 363 hypotheses.
 Only 25 have a doc-comment sentence that names them together with a source. The same premise was decided in
@@ -99,39 +104,56 @@ moves that computation into the build.
 4. **Briefs.** Every statement-authoring brief names this document and `typed-library.md` as required reading,
    and the reviewer checks rules 1-5. Proposal: yes, until the linters are on; after that the build is the check.
 
-## 4a. Layers: build up, do not stay at the bottom (operator, 2026-10-31)
+## 4a. Layers: build up, do not stay at the bottom (operator, 2026-10-31; applies to Nitro and the Pool)
 
 The proofs stayed at the bottom layer. Measured on armada-lean at `afda79b` plus `draft/prove-satp-peers-can-finalize`
-(Lean metaprogram: does a theorem's proof term name one of the base operations `Adjudicator.apply`,
-`NetworkState.applyAdv`, `Adjudicator.transfer`, `.challenge`, `.checkpoint`, `.conclude`, `.reclaim`):
+(Lean metaprogram: does a theorem's proof term name a base operation). Base operations:
+- Nitro: `Adjudicator.apply`, `NetworkState.applyAdv`, `Adjudicator.transfer`, `.challenge`, `.checkpoint`,
+  `.conclude`, `.reclaim`.
+- Pool: `removeAll`, `markSpent`, `applyRecords`, `recordPreimages`, `insertLeaves`, `insertTree`, `insertStart`,
+  `withTreePositionsFrom`, and case analysis on `Step` (`Step.casesOn`).
 
-| Measure | Count |
-|---|---|
-| Theorems scanned | 937 |
-| Proof term names a base operation | 222 |
-| Theorems whose doc comment cites a paper passage | 91 |
-| Of those, proof term names a base operation | 34 |
+A spec-level theorem is one whose doc comment cites its source: a paper passage for Nitro; a contract or circuit
+line, or an operator ruling, for the Pool.
 
-So 34 of the 91 paper-level theorems are proved by reasoning about single contract calls, not from a layer of
-facts about channels, finalization or redistribution. Other symptoms: `consensus_round_safe_core` (536 lines),
-48 declarations over 60 lines, duplicated 81-99 line blocks, `satp_peers_can_finalize` (249 lines),
-`turbo_value_upper_bound` (1,812 added lines on its branch). [INFERENCE] The count is an approximation: a proof
-that uses only lemmas about an operation does not name it; a `simp` that unfolds it does.
+| Measure | Nitro | Pool |
+|---|---|---|
+| Theorems scanned | 937 | 281 |
+| Proof term names a base operation | 222 | 71 |
+| Spec-level theorems | 91 | 44 |
+| Of those, proof term names a base operation | 34 | 12 |
+
+So 34 of 91 Nitro and 12 of 44 Pool spec-level theorems are proved by reasoning about single operations, not
+from a layer of facts about channels, finalization, redistribution, notes or pool steps. Other symptoms:
+- Nitro: `consensus_round_safe_core` (536 lines), 48 declarations over 60 lines, duplicated 81-99 line blocks,
+  `satp_peers_can_finalize` (249 lines), `turbo_value_upper_bound` (1,812 added lines on its branch).
+- Pool: `HoldingWellFormed` re-proved for every call by `holdingWellFormed_step` (169 lines; closure 26
+  declarations, 1,866 lines; `writing-lean.md` §4).
+
+[INFERENCE] The count is an approximation: a proof that uses only lemmas about an operation does not name it; a
+`simp` that unfolds it does.
 
 [INFERENCE] Why it happened: the work went top-down from approved statements, and each proof was dispatched as
 one independent pebble on its own branch. No unit of work owned a middle layer, so each worker went down to the
 base operations, and parallel branches could not share what they built (the `consensus_round_safe_core` twins).
-The paper itself is layered: per-channel finalization (Nitro §4.4), then redistribution (§4.3, Turbo §5.2),
-then constructions (§4.6, "outcomes first").
+The Nitro paper itself is layered: per-channel finalization (Nitro §4.4), then redistribution (§4.3, Turbo
+§5.2), then constructions (§4.6, "outcomes first"). The Pool contracts are layered too: tree insertion and
+nullifier marking are internal functions that every public operation calls (`TransactModule.sol`
+`_accumulateAndNullify`, `MerkleModule` `insertLeaves`).
 
 Rules:
 
-1. **Each layer has a typed API, and a proof uses only the layer directly below.** Layers for Nitro, in order:
-   base operations (`Adjudicator`, `Op`) → per-call exact-effect and frame lemmas (`writing-lean.md` §6) → per-channel
-   finalization (finalizable outcomes as typed values) → redistribution (Turbo, guarantees) → constructions
-   (ledger, virtual channels) → paper theorems.
-2. **A paper theorem's proof term does not name a base operation.** Linter `layerDiscipline` (report-only like
-   §3): it lists each spec theorem whose proof term names a base operation. Today: 34.
+1. **Each layer has a typed API, and a proof uses only the layer directly below.**
+   - Nitro, in order: base operations (`Adjudicator`, `Op`) → per-call exact-effect and frame lemmas
+     (`writing-lean.md` §6) → per-channel finalization (finalizable outcomes as typed values) → redistribution
+     (Turbo, guarantees) → constructions (ledger, virtual channels) → paper theorems.
+   - Pool, in order: base operations (tree insertion, nullifier marking, preimage records) → one exact-effect
+     and one frame lemma per `Step` constructor → state invariants as types (a holding carries its
+     well-formedness, `writing-lean.md` §4) → pool properties (value conservation, no double-spend,
+     `core_invariant`) → can-happen and not-blocked theorems.
+2. **A spec-level theorem's proof term does not name a base operation.** Linter `layerDiscipline` (report-only
+   like §3): it lists each spec-level theorem whose proof term names a base operation. Today: 34 (Nitro) and
+   12 (Pool).
 3. **Dispatch the layer before the theorems that need it.** A worker proves a layer's API as its own unit of work;
    theorem workers then compose. A worker that needs a fact the layer below lacks reports it; it does not prove
    it locally on its branch.

@@ -1,7 +1,8 @@
 # Type doctrine and linters for armada-lean statements
 
-Status: proposal for operator review, 2026-10-31. Branch `draft/type-doctrine`. Nothing here is in force. The
-design it enforces is `docs/lean/typed-library.md` (approved 2026-10-31).
+Status: in force from 2026-10-31 (operator: the coordinator in pane w3:p4 integrates the coding best practices,
+linting and checks into all armada-lean work). The design it enforces is `docs/lean/typed-library.md`. The linters
+of §3 are on the trunk in report-only mode; §4 decision 3 says when they become failures.
 
 ## 1. What failed
 
@@ -93,7 +94,7 @@ moves that computation into the build.
 `premiseVariant` reports only. The operator rules on each variant (as for `TimedChannel`, operator ruling
 2026-10-31: `2·ε`).
 
-## 4. Open decisions (operator)
+## 4. Decisions
 
 1. **Scope: every declaration, helpers included.** An earlier draft exempted helper lemmas. *Functional
    Programming in Lean* does not support that exemption:
@@ -106,21 +107,22 @@ moves that computation into the build.
    - "Interlude: Evidence as Arguments": a proof argument is the idiomatic way to state one operation's own
      precondition (`def third (xs : List α) (ok : xs.length > 2)`).
 
-   Proposal: the criterion is repetition, not the declaration's role. A precondition that one declaration alone
-   needs may be a proof argument ("evidence as argument"). A condition that two or more declarations need is a
-   type, in helpers and spec theorems alike (`repeatedPremise`, all declarations). `looseHypothesis` then
-   applies to every declaration, with the same single-use exception.
-2. **The one exception to rule 2.** The design says "no allow-list". Rule 2 needs one narrow exception: a
-   condition the source states for that theorem alone. Proposal: the exception is the theorem's own source
-   citation, which the spec module already parses (`spec_lib.py`); the citation sentence must name the
-   hypothesis. No list.
-3. **Switch-on.** 1,485 existing hypotheses would fail at once. Options:
-   - convert first, then turn the linters on (`typed-library.md` §5 step 4). Not a ratchet.
-   - a baseline of known violations. A ratchet, which the operator rejected for `check.sh`.
-
-   Proposal: convert first; the linters run in report-only mode until the conversion is complete.
-4. **Briefs.** Every statement-authoring brief names this document and `typed-library.md` as required reading,
-   and the reviewer checks rules 1-5. Proposal: yes, until the linters are on; after that the build is the check.
+   Decided (operator, 2026-10-31): the criterion is repetition, not the declaration's role. A precondition that
+   one declaration alone needs may be a proof argument ("evidence as argument"). A condition that two or more
+   declarations need is a type, in helpers and spec theorems alike (`repeatedPremise`, all declarations).
+   `looseHypothesis` then applies to every declaration, with the same single-use exception.
+2. **The one exception to rule 2.** Decided (coordinator, 2026-10-31; technical, under the operator's order
+   above): a condition the source states for that theorem alone. The exception is the theorem's own source
+   citation, which the spec module parses (`spec_lib.py`); the citation sentence must name the hypothesis. No list.
+3. **Switch-on.** Decided (coordinator, 2026-10-31): convert first, then turn the linters into failures, one
+   linter at a time, when its count on the trunk reaches 0. A baseline of known violations would be a ratchet,
+   which the operator rejected for `check.sh`. Until then every linter runs report-only, and every merge
+   reports the counts: a merge must not raise a count (the coordinator checks this at merge; it is a review
+   rule, not a stored list).
+4. **Briefs.** Decided (coordinator, 2026-10-31): every brief that writes Lean names this document and
+   `typed-library.md`, and carries the standing rules: no statement change without an operator ruling; every
+   Lean command through `/home/rix/bin/lean-run`; no copied `.lake/build`; layer rule (§4a 1-3); search rule
+   (§4a 5); `omega` on a small context. The reviewer checks rules 1-5 and the linter counts.
 
 ## 4a. Layers: build up, do not stay at the bottom (operator, 2026-10-31; applies to Nitro and the Pool)
 

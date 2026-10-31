@@ -175,7 +175,8 @@ Rules:
 5. **Record every searched proof in the source (operator, 2026-10-31: software practice, not mathematics
    practice).** A search tactic depends on the library state; its result is pinned in the source, as a lockfile
    pins dependencies.
-   - Search tactics (`simp`, `simp [..]`, `exact?`, `apply?`, `rw?`, `aesop`) are written with `says`
+   - Search tactics (`simp`, `simp [..]`, `grind`, `exact?`, `apply?`, `rw?`, `aesop`) are written with `says`
+     (`grind?` prints a `grind only [...]` form; checked on the pinned toolchain)
      (`Mathlib/Tactic/Says.lean`): `simp? [h] says simp only [h, List.append_nil]`. The build runs only the
      recorded proof. With `set_option says.verify true` (set in CI and on a toolchain or Mathlib upgrade) Lean
      reruns the search and fails if the result changed.
@@ -199,7 +200,14 @@ Rules:
    renames arrive only with a deliberate upgrade, and `says.verify` shows each break at that point. Also: one
    normal form per concept with `@[simp]` lemmas that rewrite to it (style guide, "Normal forms"); measure
    heavy proofs before and after a change (style guide, "Profiling for performance").
-   Trunk today: 0 `says`; 373 bare `simp`/`simp [..]` lines (about 31 non-terminal); 638 `simp only`.
+   Trunk today: 0 `says`; 373 bare `simp`/`simp [..]` lines (about 31 non-terminal); 638 `simp only`; 83 `grind`
+   (Nitro `Lemmas` 31, `Liveness` 34, `Safety` 18); 187 `omega` in 12 modules (`PoolSafety` 52, `Nitro/Lemmas` 39,
+   `Liveness` 29, `Value` 18, `Pool` 17, others 32); 281 `decide`.
+   Profile (`lake env lean -Dprofiler=true -Dprofiler.threshold=50`, audit worktree at `522e16d`): tactic time
+   per file is `Liveness` 34.6 s, `Lemmas` 10.2 s, `PoolSafety` 0.96 s, `Value` 0.76 s, `Pool` 0.51 s. `omega`
+   calls over 50 ms: 10 in `Lemmas` (1.70 s together), 1 in `PoolSafety`, none at top level in `Liveness`. The
+   profiler charges a nested tactic to the enclosing one (`Liveness`: `refine` 12.0 s over 18 calls), so the
+   cost inside those blocks is not attributed yet.
 
 ## 5. Order of work
 

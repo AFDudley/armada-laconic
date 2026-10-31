@@ -162,6 +162,11 @@ Read these documents. This file does not repeat them.
 - `exophial init` takes no `-e` flag. To set a prefix or languages, run the packaged play:
   `~/.local/share/uv/tools/exophial/bin/ansible-playbook <exophial>/ansible/init.yml -e exo_target_repo=<repo>
   -e exo_pebble_prefix=<p> -e '{"exo_languages_override": ["typescript"]}'` (JSON form for lists).
+- The user `rix` must linger (`loginctl show-user rix` shows `Linger=yes`; set with `sudo loginctl enable-linger
+  rix`). Without it, `/run/user/1001` disappears when the last session ends: podman loses its runtime ("default OCI
+  runtime runc not found"), gate image builds fail with an empty reason, and the supervisor dies. 2026-10-31 about
+  00:27Z-01:40Z: Nitro dispatch stopped and five parks went unseen. Commands that run podman need
+  `XDG_RUNTIME_DIR=/run/user/1001`. The watcher now wakes on `supervisor_down`.
 
 ## 6a. Reading sessions
 

@@ -167,7 +167,9 @@ and own-signing premises one theorem at a time, so the same fact was decided
 differently in different theorems, and a theorem that omitted a premise still
 type-checked (operator, 2026-10-31). The Limit above still applies: "χ is still
 open" depends on the chain state, so it is a reachable-state fact, not a fact
-about the channel's own type.
+about the channel's own type. A prose rule did not hold: the trunk had 1,485
+hypotheses and 0 refined-type inputs on 2026-10-31. `docs/lean/type-doctrine.md`
+proposes the linters that make the build check this rule.
 
 **Source.** `docs/process.md` Stratum 1 (Minsky 2011, "make illegal states
 unrepresentable"). Bird and Paterson 1999 for the scoped case.

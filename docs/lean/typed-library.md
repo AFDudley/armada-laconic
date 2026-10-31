@@ -68,14 +68,10 @@ inputs, and no brief told an author to read the sources below.
    the value alone (`writing-lean.md` §4, Limit). Examples: "χ is open", a pending deadline, "p signed no
    alternative setup state". Each such fact is a named predicate on the reachable state, or a field of a
    refined state type. It is never a fresh `∀ p, …` premise in one theorem.
-6. **The build enforces rule 1.** A Batteries environment linter (`@[env_linter]`,
-   `.lake/packages/batteries/Batteries/Tactic/Lint/Frontend.lean`) named `looseHypothesis`:
-   - It reports a spec theorem with a `Prop` binder whose free variables are exactly one data binder.
-     That is a one-input check, so the input needs a refined type.
-   - The spec check (`draft/spec-module-2`) runs the linter and fails on a report.
-   - The linter has no allow-list. The exception route is a refined type.
-   - Limit: relational premises over two or more inputs (`a' ≤ a`, `hχopen` over `v` and `w`) pass the
-     linter. Rule 5 and review cover them.
+6. **The build enforces rules 1-3.** `docs/lean/type-doctrine.md` (proposal, branch `draft/type-doctrine`)
+   gives the doctrine, four Batteries environment linters (`repeatedPremise`, `premiseVariant`,
+   `looseHypothesis`, `aliasHypothesis`), the open decisions on their scope and exception, and the switch-on
+   order. Until the operator rules on it, this rule is not in force.
 
 ## 4. Library layout
 

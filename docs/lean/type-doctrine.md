@@ -172,10 +172,23 @@ Rules:
    elaborate, so Lean enforces rule 1 itself, and `layerDiscipline` becomes a check that nothing unseals them.
    A non-vacuity witness that needs computation (`decide`, `rfl`) uses an explicit, local `unseal` in its own
    section; the spec check lists every `unseal`.
-5. **Keep each search small.** Same sources: one normal form per concept, with `@[simp]` lemmas that rewrite to
-   it (style guide, "Normal forms"); no non-terminal `simp` — use `simp only [...]` or `simpa`
-   (<https://leanprover-community.github.io/extras/simp.html>, "Non-terminal simps"); measure heavy proofs
-   before and after a change (style guide, "Profiling for performance").
+5. **Record every searched proof in the source (operator, 2026-10-31: software practice, not mathematics
+   practice).** A search tactic depends on the library state; its result is pinned in the source, as a lockfile
+   pins dependencies.
+   - Search tactics (`simp`, `simp [..]`, `exact?`, `apply?`, `rw?`, `aesop`) are written with `says`
+     (`Mathlib/Tactic/Says.lean`): `simp? [h] says simp only [h, List.append_nil]`. The build runs only the
+     recorded proof. With `set_option says.verify true` (set in CI and on a toolchain or Mathlib upgrade) Lean
+     reruns the search and fails if the result changed.
+   - Decision procedures (`omega`, `decide`) stay as written: their result depends only on the goal, not on
+     the library's lemma set.
+   - Term proofs from `show_term` are not recorded: an elaborated term depends on elaboration details and is
+     not reviewable.
+   Mathlib's guide does not freeze terminal `simp` calls, because a frozen list breaks when a lemma is renamed
+   (style guide, "Squeezing simp calls"). Here the toolchain and Mathlib are pinned (`lake-manifest.json`), so
+   renames arrive only with a deliberate upgrade, and `says.verify` shows each break at that point. Also: one
+   normal form per concept with `@[simp]` lemmas that rewrite to it (style guide, "Normal forms"); measure
+   heavy proofs before and after a change (style guide, "Profiling for performance").
+   Trunk today: 0 `says`; 373 bare `simp`/`simp [..]` lines (about 31 non-terminal); 638 `simp only`.
 
 ## 5. Order of work
 

@@ -173,7 +173,8 @@ Read these documents. This file does not repeat them.
 - Process management (operator, 2026-10-31: the user manager must not be killed; heavy work is bounded):
   - `init.scope` of `user@1001.service` has `ManagedOOMPreference=omit` (`~/.config/systemd/user/init.scope.d/50-oomd-omit.conf`;
     cgroup xattr `user.oomd_omit=1`), so `systemd-oomd` never picks the user manager.
-  - Every Lean command runs through `~/bin/lean-run <cmd>` (for example `lean-run lake build`): a scope in
+  - Every Lean command runs through `/home/rix/bin/lean-run <cmd>` (not on agents' `PATH`; for example
+    `/home/rix/bin/lean-run lake build`): a scope in
     `lean.slice` (`~/.config/systemd/user/lean.slice`: `MemoryHigh=48G`, `MemoryMax=64G`,
     `ManagedOOMMemoryPressure=kill`; per scope 12G/16G), at most 4 at once. Agent briefs must say so.
   - Measured: `lake env lean ArmadaLean/Nitro/Liveness.lean` 1.78 GiB peak RSS; warm `lake build` 0.44 GiB.

@@ -19,36 +19,47 @@ instance (prefix `aln`): exophial owns `integrated`, and the fork's `main` follo
 `nitro-theorems-approved-2026-10-27`. `armada-nitro-spec` (worktree `armada-lean-armada-nitro-spec`) is the Armada
 layer on the approved, not the repaired, Nitro spec. It waits for a rebuild on `main`.
 
-**In flight.** Phase 1 (pool proofs) is done. Phase 2 (Nitro Liveness proofs) runs: check with
-`scripts/check.sh --json` in `~/code/git_puller/repos/armada-lean` for the current `sorry` list, and
-`pgrep -af supervisor.py` for the dispatcher (match the command line `python3 supervisor.py`, not a path). The 19
-Liveness pebbles are chained (log `armada-lean/.scratch/plan/husbandry-liveness.md`). `HusbandLiveness` filed them and
-is not running. The coordinator acted as husband on 2026-10-30. Operating rules §3 gives parks to a husband.
+**In flight (2026-10-31, about 08:00Z).** Phase 2 (Nitro Liveness proofs). The trunk `integrated` is at `5696729`.
+The supervisor runs (`pgrep -af 'python3 supervisor.py'`), but it has had 0 workers since 03:34Z: every queued
+pebble is parked or blocked. Restarting needs the operator's orders (below, item 1). The watcher wakes on
+`supervisor_down` (operating rules §6, linger).
 
-- `aln-cc8` (`funding_point_universally_finalizable`) is false as stated. The Lean counterexample is
-  `docs/counterexamples/funding_point_universally_finalizable.lean` on `worker/aln-cc8` (`3235226`). A participant
-  signs two states at one turn, and the next mover chooses. ForceMove §3.1.5 (ForceMove:782-794) permits these
-  "alternative moves". So this is a statement gap (`docs/process.md`, "Model defect or statement gap?"). The repair
-  in `docs/nitro-repair-2026-10-27.md` §7 on that branch (option (a), a gate on honest sends) follows go-nitro client
-  code, not the paper. Do not use it.
-- `aln-6ca` and `aln-78b` take `Rules.NoUnilateralSupport` (operator, 2026-10-30; merged `48d483e`). Both specs
-  were refreshed after the merge.
-- `aln-2ed` and `aln-6ca` parked on 2026-10-30. Their causes are not yet read.
-- `arn-5c3` and `arn-d62` (armada-nitro, G7) wait for `exo-7ea`. `arn-5c3` passed a host fixturenet run on
-  `worker/arn-5c3` (`b9b313c6`; log `armada-nitro/.scratch/plan/husbandry-G7.md`). `arn-d62` has an untested fix.
+- Merged on 2026-10-31: funding-point type change (`4dad847`), `aln-223` `hog` (`1771430`), D7 voucher rule
+  (`ae9b109`, with `Nitro.network_received_voucher_signers`), `turbo_order_independent` (`aln-dbf`).
+- `draft/out-of-scope` (`5b8946e`, worktree `armada-lean/.scratch/oos-wt`) marks the three Nitro §5.3-§5.4
+  sub-channel theorems out of scope (operator ruling). Not merged. `apply` failed twice (CAS lost; then
+  "re-run acceptance gate REJECTED" with no step named) and `integrate --branch` failed with `returncode=-9`. The
+  configured gate passes on that tree. `podman events` shows seven `exophial-gate-*` containers dying 03:42-03:52Z.
+  Report not yet sent to the exophial coordinator (waits for the operator). `aln-e4e`, `aln-bd2`, `aln-d55` are
+  closed as out of scope.
+- `aln-a73` (`satp_theorem_3_2`): its voucher-stall claim is wrong after D7. Opus's counter-move file
+  `armada-lean/.scratch/a73-verify/tree/docs/counterexamples/a73_counter_move.lean` (`counter_after_adv_checkpoint`).
+- `aln-eb2` (`turbo_value_achievable`) is false: a Turbo value routed through a virtual channel cannot be
+  transferred. Checked counterexample on `worker/aln-eb2` (`986c203`). Needs the Turbo-scope ruling.
+- `draft/spec-module-2` (worktree `armada-lean/.scratch/spec2-wt`, Opus): the spec module, verified (build, check,
+  statement-change test). Cutover waits for the operator's citation choice. Citation research:
+  `armada-lean/.scratch/pool-citations.md`.
+- Type design approved: `docs/lean/typed-library.md`. Premise analysis: `armada-lean/.scratch/hyp-analysis.md`
+  (89 theorems, 363 premises, 338 with no stated source).
 
-**Waits for the operator.**
-1. The statement of `funding_point_universally_finalizable`. The source supports a hypothesis that `p` made no
-   alternative moves on `c` before the funding point.
-2. O2 and O3 of the liveness design wait for a fuller explanation (`labbook/2026-10-28-verification-chain-rulings.md`).
-   O1 and O4-O7 are answered there.
-3. Phase 3: rerun `live_leaf_matches` with a bare brief from a fresh agent. Its first brief named the proof's lemmas
-   and strategy (correction in `labbook/2026-10-30-qwen-lean-phase3.md`, Control 1).
-4. armada-poc `sync/upstream-2026-10-30` (`8813d21a`, fork only; report `.scratch/poc-upstream-sync.md`): merge it,
+**Waits for the operator** (one ruling at a time, in this order).
+1. Orders that restart Nitro proving: unpark `aln-50b` (D7 merged), `aln-6f0` (stall was the podman outage; kept
+   work `2e5a05d` passes `check.sh`), `aln-a73` (claim refuted); close and refile `aln-cc8` and `aln-223`.
+2. `Constrained.distinct` (`Transact.lean:146-148`) credits the circuit with a distinctness check that
+   `Transact.circom` lacks (`SECURITY_REVIEW.md:51`). The contract enforces it (`TransactModule.sol:384-385`).
+   Repair in the model: approve?
+3. Timeout: define a sensible timeout as `2·ε ≤ challengeDuration` (type `TimedChannel ε`)?
+4. Spec-module citations: (a) add verified citations, then cut over; or (b) cut over now.
+5. Send the gate-kill evidence to the exophial coordinator?
+6. Turbo scope (`aln-eb2`): Turbo theorems take a `TurboChain` type with no virtual channels?
+7. Vault: `Vault.lean` models the pre-fix contract; upstream fixed #365 with locked dead shares (`04753139`);
+   `mitigated_*` model a virtual-offset fix that no contract has. Remodel after the armada-poc upstream merge?
+8. Phase 3: rerun `live_leaf_matches` with a bare brief from a fresh agent
+   (`labbook/2026-10-30-qwen-lean-phase3.md`, Control 1).
+9. armada-poc `sync/upstream-2026-10-30` (`8813d21a`, fork only; report `.scratch/poc-upstream-sync.md`): merge it,
    and accept or change two points: the yield vault takes upstream `LOCKED_SHARES`, and `verifyOwned` becomes
    virtual.
-5. armada-circuits `integrated` `9699ba9` is not pushed. Push with the next merge there, or use the push verb that the
-   exophial coordinator offered.
+10. armada-circuits `integrated` `9699ba9` is not pushed.
 
 **Next steps** (`docs/lean/proof-dispatch-plan.md`; operator rulings 2026-10-28).
 1. Phase 2 continues, one Liveness pebble at a time. A counterexample stops the work on that statement

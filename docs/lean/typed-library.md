@@ -1,6 +1,7 @@
 # Typed library for armada-lean statements
 
-Status: design for operator review, 2026-10-31. No Lean change yet.
+Status: approved by the operator, 2026-10-31. Refinements compose by `structure … extends …`, not by nested
+subtypes (operator question, 2026-10-31). No Lean change yet.
 
 ## 1. The defect
 

@@ -162,11 +162,14 @@ Read these documents. This file does not repeat them.
 - `exophial init` takes no `-e` flag. To set a prefix or languages, run the packaged play:
   `~/.local/share/uv/tools/exophial/bin/ansible-playbook <exophial>/ansible/init.yml -e exo_target_repo=<repo>
   -e exo_pebble_prefix=<p> -e '{"exo_languages_override": ["typescript"]}'` (JSON form for lists).
-- The user `rix` must linger (`loginctl show-user rix` shows `Linger=yes`; set with `sudo loginctl enable-linger
-  rix`). Without it, `/run/user/1001` disappears when the last session ends: podman loses its runtime ("default OCI
-  runtime runc not found"), gate image builds fail with an empty reason, and the supervisor dies. 2026-10-31 about
-  00:27Z-01:40Z: Nitro dispatch stopped and five parks went unseen. Commands that run podman need
-  `XDG_RUNTIME_DIR=/run/user/1001`. The watcher now wakes on `supervisor_down`.
+- `systemd-oomd` can kill the user manager of `rix` (`user@1001.service`, its `init.scope`) when memory pressure in
+  that tree stays above 50% for 20 s (stock drop-in `10-oomd-user-service-defaults.conf`). Seen 2026-10-29 15:37Z,
+  2026-10-31 01:39Z and 14:31Z. `/run/user/1001` then disappears, and podman, the supervisor, `ingest-*` and the
+  vLLM embed/rerank services stop. Linger was never off: `/var/lib/systemd/linger/rix` exists since 2026-06-24.
+  Fix (2026-10-31): `/etc/systemd/system/user@1001.service.d/10-restart-on-oomd-kill.conf` sets
+  `Restart=on-failure`, `RestartSec=2s`; revert by removing it and `sudo systemctl daemon-reload`. Services without
+  their own restart policy (`ingest-sessions`) still need a manual start. Commands that run podman need
+  `XDG_RUNTIME_DIR=/run/user/1001`. The watcher wakes on `supervisor_down`. The pressure itself is not fixed.
 
 ## 6a. Reading sessions
 

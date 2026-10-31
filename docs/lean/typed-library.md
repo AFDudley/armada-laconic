@@ -1,7 +1,9 @@
 # Typed library for armada-lean statements
 
 Status: approved by the operator, 2026-10-31. Refinements compose by `structure … extends …`, not by nested
-subtypes (operator question, 2026-10-31). No Lean change yet.
+subtypes (operator question, 2026-10-31). On the armada-lean trunk since `2bdf598`: `Types/Channel.lean`
+(`TimedChannel`, `LedgerChannel`), `Types/Outcome.lean` (`DAGOutcomeNetwork`, `TurboOutcomeNetwork extends`
+it, `GuaranteedOutcome`). Enforcement: `docs/lean/type-doctrine.md`.
 
 ## 1. The defect
 
@@ -68,10 +70,10 @@ inputs, and no brief told an author to read the sources below.
    the value alone (`writing-lean.md` §4, Limit). Examples: "χ is open", a pending deadline, "p signed no
    alternative setup state". Each such fact is a named predicate on the reachable state, or a field of a
    refined state type. It is never a fresh `∀ p, …` premise in one theorem.
-6. **The build enforces rules 1-3.** `docs/lean/type-doctrine.md` (proposal, branch `draft/type-doctrine`)
-   gives the doctrine, four Batteries environment linters (`repeatedPremise`, `premiseVariant`,
-   `looseHypothesis`, `aliasHypothesis`), the open decisions on their scope and exception, and the switch-on
-   order. Until the operator rules on it, this rule is not in force.
+6. **The build enforces rules 1-3.** `docs/lean/type-doctrine.md` (in force 2026-10-31) gives the doctrine, the
+   linters (`repeatedPremise`, `premiseVariant`, `looseHypothesis`, `aliasHypothesis`, `layerDiscipline`,
+   `decisionScope`, Mathlib's `linter.flexible`), their decisions, and the switch-on order. They are on the
+   trunk, report-only, until each count reaches 0.
 
 ## 4. Library layout
 
@@ -81,7 +83,7 @@ inputs, and no brief told an author to read the sources below.
 |---|---|
 | `Reachable.lean` | `ReachableState M`, `ReachableNetwork apps Ts`, `ReachableViews` (the spec-module work defines the first two; they move here) |
 | `Channel.lean` | `LedgerChannel` := a channel with `kind = .ledger` (operator ruling 2026-10-31: "the channel doesn't depend on the app"; the on-chain operations decide "ledger" from `kind`; the consensus app is a separate premise, never part of "ledger". Found because `IsLedgerChannel` = `kind = .ledger ∧ apps c.appDef = consensusRules` disagreed with `kind` on a reachable state, RefinedTypes 2026-10-31), `TimedChannel ε := 2 * ε ≤ challengeDuration` (operator ruling 2026-10-31: `2·ε` is sufficient for the proofs; the factor comes from the round model, `docs/nitro-repair-2026-10-27.md:38-42`. Nitro's "sensible channel timeouts" (Nitro:552-555) become a separate requirement only when the blockchain itself is fully modelled: block times, congestion, censorship) |
-| `Outcome.lean` | outcome refinements, for example guarantees with external peers (`hog`); `TurboOutcomeNetwork` (operator ruling 2026-10-31): an on-chain state whose outcome network (Nitro:790-791, "the network of outcomes … where the nodes are channels and the edges represent" allocations) is a DAG and uses only allocations among ledger channels and external destinations, with no virtual channels and no guarantees (Turbo scope, Nitro:732-734 and footnote 5, :1102-1104). The Turbo theorems take it instead of a raw state plus `IsDAG`. Reason: `turbo_value_achievable` is false on a state with a virtual channel (`worker/aln-eb2` `986c203`) |
+| `Outcome.lean` | outcome refinements, for example guarantees with external peers (`hog`, `GuaranteedOutcome`); `DAGOutcomeNetwork` and `TurboOutcomeNetwork extends DAGOutcomeNetwork` (operator rulings 2026-10-31). The outcome network (Nitro:790-791, "the network of outcomes … where the nodes are channels and the edges represent" allocations) is a DAG for `DAGOutcomeNetwork`; `TurboOutcomeNetwork` adds the Turbo scope: only allocations among ledger channels and external destinations, no virtual channels, no guarantees (Nitro:732-734, footnote 5, :1102-1104). `turbo_value_upper_bound`, `turbo_order_independent`, `turbo_value_exists_unique` are proved for every DAG outcome network, beyond the paper, and keep that generality (operator: transfers in a system with virtual channels); `turbo_value_achievable` and `turbo_value_is_value` take the Turbo scope (they are false with a virtual channel, `worker/aln-eb2` `986c203`) |
 | `Construction.lean` | `LedgerWithSub.In n` and the other paper constructions |
 | `Honest.lean` | own-signing records: a participant's view together with the fact that it followed the protocol (`MadeNoAlternativeSetupMoves`) |
 

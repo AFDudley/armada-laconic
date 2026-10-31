@@ -58,6 +58,19 @@ Separate, open: the model's `Allocation.addTo` turns the item into `.alloc`; go-
 (`MultiAssetHolder.sol:340-352`) keeps `allocationType` and adds only to `amount`. Changing `addTo` changes an
 approved definition and does not repair the theorem.
 
+## D7 voucher rule repaired: a model defect, not an own-violation (operator, 2026-10-31)
+
+- `satp_peers_can_finalize` (pebble `aln-50b`; Opus refutation `docs/counterexamples/satp_peers_can_finalize_voucher_stall.lean`
+  on `worker/aln-50b`, `d5ee56a`, checked by the coordinator) is false in the model with SATP-honest behaviour only.
+- Cause: repair D7 (armada-lean `docs/nitro-repair-2026-10-27.md` §2) makes `NetworkState.Holds` require, for a
+  voucher signature of `q`, a received state that carries the voucher AND lists `q` among that state's signers. A
+  peer that sees an on-chain challenge carrying a voucher signed by Alice and Bob, where only Alice signed the state,
+  cannot resubmit it. The other side raises the turn with that proof and `V` stays open for ever.
+- Sources: SATP Listing 3 (SATP:630-637): a voucher carries its own `signatures`; go-nitro calls are public calldata.
+  A real peer that has seen the state can resubmit it.
+- Ruling: drop `∧ q ∈ r.signers` from the voucher clause of `NetworkState.Holds`; a received state that carries the
+  voucher is enough. This changes an approved definition. Every proof that reads `Holds` is rechecked by the build.
+
 ## Next
 
 The statement change merges with `exophial integrate --branch` (it changes `scripts/sigs-baseline.tsv`). Pebble

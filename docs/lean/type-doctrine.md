@@ -179,8 +179,19 @@ Rules:
      (`Mathlib/Tactic/Says.lean`): `simp? [h] says simp only [h, List.append_nil]`. The build runs only the
      recorded proof. With `set_option says.verify true` (set in CI and on a toolchain or Mathlib upgrade) Lean
      reruns the search and fails if the result changed.
-   - Decision procedures (`omega`, `decide`) stay as written: their result depends only on the goal, not on
-     the library's lemma set.
+   - Decision procedures (`omega`, `decide`) need no recording: their result depends only on the goal, not on
+     the library's lemma set. Their COST is not small by default, and it is paid on every build:
+     - `omega` reads every arithmetic hypothesis in the context, used or not. Measured with
+       `#count_heartbeats in` (`Mathlib/Util/CountHeartbeats.lean`): 54 heartbeats for a 3-hypothesis goal, 161
+       for the same goal with 12 hypotheses, 5 of them irrelevant. In long proofs, `clear` the unused facts or
+       call `omega` in a small `have`. Its worst case is exponential.
+     - `decide` evaluates the decision by reduction, so its cost is the cost of the computation. Measured:
+       `(List.range 200).sum = 19900` by `decide` fails with "maximum recursion depth"; `decide +kernel`
+       proves it. Kernel time is not counted in heartbeats, so `#count_heartbeats` under-reports it; time the
+       build instead. `decide` also needs the definitions it computes through to be unsealed (rule 4).
+     - `native_decide` is forbidden: it adds the axiom `Lean.ofReduceBool` and trusts the compiler.
+     - A decision procedure call that costs more than a set budget is replaced by a short explicit proof. The
+       budget is set from a measurement of the trunk's heaviest calls.
    - Term proofs from `show_term` are not recorded: an elaborated term depends on elaboration details and is
      not reviewable.
    Mathlib's guide does not freeze terminal `simp` calls, because a frozen list breaks when a lemma is renamed

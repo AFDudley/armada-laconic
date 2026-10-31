@@ -99,6 +99,42 @@ moves that computation into the build.
 4. **Briefs.** Every statement-authoring brief names this document and `typed-library.md` as required reading,
    and the reviewer checks rules 1-5. Proposal: yes, until the linters are on; after that the build is the check.
 
+## 4a. Layers: build up, do not stay at the bottom (operator, 2026-10-31)
+
+The proofs stayed at the bottom layer. Measured on armada-lean at `afda79b` plus `draft/prove-satp-peers-can-finalize`
+(Lean metaprogram: does a theorem's proof term name one of the base operations `Adjudicator.apply`,
+`NetworkState.applyAdv`, `Adjudicator.transfer`, `.challenge`, `.checkpoint`, `.conclude`, `.reclaim`):
+
+| Measure | Count |
+|---|---|
+| Theorems scanned | 937 |
+| Proof term names a base operation | 222 |
+| Theorems whose doc comment cites a paper passage | 91 |
+| Of those, proof term names a base operation | 34 |
+
+So 34 of the 91 paper-level theorems are proved by reasoning about single contract calls, not from a layer of
+facts about channels, finalization or redistribution. Other symptoms: `consensus_round_safe_core` (536 lines),
+48 declarations over 60 lines, duplicated 81-99 line blocks, `satp_peers_can_finalize` (249 lines),
+`turbo_value_upper_bound` (1,812 added lines on its branch). [INFERENCE] The count is an approximation: a proof
+that uses only lemmas about an operation does not name it; a `simp` that unfolds it does.
+
+[INFERENCE] Why it happened: the work went top-down from approved statements, and each proof was dispatched as
+one independent pebble on its own branch. No unit of work owned a middle layer, so each worker went down to the
+base operations, and parallel branches could not share what they built (the `consensus_round_safe_core` twins).
+The paper itself is layered: per-channel finalization (Nitro §4.4), then redistribution (§4.3, Turbo §5.2),
+then constructions (§4.6, "outcomes first").
+
+Rules:
+
+1. **Each layer has a typed API, and a proof uses only the layer directly below.** Layers for Nitro, in order:
+   base operations (`Adjudicator`, `Op`) → per-call exact-effect and frame lemmas (`writing-lean.md` §6) → per-channel
+   finalization (finalizable outcomes as typed values) → redistribution (Turbo, guarantees) → constructions
+   (ledger, virtual channels) → paper theorems.
+2. **A paper theorem's proof term does not name a base operation.** Linter `layerDiscipline` (report-only like
+   §3): it lists each spec theorem whose proof term names a base operation. Today: 34.
+3. **Dispatch the layer before the theorems that need it.** A worker proves a layer's API as its own unit of work;
+   theorem workers then compose. A worker that needs a fact the layer below lacks reports it; it does not prove
+   it locally on its branch.
 ## 5. Order of work
 
 1. Merge the spec module (`draft/spec-module-2`): statement protection and reachable-state types.

@@ -76,3 +76,17 @@ approved definition and does not repair the theorem.
 The statement change merges with `exophial integrate --branch` (it changes `scripts/sigs-baseline.tsv`). Pebble
 `aln-cc8` was derived for the old conclusion and its history carries the counterexample, so it is closed and refiled
 (operator order and reviewer-approved argv), as `aln-147` was.
+
+## Third own-violation: a final state that changes the setup outcome (2026-11-01)
+
+- After option A (`HonestSend`, armada-lean `6229423`), `funding_point_universally_finalizable` is still false
+  (Opus counterexample `docs/counterexamples/funding_point_universally_finalizable_conclude.lean`, branch
+  `draft/prove-funding-point-universally-finalizable`, `496eb5c`). On `c2 = [p0, q0]`, `p0` signs turn 0 with `Ωg`,
+  `q0` signs turn 1 with `Ωg`, and `p0` also signs a final turn-1 state with `Ωb`. The adversary concludes with it.
+- `ConclusionProof` follows go-nitro `_conclude`: `isFinal` and every signature, with no application check. So the only
+  path to `Ωb` is `p0`'s own signature. This is an own-violation of the same kind as `q0`'s double-sign.
+- Source: ForceMove 2018 §3.2.6, line 1208: "If a player transitions from either a PREFUNDSETUP or POSTFUNDSETUP state,
+  s, to a CONCLUDE state, s′, we require the resolution to match" (also :1094, :1155-1161). go-nitro does not check it
+  on-chain, so it is a rule of the honest signer.
+- Handling, per the standing rulings: one `HonestSend` field. A final state that `p` signs on `c` below the funding
+  point carries the outcome of `p`'s own setup states on `c`. The counterexample is kept as the third example.

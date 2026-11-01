@@ -152,3 +152,12 @@ hypothesis on `p`'s sent history, not a change to the step rules.
   changing `p`'s share, not because the game stays open. In Nitro, assets leave a channel only through a finalized
   outcome of that channel (`transfer_requires_finalized`), so "`p` takes its assets out" means "`p` can finalize some
   channel outcome that pays `p` at least its share", which does not require the game to have ended.
+- **The move-on game is one more compliant, undesirable game (operator, same day).** In a ForceMove game whose rules
+  accept every transition, the opponent's move needs only `p`'s previous signed move and its own signature
+  (turn-taking support). Its IR violation is one step: the opponent's valid move can cut `p`'s share, so `p` must
+  answer every challenge and can never let one expire. It joins the §5 catalogue. It differs from unbound griefing:
+  unbound griefing replays stale states (a support-rule failure, excluded by `SupportWindow`); here every move is a
+  fresh valid move, and only the game's rules can exclude it (IR, §2). Candidate sufficient condition for IR, to be
+  checked in Lean: no valid transition reduces any non-mover's allocation.
+- **§5 "unbound griefing" row, reworded:** what fails is that `p` cannot take its assets out (IR, §2); the game need not
+  terminate.

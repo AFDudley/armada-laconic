@@ -214,6 +214,23 @@ the existing proofs. A new statement proved equivalent to approved statements ch
 Lean accepts it. Two rules, each driven by a linter work list: replace a repeated premise by its refined type
 (`repeatedPremise`), and replace an unfolded base operation by its equation (`layerDiscipline`).
 
+Lessons from the first R.4 pass on the Nitro adjudicator (armada-lean `7057602b`, `cb84006a`, `draft/r4-rest`,
+2026-11-01):
+
+- **Rewrite the existing proof in place.** A new helper that restates an existing theorem's premises raises
+  `repeatedPremise`, `looseHypothesis` and `aliasHypothesis` above the gate baseline, and the gate refuses it. Change the
+  proof of the theorem that callers already use; keep its statement.
+- **Do not write `s.apply …` in a `show` or `have` when the theorem's own statement does not name `apply`.** The
+  ascription puts `Adjudicator.apply` into the proof term, and `layerDiscipline` flags it. State the derived equation in
+  the operation's own form (`have heq : s.challenge … = if h : … then … else none := apply_challenge_equation …`) and
+  rely on definitional equality with `s.apply apps caller (.challenge …)`.
+- **A base operation that the statement itself names is not a layer violation.** An equation about `apply` puts
+  `apply` into every proof term, whatever the technique. The linter subtracts the statement's constants from the proof's
+  (armada-lean `88356264`). Before this fix, 26 of 35 Nitro `layerDiscipline` hits were this case.
+- **Check that an acceptance clause can be met before it goes to a worker.** The first R.4 pebble required "no
+  `layerDiscipline` finding" while the linter had the defect above. The worker spent about 290k tokens before it proved
+  the clause impossible.
+
 **R.5 Delete the replaced statements and their helpers.** No alias and no deprecated copy stays.
 
 **R.6 Order for the Nitro model:** the typed operation equations; then the premise-to-type codemod; then the

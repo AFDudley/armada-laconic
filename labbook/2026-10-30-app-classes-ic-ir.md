@@ -133,3 +133,17 @@ hypothesis on `p`'s sent history, not a change to the step rules.
    `Rules.NoUnilateralSupport` and its two lemmas are then deleted.
 3. The statement of `funding_point_universally_finalizable`: a hypothesis that `p` sent no two states on `c` at one
    turn below `c.n`.
+
+## 11. Rulings, 2026-11-01
+
+- **App premise of Nitro-24.** `Rules.SupportWindow` (ForceMove support shape: every participant's signature within
+  the last `n` turns before the candidate; ForceMove:744-778, 1340-1354, 1379-1381) replaces `NoUnilateralSupport`.
+  `appsU` and `appsΩ` satisfy `NoUnilateralSupport` and break both Nitro-24 claims by re-using old signatures. They are
+  apps that must explicitly fail; their counterexamples stay as failure tests.
+- **Clock freeze is a model bug.** With `T.ε = 1`, `Threat.Round` lets neither side advance the clock, so `p` can wait
+  0 forever and no challenge expires. In the real system nobody stops the clock; time advancing is an assumption of the
+  model (Nitro:535-537, SATP:165-166). The model is repaired so the clock advances every round.
+- **Both sides can always move the game on** (a game whose rules accept every transition, `ε ≥ 2`): `p` has no outcome
+  it can force and none it cannot prevent, so Nitro-24's dichotomy fails. This is an important result: it is the
+  property a desirable app must not have. The operator notes Nitro-24 is phrased oddly; the real guarantee is that `p`
+  can take its own assets out of the channel. This feeds §10 item 1 (IR at every state).

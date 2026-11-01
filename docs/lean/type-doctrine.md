@@ -91,6 +91,21 @@ decide`, size 21,601 (74 times the trunk maximum). Mathlib's `linter.flexible`: 
 (`armada-lean/.scratch/hyp_analysis.py`, Lean-elaborated binder types, conjunction normalization). The linter
 moves that computation into the build.
 
+`repeatedPremise` excludes three kinds of premise from every count (`ArmadaLean/Lint/TypeDoctrine.lean`, trunk
+`b78c293`):
+
+1. **A structure projection.** The `structure` command generates one projection per field. The field is not a
+   premise that an author repeats.
+2. **A carrier difference.** The key strips `ReachableState.state e` to `e` before it numbers the bound
+   variables. Otherwise the carrier's implicit arguments give one premise two keys.
+3. **A premise that already is a type, or a parameter.** The linter skips a premise whose head is an
+   `ArmadaLean` structure, a `def` that unfolds to a structure or to `Subtype`, or a local variable. Rule 1
+   makes such types (`SatpEnds`), so a declaration that takes one is the intended result. Rule 1 cannot apply
+   to an abstraction's own parameter (`Inv net`).
+
+The output is deterministic: the linter sorts the rows by a total order on the shape, then groups adjacent rows.
+Measured on `0f208d6`: 257 groups before these rules, 250 after.
+
 `premiseVariant` reports only. The operator rules on each variant (as for `TimedChannel`, operator ruling
 2026-10-31: `2·ε`).
 

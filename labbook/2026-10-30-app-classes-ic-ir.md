@@ -147,3 +147,8 @@ hypothesis on `p`'s sent history, not a change to the step rules.
   it can force and none it cannot prevent, so Nitro-24's dichotomy fails. This is an important result: it is the
   property a desirable app must not have. The operator notes Nitro-24 is phrased oddly; the real guarantee is that `p`
   can take its own assets out of the channel. This feeds §10 item 1 (IR at every state).
+- **Correction (operator, same day).** An open-ended game is fine; the game does not need to end. The required property
+  is only that `p` can take its own assets out. The move-on counterexample fails because the adversary can keep
+  changing `p`'s share, not because the game stays open. In Nitro, assets leave a channel only through a finalized
+  outcome of that channel (`transfer_requires_finalized`), so "`p` takes its assets out" means "`p` can finalize some
+  channel outcome that pays `p` at least its share", which does not require the game to have ended.

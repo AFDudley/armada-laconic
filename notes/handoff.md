@@ -20,23 +20,12 @@ Nitro spec. It waits for a rebuild on `main`.
 
 **Owner.** The coordinator in pane w3:p4 (session `01a192b4`) owns all Lean work, by operator order of 2026-10-31:
 merges, husbandry, the liaison with the dispatcher's coordinator (pane w6:p1) and the host limits
-(`engineering/operating-rules.md` §6). The earlier note `notes/handoff-typing-and-husbands.md` is removed; this
-section replaces it.
+(`engineering/operating-rules.md` §6).
 
-**State at 2026-11-02, about 12:35Z** (from the w3:p4 session and `git log`; `main` at `89e9510d`).
+**Open work at 2026-11-02, about 12:35Z** (from the w3:p4 session and `git log`; `main` at `89e9510d`).
 
-- **Proofs.** Every Nitro and pool spec theorem is proved except the two Nitro-24 claims,
-  `finalizable_or_two_enabled` and `single_enabled_is_finalizable` [INFERENCE: from the coordinator's 12:26Z report;
-  I did not run `check.sh`]. Proved since 2026-10-31: `satp_theorem_3_2` (`0e1c470f`), `turbo_value_achievable`
-  (`5b3e181e`), `turbo_value_is_value`, `satp_end_user_recovers` (`ab061228`), `funding_point_universally_finalizable`
-  (`893d1175`), `deposit_bounds_value` (`5830ade1`). The three Nitro 2019 §5.3-§5.4 sub-channel theorems are block
-  comments (`18559321`, operator ruling 2026-11-01).
-- **On the trunk since 2026-10-31.** The spec module (statements protected by type, computed check), the refined types
-  (`TimedChannel`, `LedgerChannel`, `TurboOutcomeNetwork`), the type-doctrine linters and `decisionScope` (0 findings
-  since `f5374cb5`), the committed gate baseline with a freshness hook (`8b035d82`), recorded searches (`says`), the
-  round combinator, `HonestSend`, `SupportWindow`, the repair pass R.2 (one equation per operation) and R.4 (six
-  adjudicator operations), the one safety invariant `Adjudicator.Inv` (`3172bf8b`), and the verification-chain
-  pointers to `labbook/2026-11-02-refinement-risks.md` §7.
+- **Proofs.** Two spec theorems are open: the Nitro-24 claims `finalizable_or_two_enabled` and
+  `single_enabled_is_finalizable` [INFERENCE: from the coordinator's 12:26Z report; I did not run `check.sh`].
 - **Nitro-24** (branch `draft/nitro24-appir`, tip `10e82339`). Four counterexamples, each a checked failure test in
   `docs/counterexamples/`. Three honest-side rules are decided (one state per turn; after a final state, only final
   states; `CanMoveTo` checks validity). They change the meaning of 29 Spec Liveness statements through their types
@@ -50,9 +39,8 @@ section replaces it.
   measure, checks the premise lints, replaces the real hits with shared lemmas, and removes the R.4 duplicates
   (`reclaim_decompose` beside `reclaim_some`). Acceptance: every `check.sh` field true, `sorry` stays 2, `verify_says`
   passes, net line change of `ArmadaLean/` below 0.
-- **Pebble bus.** The 24 codemod pebbles are out of the supervisor queue. `aln-290`, `aln-36e`, `aln-8ab` are parked.
-  The repair-pass pebbles `aln-185`, `aln-6a9`, `aln-ba0`, `aln-904`, `aln-299` are closed with their merge shas. No
-  reducer runs [INFERENCE: last reported at 09:57Z].
+- **Pebble bus.** The 24 codemod pebbles are out of the supervisor queue. `aln-290`, `aln-36e`, `aln-8ab` are parked
+  and need a disposition once `draft/cm-opus` reports. No reducer runs [INFERENCE: last reported at 09:57Z].
 - **Not scheduled** (`labbook/2026-11-02-refinement-risks.md` §7): the EquiVM and EVMLean changes V1-V3, the O1 gas
   measurement, the conformance vectors, and the R1CS importer. Also not started: the general liveness theorem (R.6).
 
@@ -71,10 +59,6 @@ section replaces it.
 4. Phase 3 (local model for Lean): the codemod pilot is new evidence (1 of 3, after two corrections). The earlier
    question, a rerun of `live_leaf_matches` with a bare brief (`labbook/2026-10-30-qwen-lean-phase3.md`), is not run.
 
-Resolved since the last version of this note: Nitro proving restarted and finished except Nitro-24; `TimedChannel`
-(2·ε, 2026-10-31); spec-module cutover; the sub-channel theorems; the Turbo scope (`TurboOutcomeNetwork`); the
-refinement-risk questions (`labbook/2026-11-02-refinement-risks.md` §7); the vault design (below, next step 4).
-
 **Next steps.**
 1. Merge `draft/cm-opus` when `CodemodOpus` reports, after a check of its diff against its acceptance.
 2. Act on the Nitro-24 direction when the operator gives it. Until then no agent proves the two claims.
@@ -91,11 +75,6 @@ refinement-risk questions (`labbook/2026-11-02-refinement-risks.md` §7); the va
    `mitigated_*`) and goes when the new model merges.
 5. Specs for any work item name the base operation the lint flags, the lemma that replaces it or the lemma to add,
    and how to run Lean in the worktree (operator, 2026-11-02: looping is a spec defect).
-
-**Findings of 2026-10-26/27** (lab book): `2026-10-27-gonitro-reclaim-dos.md`, `2026-10-27-payout-griefing.md`,
-`2026-10-27-nitro-liveness-game-defects.md`, `2026-10-26-utxo-channel-formalizations.md`, `2026-10-27-bend2-to-evm.md`.
-Later decisions: `2026-11-01-l2bridgeapp-verifier.md`, the desirable-game rulings (`2026-10-30-app-classes-ic-ir.md`),
-`2026-11-02-refinement-risks.md`, and `docs/process.md` "The repair pass".
 
 ## 2. Other tracks
 

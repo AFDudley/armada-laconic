@@ -249,15 +249,39 @@ Lessons from the first R.4 pass on the Nitro adjudicator (armada-lean `7057602b`
   `layerDiscipline` finding" while the linter had the defect above. The worker spent about 290k tokens before it proved
   the clause impossible.
 
+Lessons from the second pass (armada-lean, 2026-11-02):
+
+- **A work item whose acceptance is a lint count gets gamed.** The R.4 merges made `Safety.lean` larger
+  (`reclaim_decompose` beside `reclaim_some`, which kept 68 uses), and a codemod worker copied a step's post-state
+  into a new `def` so that the base operations left the proof. Every repair item now also requires: the net line
+  change of the model code (`ArmadaLean/` outside `Lint/`) is at most 0, no definition restates an existing one, and
+  the work deletes what it replaces.
+- **Measure the linter before the code.** 10 of 15 `layerDiscipline` hits counted names that entered a proof only
+  through a type (a constructor field type, a `casesOn`, a rewrite motive), and `looseHypothesis` counted type
+  parameters as inputs, which hid 106 findings (armada-lean `draft/cm-opus`, failure tests in
+  `ArmadaLean/Lint/TypeDoctrineTest.lean`). A commit that corrects a measure may raise a count; it is its own commit
+  and states the defect and the counts.
+- **A brief names the replacement, not only the target.** The local model completed 1 of 3 layer items: the one whose
+  replacement lemma was easy to find. The two others looped for three hours. A codemod brief states the base
+  operation that the lint flags and the existing lemma that replaces it, or says that none exists; an item with no
+  replacement lemma is design work for a stronger model, not a codemod.
+- **A spec theorem is finished when its proof and its witness are closed.** `sorry_count` counts proofs only. A
+  witness proved by `sorry` stays in `witness_open`, and `scripts/check.sh --json NAME` reports both
+  `theorem_in_sorry` and `theorem_witness_open` for one theorem.
+
 **R.5 Delete the replaced statements and their helpers.** No alias and no deprecated copy stays.
 
 **R.6 Order for the Nitro model:** the typed operation equations; then the premise-to-type codemod; then the
 layer-rule codemod; then the general liveness theorem (Nitro §4.4: an online participant can finalize the latest state
 it holds), proved once with the window argument, with the funding point, the concluded state and the Nitro-24 claims as
-corollaries.
+corollaries. Status 2026-11-02: the exit strategy (`TakeOut.exitStrategy`, `exit_finalizes`) forces finalization from
+every state where `p` holds a support at least as new as the chain's record, and the two Nitro-24 claims are its
+corollaries, with enabled outcomes measured against that strategy (operator ruling 2026-11-02; armada-lean
+`docs/nitro-repair-2026-10-27.md` §7.4).
 
-**GATE.** Every step merges on its own. No type-doctrine linter count rises (`scripts/check.sh`, `lint_ok`). Every
-deleted statement has an equivalence proof to a statement that remains.
+**GATE.** Every step merges on its own. No type-doctrine linter count rises (`scripts/check.sh`, `lint_ok`), except in
+a commit that only corrects a linter's measure. The net line change of the model code is at most 0. Every deleted
+statement has an equivalence proof to a statement that remains.
 
 ## The decision rules to keep getting right
 

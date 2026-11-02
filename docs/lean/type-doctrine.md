@@ -65,8 +65,8 @@ Batteries environment linters (`@[env_linter]`,
 |---|---|---|---|
 | `repeatedPremise` | The same hypothesis shape, after binder names are normalized, occurs in two or more theorems. | 1 | The drift itself: `2·ε` restated 10 times, `hχopen`. |
 | `premiseVariant` | One field of one binder type is constrained differently across theorems (`ε` in one, `2·ε` in another). | 1 | Conflicting decisions on one gap. |
-| `looseHypothesis` | A spec theorem has a hypothesis whose only free variable is one data binder, and the theorem's source citation does not state it. | 2 | Single-input checks. |
-| `aliasHypothesis` | A hypothesis is `x = f y` where `x` is a binder of the same theorem. | 3 | `hvn`-style duplicates. |
+| `looseHypothesis` | A spec theorem has a hypothesis whose only input is one data binder, and the theorem's source citation does not state it. A type parameter (`E`) or an instance (`DecidableEq E`) is not an input. | 2 | Single-input checks. |
+| `aliasHypothesis` | A hypothesis is `x = f y` where `x` is a binder of the same theorem and `f y` does not contain `x` (`o = o.dedup` is a property, not an alias). | 3 | `hvn`-style duplicates. |
 | reachability | Already designed in the spec module (reachable-state types). | 3 | Raw state plus `Reachable` hypothesis. |
 | `decisionScope` | An `omega` call whose goal context holds more than N arithmetic hypotheses (`≤`, `<`, `=`, `≠` and their `∧`/`∨`/`¬` over `Nat`/`Int`), or a `decide` call whose goal has a free variable or exceeds a term-size bound, or any `decide +kernel` / `native_decide`. N and the bound come from measuring the trunk. | 4a.5 | Blow-up risk of decision procedures. |
 | `linter.flexible` (Mathlib, `Mathlib/Tactic/Linter/FlexibleLinter.lean`) | A rigid tactic (`rw`, `exact`, …) acts on the output of a flexible one (`simp`, `split`, `norm_cast`, …). | 4a.5 | Non-terminal searches. Mathlib's own linter; enabled, not rewritten. |
@@ -99,12 +99,25 @@ moves that computation into the build.
 2. **A carrier difference.** The key strips `ReachableState.state e` to `e` before it numbers the bound
    variables. Otherwise the carrier's implicit arguments give one premise two keys.
 3. **A premise that already is a type, or a parameter.** The linter skips a premise whose head is an
-   `ArmadaLean` structure, a `def` that unfolds to a structure or to `Subtype`, or a local variable. Rule 1
-   makes such types (`SatpEnds`), so a declaration that takes one is the intended result. Rule 1 cannot apply
-   to an abstraction's own parameter (`Inv net`).
+   `ArmadaLean` structure (tested by the declaring module, so the Pool's root-namespace structures count too), a
+   `def` that unfolds to a structure or to `Subtype`, or a local variable. Rule 1 makes such types (`SatpEnds`), so
+   a declaration that takes one is the intended result. Rule 1 cannot apply to an abstraction's own parameter
+   (`Inv net`).
+4. **The result of one base-operation call** (`s.apply apps caller op = some s'`, `markSpent spent ns = some
+   spent'`). It is the input of a per-call lemma (§4a rule 1, `writing-lean.md` §6). An equation `x = op …` with
+   `x` a binder stays an alias.
+5. **A transition relation:** an `ArmadaLean` inductive or field whose type ends in `S → S → Prop` (`Step`,
+   `Threat.RoundSeq`, `OtherSteps`, `ReachableFrom`). A step lemma takes the step (`writing-lean.md` §5).
 
 The output is deterministic: the linter sorts the rows by a total order on the shape, then groups adjacent rows.
-Measured on `0f208d6`: 257 groups before these rules, 250 after.
+Measured on `0f208d6`: 257 groups before rules 1-3, 250 after.
+
+Measure corrections, 2026-11-02 (armada-lean `draft/cm-opus`, failure tests in
+`ArmadaLean/Lint/TypeDoctrineTest.lean`, which `scripts/gate_extra.py` builds before it runs the linter): exclusions 4
+and 5 and the module test of exclusion 3 took `repeatedPremise` from 247 to 224 groups and `premiseVariant` from 10 to
+9; the input rule of `looseHypothesis` took it from 122 to 228 findings (the code did not change; the old count hid
+106 findings, largest groups `s.IsDAG` 14, `OnlyTransfers ops` 9, `b.KeysNodup` 9); the property rule of
+`aliasHypothesis` took it from 57 to 54.
 
 `premiseVariant` reports only. The operator rules on each variant (as for `TimedChannel`, operator ruling
 2026-10-31: `2·ε`).
@@ -130,10 +143,11 @@ Measured on `0f208d6`: 257 groups before these rules, 250 after.
    above): a condition the source states for that theorem alone. The exception is the theorem's own source
    citation, which the spec module parses (`spec_lib.py`); the citation sentence must name the hypothesis. No list.
 3. **Switch-on.** Decided (coordinator, 2026-10-31): convert first, then turn the linters into failures, one
-   linter at a time, when its count on the trunk reaches 0. A baseline of known violations would be a ratchet,
-   which the operator rejected for `check.sh`. Until then every linter runs report-only, and every merge
-   reports the counts: a merge must not raise a count (the coordinator checks this at merge; it is a review
-   rule, not a stored list).
+   linter at a time, when its count on the trunk reaches 0. Superseded 2026-11-01: the gate container has no git
+   history, so the gate compares every count with the committed `scripts/gate-baseline.json` (armada-lean
+   `AGENTS.md`, "The gate baseline"). A merge must not raise a count. A branch that lowers a count commits the lower
+   baseline. A commit that only corrects a linter's measure may raise a count; its message states the defect and
+   the counts before and after (coordinator decision, 2026-11-02).
 4. **Briefs.** Decided (coordinator, 2026-10-31): every brief that writes Lean names this document and
    `typed-library.md`, and carries the standing rules: no statement change without an operator ruling; every
    Lean command through `/home/rix/bin/lean-run`; no copied `.lake/build`; layer rule (§4a 1-3); search rule
@@ -191,9 +205,16 @@ Rules:
      and one frame lemma per `Step` constructor → state invariants as types (a holding carries its
      well-formedness, `writing-lean.md` §4) → pool properties (value conservation, no double-spend,
      `core_invariant`) → can-happen and not-blocked theorems.
-2. **A spec-level theorem's proof term does not name a base operation.** Linter `layerDiscipline` (report-only
-   like §3): it lists each spec-level theorem whose proof term names a base operation. Today: 34 (Nitro) and
-   12 (Pool).
+2. **A spec-level theorem's proof term does not name a base operation.** Linter `layerDiscipline`: it lists each
+   spec-level theorem whose proof names a base operation in a value position (not a binder type, not an implicit
+   argument, not a matcher motive, not an argument Lean copies from the goal for `Eq.refl` or `congrArg`), or
+   uses one of its unfolding auxiliaries (`<op>.eq_<n>`, `<op>.eq_def`, `<op>.match_<n>`, `<op>.induct`). A name
+   that the statement itself contains is exempt, and so are, one level deep, the constructor field types, `casesOn`
+   and `rec` of an `ArmadaLean` inductive that the statement names: a statement about `Step s s'` is a step lemma.
+   Counts: 34 (Nitro) and 12 (Pool) at `afda79b`; 35 and 12 when the gate started; 1 and 0 after the measure
+   correction and the fixes of 2026-11-02 (armada-lean `draft/cm-opus`). The one Nitro hit,
+   `satp_peers_can_finalize`, splits on `apply` with `cases`; the same split occurs at 87 helper sites, and one
+   codemod of those sites is the fix.
 3. **Dispatch the layer before the theorems that need it.** A worker proves a layer's API as its own unit of work;
    theorem workers then compose. A worker that needs a fact the layer below lacks reports it; it does not prove
    it locally on its branch.

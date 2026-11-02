@@ -176,29 +176,33 @@ only with the operator's approval.
 ## The next chart. Refine one level at a time
 
 **9.1 To add detail, write a machine that refines the previous one.** Write the gluing invariant first [Abrial 2010].
-Lean model to Stele: each symbolic term maps to its concrete value, under named cryptographic hypotheses. Stele to
-bytecode: EquiVM. The form of the map and the scope of the hypotheses wait for the operator
-(`labbook/2026-11-02-refinement-risks.md` §1, Q1.2 and Q1.3).
+Lean model to Stele: a typed decoder for each ABI position maps each concrete word to its term; a word that the run
+computed as a hash maps to that hash term, and any other word to `val` in its range. The encodings need no assumption
+beyond what the EVM forces, so the theorem names collision freedom of Keccak-256 and of its 160-bit truncation, with
+Poseidon trusted (operator ruling 2026-11-02; `labbook/2026-11-02-refinement-risks.md` §7). Stele to bytecode: EquiVM.
 
 **9.2 Strengthen each new guard so the refined machine does no more than the abstract one allowed** [Abrial 2010]. A
 contract may add input checks a paper assumes (go-nitro's reclaim checks that SATP leaves to honest signers); it may
-never allow more. Two contract rules allow more today: go-nitro's 12-byte destination rule and the owned path's
-160-bit `ownerField` truncation (`labbook/2026-11-02-refinement-risks.md` §1, Q1.1).
+never allow more. The Lean model is the specification, and the contracts are rewritten from it. The current Solidity
+is not a source to reconcile with the model (operator ruling 2026-11-02). Where it allows more, it is a defect that the
+rewrite does not copy: for example go-nitro's 12-byte destination rule and the owned path's 160-bit `ownerField`
+truncation.
 
 **9.3 Finish a level when nothing is left to prove, never when it runs.**
 
 **9.4 Expect to back up** [Wirth 1971].
 
 **9.5 A safety certificate carries only safety.** An EquiVM certificate is a one-way inclusion. It does not carry a
-"can happen" or liveness theorem to bytecode (`labbook/2026-10-28-liveness-refinement-design.md` §(a)). The proposed
-route for those classes is in the same entry, §(d), with the 2026-10-28 answers and the O2 correction: a bounded
-number of honest calls may fail (`labbook/2026-10-28-verification-chain-rulings.md`). The design itself waits for
-the operator (`labbook/2026-11-02-refinement-risks.md` §2, Q2.1).
+"can happen" or liveness theorem to bytecode (`labbook/2026-10-28-liveness-refinement-design.md` §(a)). The route for
+those classes is that entry's §(d): each Liveness theorem is proved once in Lean, and one game-transfer theorem carries
+it to bytecode through a two-way lemma per operation and a gas-indexed EquiVM certificate. The transfer allows a
+bounded number of failed honest calls (`labbook/2026-10-28-verification-chain-rulings.md`, O2 correction). A size
+bound that this route adds to an approved statement goes to the operator with its gas measurement.
 
-**9.6 Record every gap that a level leaves open, with its question.** Four gaps are open, and none is a rule:
-concretization of raw values, liveness through a one-way certificate, an executable honest strategy for the clients,
-and the ties from each circuit to its Lean model and its deployed key. `labbook/2026-11-02-refinement-risks.md` gives
-the facts and the operator's questions. A rule enters this chart only after the operator rules.
+**9.6 Tie each artifact that the model does not produce to the model.** A circuit: import its R1CS into Lean, bind
+its Poseidon and EdDSA templates to the trusted primitives, and prove the rest equivalent to the model's constraint
+predicate. A deployed key: check it against the key exported from the ceremony zkey. A client: run conformance vectors
+that the model generates. `labbook/2026-11-02-refinement-risks.md` §7 gives the reasons and the order.
 
 **GATE.** Zero open obligations for the level.
 

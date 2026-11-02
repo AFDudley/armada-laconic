@@ -60,8 +60,6 @@ pebble is parked or blocked. Restarting needs the operator's orders (below, item
    and accept or change two points: the yield vault takes upstream `LOCKED_SHARES`, and `verifyOwned` becomes
    virtual.
 10. armada-circuits `integrated` `9699ba9` is not pushed.
-11. Refinement risks (`labbook/2026-11-02-refinement-risks.md`): Q1.1-Q1.3 (concretization) first, then Q2.1-Q2.2
-    (liveness design, EquiVM work owner), Q3.1 (clients in the chain), Q4.1-Q4.3 (circuit models, deployed keys).
 
 **Next steps** (`docs/lean/proof-dispatch-plan.md`; operator rulings 2026-10-28).
 1. Phase 2 continues, one Liveness pebble at a time. A counterexample stops the work on that statement

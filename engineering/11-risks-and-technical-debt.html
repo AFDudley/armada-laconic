@@ -91,8 +91,8 @@
 </tr>
 <tr>
 <td>R10</td>
-<td><strong>The verification chain proves less than its plan states, in four places.</strong> Two contract rules accept more than the Lean model (destination kind, <code>ownerField</code> truncation). An EquiVM certificate carries safety only, and the liveness route is not approved. No client is tied to the model. The circuit models are hand-written, and no check ties a deployed key to its circuit. Questions: <code>labbook/2026-11-02-refinement-risks.md</code>.</td>
-<td>High (a theorem about the model can be false of the deployed system)</td>
+<td><strong>The verification chain does not yet tie the deployed system to the Lean model in four places.</strong> The current Solidity has rules that allow more than the model (destination kind, <code>ownerField</code> truncation); they are defects, and the rewrite does not copy them (operator ruling 2026-11-02). The step-4 liveness route and its EquiVM and EVMLean prerequisites are decided but not built. No client is tied to the model. The circuit models are hand-written, and no check ties a deployed key to its circuit yet. Decisions and order: <code>labbook/2026-11-02-refinement-risks.md</code> §7.</td>
+<td>High until built (a theorem about the model can be false of the deployed system)</td>
 <td>T0.0, T0.1, T0.2</td>
 </tr>
 </tbody>

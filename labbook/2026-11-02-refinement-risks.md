@@ -314,10 +314,13 @@ observed? Answer: no. Evidence:
   `Term.poseidon_ne_keccak`. Its concrete content: `Poseidon(mpk, r₁) = Poseidon(owner, r₂)` needs either a Poseidon
   collision, or a Poseidon output `mpk` equal to a 160-bit owner address. The first case is Poseidon's collision
   freedom. The second case is the separation of Poseidon's outputs from Keccak's, which the approved model encodes by
-  the `HashFn` tag. Decision: this separation is part of "Poseidon stays trusted" in the form the approved model
-  states it, so the step-1 theorem names it with Poseidon and it is not a new assumption. The concrete work to break
-  it: an output of Poseidon must equal one of k given addresses, about 2^254 / k evaluations if the outputs are uniform
-  `[INFERENCE]`.
+  the `HashFn` tag. Concretely it is a cross-function collision assumption: no Poseidon output that a run uses equals
+  a Keccak output that the run uses. It is not part of "Poseidon stays trusted": that ruling (2026-10-28) says only
+  that step 4 treats the deployed Poseidon bytecode as computing Poseidon correctly at the call boundary. It is not new
+  either: the hypothesis of 2026-10-25 ("no Keccak or Poseidon collision among the values a run uses") covers it. So
+  the step-1 theorem names it, and no operator ruling is needed (correction by the coordinator, 2026-11-02; my first
+  reading of this point was wrong). The concrete work to break it: an output of Poseidon must equal one of k given
+  addresses, about 2^254 / k evaluations if the outputs are uniform `[INFERENCE]`.
 - Observed, with no theorem that depends on it: the plain nullifier is `Poseidon(nk, leafIndex)` with `nk` a raw value
   that the spender chooses (`ArmadaLean/Nullifier.lean:34`, `Transact.lean:100`). A spender can choose `nk` equal to an
   owner address. Then a plain nullifier and an owned nullifier can be equal at one leaf index. One leaf holds one
@@ -328,8 +331,9 @@ observed? Answer: no. Evidence:
 
 - **Q1.3: decided, yes.** The step-1 refinement uses the run-relative map: each ABI position has a typed decoder; a word
   that the run computed as a hash decodes to that hash term; any other word decodes to `val` within its range. Reason:
-  the fact-6 check above. With the encodings above, the step-1 theorem names Keccak-256 and its 160-bit truncation,
-  with Poseidon as trusted.
+  the fact-6 check above. With the encodings above, the step-1 theorem names three items: collision freedom of
+  Keccak-256, collision freedom of its 160-bit truncation, and the separation of Poseidon outputs from Keccak outputs
+  on the run's values. Separately, step 4 treats the deployed Poseidon as correct at the call boundary (2026-10-28).
 - **Q2.1: decided, the design of `2026-10-28-liveness-refinement-design.md` §(d)** (D4 with a D5b certificate), with
   the O2 correction: the game transfer allows a bounded number of failed honest calls. Reasons, from that entry §(d):
   D1 is false as stated; D2 alone needs a transfer argument for each Liveness theorem; D3 proves each theorem twice and

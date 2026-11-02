@@ -178,8 +178,9 @@ only with the operator's approval.
 **9.1 To add detail, write a machine that refines the previous one.** Write the gluing invariant first [Abrial 2010].
 Lean model to Stele: a typed decoder for each ABI position maps each concrete word to its term; a word that the run
 computed as a hash maps to that hash term, and any other word to `val` in its range. The encodings need no assumption
-beyond what the EVM forces, so the theorem names collision freedom of Keccak-256 and of its 160-bit truncation, with
-Poseidon trusted (operator ruling 2026-11-02; `labbook/2026-11-02-refinement-risks.md` §7). Stele to bytecode: EquiVM.
+beyond what the EVM forces, so the theorem names three items: collision freedom of Keccak-256, collision freedom of its
+160-bit truncation, and no Poseidon output equal to a Keccak output among the run's values (operator ruling 2026-11-02;
+`labbook/2026-11-02-refinement-risks.md` §7). Stele to bytecode: EquiVM.
 
 **9.2 Strengthen each new guard so the refined machine does no more than the abstract one allowed** [Abrial 2010]. A
 contract may add input checks a paper assumes (go-nitro's reclaim checks that SATP leaves to honest signers); it may

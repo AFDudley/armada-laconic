@@ -60,22 +60,20 @@ section replaces it.
 1. Nitro-24 direction (asked 12:29Z): (1) measure against p's honest strategy, `Enabled_σ` (the coordinator's
    recommendation); (2) a composition premise; (3) remove both claims and record the counterexamples. The operator
    asked at 12:34Z whether Nitro-24 adds anything to the model; that discussion is open.
-2. Vault: `Vault.lean` models the pre-fix contract; upstream fixed #365 with locked dead shares (`04753139`);
-   `mitigated_*` model a virtual-offset fix that no contract has. `draft/vault-locked-shares` (`26a1238`) is paused.
-   Remodel after the armada-poc upstream merge?
-3. armada-poc `sync/upstream-2026-10-30` (`8813d21a`, fork only; report `.scratch/poc-upstream-sync.md`): not merged
+2. armada-poc `sync/upstream-2026-10-30` (`8813d21a`, fork only; report `.scratch/poc-upstream-sync.md`): not merged
    (checked: not an ancestor of the trunk tip `fbcf2b1e`). Accept or change two points: the yield vault takes upstream
-   `LOCKED_SHARES`, and `verifyOwned` becomes virtual.
-4. armada-circuits: the local trunk `9699ba9` is ahead of the fork's (`f790107`, `git ls-remote`). The branch
+   `LOCKED_SHARES`, and `verifyOwned` becomes virtual. For the rewrite, the vault design of ship-armada/armada-poc#651
+   replaces `LOCKED_SHARES`; the sync question concerns only the current code.
+3. armada-circuits: the local trunk `9699ba9` is ahead of the fork's (`f790107`, `git ls-remote`). The branch
    `draft/inputs-distinct` (`a505b9f`) adds the input-distinctness block that `Constrained.distinct` models; it is not
    merged and changes the keys of all 51 shapes. Under the 2026-11-02 rulings the Lean model is the specification, so
    this is a merge to schedule, not a model question.
-5. Phase 3 (local model for Lean): the codemod pilot is new evidence (1 of 3, after two corrections). The earlier
+4. Phase 3 (local model for Lean): the codemod pilot is new evidence (1 of 3, after two corrections). The earlier
    question, a rerun of `live_leaf_matches` with a bare brief (`labbook/2026-10-30-qwen-lean-phase3.md`), is not run.
 
 Resolved since the last version of this note: Nitro proving restarted and finished except Nitro-24; `TimedChannel`
 (2·ε, 2026-10-31); spec-module cutover; the sub-channel theorems; the Turbo scope (`TurboOutcomeNetwork`); the
-refinement-risk questions (`labbook/2026-11-02-refinement-risks.md` §7).
+refinement-risk questions (`labbook/2026-11-02-refinement-risks.md` §7); the vault design (below, next step 4).
 
 **Next steps.**
 1. Merge `draft/cm-opus` when `CodemodOpus` reports, after a check of its diff against its acceptance.
@@ -83,7 +81,15 @@ refinement-risk questions (`labbook/2026-11-02-refinement-risks.md` §7).
 3. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
    parameter `E`. Channels follow the `ledger` and `virtual` kinds. Apply the pending payee-key rulings
    (`payout_spendable`, `payment_note_only_payee`, no ciphertexts). Then give its theorem types to the operator.
-4. Specs for any work item name the base operation the lint flags, the lemma that replaces it or the lemma to add,
+4. Vault (operator, 2026-11-02; filed as ship-armada/armada-poc#651). The rewritten `ArmadaYieldVault` has one
+   deposit entry: the caller names the most it pays, the vault charges what whole shares cost and returns the
+   change, and the sub-unit remainder goes to an explicit `roundingSurplus`. No `LOCKED_SHARES`, no `deposit(assets)`
+   that rounds shares down. Next: state these postconditions in the Lean vault model. That model supersedes
+   `draft/vault-locked-shares` (`26a1238`, the dead-share model), which is not merged. Open design point: a shielded
+   deposit that commits to an exact note amount needs the change returned as its own note, or a note amount fixed
+   after the call. `ArmadaLean/Vault.lean` on the trunk still models the pre-fix contract (`inflation_attack_*`,
+   `mitigated_*`) and goes when the new model merges.
+5. Specs for any work item name the base operation the lint flags, the lemma that replaces it or the lemma to add,
    and how to run Lean in the worktree (operator, 2026-11-02: looping is a spec defect).
 
 **Findings of 2026-10-26/27** (lab book): `2026-10-27-gonitro-reclaim-dos.md`, `2026-10-27-payout-griefing.md`,

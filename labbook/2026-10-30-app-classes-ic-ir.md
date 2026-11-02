@@ -161,3 +161,34 @@ hypothesis on `p`'s sent history, not a change to the step rules.
   checked in Lean: no valid transition reduces any non-mover's allocation.
 - **§5 "unbound griefing" row, reworded:** what fails is that `p` cannot take its assets out (IR, §2); the game need not
   terminate.
+
+## 12. Rulings for the finalizable-or-enabled claims, 2026-11-01 and 2026-11-02
+
+The claims are `finalizable_or_two_enabled` and `single_enabled_is_finalizable` (Nitro:653-658). Work branch:
+armada-lean `draft/nitro24-appir`.
+
+- **The paper's claims are true; our statements were too weak.** Every counterexample so far uses an undesirable game
+  or an own-violation. A counterexample is a failure test that shows the game is outside the scope, never evidence that
+  the paper is wrong.
+- **Desirable games are a subset of all games, defined first and independently of the claims.** The claims say: for
+  every desirable game, the claims hold. A premise is never added only to make one counterexample go away.
+- **`Desirable` has three parts:**
+  - IR, §2: from any state, `p` can enforce at least what its holdings give it (`AppIR`).
+  - IC, §2: at no state does a participant gain by deviating or aborting (`AppIC`; ForceMove:339-347).
+  - Value conservation: a valid transition keeps the total allocated, lowers no entry except one the mover owns, and
+    keeps the destinations and the entry count (`Conserving`; SATP §2.2 footnote 7 "fair distribution of assets";
+    go-nitro `SingleAssetPayments.sol` "Total allocated cannot change", "Destinations may not change"). A game that
+    creates coins, spends value no participant owns, or renames a zero entry is not desirable.
+- **Scope: ForceMove apps and the consensus app** (Nitro:633 "for a ForceMove channel"; Nitro:662-664). This replaces
+  `SupportWindow` in the two claims.
+- **Own-violation is one rule for every participant, defender and attacker.** A participant that signs against its own
+  interest bears the cost itself; it never defeats another participant's guarantee. It lives in the participant and
+  threat layers, never in what `Finalizable` and `Enabled` mean; those stay exact.
+  - Defender: `HonestSend` — no two different outcomes at one turn, at any turn (`noConflict`, replacing the setup-only
+    rule), and an honest participant signs a state only as a move from a support it holds (ForceMove:744-778).
+  - Attacker: the derived threat `T.noOwnViolation dest`, which drops only the violating moves (a premise on the
+    threat would contradict `Assumptions` and make the claims vacuous). A gift — signing a state that lowers one's own
+    share — is the attacker's own-violation: griefing, not a clean attack (ForceMove §4.5).
+  - A state every participant signed is an agreement, not a gift.
+  - A gift that `p` has built on in the same proof is accepted history; it no longer counts as a violation.
+- **Payout-level readings were rejected:** "finalizable at least this much for `p`" makes the dichotomy trivial.

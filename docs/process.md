@@ -38,6 +38,11 @@ it [Abrial 2010].
 
 Forge unit tests are an inner loop only. They are never the acceptance of anything.
 
+The Lean model is the one specification for every component that must agree with another: contracts, circuits and the
+shared logic of clients. Each target gets the route that can be checked: a proof where a tool exists (EquiVM for
+bytecode, an R1CS import for circuits), conformance vectors from the model where none exists
+(`labbook/2026-11-02-lean-as-the-unified-model.md`).
+
 ## The practice, in the order it applies
 
 1. Acquire the context before you touch anything. Read the code, the design record and **every source in full**. A

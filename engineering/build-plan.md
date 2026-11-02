@@ -153,7 +153,7 @@ So the rewrite needs both proofs: Lean model → Stele (new) and Stele → bytec
 **Alternatives considered and rejected (2026-10-27).**
 
 - **Verity** (LFG Labs, a Lean embedded contract language with a verified compiler to Yul; solc's Yul-to-bytecode step is not verified): a step backwards. It adds a young compiler to the trusted base and gives nothing EquiVM's bytecode-level check does not.
-- **Writing the specification in Bend2:** no route is shorter than this chain (`labbook/2026-10-27-bend2-to-evm.md`). A Bend2 EVM backend exists (`ind-igo/bend-evm`), but it proves only contract ≡ IR ≡ Yul model and tests the rest, solc included. Exporting Bend2 to Lean is a research project (session `01a162aa`, 2026-10-25). Bend2 could later serve as an implementation language: EquiVM checks bytecode from any source, because Stele is source-language agnostic. The Lean model → Stele proof is needed in every route.
+- **Writing the specification in Bend2:** no route is shorter than this chain (`labbook/2026-10-27-bend2-to-evm.md`). A Bend2 EVM backend exists (`ind-igo/bend-evm`), but it proves only contract ≡ IR ≡ Yul model and tests the rest, solc included. Exporting Bend2 to Lean is a research project (session `01a162aa`, 2026-10-25). Bend2 could later serve as an implementation language: EquiVM checks bytecode from any source, because Stele is source-language agnostic. The Lean model → Stele proof is needed in every route. Bend2's other possible role, a client-side target for shared logic with the Lean model as the one specification, is recorded in `labbook/2026-11-02-lean-as-the-unified-model.md`.
 
 **Delivers:** a hardening delta on T0.2.
 

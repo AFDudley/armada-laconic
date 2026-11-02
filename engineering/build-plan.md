@@ -121,7 +121,7 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-tre
 **Verification chain (operator rulings, 2026-10-25):** three layers, two refinement proofs.
 
 1. The Lean model (`AFDudley/armada-lean`) is a symbolic (Dolev–Yao) specification. Hashes are symbolic terms with distinct function symbols (Poseidon, Keccak). Addresses are Keccak-derived terms, not numbers. It is the only layer that reasons about an attacker.
-2. A Stele specification (EquiVM's specification language) gives the same contract with concrete values (`address` is a 20-byte word). A new refinement proof shows that the Stele specification implements the Lean model. This proof maps each symbolic term to its concrete value, and it carries the one cryptographic assumption as a named hypothesis: no Keccak or Poseidon collision among the values a run uses. No existing tool provides this proof.
+2. A Stele specification (EquiVM's specification language) gives the same contract with concrete values (`address` is a 20-byte word). A new refinement proof shows that the Stele specification implements the Lean model. This proof maps each symbolic term to its concrete value, and it carries the cryptographic assumptions as named hypotheses. The 2026-10-25 ruling named one: no Keccak or Poseidon collision among the values a run uses. That sentence does not cover address truncation to 160 bits, Keccak mod p, a channel id that reads as an external destination, or SHA-256; the scope and the form of the map wait for the operator (`labbook/2026-11-02-refinement-risks.md` §1). No existing tool provides this proof.
 3. The bytecode runs on EVMLean (`AccountAddress = Fin 2^160`, transparent Keccak). EquiVM proves that the bytecode refines the Stele specification.
 
 So the rewrite needs both proofs: Lean model → Stele (new) and Stele → bytecode (EquiVM).
@@ -140,7 +140,14 @@ So the rewrite needs both proofs: Lean model → Stele (new) and Stele → bytec
 - **The token contract stays trusted.** A token with a blocklist or a pause (for example USDC) can block a payout. No proof removes this residual trust.
 - **Gas limits are current mainnet's.** Each operation's gas must fit the per-transaction cap of 2^24 gas (EIP-7825). The input-size bounds wait for gas measurements.
 - **The new pool comes from the existing armada-poc pool,** probably by removing features. Every entry point that the Lean `Step` does not model goes.
-- **Liveness and "can happen" theorems need more than the one-way certificate.** An EquiVM certificate shows that the bytecode does nothing the Stele specification forbids. It does not show that the bytecode can do what the specification allows. The proposed design is in the lab book entry. Its open questions wait for the operator.
+- **Liveness and "can happen" theorems need more than the one-way certificate.** An EquiVM certificate shows that the bytecode does nothing the Stele specification forbids. It does not show that the bytecode can do what the specification allows. The proposed design is in the lab book entry. The operator answered O1, O4, O5, O6 and O7 on 2026-10-28; O2 and O3 were resolved by correction and from the record. The design itself (D4 with a D5b certificate), and the owner of the EquiVM and EVMLean changes it needs, wait for the operator (`labbook/2026-11-02-refinement-risks.md` §2).
+
+**Open refinement gaps (2026-11-02; `labbook/2026-11-02-refinement-risks.md`).** Each gap waits for an operator ruling. None is scheduled.
+
+- **Concretization (§1).** Two contract rules accept more than the model: go-nitro's 12-byte destination rule (`MultiAssetHolder.sol:474-476`) and the owned path's 160-bit `ownerField` truncation (`TransactModule.sol:637`). The representation map that S5 "How each step is done" calls known must also fix these cases.
+- **Liveness (§2).** As above. The gas measurement that O1 waits for is not scheduled.
+- **Clients (§3).** No stage ties a client core (ts-nitro, S9 and S10) to the Lean model, and no test checks the representation map against the contracts.
+- **Circuits and keys (§4).** The Lean circuit models are written by hand. No acceptance checks that a deployed pool key equals the key exported from its ceremony zkey. `Ledger.circom` and `Battleship.circom` (S3) have no Lean model.
 
 **Alternatives considered and rejected (2026-10-27).**
 

@@ -89,6 +89,12 @@
 <td>High (a soundness/format bug = unprovable spend or value creation)</td>
 <td>T0.0, T0.1 · ADR-0014</td>
 </tr>
+<tr>
+<td>R10</td>
+<td><strong>The verification chain proves less than its plan states, in four places.</strong> Two contract rules accept more than the Lean model (destination kind, <code>ownerField</code> truncation). An EquiVM certificate carries safety only, and the liveness route is not approved. No client is tied to the model. The circuit models are hand-written, and no check ties a deployed key to its circuit. Questions: <code>labbook/2026-11-02-refinement-risks.md</code>.</td>
+<td>High (a theorem about the model can be false of the deployed system)</td>
+<td>T0.0, T0.1, T0.2</td>
+</tr>
 </tbody>
 </table>
 <h2 id="technical-debt-known-shortcuts">Technical debt / known shortcuts</h2>

@@ -176,8 +176,8 @@ only with the operator's approval.
 ## The next chart. Refine one level at a time
 
 **9.1 To add detail, write a machine that refines the previous one.** Write the gluing invariant first [Abrial 2010].
-Lean model to Stele: each symbolic term maps to its concrete value, with one named hypothesis (no Keccak or Poseidon
-collision among the values a run uses). Stele to bytecode: EquiVM.
+Lean model to Stele: each symbolic term maps to its concrete value, with one named hypothesis (9.5). Stele to bytecode:
+EquiVM.
 
 **9.2 Strengthen each new guard so the refined machine does no more than the abstract one allowed** [Abrial 2010]. A
 contract may add input checks a paper assumes (go-nitro's reclaim checks that SATP leaves to honest signers); it may
@@ -186,6 +186,39 @@ never allow more.
 **9.3 Finish a level when nothing is left to prove, never when it runs.**
 
 **9.4 Expect to back up** [Wirth 1971].
+
+**9.5 The concretization map covers raw values that equal hash outputs, as an explicit hypothesis.** Symbolically
+`val n ≠ hash f xs`. Concretely an attacker can submit a hash output as a raw value: channel ids, commitments and roots
+are calldata words. So "no Keccak or Poseidon collision among the values a run uses" must also cover a raw value that
+equals a hash the run computed. The map from concrete words back to terms is keyed by the run's hash table, and turns
+such a raw value into the matching hash term. BN254 reduction gets the same treatment for Poseidon values, because
+`val` is an unbounded `Nat`. The hypothesis (`RunInjective`) is a premise of the step-1 refinement theorem, never a
+sentence in a document. Every later concretization (the `L2BridgeApp` proven-root registry, the RISC Zero hypotheses,
+armada-laconic `labbook/2026-11-01-l2bridgeapp-verifier.md` §8) uses this one map. Build it first: 9.6-9.8 reuse it.
+
+**9.6 A safety certificate does not carry liveness; prove a gas bound for every honest move.** EquiVM's certificate
+is one-way: it preserves safety, not "can happen" or liveness (`labbook/2026-10-28-liveness-refinement-design.md`).
+For a state channel the main guarantee is liveness: an honest party can always take its assets out. The certificate's
+out-of-gas exit (`Stele/Refine.lean` has `outOfGas` separate from revert) is where channel attacks live: oversized
+outcomes, or a challenge griefed past the block gas limit. For each honest move in `Strategy.lean`, prove that the
+bytecode does not revert spuriously and finishes within a stated gas bound under the model's size limits
+(`no_spurious_revert_f`, `gas_bound_f`; open questions O1 and O5 of the design).
+
+**9.7 The honest side is a program, not only a relation.** `HonestMove`, `HonestSend` and the strategy proofs say what
+an honest party may do. A client (go-nitro, mobile, web) needs an executable `NetworkState → HonestMove`, written in
+the portable fragment, with a proof that it satisfies the unbeatable-strategy theorems. Build it by filtering the
+candidate moves through `Decidable` (`decideMove`). That one function is what is ported, and it is checked with
+conformance vectors that a small-scope enumerator generates from the model.
+
+**9.8 A hand-written circuit model is a claim until it is tied to the compiled circuit and the deployed key.**
+`Transact.lean` models `Transact.circom` by hand. Extract the R1CS into Lean and prove that it matches the model, with
+a proved lemma per gadget template (Num2Bits, MerkleProof, and the rest). Check the verifying key derived from each
+zkey against the constants in the deployed verifier's bytecode; `L2BridgeApp` uses the same check with RISC Zero's
+image id.
+
+Source of 9.5-9.8: the review of armada-lean on 2026-11-01 (armada-laconic `.scratch/claude-share-46520279.clean.txt`),
+checked against the repositories in session `01a195d3`. None of the four is in the specification layer, so the Nitro
+proofs do not reduce them and do not block them.
 
 **GATE.** Zero open obligations for the level.
 

@@ -21,9 +21,9 @@ Points and hours use [`estimation-method.md`](./estimation-method.md): one point
 | # | Goal | Status |
 |---|---|---|
 | S1 | Foundation: pool, circuits (dev ceremony), adjudicator, CCTP + Aave-v4 adapters, the v1 custom governor and revenue contracts, the FROST hub custodian core, the web wallet | done |
-| S2 | Contract-owned notes: a non-upgradeable pool deploy with owner-authorized spends | in progress |
+| S2 | Contract-owned notes: a non-upgradeable pool deploy with owner-authorized spends | satisfied in the model (2026-11-06); P3 and P4 move into the pool rewrite |
 | S3 | Hidden-balance ZK channel apps on armada-nitro: the generic `IForceMoveApp` | in progress |
-| S4 | Baal treasury governance: a Safe-owned treasury replaces the v1 custom governor | next |
+| S4 | Baal treasury governance: a Safe-owned treasury replaces the v1 custom governor | out of scope (operator ruling 2026-11-06) |
 | S5 | armada-nitro side of contract-owned collateral: commitments as channel collateral | next |
 | S6 | armada-client Phase 1: daemon with wallet and relayer, e2e on the fixturenet | next |
 | S7 | Proof path: patch the fixturenet genesis, operate the nimbus verified proxy, run the first proof | done, by hand; not yet a standing gate |
@@ -44,6 +44,8 @@ Order (operator ruling, 2026-10-20): the next work dispatched is, in this order 
 **Delivers:** T0.0, T0.1 (circuits compiled; Phase-2 open), T0.2, T5.0a, T5.0b, T6.0, T6.1, T6.2 (partly); the governance/revenue row of §5 T0 (`ArmadaGovernor`, `ArmadaTreasuryGov`, `TreasurySteward`, `ArmadaToken`, `ArmadaCrowdfund`, `ArmadaWindDown`, `ArmadaRedemption`, `AdapterRegistry`, `RevenueCounter`, `RevenueLock`, `RevenueReserveDistributor`); `HubCustodian.sol` — built but not yet a registered `T#.#` id.
 
 **Depends on:** nothing.
+
+**Proof scope (operator ruling 2026-11-06, `labbook/2026-11-06-proof-scope-and-order.md`):** the governance and revenue contracts above and `HubCustodian` are out of the proof scope. On the governance side the pool keeps a fee rate that one named address can change, and a treasury address. The pool goes through the proof chain first; armada-nitro (S5) follows.
 
 **Acceptance (already true):** `armada-poc`'s and `armada-circuits`' Hardhat/TS and Foundry (fuzz, invariant, Halmos) suites pass; `armada-nitro`'s `pool-e2e`, `nitro-e2e` and `hub-custodian-frost` gates are green against the armada-nitro environment's fixturenet.
 
@@ -115,6 +117,8 @@ Chunk ids and points are copied from the 209-point list (`labbook/2026-10-18-tre
 ## S5 — armada-nitro side of contract-owned collateral (next)
 
 **Goal:** `ArmadaNitroAdjudicator` holds its channel collateral as contract-owned notes, so collateral never leaves the pool. N8 is withdrawn (there is no protocol swap fee).
+
+**Order (operator ruling 2026-11-06, `labbook/2026-11-06-proof-scope-and-order.md`):** the pool goes through the proof chain first (model, Solidity rewrite from the model, Stele, EquiVM, fixturenet check). The adjudicator follows.
 
 **Specification (operator ruling, 2026-10-24):** the adjudicator is rewritten from a Lean model, and the commented Lean model is its specification. The model is in `AFDudley/armada-lean`: branch `owned-notes` (contract-owned notes, a pool feature, proved) and branch `adjudicator-model-v4` (the adjudicator as an ordinary pool user, 23 statements). Rewrite briefs are derived from the model. The N1a–N3, N7, N8 and R1 briefs below are superseded and deleted from armada-nitro; they remain in history at armada-nitro `5519526c`. The merged N1–N3 code on `integrated` has confirmed defects (deposit cannot be funded by any client, reclaim creates value, payouts send a zero proof) and is replaced by the rewrite.
 

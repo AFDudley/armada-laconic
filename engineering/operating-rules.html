@@ -96,6 +96,9 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
   because of a bad system prompt. Experiments decide whether Qwen can write Lean before any Lean work goes to it.</li>
 <li>The operator decides theorem types. If the papers determine the fix for a defect, the coordinator fixes it and does
   not ask.</li>
+<li>A theorem type sent for approval carries its state domain: "reachable" (and which predicate) or "every state,
+  because …". The operator rules on the domain with the type. Reachability is never added after proving starts
+  (operator ruling 2026-10-29; <code>docs/lean/writing-lean.md</code> §11; gate <code>scripts/reach.py</code> in armada-lean).</li>
 <li>Do not suggest nitrolite.</li>
 <li>Do not propose pool contract changes until the Lean work is complete.</li>
 <li>eprint.iacr.org blocks <code>curl</code> (Cloudflare). The papers are in armada-nitro <code>docs/references/nitro/sources/</code>. Do not
@@ -116,6 +119,11 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
 <li><code>pool/5090</code> and <code>pool/5090-local</code> both run <code>vllm/qwen3.8-27b-ablit</code> (window 146,816 tokens). <code>pool/5090</code> promotes to
   <code>anthropic/claude-sonnet-5</code> when the window overflows. <code>pool/5090-local</code> does not promote. A worker on
   <code>pool/5090-local</code> that outgrows the window fails, and the husband merges that chunk by hand.</li>
+<li>Local-model subagents use the <code>build-pool</code> agent (<code>pool/27b-class</code>; operator, 2026-10-30). The <code>sonic</code> agent has
+  no model override in <code>~/.omp/agent/config.yml</code>, so it runs on the session default (Opus). 2026-10-30: four
+  "Qwen" cleanup steps ran on Opus as <code>sonic</code>; their session files show <code>claude-opus-5-5</code>, and vLLM logged 0
+  requests. Confirm local use from the vLLM journal (<code>journalctl -u vllm@qwen3.8-27b-ablit | grep 'POST
+  /v1/chat/completions'</code>), not from one <code>nvidia-smi</code> sample: GPU use reads 0% while the agent waits on a build.</li>
 </ul>
 <h3 id="what-qwen-on-the-5090-did-measured-2026-10-20">What Qwen on the 5090 did (measured 2026-10-20)</h3>
 <ul>
@@ -164,6 +172,11 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
 <li>A reducer keeps the exophial code that it loaded at start. Before you trust a verdict after an exophial install,
   compare <code>Starting reducer</code> in <code>.exophial/logs/dispatcher.log</code> with the install time. Do not stop a reducer that has
   a live worker. Let it drain, then unpark.</li>
+<li><code>exophial self-update</code> restarts the repo's reducer with the caller's environment. A plain shell has no
+  <code>EXOPHIAL_ORACLE_*</code> variables and no <code>~/.elan/bin</code> on <code>PATH</code>, so the oracle cannot find <code>lake</code>. On 2026-10-30 such
+  a restart parked <code>aln-2ed</code>, whose proof was complete ("cannot resolve these declared binaries via shutil.which").
+  Run the update with the repo's <code>ORACLE_ENV</code> and <code>PATH_PREFIX</code> from <code>supervisor.py</code>, or stop the reducer after the
+  update and let the supervisor start the next one.</li>
 <li>A reducer that grades against a known-faulty oracle blocks the other pebbles of its repo (example: <code>exo-b9b</code>). Stop
   it with <code>exophial stop</code>. Check its worktree for a left-over mutant with <code>git status</code>. Queue the other pebbles again.</li>
 </ul>
@@ -173,6 +186,14 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
 <li>State the search scope of every claim that something does not exist.</li>
 <li>A spec is graded from the base commit. A comment added after derivation does not change the spec. Close the pebble
   and file it again.</li>
+<li>A filing body states observations only. It names no predicate, no field to compare and no oracle shape: the spec
+  derivation designs the check. <code>--cites</code> quotes a committed rule, not a declaration line. Lean example: cite
+  <code>docs/how-to-verify.md</code> ("A proof can be faked with <code>sorry</code> …").</li>
+<li>An adversarial <code>reviewer</code> agent approves the exact intake argv before it is filed (section 10).</li>
+<li>When a derivation escalates or derives a wrong check, correct the filing form, close the pebble and file it again.
+  Do not add notes that name fields or spec shapes: a note reaches the derivation as a remedy. Do not change the repo
+  to fit one derivation. 2026-10-28: the Lean filings stated a predicate, and five derivations escalated or
+  invented fields (<code>docs/lean/proof-dispatch-plan.md</code>, Phase 0 result, correction).</li>
 <li>Merge paths:</li>
 <li>a worker pebble: intake, estimate, spec review, queue;</li>
 <li>critical-severity Solidity: the spec derives with <code>forge_mutation_gated_test</code> (exophial <code>docs/ORACLES.md</code>). If
@@ -182,6 +203,14 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
 <li>Fixturenet grading (operator ruling, 2026-10-25), interim: a recorded host run grades a fixturenet pebble, and
   <code>exophial apply</code> merges it. The commit quotes each fixturenet clause with the host command, the tested sha and the
   verdict lines. The coordinator closes the original pebble as superseded.</li>
+<li>A pebble keeps the base recorded at its first claim, and grading reads the spec and the repo config at that base
+  (exophial coordinator, 2026-10-30; <code>exo-7ea</code>). A rebase of the branch does not move it. If the base predates a
+  needed change (a refreshed spec, an <code>environment_command</code>), the recovery is the one the coordinator names:
+  refresh the spec, rebase in the kept worktree, then unpark, so the unpark records the new merge-base. When no
+  route exists (<code>arn-5c3</code>, <code>arn-d62</code>: base before <code>environment_command</code>), hold the pebble until the exophial fix
+  merges. Never hand-merge, never hand-write a base-sha, and never rename a branch to mint a new identity.</li>
+<li>A spec derived before an approved type change still checks the old statement text. Refresh it
+  (<code>exophial specify --refresh</code>) before that pebble is graded (<code>aln-c03</code>, 2026-10-30).</li>
 </ul>
 <h2 id="6-environment-for-exophial-commands">6. Environment for exophial commands</h2>
 <ul>
@@ -195,6 +224,35 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
 <li><code>exophial init</code> takes no <code>-e</code> flag. To set a prefix or languages, run the packaged play:
   <code>~/.local/share/uv/tools/exophial/bin/ansible-playbook &lt;exophial&gt;/ansible/init.yml -e exo_target_repo=&lt;repo&gt;
   -e exo_pebble_prefix=&lt;p&gt; -e '{"exo_languages_override": ["typescript"]}'</code> (JSON form for lists).</li>
+<li><code>systemd-oomd</code> can kill the user manager of <code>rix</code> (<code>user@1001.service</code>, its <code>init.scope</code>) when memory pressure in
+  that tree stays above 50% for 20 s (stock drop-in <code>10-oomd-user-service-defaults.conf</code>). Seen 2026-10-29 15:37Z,
+  2026-10-31 01:39Z and 14:31Z. <code>/run/user/1001</code> then disappears, and podman, the supervisor, <code>ingest-*</code> and the
+  vLLM embed/rerank services stop. Linger was never off: <code>/var/lib/systemd/linger/rix</code> exists since 2026-06-24.
+  Fix (2026-10-31): <code>/etc/systemd/system/user@1001.service.d/10-restart-on-oomd-kill.conf</code> sets
+  <code>Restart=on-failure</code>, <code>RestartSec=2s</code>; revert by removing it and <code>sudo systemctl daemon-reload</code>. Services without
+  their own restart policy (<code>ingest-sessions</code>) still need a manual start. Commands that run podman need
+  <code>XDG_RUNTIME_DIR=/run/user/1001</code>. The watcher wakes on <code>supervisor_down</code>.</li>
+<li>Process management (operator, 2026-10-31: the user manager must not be killed; heavy work is bounded):</li>
+<li><code>init.scope</code> of <code>user@1001.service</code> has <code>ManagedOOMPreference=omit</code> (<code>~/.config/systemd/user/init.scope.d/50-oomd-omit.conf</code>;
+    cgroup xattr <code>user.oomd_omit=1</code>), so <code>systemd-oomd</code> never picks the user manager.</li>
+<li>Every Lean command runs through <code>/home/rix/bin/lean-run &lt;cmd&gt;</code> (not on agents' <code>PATH</code>; for example
+    <code>/home/rix/bin/lean-run lake build</code>): a scope in
+    <code>lean.slice</code> (<code>~/.config/systemd/user/lean.slice</code>: <code>MemoryHigh=48G</code>, <code>MemoryMax=64G</code>,
+    <code>ManagedOOMMemoryPressure=kill</code>; per scope 12G/16G), at most 4 at once. Agent briefs must say so.</li>
+<li>Measured: <code>lake env lean ArmadaLean/Nitro/Liveness.lean</code> 1.78 GiB peak RSS; warm <code>lake build</code> 0.44 GiB.</li>
+<li>Gate and worker containers still run outside any bounded slice: exophial's podman argv has no <code>--cgroup-parent</code>
+    (sent to the exophial coordinator).</li>
+</ul>
+<h2 id="6a-reading-sessions">6a. Reading sessions</h2>
+<ul>
+<li>Read omp and Claude Code sessions through ingest_sessions (operator, 2026-10-30), not by grepping raw JSONL. The
+  database is Postgres on <code>127.0.0.1:5433</code> (container <code>ingest-pg</code>). Read-only access:
+  <code>cd ~/code/git_puller/repos/ingest_sessions/ingest_sessions &amp;&amp; uv run python -c 'import psycopg; from ingest_sessions
+  import db; c = psycopg.connect(db._dsn(role="ro")); ...'</code>. Tables: <code>sessions</code>, <code>records</code>, <code>summaries</code>, <code>history</code>.
+  The MCP server (<code>ingest-sessions-server</code>, port 8741) ingests new sessions and serves the <code>query</code> tool.</li>
+<li>After a host crash, check <code>systemctl --user is-active ingest-sessions</code> (with <code>XDG_RUNTIME_DIR=/run/user/$(id -u)</code>).
+  On 2026-10-29 it failed its start with <code>dependency</code> because <code>ingest-pg</code> came up 8 s later, and nothing restarted it.
+  <code>max(modified)</code> in <code>sessions</code> shows when ingestion stopped.</li>
 </ul>
 <h2 id="7-git-and-repositories">7. Git and repositories</h2>
 <p>All repositories are under <code>~/code/git_puller/repos/</code>.</p>

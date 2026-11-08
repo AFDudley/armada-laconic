@@ -61,25 +61,23 @@ has not named a new owner); pane w4:p1 lean-mend; pane w6:p1 exophial, and stage
    `Pool.apply` in Blanc, and V6 does the same task in EquiVM and Stele.
 7. Lake artifact cache in armada-lean (brief `.scratch/pool-exec/lake-cache-brief.md`): Lake v4.33.1 stores no build
    outputs unless `enableArtifactCache` is set, so every fresh tree compiles armada-lean. Measure, then a branch.
-8. Two forwarded SSH agent sockets went stale on 2026-11-08. Repair with `exophial ssh check --fix`
-   (`skill://ssh-fix`) before a push.
-9. Proof path (lab book `2026-10-20-nimbus-fixturenet-and-proxy-proof.md`): analyse whether the plan needs per-log
+8. Proof path (lab book `2026-10-20-nimbus-fixturenet-and-proxy-proof.md`): analyse whether the plan needs per-log
    proofs (an unchecked script and data are in `.scratch/PerLogAnalysis/`); add the proof as a job in the
    armada-nitro gates for the S7 acceptance.
-10. armada-nitro E16: one frozen asset blocks every payout of a close (`script/CustodianFrostScenario.s.sol`,
+9. armada-nitro E16: one frozen asset blocks every payout of a close (`script/CustodianFrostScenario.s.sol`,
     `concludeAndTransferAllAssets`). The fix is part of E11. The E16 brief's scope statement about E11 contradicts
     itself.
-11. armada-nitro E17, not scheduled: `_executeSingleAssetExit` ignores a `withdrawHelper` allocation; `reclaim`
+10. armada-nitro E17, not scheduled: `_executeSingleAssetExit` ignores a `withdrawHelper` allocation; `reclaim`
     credits only target allocations 0 and 1. No test confirms either.
-12. Selective disclosure (page 16, ADR-0020): no hop is checked against events of real transactions; the hub's
+11. Selective disclosure (page 16, ADR-0020): no hop is checked against events of real transactions; the hub's
     EIP-1271 check ran only against a stand-in. The production proof system and ceremony are open.
-13. Hub tracking of cross-chain swaps: no reference hub daemon or design page exists
+12. Hub tracking of cross-chain swaps: no reference hub daemon or design page exists
     (`engineering/shielded-nitro-bridge-design.md` §4-§6, ADR-0015).
-14. Documentation: `engineering/build-plan.md` S3 omits N9; S5 uses the old N1-N8 sizes. The site link to this note
+13. Documentation: `engineering/build-plan.md` S3 omits N9; S5 uses the old N1-N8 sizes. The site link to this note
     is broken because `notes/` is not rendered.
-15. The armada-poc gate omits `test:config`. armada-circuits `main` is behind `integrated`
+14. The armada-poc gate omits `test:config`. armada-circuits `main` is behind `integrated`
     (`git log --oneline main..integrated` in armada-circuits).
-16. Nitro, when its work starts: rename `Nitro.Address E` to `Nitro.Destination E` (it is a tagged destination, not an
+15. Nitro, when its work starts: rename `Nitro.Address E` to `Nitro.Destination E` (it is a tagged destination, not an
     address), and use `ArmadaLean.Address` for its external case and for `Participant.key` (go-nitro
     `INitroTypes.sol:14` `address[] participants`). The first Armada client that builds channels runs go-nitro's
     `FixedPart.Validate` check (risk R10).

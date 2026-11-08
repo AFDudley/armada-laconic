@@ -46,10 +46,17 @@ Read these documents. This file does not repeat them.
 
 ## 2. Models
 
-- Subagents: Sonnet by default. Use Opus only when Sonnet fails at the task. Do not use Fable. Keep the `fable` agent
-  definition file. Evidence: `labbook/2026-10-27-nitro-liveness-game-defects.md`.
+- Work in a repo that has an exophial bus goes through exophial: a pebble with spec oracles, filed by intake with
+  `--execute`, and dispatched on the routing of `engineering/build-plan.md` (the 5090 first, split above 9 points).
+  Do not run the work as direct subagent tasks. A direct agent has no prepared image, no oracle and no gate.
+  Evidence (2026-11-06/07, evm-proof-toolchain translator): an Opus agent spent 30 min on reading and build setup
+  before it wrote a line, and a vacuous hypothesis (`h_tree`) merged because no oracle checked non-vacuity.
 - Circuit work (armada-circuits) runs on Sonnet.
 - Husbands run on Sonnet, as the `task` agent.
+- Agent roster (operator, 2026-11-08): no `opus` and no `fable` agent. `fable.md` is moved to
+  `~/.omp/agent/agents-removed/`. A direct subagent runs as the `task` agent, which is `anthropic/claude-sonnet-5`
+  (`task.agentModelOverrides.task` in `~/.omp/agent/config.yml`). Per-call model overrides are off
+  (`task.perCallModel: off`). A coordinator asks the operator before it uses any other model.
 - At most 5 workers run at once. When an Anthropic account passes 60% of its 5-hour window, or its 7-day use grows
   faster than 0.6%/h, at most 2 Sonnet workers run.
 - The 5090 serves one session (`local_agents/router/pools.json`, `maxSessions: 1`). `exophial4` shares it through

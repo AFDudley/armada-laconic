@@ -1,145 +1,97 @@
 # Handoff — Armada build programme
 
-This note holds the work in flight, the next steps, what waits for the operator, and the open questions. It does not
-copy state that a command, the pebble bus or another document shows. Rules and procedures are in
-`engineering/operating-rules.md` and the documents that it lists. Remove an item when it is resolved; git history keeps
-the record. Commit every change to `main`. A claim that the writer did not observe has the mark [INFERENCE].
+This note holds only open questions, what is to be done, and what is pending (operator ruling, 2026-11-07). A
+completed item is removed from it. To see what is done, read the issue bus of each repo.
 
-The plan is `engineering/build-plan.md`. Decisions are in `labbook/`.
+## Documents
 
-## 1. Lean specification (the main track)
+All paths are absolute. Read the goal document first. Open the others when a task needs them.
 
-The old adjudicator model `adjudicator-model-v4` is reference only. Do not extend it
-(`labbook/2026-10-26-adjudicator-layout-audit.md`).
+| What | Document |
+|---|---|
+| **Read first.** The goal, the scope and the order of the proof work: the pool first, then armada-nitro; governance out | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-06-proof-scope-and-order.md` |
+| The build plan (S-items and their status) | `~/code/git_puller/repos/armada-laconic/engineering/build-plan.md` |
+| The operating rules (models, limits, routing) | `~/code/git_puller/repos/armada-laconic/engineering/operating-rules.md` |
+| All decisions | `~/code/git_puller/repos/armada-laconic/labbook/` |
+| The proof toolchain plan (items A-E) | `~/code/git_puller/repos/evm-proof-toolchain/docs/plan.md` |
+| The Lean model to Stele translator (milestones §9, open questions §10) | `~/code/git_puller/repos/evm-proof-toolchain/docs/translator.md` |
+| The Lean model of the pool and of Nitro | `~/code/git_puller/repos/armada-lean/` (namespace `ArmadaLean`) |
 
-`github.com/AFDudley/armada-lean` has one trunk, in the clone `~/code/git_puller/repos/armada-lean` (bus prefix `aln`).
-The dispatcher owns the trunk branch; the fork's `main` follows it. Approval tags:
-`pool-symbolic-approved-2026-10-28`, `nitro-proofs-approved-2026-10-28`, `nitro-theorems-approved-2026-10-27`.
-`armada-nitro-spec` (worktree `armada-lean-armada-nitro-spec`) is the Armada layer on the approved, not the repaired,
-Nitro spec. It waits for a rebuild on `main`.
+Owners: pane w3:p5 armada-lean, and the evm-proof-toolchain items of w3:p4 (that session ended 2026-11-07; the operator
+has not named a new owner); pane w4:p1 lean-mend; pane w6:p1 exophial, and stage ML of exophial `docs/merge_plan.md`.
 
-**Owner.** The coordinator in pane w3:p4 (session `01a192b4`) owns all Lean work, by operator order of 2026-10-31:
-merges, husbandry, the liaison with the dispatcher's coordinator (pane w6:p1) and the host limits
-(`engineering/operating-rules.md` §6).
+## Open questions to the operator
 
-**Open work at 2026-11-02, about 12:35Z** (from the w3:p4 session and `git log`; `main` at `89e9510d`).
+1. AxiomFix (w4:p1) has three edits, E1-E3, that give back the v4.29 axiom sets of all 43 axiom findings of lean-mend
+   run 10. The exact text is in evm-proof-toolchain `.scratch/axiom-fix/edits.md`. Apply them, run the gate, merge,
+   and start lean-mend run 11?
+2. Does the E11 pause of 2026-10-26 still hold? The E11 Aave yield gate merged on armada-nitro (bus `arn-0a2`).
+3. F3 governance is out of scope since 2026-11-06. Close or keep: `arp-6cc` and `arp-445.1` (closed, but armada-poc has
+   no merge commit for them); `arp-acf` and E7 (they wait for rulings); the replacement of the live armada-1
+   deployment and the move of ARM holders.
+4. Give the S7 proof gate job to a husband?
+5. mtm production: who owns the failing reconcile, and when is the cron line enabled again?
+6. Prune dangling Docker images? Remove marks from `pool/27b-class` and `pool/long`?
+7. Branch cleanup: armada-poc's fork has 153 branches with no local copy, armada-sdk's fork 19. Unclassified branches
+   and worktrees with uncommitted changes in armada-nitro, armada-poc and armada-circuits: list them with
+   `git branch -a` and `git worktree list` in each repo.
+8. `armada-laconic/.scratch/supervise/supervisor.py` runs (pid 1882621, started 2026-10-31, last sample
+   2026-11-07 03:17). It is a second scheduler that reads exophial internals. w6:p1: leave it running, queue no work
+   into it; stopping it is the operator's decision.
+9. evm-proof-toolchain `integrated` is 353 commits ahead of the pushed `main` (`e148eb42`), because
+   `branch.integrated.remote` is not set. Operator, 2026-11-08: do not push it now. When to push it?
 
-- **Proofs.** Two spec theorems are open: the Nitro-24 claims `finalizable_or_two_enabled` and
-  `single_enabled_is_finalizable` [INFERENCE: from the coordinator's 12:26Z report; I did not run `check.sh`].
-- **Nitro-24** (branch `draft/nitro24-appir`, tip `10e82339`). Four counterexamples, each a checked failure test in
-  `docs/counterexamples/`. Three honest-side rules are decided (one state per turn; after a final state, only final
-  states; `CanMoveTo` checks validity). They change the meaning of 29 Spec Liveness statements through their types
-  (the branch's repair doc §7.1). The coordinator's diagnosis (12:29Z): the claims swap a quantifier against the paper
-  (Nitro:640-652). `Enabled` is "no single strategy prevents Ω", while `Finalizable` needs one strategy that prevents
-  every other outcome at once. Patching does not converge. No other theorem uses the two claims.
-- **Codemods.** The local-model pilot merged 1 of 3 (`shield_can_happen`, `034b8af1`, net 0 lines). The other two
-  looped for 3 hours on thin briefs; the operator ruled that looping means a bad spec. `LayerCodemods` (Sonnet) found
-  that `layerDiscipline` counts constants that enter only through a case split's type or a bridge lemma's statement:
-  7 of 15 hits are false. `CodemodOpus` (Opus, branch `draft/cm-opus`, dispatched 12:33Z, no commit yet) fixes that
-  measure, checks the premise lints, replaces the real hits with shared lemmas, and removes the R.4 duplicates
-  (`reclaim_decompose` beside `reclaim_some`). Acceptance: every `check.sh` field true, `sorry` stays 2, `verify_says`
-  passes, net line change of `ArmadaLean/` below 0.
-- **Pebble bus.** The 24 codemod pebbles are out of the supervisor queue. `aln-290`, `aln-36e`, `aln-8ab` are parked
-  and need a disposition once `draft/cm-opus` reports. No reducer runs [INFERENCE: last reported at 09:57Z].
-- **Not scheduled** (`labbook/2026-11-02-refinement-risks.md` §7): the EquiVM and EVMLean changes V1-V3, the O1 gas
-  measurement, the conformance vectors, and the R1CS importer. Also not started: the general liveness theorem (R.6).
+## To be done
 
-**Waits for the operator.**
-1. Nitro-24 direction (asked 12:29Z): (1) measure against p's honest strategy, `Enabled_σ` (the coordinator's
-   recommendation); (2) a composition premise; (3) remove both claims and record the counterexamples. The operator
-   asked at 12:34Z whether Nitro-24 adds anything to the model; that discussion is open.
-2. armada-poc `sync/upstream-2026-10-30` (`8813d21a`, fork only; report `.scratch/poc-upstream-sync.md`): not merged
-   (checked: not an ancestor of the trunk tip `fbcf2b1e`). Accept or change two points: the yield vault takes upstream
-   `LOCKED_SHARES`, and `verifyOwned` becomes virtual. For the rewrite, the vault design of ship-armada/armada-poc#651
-   replaces `LOCKED_SHARES`; the sync question concerns only the current code.
-3. armada-circuits: the local trunk `9699ba9` is ahead of the fork's (`f790107`, `git ls-remote`). The branch
-   `draft/inputs-distinct` (`a505b9f`) adds the input-distinctness block that `Constrained.distinct` models; it is not
-   merged and changes the keys of all 51 shapes. Under the 2026-11-02 rulings the Lean model is the specification, so
-   this is a merge to schedule, not a model question.
-4. Phase 3 (local model for Lean): the codemod pilot is new evidence (1 of 3, after two corrections). The earlier
-   question, a rerun of `live_leaf_matches` with a bare brief (`labbook/2026-10-30-qwen-lean-phase3.md`), is not run.
+1. After question 1 (owner w3:p5): apply E1-E3 on a branch, run `scripts/gate.sh`, merge, then lean-mend run 11. Then
+   update the status of plan item A2 in evm-proof-toolchain `docs/plan.md`.
+2. Owner w3:p5: add `armada-stele/` to the evm-proof-toolchain worker image and gate, on its own env-change branch.
+   armada-stele is pinned to armada-lean `9a685f58` (evm-proof-toolchain `3e671aeb`) and builds with no change.
+3. Owner w3:p5: translator M3 (`transact`) as exophial pebbles: M3a tree batch insertion and root query, M3b the owned
+   `transact`, M3c its generator, M3d `transact` with unshield. Each acceptance includes a non-vacuity theorem.
+4. Translator open items (`docs/translator.md` §9 and §10): the trusted call hypotheses have no concrete witness yet
+   (step-2 work); the Solidity rewrite of the pool must compute the fee with full precision (`mulDiv`) and must not
+   record the empty tree's root.
+5. The pool's executable form is complete in armada-lean (PE1-PE5 and the fee-admin setter proved, `sorry_count` 0,
+   tip `c3e423e2`). The next step of the order is the Solidity rewrite of the pool from `Pool.apply`.
+6. Jaune/Blanc evaluation (`.scratch/jaune-eval/`, briefs there). V1-V4 are measuring: Jaune passes 4968/4968 and
+   3692/3692 execution-spec fixture files; EVMLean fails 89 Cancun cases so far; EquiVM's ERC20 proof depends on
+   2007 `native_decide` axioms; armada-lean on Jaune's Lean v4.35.0 fails one module (`Nitro.Invariant`, 4 `grind`
+   errors). Open: Blanc's axioms (V2) and gas (V3). If V1-V4 pass, V5 proves one pool function's bytecode against
+   `Pool.apply` in Blanc, and V6 does the same task in EquiVM and Stele.
+7. Lake artifact cache in armada-lean (brief `.scratch/pool-exec/lake-cache-brief.md`): Lake v4.33.1 stores no build
+   outputs unless `enableArtifactCache` is set, so every fresh tree compiles armada-lean. Measure, then a branch.
+8. Two forwarded SSH agent sockets went stale on 2026-11-08. Repair with `exophial ssh check --fix`
+   (`skill://ssh-fix`) before a push.
+9. Proof path (lab book `2026-10-20-nimbus-fixturenet-and-proxy-proof.md`): analyse whether the plan needs per-log
+   proofs (an unchecked script and data are in `.scratch/PerLogAnalysis/`); add the proof as a job in the
+   armada-nitro gates for the S7 acceptance.
+10. armada-nitro E16: one frozen asset blocks every payout of a close (`script/CustodianFrostScenario.s.sol`,
+    `concludeAndTransferAllAssets`). The fix is part of E11. The E16 brief's scope statement about E11 contradicts
+    itself.
+11. armada-nitro E17, not scheduled: `_executeSingleAssetExit` ignores a `withdrawHelper` allocation; `reclaim`
+    credits only target allocations 0 and 1. No test confirms either.
+12. Selective disclosure (page 16, ADR-0020): no hop is checked against events of real transactions; the hub's
+    EIP-1271 check ran only against a stand-in. The production proof system and ceremony are open.
+13. Hub tracking of cross-chain swaps: no reference hub daemon or design page exists
+    (`engineering/shielded-nitro-bridge-design.md` §4-§6, ADR-0015).
+14. Documentation: `engineering/build-plan.md` S3 omits N9; S5 uses the old N1-N8 sizes. The site link to this note
+    is broken because `notes/` is not rendered.
+15. The armada-poc gate omits `test:config`. armada-circuits `main` is behind `integrated`
+    (`git log --oneline main..integrated` in armada-circuits).
+16. Nitro, when its work starts: rename `Nitro.Address E` to `Nitro.Destination E` (it is a tagged destination, not an
+    address), and use `ArmadaLean.Address` for its external case and for `Participant.key` (go-nitro
+    `INitroTypes.sol:14` `address[] participants`). The first Armada client that builds channels runs go-nitro's
+    `FixedPart.Validate` check (risk R10).
 
-**Next steps.**
-1. Merge `draft/cm-opus` when `CodemodOpus` reports, after a check of its diff against its acceptance.
-2. Act on the Nitro-24 direction when the operator gives it. Until then no agent proves the two claims.
-3. Rebuild `armada-nitro-spec` on the repaired Nitro spec. The payee note key becomes Nitro's external-destination
-   parameter `E`. Channels follow the `ledger` and `virtual` kinds. Apply the pending payee-key rulings
-   (`payout_spendable`, `payment_note_only_payee`, no ciphertexts). Then give its theorem types to the operator.
-4. Vault (operator, 2026-11-02; filed as ship-armada/armada-poc#651). The rewritten `ArmadaYieldVault` has one
-   deposit entry: the caller names the most it pays, the vault charges what whole shares cost and returns the
-   change, and the sub-unit remainder goes to an explicit `roundingSurplus`. No `LOCKED_SHARES`, no `deposit(assets)`
-   that rounds shares down. Next: state these postconditions in the Lean vault model. That model supersedes
-   `draft/vault-locked-shares` (`26a1238`, the dead-share model), which is not merged. Open design point: a shielded
-   deposit that commits to an exact note amount needs the change returned as its own note, or a note amount fixed
-   after the call. `ArmadaLean/Vault.lean` on the trunk still models the pre-fix contract (`inflation_attack_*`,
-   `mitigated_*`) and goes when the new model merges.
-5. Specs for any work item name the base operation the lint flags, the lemma that replaces it or the lemma to add,
-   and how to run Lean in the worktree (operator, 2026-11-02: looping is a spec defect).
+## Pending (waits for someone else)
 
-## 2. Other tracks
-
-- **E11 pause (operator ruling, 2026-10-26)**: all E11 work waits until the Lean work is complete. Conflict: the E11
-  Aave yield gate merged on armada-nitro (`fddf4337`, bus `arn-0a2`; `arn-273` closed). No record of a lifted pause
-  was found in `labbook/` or this note. Ask the operator whether the pause still holds before an E11 pebble is queued.
-- **F4 collateral** is replaced by the Lean work.
-- **F3 governance** (husband `HusbandF3j`):
-  - `arp-6cc` (E2) and `arp-445.1` (E5) are closed, but armada-poc `integrated` has no merge commit for them. The
-    husband must find out why.
-  - `arp-acf` (E3 follow-up) and E7 (treasury ARM in the payout divisor) wait for operator rulings.
-  - G7 (`arn-5c3`, `arn-d62`): held for `exo-7ea` (a pebble keeps the base of its first claim).
-  - Open: the replacement of the live armada-1 deployment and the move of ARM holders.
-- **F2** (husband `HusbandF2c`, also E11): N9 waits for N3. **F5 client:** waits for N3.
-- **Dispatch.** One supervisor runs (`pgrep -af supervisor.py`), queue at
-  `.scratch/supervise/queue.jsonl`, log at `.scratch/supervise/supervisor.log`.
-- **Gates.** armada-circuits now has `.exophial/gate/Dockerfile` on `integrated`. The armada-poc gate still omits
-  `test:config`.
-
-## 3. Open items with no other record
-
-- **Proof path (nimbus verified proxy).** Lab book: `2026-10-20-nimbus-fixturenet-and-proxy-proof.md` and
-  `2026-10-20-proxy-and-archive-open-questions.md`. Open operator orders:
-  1. File a local issue for the WASM proxy stall. armada-client is the tracker. `exophial intake` there needs a
-     committed armada-client document that states the rule (ADR-0009 D9.2, `build-plan.md` T1-4). armada-client
-     doctrine requires operator approval of the issue body. A draft is in session `01a14aa3`.
-  2. Analyse whether the plan needs per-log proofs. A stopped agent left an unchecked script and data in
-     `.scratch/PerLogAnalysis/`.
-  3. The S7 acceptance needs the proof as a job in the armada-nitro gates. No chunk schedules it.
-- **E16 (armada-nitro).** The hub's close script pays with `concludeAndTransferAllAssets`
-  (`script/CustodianFrostScenario.s.sol`). With a second asset, one frozen asset blocks every payout of that close.
-  The fix is part of E11. The E16 brief's scope statement about E11 contradicts itself.
-- **E17 (armada-nitro).** Not scheduled. Candidate defects that no test confirms: `_executeSingleAssetExit` ignores a
-  `withdrawHelper` allocation (clause 31, Sil4); `reclaim` credits only target allocations 0 and 1 (Sil6).
-- **Selective disclosure.** Design: page 16 and ADR-0020. Circuit: ship-armada/armada-circuits#3. SDK: draft
-  ship-armada/armada-sdk#142. No hop is checked against events from real transactions. The hub's EIP-1271 check ran
-  only against a stand-in. `arn-12e` covers both and is parked under the E11 pause. The production proof system and
-  ceremony are open.
-- **Hub tracking of cross-chain swaps.** `engineering/shielded-nitro-bridge-design.md` §4–§6 and ADR-0015 put hub
-  inventory, rebalancing and pricing out of protocol. No reference hub daemon or design page exists.
-- **exophial.** `exophial/acceptance-e2e-outer-gate.md` is untracked and not filed.
-- **mtm production.** The cron line is disabled (backup `.scratch/crontab.before-2026-10-16`). The reconcile failed at
-  "Converge the gateway surface to the promoted ref". Before the cron line is enabled again, its checkout must follow
-  `origin/main`.
-- **Documentation.**
-  - `engineering/build-plan.md`: S3 omits N9 (9 points). S5 uses the old N1–N8 sizes (43), not the split briefs (50).
-  - The site link to this note is broken because `notes/` is not rendered.
-- **AFDudley forks push over SSH.** Every repo's `AFDudley.github.com` (or `fork`) remote push URL is `git@github.com:AFDudley/<repo>.git`. `armada-client` is the one exception: its only remote, `origin`, still pushes over HTTPS.
-- **armada-circuits `integrated` tip.** `9699ba9` adds `ff-main-from-integrated`. `main` is 36 commits behind it
-  (`git log --oneline main..9699ba9` in `~/code/git_puller/repos/armada-circuits`); the workflow has not caught
-  `main` up yet.
-- **Branch cleanup, 2026-10-28.** Deleted branches survive as `archive/<name>` tags on each fork. Left for a decision:
-  - armada-poc's fork has 153 branches with no local copy (`brent/*`, `iskay/*`, `feature/*`, …). armada-sdk's fork
-    has 19 such branches.
-  - Unclassified branches: armada-nitro `arn765-abl`, `backup/main-before-reset-2026-10-13`, `docs/r1-single-chunk`,
-    `epic/arn-46d`, `hand/e16-2026-10-14`, `migrate/briefguards2`, `task/arn-46d1-rebase`; armada-poc
-    `design/interactive-baseline`, `design/rendered-baseline`, `docs/design-system-policy`, `exo/drop-license-check`;
-    armada-circuits `ceremony/1x2-0001-iskay`, `disclosure-circuit`, `docs/n6-battleship-brief`, `feat/public-ceremony`.
-  - Worktrees with uncommitted changes: armada-nitro `worker-arn-781`, `worker-arn-bd4`; armada-poc `hand/arp-caf-e3`,
-    `worker-arp-dec`; armada-circuits `.scratch/cfg-sonnet`, `.scratch/n5fix`, `.scratch/probe-circom`.
-
-## 4. Questions to the operator
-
-- `supervisor.py` replaces scheduling that exophial lacks (host-wide limits, quota, local versus cloud routing). Move
-  it into exophial as a feature?
-- Give the S7 proof gate job to a husband?
-- mtm production: who owns the failing reconcile, and when is the cron line enabled again?
-- Prune dangling Docker images? Remove marks from `pool/27b-class` and `pool/long`?
+1. w4:p1 (lean-mend): a rule trigger for axiom findings, so a later run makes edits like E1-E3 itself (plan item E1).
+2. w6:p1, stage ML: `exo-748.1` (the Lean package) is parked; its fix is `exo-503` (law L2). `exo-748.2`, `exo-748.3`,
+   `exo-c57` and `exo-313` wait behind it. armada-lean has no open spec theorem now, so the next statement commit
+   with an open theorem gives w6:p1 its replay subject.
+3. Pebble `exo-041` (parked: the gate container drops `.claude`; law L3, epic `exo-4d4d`): skills come from one source,
+   the installed tool. Until it merges, a worker in armada-lean or evm-proof-toolchain cannot read
+   `exophial-worker-orient`.
+4. F2 (husband `HusbandF2c`): N9 waits for N3. F5 client waits for N3.
+5. The WASM proxy stall issue in armada-client: the operator approves the issue body (draft in session `01a14aa3`).

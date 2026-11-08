@@ -54,30 +54,29 @@ has not named a new owner); pane w4:p1 lean-mend; pane w6:p1 exophial, and stage
    record the empty tree's root.
 5. The pool's executable form is complete in armada-lean (PE1-PE5 and the fee-admin setter proved, `sorry_count` 0,
    tip `c3e423e2`). The next step of the order is the Solidity rewrite of the pool from `Pool.apply`.
-6. Jaune/Blanc evaluation (`.scratch/jaune-eval/`, briefs there). V1-V4 are measuring: Jaune passes 4968/4968 and
-   3692/3692 execution-spec fixture files; EVMLean fails 89 Cancun cases so far; EquiVM's ERC20 proof depends on
-   2007 `native_decide` axioms; armada-lean on Jaune's Lean v4.35.0 fails one module (`Nitro.Invariant`, 4 `grind`
-   errors). Open: Blanc's axioms (V2) and gas (V3). If V1-V4 pass, V5 proves one pool function's bytecode against
-   `Pool.apply` in Blanc, and V6 does the same task in EquiVM and Stele.
-7. Lake artifact cache in armada-lean (brief `.scratch/pool-exec/lake-cache-brief.md`): Lake v4.33.1 stores no build
-   outputs unless `enableArtifactCache` is set, so every fresh tree compiles armada-lean. Measure, then a branch.
-8. Proof path (lab book `2026-10-20-nimbus-fixturenet-and-proxy-proof.md`): analyse whether the plan needs per-log
+6. Jaune/Blanc evaluation (`.scratch/jaune-eval/`, briefs there). V1-V4 pass for Jaune/Blanc: 4968/4968 and 3692/3692
+   execution-spec fixture files; all 7 Blanc exhibits rest on Lean's three axioms; gas is an exact equality; armada-lean
+   on v4.35.0 fails one module. EquiVM's ERC20 proof has 2007 `native_decide` axioms. EVMLean's Cancun count (341
+   failures) is not clean: the host lacked its Python crypto modules. Next: an evaluation image built on the
+   evm-proof-toolchain worker image plus those modules and solc; the EVMLean rerun in it; then V5 (`setFeeRatio`
+   bytecode against `Pool.apply` in Blanc) and V6 (the same task in EquiVM and Stele).
+7. Proof path (lab book `2026-10-20-nimbus-fixturenet-and-proxy-proof.md`): analyse whether the plan needs per-log
    proofs (an unchecked script and data are in `.scratch/PerLogAnalysis/`); add the proof as a job in the
    armada-nitro gates for the S7 acceptance.
-9. armada-nitro E16: one frozen asset blocks every payout of a close (`script/CustodianFrostScenario.s.sol`,
+8. armada-nitro E16: one frozen asset blocks every payout of a close (`script/CustodianFrostScenario.s.sol`,
     `concludeAndTransferAllAssets`). The fix is part of E11. The E16 brief's scope statement about E11 contradicts
     itself.
-10. armada-nitro E17, not scheduled: `_executeSingleAssetExit` ignores a `withdrawHelper` allocation; `reclaim`
+9. armada-nitro E17, not scheduled: `_executeSingleAssetExit` ignores a `withdrawHelper` allocation; `reclaim`
     credits only target allocations 0 and 1. No test confirms either.
-11. Selective disclosure (page 16, ADR-0020): no hop is checked against events of real transactions; the hub's
+10. Selective disclosure (page 16, ADR-0020): no hop is checked against events of real transactions; the hub's
     EIP-1271 check ran only against a stand-in. The production proof system and ceremony are open.
-12. Hub tracking of cross-chain swaps: no reference hub daemon or design page exists
+11. Hub tracking of cross-chain swaps: no reference hub daemon or design page exists
     (`engineering/shielded-nitro-bridge-design.md` §4-§6, ADR-0015).
-13. Documentation: `engineering/build-plan.md` S3 omits N9; S5 uses the old N1-N8 sizes. The site link to this note
+12. Documentation: `engineering/build-plan.md` S3 omits N9; S5 uses the old N1-N8 sizes. The site link to this note
     is broken because `notes/` is not rendered.
-14. The armada-poc gate omits `test:config`. armada-circuits `main` is behind `integrated`
+13. The armada-poc gate omits `test:config`. armada-circuits `main` is behind `integrated`
     (`git log --oneline main..integrated` in armada-circuits).
-15. Nitro, when its work starts: rename `Nitro.Address E` to `Nitro.Destination E` (it is a tagged destination, not an
+14. Nitro, when its work starts: rename `Nitro.Address E` to `Nitro.Destination E` (it is a tagged destination, not an
     address), and use `ArmadaLean.Address` for its external case and for `Participant.key` (go-nitro
     `INitroTypes.sol:14` `address[] participants`). The first Armada client that builds channels runs go-nitro's
     `FixedPart.Validate` check (risk R10).
@@ -93,3 +92,6 @@ has not named a new owner); pane w4:p1 lean-mend; pane w6:p1 exophial, and stage
    `exophial-worker-orient`.
 4. F2 (husband `HusbandF2c`): N9 waits for N3. F5 client waits for N3.
 5. The WASM proxy stall issue in armada-client: the operator approves the issue body (draft in session `01a14aa3`).
+6. w6:p1, pebble `exo-6dd.2`: the gate and worker containers read one host Lake artifact store. Law L3: exophial's
+   image-store owner is its only writer; the gate mounts it read-only; a worker never writes a store a gate reads.
+   It starts after exophial `integrated` is green again. w6:p1 sends the merge sha.

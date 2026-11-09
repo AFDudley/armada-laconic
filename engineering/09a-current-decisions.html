@@ -139,7 +139,6 @@
 <h3 id="adr-0019-architecture-decisions-state-what-must-hold-code-level-requirements-live-with-the-code">ADR-0019 — Architecture decisions state what must hold; code-level requirements live with the code</h3>
 <ul>
 <li><strong>D19.1</strong> Architecture decisions and design pages in this repo state <strong>what must hold</strong> (decisions and invariants). Requirements on <strong>how a component's code enforces them</strong>, and the tests that verify it, live in that component's repository and cite the invariants they implement.</li>
-<li><strong>D19.2</strong> (supersedes D17.5) The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of <a href="./15-hub-yield-and-swaps.html">15</a>; its asset allow-list is <strong>immutable</strong>. The contract-level requirements and their tests are armada-nitro's task E16.</li>
 </ul>
 <h3 id="adr-0020-selective-disclosure-of-a-chain-of-custody-voluntary-off-chain">ADR-0020 — Selective disclosure of a chain of custody (voluntary, off-chain)</h3>
 <ul>
@@ -149,6 +148,11 @@
 <li><strong>D20.4</strong> The protocol needs no change to the pool, its circuits or the armada-nitro contracts. It must never become a condition to deposit into, transfer in, or withdraw from the pool.</li>
 <li><strong>D20.5</strong> A statement either claims an attribution for a channel's gain or claims none. A claimed attribution requires the channel's co-signed states, and the verifier checks all of them. Without a claim, the verifier reports only the deposit and payout amounts. The protocol has no optional evidence.</li>
 <li><strong>D20.6</strong> The statement names one chain, one pool and, for channel hops, one armada-nitro adjudicator. The verifier accepts only events from that chain and those contracts.</li>
+</ul>
+<h3 id="adr-0021-on-one-l1-value-moves-between-systems-as-routed-nitro-payments-asset-lists-may-name-factories">ADR-0021 — On one L1, value moves between systems as routed Nitro payments; asset lists may name factories</h3>
+<ul>
+<li><strong>D21.1</strong> Between systems that settle under one armada-nitro adjudicator, value moves as a Nitro payment routed through hubs' channels, made atomic by Nitro's guarantees and reclaim. A hub routes the payment and advances no value. No hash lock is used. Hub trust stays liveness-only, through unilateral exit (ADR-0004).</li>
+<li><strong>D21.2</strong> (supersedes D19.2) The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of <a href="./15-hub-yield-and-swaps.html">15</a>. Its asset list is <strong>immutable</strong>. The list may also name factories, fixed at deployment like the list, and every token that a named factory deployed is a listed asset. A factory is named only if every token it can deploy satisfies I1. The contract-level requirements and their tests are armada-nitro's task E16.</li>
 </ul>
 <h2 id="supersessions">Supersessions</h2>
 <table>
@@ -174,6 +178,11 @@
 <td>D17.5</td>
 <td>D19.2</td>
 <td>The adjudicator gains an immutable asset allow-list, balance-delta accounting on <code>deposit</code>, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: <a href="./15-hub-yield-and-swaps.html">15</a>.</td>
+</tr>
+<tr>
+<td>D19.2</td>
+<td>D21.2</td>
+<td>The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of <a href="./15-hub-yield-and-swaps.html">15</a>; its asset allow-list is <strong>immutable</strong>. The contract-level requirements and their tests are armada-nitro's task E16.</td>
 </tr>
 </tbody>
 </table>

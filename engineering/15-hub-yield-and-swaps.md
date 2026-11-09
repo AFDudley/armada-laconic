@@ -94,11 +94,11 @@ The hub's calls follow ERC-4626 practice: an exact `forceApprove` of the deposit
 
 This page states what must hold. How the contracts enforce it lives with the contracts: armada-nitro's task **E16 · Adjudicator hardening for multi-asset hub channels** (`docs/tasks/E16-adjudicator-hardening.md`) turns I1, I4, I5 and I6 into concrete contract requirements and tests that fail before and pass after. I2 and I3 need no contract change; I7 concerns the hub's own operations.
 
-One design choice belongs here rather than there: the asset allow-list is **immutable**, so adding an asset is a new adjudicator deployment. With four assets and channels that are short-lived relative to deployments, that is acceptable and keeps governance off the settlement path. A governed list is a later decision.
+One design choice belongs here rather than there: the asset allow-list is **immutable**, and it may name factories fixed at deployment, so that every token a named factory deployed is listed ([ADR-0021](./09-architecture-decisions.md#adr-0021) D21.2). A factory is named only if every token it can deploy satisfies I1. Adding any other asset is a new adjudicator deployment. This keeps governance off the settlement path. A governed list is a later decision.
 
 ## What this does not cover
 
-- **Unilateral swap enforcement.** Option 2 swaps need both signatures. A swap routed across hubs through virtual channels needs the hash-locked swap pattern of [ADR-0015](./09-architecture-decisions.md#adr-0015).
+- **Unilateral swap enforcement.** Option 2 swaps need both signatures. On one L1, a swap routed across hubs is one co-signed state in a virtual channel that the hubs' channels fund, so it is atomic with no hash lock ([ADR-0021](./09-architecture-decisions.md#adr-0021) D21.1). The hash-locked swap of [ADR-0015](./09-architecture-decisions.md#adr-0015) applies only between chains with separate adjudicators.
 - **Protocol fees on swaps.** The fee split (T4.3) is an allocation on the same state and needs no further mechanism.
 
 ## How it is tested

@@ -28,6 +28,7 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 | [0018](#adr-0018) | Decisions are clause-level records compiled to a current view | accepted |
 | [0019](#adr-0019) | Architecture decisions state what must hold; code-level requirements live with the code | accepted |
 | [0020](#adr-0020) | Selective disclosure of a chain of custody (voluntary, off-chain) | accepted |
+| [0021](#adr-0021) | On one L1, value moves between systems as routed Nitro payments; asset lists may name factories | accepted |
 
 ---
 
@@ -336,3 +337,17 @@ Decisions are recorded as **ADRs** in the Michael Nygard format: append-only, nu
 **Consequences.** One net-new component: a small disclosure circuit (a few Poseidon hashes and one EdDSA check), with its own proof system choice and verifier. All other links in the chain use data that is already public or that the wallet already holds. Users do not need to rotate keys to limit what a disclosure reveals. A disclosure package can be forwarded and checked by anyone who holds it, and it opens the disclosed notes permanently. Address-ownership verification products, such as WalletConnect Wallet Verification, are complementary to this protocol and compatible with it.
 
 **Alternatives.** Disclose the `nullifyingKey` (rejected: it reveals every spend of the wallet). Disclose the viewing key (rejected: it reveals every note and balance of the wallet). Rotate keys often to limit what one disclosure reveals (rejected as the mechanism: it does not hide spends made under a disclosed key, and each rotation costs a migration transaction and adds a step to every proof chain). A disclosure gate in the pool or the adjudicator (rejected: forbidden by §Pool access conditions). Optional attribution evidence (rejected: a package without it has no defined meaning, and a checker cannot be tested against it).
+
+## ADR-0021
+**On one L1, value moves between systems as routed Nitro payments; asset lists may name factories** · accepted · 2026-11-09
+
+**Context.** ADR-0015 moves value between chains by fronting: a hub advances one leg from its inventory, and an off-chain hash-locked swap makes the advance atomic. The MetaLeX design reused that model between an issuer's RootChain state and armada-nitro channels, which settle on the same L1 (armada-metalex `docs/system-design.md` §9.3). There, every leg is an allocation under one armada-nitro adjudicator. Nitro already moves value across several channels atomically, with guarantees and reclaim, and ForceMove accepts or rejects whole states, so "a half-executed swap (one leg moved, the other not) cannot be represented on chain" ([15](./15-hub-yield-and-swaps.md), I2). Fronting and a hash lock on one L1 are a second atomicity construction, and they leave value in flight. Separately, the adjudicator's asset list is immutable (D19.2), so each new token needs a new adjudicator deployment. An issuer's wrapper token adds one token per issuer.
+
+**Decision.**
+
+- **D21.1** Between systems that settle under one armada-nitro adjudicator, value moves as a Nitro payment routed through hubs' channels, made atomic by Nitro's guarantees and reclaim. A hub routes the payment and advances no value. No hash lock is used. Hub trust stays liveness-only, through unilateral exit (ADR-0004).
+- **D21.2** (supersedes D19.2) The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of [15](./15-hub-yield-and-swaps.md). Its asset list is **immutable**. The list may also name factories, fixed at deployment like the list, and every token that a named factory deployed is a listed asset. A factory is named only if every token it can deploy satisfies I1. The contract-level requirements and their tests are armada-nitro's task E16.
+
+**Consequences.** Fronting and the hash-locked swap of D15.1 remain only between chains with separate adjudicators, which cannot see each other's states. On one L1, no party has value in flight, and a hub needs channel capacity but no inventory to route a payment. armada-nitro's E16 gains a factory check in `isAsset`. The armada-metalex issuer-wrapper factory is the first named factory.
+
+**Alternatives.** Fronting with a hash-locked swap on one L1 (rejected: a second atomicity construction where Nitro routing is already atomic). Fronting without a hash lock (rejected: one side has value in flight). One adjudicator deployment per new token (rejected: one token per issuer makes the deployments unbounded). A governed asset list (still deferred: a named factory keeps governance off the settlement path).

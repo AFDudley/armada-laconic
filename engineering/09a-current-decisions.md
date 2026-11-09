@@ -101,7 +101,6 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
 
 ### ADR-0019 — Architecture decisions state what must hold; code-level requirements live with the code
 - **D19.1** Architecture decisions and design pages in this repo state **what must hold** (decisions and invariants). Requirements on **how a component's code enforces them**, and the tests that verify it, live in that component's repository and cite the invariants they implement.
-- **D19.2** (supersedes D17.5) The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of [15](./15-hub-yield-and-swaps.md); its asset allow-list is **immutable**. The contract-level requirements and their tests are armada-nitro's task E16.
 
 ### ADR-0020 — Selective disclosure of a chain of custody (voluntary, off-chain)
 - **D20.1** Armada provides a voluntary, off-chain selective disclosure protocol. With it, a user proves a chain of custody for chosen value: from a shielding address, through notes, spends and armada-nitro channels, to a payout note or a withdrawal address. The user reveals nothing else about the wallet.
@@ -111,6 +110,10 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
 - **D20.5** A statement either claims an attribution for a channel's gain or claims none. A claimed attribution requires the channel's co-signed states, and the verifier checks all of them. Without a claim, the verifier reports only the deposit and payout amounts. The protocol has no optional evidence.
 - **D20.6** The statement names one chain, one pool and, for channel hops, one armada-nitro adjudicator. The verifier accepts only events from that chain and those contracts.
 
+### ADR-0021 — On one L1, value moves between systems as routed Nitro payments; asset lists may name factories
+- **D21.1** Between systems that settle under one armada-nitro adjudicator, value moves as a Nitro payment routed through hubs' channels, made atomic by Nitro's guarantees and reclaim. A hub routes the payment and advances no value. No hash lock is used. Hub trust stays liveness-only, through unilateral exit (ADR-0004).
+- **D21.2** (supersedes D19.2) The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of [15](./15-hub-yield-and-swaps.md). Its asset list is **immutable**. The list may also name factories, fixed at deployment like the list, and every token that a named factory deployed is a listed asset. A factory is named only if every token it can deploy satisfies I1. The contract-level requirements and their tests are armada-nitro's task E16.
+
 ## Supersessions
 
 | Superseded | By | Superseded decision (for reference) |
@@ -118,3 +121,4 @@ The live (non-superseded) Decision clauses of every accepted ADR, in order, foll
 | D11.3 | D17.6 | Consequently v1 yield is **ETH/wstETH only** (held as a note, T4.4), and **USDC yield defers to v2**. |
 | D12.3 | D18.1 | **Fixed architecture baseline.** ADRs 0002–0011 are the baseline; specs build on them and never relitigate. Change means *superseding* an ADR, never editing a decided one. |
 | D17.5 | D19.2 | The adjudicator gains an immutable asset allow-list, balance-delta accounting on `deposit`, and a reentrancy guard on every holdings-changing function; clients exit per asset when an all-assets transfer reverts. Invariants and requirements: [15](./15-hub-yield-and-swaps.md). |
+| D19.2 | D21.2 | The armada-nitro adjudicator, with its clients and watchtowers, enforces invariants I1–I7 of [15](./15-hub-yield-and-swaps.md); its asset allow-list is **immutable**. The contract-level requirements and their tests are armada-nitro's task E16. |

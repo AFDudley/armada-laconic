@@ -95,3 +95,8 @@ has not named a new owner); pane w4:p1 lean-mend; pane w6:p1 exophial, and stage
 6. w6:p1, pebble `exo-6dd.2`: the gate and worker containers read one host Lake artifact store. Law L3: exophial's
    image-store owner is its only writer; the gate mounts it read-only; a worker never writes a store a gate reads.
    It starts after exophial `integrated` is green again. w6:p1 sends the merge sha.
+7. Exophial session `01a18891` (the exophial coordinator): an exophial fix so that a change to a repo's gate command can
+   pass the gate. Then armada-laconic session `01a195d3` merges two armada-poc branches, in order:
+   `chore/gate-no-npm-ci` (`0c8cdaba`, the gate command without its second `npm ci`: 331-492 s to 158 s, limit 300 s),
+   then `chore/solc-0.8.31` (`3a3ef80e`, `18349c4a`: solc 0.8.31, `evmVersion` `osaka`, the current mainnet, Fusaka).
+   Worktrees: armada-poc `.scratch/solc-020/{gate-wt,wt}`. Address agents by session id; pane ids change.

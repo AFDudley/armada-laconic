@@ -13,10 +13,6 @@
 #
 set -euo pipefail
 
-# Defaults are the MacPorts paths; override with MARKDOWN=/SED= on other hosts.
-MARKDOWN="${MARKDOWN:-/opt/local/bin/markdown_py-3.13}"
-SED="${SED:-/opt/local/bin/gsed}"
-
 usage() {
   echo "usage: tools/render.sh <input.md> <output.html> \"<title>\"" >&2
   exit 2
@@ -26,8 +22,8 @@ MD="${1:-}";    [ -n "$MD" ]    || usage
 OUT="${2:-}";   [ -n "$OUT" ]   || usage
 TITLE="${3:-}"; [ -n "$TITLE" ] || usage
 
-[ -x "$MARKDOWN" ] || { echo "render.sh: markdown renderer not found at $MARKDOWN" >&2; exit 1; }
-[ -x "$SED" ]      || { echo "render.sh: gsed not found at $SED" >&2; exit 1; }
+# shellcheck source=tools/render-tools.sh
+. "$(dirname "$0")/render-tools.sh" render.sh
 [ -f "$MD" ]       || { echo "render.sh: input markdown not found: $MD" >&2; exit 1; }
 
 # Render the Markdown body, then strip trailing whitespace from every line so

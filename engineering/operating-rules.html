@@ -108,10 +108,17 @@ state. The handoff (<code>notes/handoff.md</code>) records only the work in flig
 </ul>
 <h2 id="2-models">2. Models</h2>
 <ul>
-<li>Subagents: Sonnet by default. Use Opus only when Sonnet fails at the task. Do not use Fable. Keep the <code>fable</code> agent
-  definition file. Evidence: <code>labbook/2026-10-27-nitro-liveness-game-defects.md</code>.</li>
+<li>Work in a repo that has an exophial bus goes through exophial: a pebble with spec oracles, filed by intake with
+  <code>--execute</code>, and dispatched on the routing of <code>engineering/build-plan.md</code> (the 5090 first, split above 9 points).
+  Do not run the work as direct subagent tasks. A direct agent has no prepared image, no oracle and no gate.
+  Evidence (2026-11-06/07, evm-proof-toolchain translator): an Opus agent spent 30 min on reading and build setup
+  before it wrote a line, and a vacuous hypothesis (<code>h_tree</code>) merged because no oracle checked non-vacuity.</li>
 <li>Circuit work (armada-circuits) runs on Sonnet.</li>
 <li>Husbands run on Sonnet, as the <code>task</code> agent.</li>
+<li>Agent roster (operator, 2026-11-08): no <code>opus</code> and no <code>fable</code> agent. <code>fable.md</code> is moved to
+  <code>~/.omp/agent/agents-removed/</code>. A direct subagent runs as the <code>task</code> agent, which is <code>anthropic/claude-sonnet-5</code>
+  (<code>task.agentModelOverrides.task</code> in <code>~/.omp/agent/config.yml</code>). Per-call model overrides are off
+  (<code>task.perCallModel: off</code>). A coordinator asks the operator before it uses any other model.</li>
 <li>At most 5 workers run at once. When an Anthropic account passes 60% of its 5-hour window, or its 7-day use grows
   faster than 0.6%/h, at most 2 Sonnet workers run.</li>
 <li>The 5090 serves one session (<code>local_agents/router/pools.json</code>, <code>maxSessions: 1</code>). <code>exophial4</code> shares it through

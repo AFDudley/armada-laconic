@@ -15,12 +15,8 @@
 #
 set -euo pipefail
 
-# Defaults are the MacPorts paths; override with MARKDOWN=/SED= on other hosts.
-MARKDOWN="${MARKDOWN:-/opt/local/bin/markdown_py-3.13}"
-SED="${SED:-/opt/local/bin/gsed}"
-
-[ -x "$MARKDOWN" ] || { echo "render-engineering.sh: markdown renderer not found at $MARKDOWN" >&2; exit 1; }
-[ -x "$SED" ]      || { echo "render-engineering.sh: gsed not found at $SED" >&2; exit 1; }
+# shellcheck source=tools/render-tools.sh
+. "$(dirname "$0")/render-tools.sh" render-engineering.sh
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

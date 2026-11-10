@@ -124,7 +124,8 @@ requiring armada-lean by git and Blanc by path. `armada-stele/` stays until P7's
 ## 7. Open
 
 1. The construct inventory (§5).
-2. armada-lean on Lean v4.35.0 (3 `grind` failures in `Nitro/Invariant.lean`, measured on `c3e423e2`).
+2. ~~armada-lean on Lean v4.35.0~~: merged 2026-11-10 as `2de42407` (tip `d960899c`). The 3 `grind` failures were
+   stale replay anchors (`grind only [#3a2f, …]`), recorded under v4.33.1; plain `grind only` closes both goals.
 3. The pool statement audit (O8) is not started. It comes before `transact`.
 4. V5's `hFee` and `hAdminShaped` need a reachability proof over the contract's own calls. P4 inherits them.
 

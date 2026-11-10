@@ -61,6 +61,27 @@ chain is keyed to the constructs of that tree.
 | # | Part | Artifact |
 |---|---|---|
 | P1 | **Syntax** | `SolAst`: the Solidity subset the printer emits. Its constructs are exactly the inventory of `Pool.apply`'s needs (§5). |
+| P2 | **Semantics** | `SolAst.eval`: a Lean function from a call and a contract state to `Option` state, written per construct, total, with no EVM detail. |
+| P3 | **Printer and parser** | `print : SolAst → String`, `parse : String → Option SolAst`, and one theorem `parse_print`. This is O3 without Stele. |
+| P4 | **Model link** | For each pool function, a `SolAst` term and a theorem that `eval` of it equals `Pool.apply` on the decoded state (a relation for the tree, §5). |
+| P5 | **Pattern catalogue** | For each construct, its bytecode forms under the pinned settings, located through solc's source maps (M0b gives the forms). |
+| P6 | **Lemma library** | For each construct form, one Blanc lemma: the bytecode segment refines `eval` of the construct. Forward with exact gas (`RunExact`), `RunEx` for external calls, inversion for reverts. Plus one generic call-and-return lemma. |
+| P7 | **Generator** | From a `SolAst` term, solc's source map and Blanc's certificate: the composed theorem that the bytecode refines `eval` of the term. Composed with P4: the bytecode refines `Pool.apply`. |
+| P8 | **Assumptions** | The token and the trusted verifier, each stated once as a named structure, as `TransactProofSoundness` is. Keccak slot non-collision as named hypotheses. |
+| P9 | **Gate** | Per contract: the theorems build, 0 `sorry`, and `#print axioms` shows Lean's three axioms plus the declared hypotheses only. |
+
+Why P2 sits in the middle: P6's lemmas then talk about `eval` of one construct, not about `Pool.apply`. So the library
+is reusable across contracts, and only P4 depends on the pool. P4 is a statement about two Lean functions, so it
+needs no EVM reasoning.
+
+**Proposal:** P2 copies the model's structure one to one (one `SolAst` function per `Pool.apply` equation, one
+internal function per helper), so P4 closes by unfolding.
+
+**Proposal:** the printer emits an exact pragma `pragma solidity 0.8.31;`, not a caret range, so that the source names
+its compiler.
+
+**Proposal:** the printer writes NatSpec from the model's docstrings, and each function cites its Lean equation.
+
 ## 5. The Solidity subset
 
 The inventory of `Pool.apply`'s constructs (session `01a195d3`, agent `PoolConstructInventory`, 2026-11-10) gives the
@@ -84,27 +105,6 @@ that incremental insertion computes `treeRoot` of the appended leaves. The other
 
 The first cut of P1-P3 covers only `setFeeRatio` and the shield accounting fixture (agent `SolAstP1P3`), with types
 designed to extend to the rest.
-| P6 | **Lemma library** | For each construct form, one Blanc lemma: the bytecode segment refines `eval` of the construct. Forward with exact gas (`RunExact`), `RunEx` for external calls, inversion for reverts. Plus one generic call-and-return lemma. |
-| P7 | **Generator** | From a `SolAst` term, solc's source map and Blanc's certificate: the composed theorem that the bytecode refines `eval` of the term. Composed with P4: the bytecode refines `Pool.apply`. |
-| P8 | **Assumptions** | The token and the trusted verifier, each stated once as a named structure, as `TransactProofSoundness` is. Keccak slot non-collision as named hypotheses. |
-| P9 | **Gate** | Per contract: the theorems build, 0 `sorry`, and `#print axioms` shows Lean's three axioms plus the declared hypotheses only. |
-
-Why P2 sits in the middle: P6's lemmas then talk about `eval` of one construct, not about `Pool.apply`. So the library
-is reusable across contracts, and only P4 depends on the pool. P4 is a statement about two Lean functions, so it
-needs no EVM reasoning.
-
-**Proposal:** P2 copies the model's structure one to one (one `SolAst` function per `Pool.apply` equation, one
-internal function per helper), so P4 closes by unfolding.
-
-**Proposal:** the printer emits an exact pragma `pragma solidity 0.8.31;`, not a caret range, so that the source names
-its compiler.
-
-**Proposal:** the printer writes NatSpec from the model's docstrings, and each function cites its Lean equation.
-
-## 5. The Solidity subset
-
-The inventory of `Pool.apply`'s constructs is in progress (session `01a195d3`, agent `PoolConstructInventory`). P1's
-constructor list is that inventory, and nothing more. A construct that the model does not need is not in the subset.
 
 ## 6. Order
 

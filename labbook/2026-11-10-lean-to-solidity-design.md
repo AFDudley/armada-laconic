@@ -74,8 +74,18 @@ Why P2 sits in the middle: P6's lemmas then talk about `eval` of one construct, 
 is reusable across contracts, and only P4 depends on the pool. P4 is a statement about two Lean functions, so it
 needs no EVM reasoning.
 
-**Proposal:** P2 copies the model's structure one to one (one `SolAst` function per `Pool.apply` equation, one
-internal function per helper), so P4 closes by unfolding.
+**Measured (P4, 2026-11-10):** P2 copies the model's structure one to one, and P4 closes by unfolding plus arithmetic.
+The two P4 theorems for `setFeeRatio` and the shield accounting carry three kinds of hypothesis: the token assumption
+(P8), `uint256` overflow bounds (the contract is `uint256`, the model `Nat`), and storage shape plus `FeeRatio`
+invariants, which a reachability proof over the contract's own calls should discharge (§7, item 4).
+
+**Rule (2026-11-10):** every constant in a printed contract comes from a model term, never a typed-in number. The first
+P4 proof passed with a 1% cap in the example contracts while the model's cap was 10% (`faf809c3`); the theorem hid it
+behind a hypothesis. The cap is now `ArmadaLean.maxFeePercent` in the `SolAst` term.
+
+**Status (2026-11-10):** P1-P3 merged in evm-proof-toolchain as `81ed0b04` (`parse_print`, Lean's three axioms; the
+printed fixtures compiled byte-identical to M0's; `eval` agreed with anvil). P4 merged as `431a0f81` and `4d34cfd8`
+(both theorems, Lean's three axioms; anvil 37/37).
 
 **Proposal:** the printer emits an exact pragma `pragma solidity 0.8.31;`, not a caret range, so that the source names
 its compiler.

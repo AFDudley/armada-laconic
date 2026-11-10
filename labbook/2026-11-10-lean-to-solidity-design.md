@@ -61,10 +61,29 @@ chain is keyed to the constructs of that tree.
 | # | Part | Artifact |
 |---|---|---|
 | P1 | **Syntax** | `SolAst`: the Solidity subset the printer emits. Its constructs are exactly the inventory of `Pool.apply`'s needs (§5). |
-| P2 | **Semantics** | `SolAst.eval`: a Lean function from a call and a contract state to `Option` state, written per construct, total, with no EVM detail. |
-| P3 | **Printer and parser** | `print : SolAst → String`, `parse : String → Option SolAst`, and one theorem `parse_print`. This is O3 without Stele. |
-| P4 | **Model link** | For each pool function, a `SolAst` term and a theorem that `eval` of it equals `Pool.apply` on the decoded state. |
-| P5 | **Pattern catalogue** | For each construct, its bytecode forms under the pinned settings, located through solc's source maps (M0b gives the forms). |
+## 5. The Solidity subset
+
+The inventory of `Pool.apply`'s constructs (session `01a195d3`, agent `PoolConstructInventory`, 2026-11-10) gives the
+subset. Beyond the constructs of `setFeeRatio` and the shield accounting fixture, the four operations need:
+
+- **storage:** nested mappings (the nullifier set and the root history per tree), a mapping from `bytes32` to a struct
+  (the preimage registry), and the incremental Merkle tree state;
+- **calldata:** structs and bounded dynamic arrays (public inputs with up to 8 nullifiers and 4 commitments, bound
+  parameters, disclosed records, published openings);
+- **control:** loops bounded by those sizes and by the tree depth;
+- **hashing:** Poseidon (as a call to the deployed Poseidon contract) and `keccak256(abi.encode(...))`;
+- **external calls:** `transferFrom` in, `transfer` out, and two `staticcall`s to the trusted verifier.
+
+No events are needed by the model. The existing contracts emit events for wallet sync. Whether the new pool emits
+them is a client question, not a model one, and is open.
+
+**The tree is a relation, not a decode.** The model keeps each tree's leaf list (`TreeState.leaves`). A contract
+keeps only the incremental state. A function from storage to the model's state cannot rebuild the leaves, so P4 for
+the tree is a refinement relation: the incremental state is consistent with the model's leaves. Its core lemma is
+that incremental insertion computes `treeRoot` of the appended leaves. The other fields keep a decode function.
+
+The first cut of P1-P3 covers only `setFeeRatio` and the shield accounting fixture (agent `SolAstP1P3`), with types
+designed to extend to the rest.
 | P6 | **Lemma library** | For each construct form, one Blanc lemma: the bytecode segment refines `eval` of the construct. Forward with exact gas (`RunExact`), `RunEx` for external calls, inversion for reverts. Plus one generic call-and-return lemma. |
 | P7 | **Generator** | From a `SolAst` term, solc's source map and Blanc's certificate: the composed theorem that the bytecode refines `eval` of the term. Composed with P4: the bytecode refines `Pool.apply`. |
 | P8 | **Assumptions** | The token and the trusted verifier, each stated once as a named structure, as `TransactProofSoundness` is. Keccak slot non-collision as named hypotheses. |

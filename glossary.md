@@ -117,6 +117,23 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **Taker / maker (LP)** — **taker**: swaps notes privately at the posted price, capacity-bounded and fully private. **maker/LP**: provides inventory, holds a public aggregate position, and earns the spread — voluntary and compensated, never forced into a public deposit. Saturating takers are *offered* the maker role. Venue **T4**.
 - **v1 / v2 / v3** — the scope split: **v1** = Armada support (posted price + clearing + private sync + mobile client + CCTP + boundary + base yield); **v2** = ex_net matcher (price discovery + fair ordering); **v3** = Design B. See [Build plan · versions](./build-plan.html#versions) (→ §4, build-plan).
 
+### Verification terms (2026-11-11)
+
+Terms of the proof chain from the Lean model to deployed bytecode (`docs/process.md`, "The layers" and Stratum 9).
+
+- **Verification layer** — one stage of the proof chain: **specification**, **concrete specification**, **implementation**, **system**. Each layer refines the one above it [Abrial 2010]. Not a **tier**: tiers are stack rungs (T0–T6), and verification layers are stages of the proof.
+- **Specification** — the Lean model in `armada-lean`: the protocol as a machine, its invariant and its theorems, against an attacker. It is symbolic in the cryptography (see **symbolic**) [Dolev and Yao 1983].
+- **Symbolic** — a symbol stands for a value that is not computed. One definition. Each verification layer chooses which parts are symbols: in the specification, hashes and other cryptography are symbols, so they cannot collide by construction; in a **walk**, the inputs are symbols and keccak is computed, so collision freedom is a named hypothesis [Dolev and Yao 1983; King 1976].
+- **Concrete specification** — the same machine as the specification, written with the **Lean contract library**, over concrete words, storage and the ABI. It is the chain's executable step, as `Adjudicator.apply` is for Nitro [Hoare 1972, data refinement; Abrial 2010].
+- **Gluing invariant** — the relation between the states of two verification layers, written before the refinement proof: here, a typed decoder per ABI position plus three named collision assumptions (`docs/process.md` 9.1) [Abrial 2010].
+- **Lean contract library** — the Lean types and combinators that a concrete specification is written with. A program written with it is ordinary Lean in a contract monad; the **emitter** reads it (`labbook/2026-11-11-library-selection.md`). The pattern of one definition with two readings follows Verity's dual embedding (`veritylabs.dev/papers/verity.pdf` §3).
+- **Construct** — one type or combinator of the Lean contract library, with four parts proved or stated once: its Solidity form, its expected bytecode block pattern for the pinned solc build, its **walk** lemma, and its source lemma `eval (emit c) = c`.
+- **Emitter** — the metaprogram that reads a concrete specification and builds its `SolAst` term, with the source theorem composed from the construct lemmas [Boutin 1997, reification].
+- **Predicted certificate** — the control-flow certificate that the emitter composes from the constructs' block patterns, and that must match the certificate Blanc lifts from solc's output, up to PC renaming [Necula and Lee 1998, certifying compilation].
+- **Walk** — a Blanc proof that a bytecode path refines its source, by symbolic execution of the build's bytecode (`xrun`, `xcallM`, `RunEx`) [King 1976; Myreen, Gordon and Slind 2008, decompilation into logic].
+- **Callee specification** — the walk of one internal function entry, stated generic in its context (any stack below its arguments, any memory that satisfies its invariant), and proved once [Hoare 1969; O'Hearn, Reynolds and Yang 2001, frame rule].
+- **Translation validation** — a proof, for one build, that a compiler's output refines its input; the compiler itself is not verified [Pnueli, Siegel and Singerman 1998; Sewell, Myreen and Klein 2013].
+
 ## Orgs
 
 - **Vulcanize** — the originating company (ex_net, matcher, vulcanizedb lineage; 2017–).

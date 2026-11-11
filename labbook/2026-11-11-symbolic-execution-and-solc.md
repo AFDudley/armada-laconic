@@ -45,3 +45,5 @@ What symbolic execution needs from us:
 The operator's requirement is Solidity together with proven bytecode (2026-11-08: "we need solidity along with its bytecode proven"). So option A stays. Its cost, the callee-spec library for solc's helper routines, is also reusable across contracts, which suits a library design.
 
 Operator ruling (2026-11-11): option B is off the table for this project. A direct-to-bytecode compiler would be a fork of a different project, not part of this work. This project's deliverable stays Solidity, compiled by solc, with its bytecode proved by symbolic execution.
+
+Note (2026-11-11, later): the consequences above name one solc build and helper specifications "proved once per solc version". The operator ruled that the compiler must be swappable by one command, to other solc versions and to Solar. The pipeline is now organized by compiler profile: each profile has its own pattern catalogue and helper specifications, generated for that build. See `labbook/2026-11-11-programmatic-compiler-swap.md`. The trust argument in this entry is unchanged.

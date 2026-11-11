@@ -35,7 +35,7 @@ library emits (`labbook/2026-11-11-library-selection.md`, `labbook/2026-11-11-sy
 |---|---|---|---|
 | Specification | Lean model in `AFDudley/armada-lean`, symbolic (Dolev–Yao) | what must hold, against an attacker | `lake build`, zero `sorry`, `#print axioms` |
 | Concrete specification | the same machine as a program written with the Lean contract library (concrete words, storage, ABI) | the same contract with concrete values | refinement proof to the Lean model, through the gluing invariant of 9.1 |
-| Implementation | the Solidity the library emits, and its bytecode from the pinned solc build | what runs | a Blanc proof for each build that the bytecode refines the concrete specification; the lifted certificate matches the one the library predicts |
+| Implementation | the Solidity the library emits, and its bytecode from the compiler of one compiler profile | what runs | a Blanc proof for each build that the bytecode refines the concrete specification; the lifted certificate matches the one the library predicts for that profile |
 | System | the fixturenet (laconic-so stack) | that the deployed system does it | scenario run, recorded verdict lines |
 
 Forge unit tests are an inner loop only. They are never the acceptance of anything.
@@ -45,8 +45,10 @@ shared logic of clients. Each target gets the route that can be checked: a proof
 bytecode, an R1CS import for circuits), conformance vectors from the model where none exists
 (`labbook/2026-11-02-lean-as-the-unified-model.md`).
 
-solc is not verified and is not trusted. The bytecode theorem is about the exact bytecode of one build, so a change of
-solc version, optimizer setting or EVM version needs a new bytecode proof. The generated Solidity is idiomatic and
+solc is not verified and is not trusted. The bytecode theorem is about the exact bytecode of one build. The compiler is
+swappable by one command (operator ruling 2026-11-11): other solc versions and Solar are compiler profiles, each with
+its own generated pattern catalogue and helper specifications, and a swap reports the proof result or the failing
+goals (`labbook/2026-11-11-programmatic-compiler-swap.md`). The generated Solidity is idiomatic and
 gas-efficient: it may differ from the concrete specification wherever a construct lemma or a proof obligation shows
 the two equal (packed storage, `unchecked` arithmetic under a proved bound, custom errors, SafeERC20, events).
 

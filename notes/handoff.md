@@ -9,12 +9,15 @@ All paths are absolute. Read the goal document first. Open the others when a tas
 
 | What | Document |
 |---|---|
-| **Read first.** The goal, the scope and the order of the proof work: the pool first, then armada-nitro; governance out | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-06-proof-scope-and-order.md` |
+| **Read first.** The process: four layers, the strata, the one rule, the measured anti-patterns | `~/code/git_puller/repos/armada-laconic/docs/process.md` |
+| The goal, the scope and the order of the proof work: the pool first, then armada-nitro; governance out | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-06-proof-scope-and-order.md` |
+| The Lean contract library: evidence, selection and open decisions D1-D3 | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-11-library-selection.md` |
+| Symbolic execution and solc in the chain (option A; option B ruled out) | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-11-symbolic-execution-and-solc.md` |
 | The build plan (S-items and their status) | `~/code/git_puller/repos/armada-laconic/engineering/build-plan.md` |
 | The operating rules (models, limits, routing) | `~/code/git_puller/repos/armada-laconic/engineering/operating-rules.md` |
 | All decisions | `~/code/git_puller/repos/armada-laconic/labbook/` |
 | The proof toolchain plan (items A-E) | `~/code/git_puller/repos/evm-proof-toolchain/docs/plan.md` |
-| The Lean model to Stele translator (milestones §9, open questions §10) | `~/code/git_puller/repos/evm-proof-toolchain/docs/translator.md` |
+| The Lean model to Stele translator (superseded: Stele dropped 2026-11-08) | `~/code/git_puller/repos/evm-proof-toolchain/docs/translator.md` |
 | The Lean model of the pool and of Nitro | `~/code/git_puller/repos/armada-lean/` (namespace `ArmadaLean`) |
 
 Owners: pane w3:p5 armada-lean, and the evm-proof-toolchain items of w3:p4 (that session ended 2026-11-07; the operator

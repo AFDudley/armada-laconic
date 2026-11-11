@@ -27,21 +27,29 @@ For Armada this means, in order:
 ## The layers
 
 The adjudicator, the pool and every later contract pass through the same four layers. Each layer refines the one above
-it [Abrial 2010].
+it [Abrial 2010]. Revised 2026-11-11: Stele and EquiVM are dropped (operator rulings 2026-11-08 and 2026-11-11); the
+concrete layer is a program written with the Lean contract library, and the implementation is the Solidity that the
+library emits (`labbook/2026-11-11-library-selection.md`, `labbook/2026-11-11-symbolic-execution-and-solc.md`).
 
 | Layer | Artifact | What it decides | Gate |
 |---|---|---|---|
-| Specification | Lean model in `AFDudley/armada-lean` | what must hold, against an attacker | `lake build`, zero `sorry`, `#print axioms` |
-| Concrete specification | Stele (EquiVM) | the same contract with concrete values | refinement proof to the Lean model |
-| Implementation | Solidity, compiled bytecode on EVMLean | what runs | EquiVM refinement proof to Stele |
+| Specification | Lean model in `AFDudley/armada-lean`, symbolic (Dolev–Yao) | what must hold, against an attacker | `lake build`, zero `sorry`, `#print axioms` |
+| Concrete specification | the same machine as a program written with the Lean contract library (concrete words, storage, ABI) | the same contract with concrete values | refinement proof to the Lean model, through the gluing invariant of 9.1 |
+| Implementation | the Solidity the library emits, and its bytecode from the pinned solc build | what runs | a Blanc proof for each build that the bytecode refines the concrete specification; the lifted certificate matches the one the library predicts |
 | System | the fixturenet (laconic-so stack) | that the deployed system does it | scenario run, recorded verdict lines |
 
 Forge unit tests are an inner loop only. They are never the acceptance of anything.
 
 The Lean model is the one specification for every component that must agree with another: contracts, circuits and the
-shared logic of clients. Each target gets the route that can be checked: a proof where a tool exists (EquiVM for
+shared logic of clients. Each target gets the route that can be checked: a proof where a tool exists (Blanc for
 bytecode, an R1CS import for circuits), conformance vectors from the model where none exists
 (`labbook/2026-11-02-lean-as-the-unified-model.md`).
+
+solc is not verified and is not trusted. The bytecode theorem is about the exact bytecode of one build, so a change of
+solc version, optimizer setting or EVM version needs a new bytecode proof. The generated Solidity is idiomatic and
+gas-efficient: it may differ from the concrete specification wherever a construct lemma or a proof obligation shows
+the two equal (packed storage, `unchecked` arithmetic under a proved bound, custom errors, SafeERC20, events).
+
 
 ## The practice, in the order it applies
 
@@ -181,11 +189,14 @@ only with the operator's approval.
 ## The next chart. Refine one level at a time
 
 **9.1 To add detail, write a machine that refines the previous one.** Write the gluing invariant first [Abrial 2010].
-Lean model to Stele: a typed decoder for each ABI position maps each concrete word to its term; a word that the run
-computed as a hash maps to that hash term, and any other word to `val` in its range. The encodings need no assumption
-beyond what the EVM forces, so the theorem names three items: collision freedom of Keccak-256, collision freedom of its
-160-bit truncation, and no Poseidon output equal to a Keccak output among the run's values (operator ruling 2026-11-02;
-`labbook/2026-11-02-refinement-risks.md` §7). Stele to bytecode: EquiVM.
+Lean model to the concrete specification (the library program): a typed decoder for each ABI position maps each
+concrete word to its term; a word that the run computed as a hash maps to that hash term, and any other word to `val`
+in its range. The encodings need no assumption beyond what the EVM forces, so the theorem names three items: collision
+freedom of Keccak-256, collision freedom of its 160-bit truncation, and no Poseidon output equal to a Keccak output
+among the run's values (operator ruling 2026-11-02; `labbook/2026-11-02-refinement-risks.md` §7). The library program
+is the chain's executable step, as `Adjudicator.apply` is for Nitro; the off-chain world (signers, notes, witnesses,
+the network) is modelled around it. Concrete specification to bytecode: Blanc, by symbolic execution of the build's
+bytecode.
 
 **9.2 Strengthen each new guard so the refined machine does no more than the abstract one allowed** [Abrial 2010]. A
 contract may add input checks a paper assumes (go-nitro's reclaim checks that SATP leaves to honest signers); it may
@@ -198,12 +209,13 @@ truncation.
 
 **9.4 Expect to back up** [Wirth 1971].
 
-**9.5 A safety certificate carries only safety.** An EquiVM certificate is a one-way inclusion. It does not carry a
-"can happen" or liveness theorem to bytecode (`labbook/2026-10-28-liveness-refinement-design.md` §(a)). The route for
-those classes is that entry's §(d): each Liveness theorem is proved once in Lean, and one game-transfer theorem carries
-it to bytecode through a two-way lemma per operation and a gas-indexed EquiVM certificate. The transfer allows a
-bounded number of failed honest calls (`labbook/2026-10-28-verification-chain-rulings.md`, O2 correction). A size
-bound that this route adds to an approved statement goes to the operator with its gas measurement.
+**9.5 A safety certificate carries only safety.** A one-way inclusion (an EquiVM certificate) does not carry a
+"can happen" or liveness theorem to bytecode (`labbook/2026-10-28-liveness-refinement-design.md` §(a)). Blanc proves
+the existence of a successful run with its exact gas, so the bytecode theorem for each function has two parts: the
+run exists when the concrete specification succeeds, and no successful run exists when it reverts. Each Liveness
+theorem is proved once in Lean and carried to bytecode through those two parts (that entry's §(d)). The transfer
+allows a bounded number of failed honest calls (`labbook/2026-10-28-verification-chain-rulings.md`, O2 correction). A
+size bound that this route adds to an approved statement goes to the operator with its gas measurement.
 
 **9.6 Tie each artifact that the model does not produce to the model.** A circuit: import its R1CS into Lean, bind
 its Poseidon and EdDSA templates to the trusted primitives, and prove the rest equivalent to the model's constraint
@@ -321,6 +333,30 @@ by zero [Bowen and Hinchey 1995].
 
 **A specification that stops tracking the code.** Written once and never re-run, it has not been verified; it has
 merely not been falsified [Parnas and Clements 1986].
+
+Measured in the bytecode work of 2026-11-10 and 2026-11-11 (armada-laconic session `01a195d3`, evm-proof-toolchain
+`armada-sol/gen/TIMES.md`):
+
+**Deep before running.** One function's bytecode walks went deep for two days while most of the pool had no concrete
+form and nothing was deployed. This breaks the one rule at the top of this document.
+
+**Rebuilding a tool's own mechanism.** Blanc already had forward walks (`xrun`, 228 uses on Dai, USDC and USDT),
+memory-growth walks (`WalkFpMove.lean`), walks to an outcome that a callee decides (`RunEx.lean`, 187 files) and a
+shape for an external-call boundary (`Usdc/TransferLiveProxy.lean:95-103`). Agents rebuilt each one, about 20 active
+agent hours, because nobody read how the tool proves its own examples (practice 1). A report that a tool "does not
+work" is accepted only with the failing goal and a place where the same tool works.
+
+**Cutting one function at arbitrary points.** A split of one straight-line path into parallel pieces forced each
+piece to state an intermediate state by hand, and three of those states were wrong. Split work only at boundaries
+that have a specification (a callee entry, a library lemma, a component with a defined input and output). Symbolic
+execution computes the states inside a path; nobody writes them.
+
+**A narrowed trial instead of the work.** A "cheap first test" answers a local question and leaves the design
+undecided. State the requirement, the interfaces and the acceptance, and build that.
+
+**Transliteration instead of refinement.** A rule that the emitted Solidity copies the model one to one removed a
+gas optimization (`if (fee > 0)` around a token call) and produced unidiomatic code. The emitted code may differ from
+the concrete specification wherever a lemma shows the two equal.
 
 ## Sources
 

@@ -11,7 +11,7 @@ All paths are absolute. Read the goal document first. Open the others when a tas
 |---|---|
 | **Read first.** The process: four layers, the strata, the one rule, the measured anti-patterns | `~/code/git_puller/repos/armada-laconic/docs/process.md` |
 | The goal, the scope and the order of the proof work: the pool first, then armada-nitro; governance out | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-06-proof-scope-and-order.md` |
-| The Lean contract library: evidence, selection and open decisions D1-D3 | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-11-library-selection.md` |
+| The Lean contract library: evidence, selection and decisions E1, E2, D0-D3 | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-11-library-selection.md` |
 | Symbolic execution and solc in the chain (option A; option B ruled out) | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-11-symbolic-execution-and-solc.md` |
 | The concrete specification of the pool (strata 1-5, stratum 6 contents) | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-11-concrete-specification-design.md` |
 | Programmatic compiler swap (other solc versions, Solar): compiler profiles, operator ruling 2026-11-11 | `~/code/git_puller/repos/armada-laconic/labbook/2026-11-11-programmatic-compiler-swap.md` |

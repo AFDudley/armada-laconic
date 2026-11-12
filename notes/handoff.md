@@ -89,9 +89,13 @@ has not named a new owner); pane w4:p1 lean-mend; pane w6:p1 exophial, and stage
 ## Pending (waits for someone else)
 
 1. w4:p1 (lean-mend): a rule trigger for axiom findings, so a later run makes edits like E1-E3 itself (plan item E1).
-2. w6:p1, stage ML: `exo-748.1` (the Lean package) is parked; its fix is `exo-503` (law L2). `exo-748.2`, `exo-748.3`,
-   `exo-c57` and `exo-313` wait behind it. armada-lean has no open spec theorem now, so the next statement commit
-   with an open theorem gives w6:p1 its replay subject.
+2. Stage ML (w6:p9, 2026-11-12): merged on exophial `integrated` `4b874b87b` (verb `exophial lean-oracle REPO THEOREM`).
+   It cannot see armada-lean theorems yet: armada-lean has no `exophial_core` entry in `lake-manifest.json` and no
+   module calls `#spec_report`. Two armada-lean steps have no owner: add `exophial_core` as a pinned dependency and
+   call `#spec_report`; then point the gate at the exophial procedure. Both wait for `exo-07e8` (P1, replaces
+   `exo-80b`). Until then, armada-lean's `scripts/check.sh` and `#print axioms` are the checks (`exo-b137`: exophial's
+   sorry check misses non-approved axioms). `exo-b190` (intake from a theorem name; replay subject
+   `ArmadaLean.Pool.apply_backward_refinement_run`) waits for `exo-07e8` and `exo-c57`.
 3. Pebble `exo-041` (parked: the gate container drops `.claude`; law L3, epic `exo-4d4d`): skills come from one source,
    the installed tool. Until it merges, a worker in armada-lean or evm-proof-toolchain cannot read
    `exophial-worker-orient`.

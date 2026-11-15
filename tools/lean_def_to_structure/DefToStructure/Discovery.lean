@@ -73,6 +73,10 @@ structure Found where
   typeText : Option String
   bodyHead : Option Loc
   bodyIsStructure : Bool
+  /-- Instance variables of the section that the `def` did not take
+      (`DecidableEq E`). A `theorem` includes them, so `P.iff` gets
+      `omit [...] in`; the structure does not include them. -/
+  omits : Array String
   deriving Repr
 
 /-- The pieces of a `def` declaration. -/
@@ -122,7 +126,7 @@ def describe (env : Environment) (root : System.FilePath) (n : Name) : MetaM Fou
   if holdsStructure && hasIff then
     return { name := n, declId := n.toString, file := rel, alreadyConverted := true, defStart := 0,
              bodyStart := 0, bodyEnd := 0, binders := #[], typeText := none, bodyHead := none,
-             bodyIsStructure := false }
+             bodyIsStructure := false, omits := #[] }
   let .defnInfo d := ci | throwError "{n} is not a `def` (and not a converted structure)"
   unless isProp do throwError "{n} is not a `Prop`"
   if hasIff then throwError "{n}.iff already exists; refused"
@@ -144,10 +148,33 @@ def describe (env : Environment) (root : System.FilePath) (n : Name) : MetaM Fou
     | some h => declLoc env root h
     | none => pure none
   let typeText := typeSpec.map fun t => t.reprint.get!.trimAscii.copy
+  let binderFactsArr := binders.map (binderFacts slice)
+  -- instance variables of the section that the `def` did not take: a
+  -- `theorem` includes every instance variable whose arguments it mentions,
+  -- so `P.iff` must `omit` the ones the structure does not use
+  let defInsts ← lambdaTelescope d.value fun xs _ => do
+    let mut out : Array String := #[]
+    for x in xs do
+      let ldecl ← x.fvarId!.getDecl
+      if ldecl.binderInfo.isInstImplicit then out := out.push (toString (← Meta.ppExpr ldecl.type))
+    pure out
+  let parsed ← Parse.parseFile env rel text
+  let cmdIdx := parsed.commands.findIdx? fun cmd =>
+    match Parse.range? cmd with
+    | some (a, b) => a ≤ startPos && startPos < b
+    | none => false
+  let scopeVars := match cmdIdx with
+    | some i => parsed.scopeVars[i]!
+    | none => #[]
+  let mut omits : Array String := #[]
+  for v in scopeVars do
+    if v.isOfKind ``Parser.Term.instBinder then
+      let t := v[2].reprint.get!.trimAscii.copy
+      unless defInsts.contains t do omits := omits.push t
   return {
     name := n, declId := declId[0].getId.toString, file := rel, alreadyConverted := false,
     defStart := shift (kw.getPos?), bodyStart := shift (body.getPos?), bodyEnd := shift (body.getTailPos?),
-    binders := binders.map (binderFacts slice), typeText, bodyHead, bodyIsStructure }
+    binders := binderFactsArr, typeText, bodyHead, bodyIsStructure, omits }
 
 /-- The body text with its continuation lines re-indented to `cont`. -/
 def reindent (body : String) (cont : String) : String := Id.run do
@@ -172,7 +199,8 @@ def conversionEdit (f : Found) (text : String) : Except String (Edit × Nat × N
   let body := String.Pos.Raw.extract text ⟨f.bodyStart⟩ ⟨f.bodyEnd⟩
   let app := " ".intercalate (f.declId :: explicit)
   let structureText := s!"structure {f.declId}{bText} : Prop where\n  holds : {reindent body "    "}"
-  let iff := s!"/-- `{f.declId}`'s structure carries exactly its old `def` body; a citing statement's\n" ++
+  let omitText := "".intercalate (f.omits.toList.map fun t => s!"omit [{t}] in\n")
+  let iff := omitText ++ s!"/-- `{f.declId}`'s structure carries exactly its old `def` body; a citing statement's\n" ++
     s!"    meaning did not change when `{f.declId}` became a structure. -/\n" ++
     s!"theorem {f.declId}.iff{bText} :\n    {app} ↔ {reindent body "      "} :=\n" ++
     "  ⟨fun h => h.holds, fun h => ⟨h⟩⟩"

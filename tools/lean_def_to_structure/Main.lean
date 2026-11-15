@@ -101,6 +101,8 @@ structure State where
   files : Array String
   nextIndex : Nat
   repairs : Array RepairRecord
+  /-- `constructor` tactics this run inserted: file, byte offset in the current text. -/
+  inserted : Array (String × Nat) := #[]
   rounds : Array Json
   stops : Array String
   lintBefore : Json
@@ -198,8 +200,10 @@ def shiftPreds (rel : String) (edits : Array Edit) : M Unit := do
     for e in edits do
       if e.stop ≤ off then o := o + e.replacement.utf8ByteSize - (e.stop - e.start)
     return o
-  modifyState fun s => { s with preds := s.preds.map fun p =>
-    if p.file == rel then { p with declIdOffset := shift p.declIdOffset, holdsOffset := shift p.holdsOffset } else p }
+  modifyState fun s => { s with
+    preds := s.preds.map fun p =>
+      if p.file == rel then { p with declIdOffset := shift p.declIdOffset, holdsOffset := shift p.holdsOffset } else p
+    inserted := s.inserted.map fun (f, o) => if f == rel then (f, shift o) else (f, o) }
 
 def predTexts : M PredTexts := do
   let e ← read
@@ -238,16 +242,21 @@ partial def repairFile (c : Lsp.Client) (env : Environment) (rel : String) : M B
       stop s!"{rel}: the file does not parse: {parsed.parseErrors[0]!}"
     let fm := parsed.fileMap
     let trace ← IO.mkRef #[]
-    let ctx : Ctx := { env, parsed, preds := (← e.state.get).preds, predTexts := ← predTexts,
-                       oracle := mkOracle c uri fm, trace }
+    let st ← e.state.get
+    let ctx : Ctx := { env, parsed, preds := st.preds, predTexts := ← predTexts,
+                       oracle := mkOracle c uri fm, trace,
+                       inserted := st.inserted.filterMap fun (f, o) => if f == rel then some o else none }
     let mut chosen : Array (Repair × Nat × Nat) := #[]
     let mut taken : Array Edit := #[]
     let mut unmatched : Array Json := #[]
-    -- the silent case first: it never conflicts with a diagnostic repair site
-    for r in ← silentProjections ctx do
+    -- the silent cases first, alone: they change the elaboration upstream of
+    -- the diagnostics, so the diagnostics are decided on the next round
+    for r in (← silentProjections ctx) ++ (← silentUnfolds ctx) ++ (← silentConstructors ctx) do
+      if r.edits.any fun x => taken.any (conflicts x ·) then continue
       chosen := chosen.push (r, r.edits[0]!.start, 0)
       taken := taken ++ r.edits
-    let ranges := errors.map fun d =>
+    let errorsToDecide := if chosen.isEmpty then errors else #[]
+    let ranges := errorsToDecide.map fun d =>
       let r := d.fullRange?.getD d.range
       ((fm.lspPosToUtf8Pos r.start).byteIdx, (fm.lspPosToUtf8Pos r.end).byteIdx, d)
     let sorted := ranges.qsort fun a b => a.1 > b.1 || (a.1 == b.1 && a.2.1 > b.2.1)
@@ -278,6 +287,15 @@ partial def repairFile (c : Lsp.Client) (env : Environment) (rel : String) : M B
     checkForbidden text newText rel
     writeFile rel newText
     shiftPreds rel edits
+    -- the `constructor`s this round inserts, at their offsets in the new text:
+    -- moved by the edits that end before the insertion point (the insertion
+    -- itself keeps its keyword at that point)
+    let newInserted := chosen.filterMap fun (r, _, _) =>
+      if r.pattern == "constructor" || r.pattern == "constructor-split" then
+        let o := r.edits[0]!.start
+        some (rel, edits.foldl (fun acc e => if e.stop < o then acc + e.replacement.utf8ByteSize - (e.stop - e.start) else acc) o)
+      else none
+    modifyState fun st => { st with inserted := st.inserted ++ newInserted }
     for (r, s, _) in chosen do
       let lp := fm.utf8PosToLspPos ⟨s⟩
       let key := s!"{rel}|{r.pattern}|{r.detail}|{(parsed.text.splitOn "\n")[lp.line]!}"

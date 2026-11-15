@@ -119,6 +119,9 @@ structure Ctx where
   oracle : Oracle
   /-- Decision trace lines (the driver writes them to the log). -/
   trace : IO.Ref (Array String)
+  /-- Byte offsets of the `constructor` tactics this run inserted in the
+      current text: they enter the structure and must not be doubled. -/
+  inserted : Array Nat := #[]
 
 def Ctx.note (c : Ctx) (s : String) : IO Unit := c.trace.modify (·.push s)
 
@@ -321,9 +324,36 @@ def tryMismatch (c : Ctx) (stack : Array Syntax) (t : Syntax) (ds de : Nat) : IO
     s!"⟨{(textOf c s e).take 40}⟩ expected the body of {p.short}"
     #[⟨s, s, "⟨"⟩, ⟨e, e, "⟩"⟩])
 
-/-- `unfold-iff`: `unfold P` cannot unfold a structure. `simp only [P.iff]`
-    rewrites every application of `P`, as `unfold` did; `rw [P.iff]` would
-    rewrite only the instances of its first match. -/
+/-- `unfold-iff`: `unfold P` cannot unfold a structure. On the goal,
+    `simp only [P.iff]` rewrites every application of `P`, as `unfold` did
+    (`rw` rewrites only the instances of its first match). On a hypothesis,
+    `rw [P.iff] at h` keeps `h` at its place in the context, as `unfold` did;
+    `simp only … at h` moves `h` to the end, and a later `revert h h'` then
+    binds in the other order. This is the edit for the `unfold` tactic `tac`
+    whose argument `id` names `p`. -/
+def unfoldRepair (c : Ctx) (tac id : Syntax) (p : Pred) : Repair :=
+  let (ts, te) := rangeOf tac
+  let tactic := textOf c ts te
+  -- `unfold a b c (at h)?`
+  let parts := (tactic.splitOn " ").filter (· ≠ "")
+  let atIdx := parts.findIdx? (· == "at")
+  let names := (parts.drop 1).take ((atIdx.getD parts.length) - 1)
+  let locs := match atIdx with
+    | some i => parts.drop (i + 1)
+    | none => []
+  let atClause := if locs.isEmpty then "" else " at " ++ " ".intercalate locs
+  let written := textOf c (rangeOf id).1 (rangeOf id).2
+  let keep := names.filter (· ≠ written)
+  let sep := if startsLine c ts then "\n" ++ indentOf c ts else "; "
+  let hyps := locs.filter fun l => l ≠ "⊢" && l ≠ "*"
+  let goal := locs.isEmpty || locs.contains "⊢"
+  let steps : List String :=
+    (if locs.contains "*" then [s!"simp only [{written}.iff] at *"] else []) ++
+    (if hyps.isEmpty then [] else [s!"rw [{written}.iff] at {" ".intercalate hyps}"]) ++
+    (if goal then [s!"simp only [{written}.iff]"] else []) ++
+    (if keep.isEmpty then [] else [s!"unfold {" ".intercalate keep}{atClause}"])
+  mkRepair "unfold-iff" p.fullName s!"unfold {written} → {steps.headD ""}" #[⟨ts, te, sep.intercalate steps⟩]
+
 def tryUnfold (c : Ctx) (stack : Array Syntax) (s e : Nat) : IO (Option Repair) := do
   let some (ti, tac) := Parse.innermostTactic c.env stack | return none
   unless firstWord tac == "unfold" do return none
@@ -331,22 +361,7 @@ def tryUnfold (c : Ctx) (stack : Array Syntax) (s e : Nat) : IO (Option Repair) 
   let defn ← c.oracle.definition s
   c.note s!"{s}-{e}: unfold name resolves to {repr defn}"
   let some p := c.predAt defn | return none
-  let (ts, te) := rangeOf tac
-  let tactic := textOf c ts te
-  -- `unfold a b c (at h)?`
-  let parts := (tactic.splitOn " ").filter (· ≠ "")
-  let atIdx := parts.findIdx? (· == "at")
-  let names := (parts.drop 1).take ((atIdx.getD parts.length) - 1)
-  let atClause := match atIdx with
-    | some i => " " ++ " ".intercalate (parts.drop i)
-    | none => ""
-  let written := textOf c (rangeOf id).1 (rangeOf id).2
-  let keep := names.filter (· ≠ written)
-  let sep := if startsLine c ts then "\n" ++ indentOf c ts else "; "
-  let new := s!"simp only [{written}.iff]{atClause}" ++ (if keep.isEmpty then "" else s!"{sep}unfold {" ".intercalate keep}{atClause}")
-  return some (mkRepair "unfold-iff" (p.fullName)
-      (s!"unfold {written} → simp only [{written}.iff]")
-      #[⟨ts, te, new⟩])
+  return some (unfoldRepair c tac id p)
 
 /-- `simp-iff`: a `simp` family call that lists `P` fails. -/
 def trySimp (c : Ctx) (stack : Array Syntax) (s e : Nat) : IO (Option Repair) := do
@@ -437,9 +452,54 @@ def silentProjections (c : Ctx) : IO (Array Repair) := do
       let (is, _) := rangeOf idx
       if let some p := c.holdsAt (← c.oracle.definition is) then
         let dot := (rangeOf proj[1]).1
-        out := out.push (mkRepair "holds-proj" (p.fullName)
-      ("numeric projection on the converted type")
-      #[⟨dot, dot, ".holds"⟩])
+        out := out.push (mkRepair "holds-proj" p.fullName "numeric projection on the converted type" #[⟨dot, dot, ".holds"⟩])
+  return out
+
+/-- Every `unfold` tactic (direct child kind) under `stx`. -/
+partial def unfoldTactics (stx : Syntax) (acc : Array Syntax := #[]) : Array Syntax :=
+  match stx with
+  | .node _ _ args =>
+    let acc := if firstWord stx == "unfold" && stx.getKind.toString.endsWith "unfold" then acc.push stx else acc
+    args.foldl (fun a x => unfoldTactics x a) acc
+  | _ => acc
+
+/-- The silent `unfold` case: `unfold P at h` on a hypothesis of type `P …`
+    reports no error and changes nothing (the structure has nothing to
+    unfold), so a later tactic that expected the body fails far away.
+    Every `unfold` whose name resolves to a converted predicate gets the
+    `unfold-iff` edit, error or not. -/
+def silentUnfolds (c : Ctx) : IO (Array Repair) := do
+  let mut out := #[]
+  for cmd in c.parsed.commands do
+    for tac in unfoldTactics cmd do
+      for id in Parse.idents tac do
+        if let some p := c.predAt (← c.oracle.definition (rangeOf id).1) then
+          out := out.push (unfoldRepair c tac id p)
+          break
+  return out
+
+/-- Every tactic node under `stx` whose first word is `w`. -/
+partial def tacticsNamed (env : Environment) (w : String) (stx : Syntax) (acc : Array Syntax := #[]) : Array Syntax :=
+  match stx with
+  | .node _ k args =>
+    let acc := if Parse.isTacticKind env k && firstWord stx == w then acc.push stx else acc
+    args.foldl (fun a x => tacticsNamed env w x a) acc
+  | _ => acc
+
+/-- The silent `constructor` case: `constructor` on a goal `P …` split the
+    body when `P` was a `def`; on the structure it yields the body as one
+    goal, and the next tactics fail far away. Every `constructor` whose goal
+    before it is headed by a converted predicate, other than the ones this
+    run inserted, gets a `constructor` before it. -/
+def silentConstructors (c : Ctx) : IO (Array Repair) := do
+  let mut out := #[]
+  for cmd in c.parsed.commands do
+    for tac in tacticsNamed c.env "constructor" cmd do
+      let ts := (rangeOf tac).1
+      if c.inserted.contains ts then continue
+      if let some p := c.predAt (← c.oracle.goalHead ts).head then
+        out := out.push (mkRepair "constructor-split" p.fullName "constructor on the structure, then on its body"
+          #[constructorEdit c ts])
   return out
 
 /-- Apply non-overlapping edits, last offset first. -/

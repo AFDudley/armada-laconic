@@ -37,6 +37,10 @@ structure Threat.TransfersOnly {p : Participant} (T : Threat E p) : Prop where
   holds : ∀ net m, T.feasible net m → ∃ caller a b, m = .chain caller (.transfer a b)
 structure Allocation.Precedes (o : Allocation E) (c d : Address E) : Prop where
   holds : c ∈ (o.dedup.map Entry.dest).takeWhile (· ≠ d)
+structure StatusOrigin (apps : Apps E) (s : Adjudicator E) (c : FixedPart) : Prop where
+  holds : True
+structure NetworkState.Unforged {p : Participant} (net : NetworkState E p) (ss : SignedState E) : Prop where
+  holds : True
 "
 
 def predUri := "file:///P.lean"
@@ -70,6 +74,7 @@ def RC := mkPred "ArmadaLean.RegistryConsistent" "RegistryConsistent"
 def OT := mkPred "ArmadaLean.Nitro.OnlyTransfers" "OnlyTransfers"
 def TO := mkPred "ArmadaLean.Nitro.Threat.TransfersOnly" "Threat.TransfersOnly"
 def PRECEDES := mkPred "ArmadaLean.Nitro.Allocation.Precedes" "Allocation.Precedes"
+def SO := mkPred "ArmadaLean.Nitro.StatusOrigin" "StatusOrigin"
 
 def predTexts : PredTexts := { fileMaps := Std.HashMap.ofList [("P.lean", FileMap.ofString predFile)] }
 def loc (p : Pred) : Loc := p.loc predTexts
@@ -276,11 +281,15 @@ def cases : List Case := [
     expect := some ("unfold-iff", "theorem t3c : Dag r := by\n  simp only [Dag.iff]\n  exact ⟨hr⟩\n") },
   { name := "unfold qualified name with at", src := "theorem t : X := by\n  unfold Adjudicator.IsDAG at h\n",
     diag := ("Adjudicator.IsDAG", 0), facts := [.defn "Adjudicator.IsDAG at" 0 #[loc ISDAG]],
-    expect := some ("unfold-iff", "theorem t : X := by\n  simp only [Adjudicator.IsDAG.iff] at h\n") },
+    expect := some ("unfold-iff", "theorem t : X := by\n  rw [Adjudicator.IsDAG.iff] at h\n") },
   { name := "unfold with two applications of P in the goal",
     src := "theorem precedes_reduceOwed' (o : Allocation E) (c d : Address E) :\n    (o.reduceOwed e x).Precedes c d ↔ o.Precedes c d := by\n  unfold Precedes\n  rw [dedup_reduceOwed, reduceOwed_map_dest]\n",
     diag := ("Precedes\n", 0), preds := #[PRECEDES], facts := [.defn "Precedes\n" 0 #[loc PRECEDES]],
     expect := some ("unfold-iff", "theorem precedes_reduceOwed' (o : Allocation E) (c d : Address E) :\n    (o.reduceOwed e x).Precedes c d ↔ o.Precedes c d := by\n  simp only [Precedes.iff]\n  rw [dedup_reduceOwed, reduceOwed_map_dest]\n") },
+  { name := "unfold at a hypothesis and the goal",
+    src := "theorem t : X := by\n  unfold StatusOrigin at ho ⊢\n  rw [hs]\n",
+    diag := ("StatusOrigin", 0), preds := #[SO], facts := [.defn "StatusOrigin" 0 #[loc SO]],
+    expect := some ("unfold-iff", "theorem t : X := by\n  rw [StatusOrigin.iff] at ho\n  simp only [StatusOrigin.iff]\n  rw [hs]\n") },
   { name := "unfold refuses another name", src := "theorem t : X := by\n  unfold Other\n",
     diag := ("Other", 0), facts := [.defn "Other" 0 #[otherLoc]], expect := none },
   { name := "simp only", src := "theorem t3e : Reg (fun _ => none) := by\n  simp only [Reg]\n",
@@ -344,9 +353,42 @@ def silentCase (env : Environment) : IO Bool := do
   let rs ← silentProjections ctx
   let got := rs.map fun r => (r.pattern, applyEdits src r.edits)
   let want := #[("holds-proj", "theorem x : X := by\n  have hnd := hord.holds.1\n  exact hnd.2.2 c hcp\n")]
-  if got == want then IO.println "ok   silent projection"; return true
-  IO.println s!"FAIL silent projection: {repr got}"
-  return false
+  unless got == want do
+    IO.println s!"FAIL silent projection: {repr got}"
+    return false
+  IO.println "ok   silent projection"
+  -- `unfold P at h` reports no error on a structure; the scan rewrites it anyway
+  let src2 := "theorem y (ho : StatusOrigin apps s c) : X := by\n  unfold StatusOrigin at ho\n  revert ho\n  unfold Other\n"
+  let parsed2 ← Parse.parseFile env "t.lean" src2
+  let facts2 := [Fact.defn "StatusOrigin at" 0 #[loc SO], Fact.defn "Other\n" 0 #[otherLoc]]
+  let ctx2 : Ctx := { env, parsed := parsed2, preds := #[SO], predTexts, oracle := mkOracle src2 facts2 log, trace }
+  let rs2 ← silentUnfolds ctx2
+  let got2 := rs2.map fun r => (r.pattern, applyEdits src2 r.edits)
+  let want2 := #[("unfold-iff", "theorem y (ho : StatusOrigin apps s c) : X := by\n  rw [StatusOrigin.iff] at ho\n  revert ho\n  unfold Other\n")]
+  unless got2 == want2 do
+    IO.println s!"FAIL silent unfold: {repr got2}"
+    return false
+  IO.println "ok   silent unfold"
+  -- `constructor` on a converted goal split the body when `P` was a `def`
+  let src3 := "theorem t (hH : net.Holds ss) : net.Unforged ss := by\n  constructor\n  · intro hp\n    exact foo\n  · intro v\n    exact bar\n\ntheorem u : A ∧ B := by\n  constructor\n  · exact a\n  · exact b\n"
+  let parsed3 ← Parse.parseFile env "t.lean" src3
+  let uf := mkPred "ArmadaLean.Nitro.NetworkState.Unforged" "NetworkState.Unforged"
+  let facts3 := [Fact.goal "constructor\n  · intro hp" 0 #[loc uf], Fact.goal "constructor\n  · exact a" 0 #[andLoc]]
+  let ctx3 : Ctx := { env, parsed := parsed3, preds := #[uf], predTexts, oracle := mkOracle src3 facts3 log, trace }
+  let rs3 ← silentConstructors ctx3
+  let got3 := rs3.map fun r => (r.pattern, applyEdits src3 r.edits)
+  let want3 := #[("constructor-split", "theorem t (hH : net.Holds ss) : net.Unforged ss := by\n  constructor\n  constructor\n  · intro hp\n    exact foo\n  · intro v\n    exact bar\n\ntheorem u : A ∧ B := by\n  constructor\n  · exact a\n  · exact b\n")]
+  unless got3 == want3 do
+    IO.println s!"FAIL silent constructor: {repr got3}"
+    return false
+  -- a `constructor` this run inserted is not doubled
+  let ctx4 : Ctx := { ctx3 with inserted := #[find! src3 "constructor"] }
+  let rs4 ← silentConstructors ctx4
+  unless rs4.isEmpty do
+    IO.println s!"FAIL silent constructor exclusion: {repr (rs4.map (·.pattern))}"
+    return false
+  IO.println "ok   silent constructor"
+  return true
 
 end Tests
 

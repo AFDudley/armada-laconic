@@ -178,11 +178,18 @@ partial def Client.waitIdle (c : Client) (uri : DocumentUri) : IO (Array Diagnos
   | .responseError rid _ m _ => c.logLine s!"stray error response {toJson rid}: {m}"
   c.waitIdle uri
 
+/-- `textDocument/definition`. The watchdog answers with `LocationLink`s, or
+    with plain `Location`s when it fell back to its reference data
+    (`Watchdog.bendLocationLinks`); both become links here. -/
 def Client.definition (c : Client) (uri : DocumentUri) (pos : Lsp.Position) : IO (Array LocationLink) := do
   let r ← c.request "textDocument/definition" (tdp uri pos)
-  match fromJson? r with
+  match fromJson? (α := Array LocationLink) r with
   | .ok ls => return ls
-  | .error e => throw (IO.userError s!"definition: {e}: {r}")
+  | .error e =>
+    match fromJson? (α := Array Location) r with
+    | .ok locs => return locs.map fun l =>
+        { originSelectionRange? := none, targetUri := l.uri, targetRange := l.range, targetSelectionRange := l.range }
+    | .error _ => throw (IO.userError s!"definition: {e}: {r}")
 
 def Client.rpcSession (c : Client) (uri : DocumentUri) : IO UInt64 := do
   let d ← c.doc uri

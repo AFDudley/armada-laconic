@@ -4,8 +4,8 @@
   `parseFile` runs the Lean parser over the file with an environment that
   holds the parsers of the file's imports. It elaborates only the commands
   that change how later text parses (`open`, `namespace`, `section`, `end`,
-  `set_option`, `universe`, `macro`, `syntax`, `notation`, …). It skips every
-  declaration: the server elaborates those. The result is the array of
+  `set_option`, `universe`, `variable`, `macro`, `syntax`, `notation`, …). It
+  skips every declaration: the server elaborates those. The result is the array of
   command syntax trees with source positions, and the `FileMap`.
 
   The rest of the module answers questions about syntax at a source range:
@@ -25,10 +25,12 @@ def scopeKinds : List Name := [
   ``Command.«open», ``Command.«namespace», ``Command.«section», ``Command.«end»,
   ``Command.«set_option», ``Command.«universe», ``Command.«macro», ``Command.«macro_rules»,
   ``Command.«syntax», ``Command.syntaxAbbrev, ``Command.«notation», ``Command.«mixfix»,
-  ``Command.syntaxCat, ``Command.«attribute»]
+  ``Command.syntaxCat, ``Command.«attribute», ``Command.«variable»]
 
 structure Parsed where
   commands : Array Syntax
+  /-- The section's `variable` binders in scope before each command. -/
+  scopeVars : Array (Array Syntax)
   fileMap : FileMap
   text : String
   /-- Messages the parser logged (a parse error stops the tool). -/
@@ -40,8 +42,8 @@ partial def parseFile (env : Environment) (fileName : String) (text : String) : 
   let (_, parserState, messages) ← Parser.parseHeader inputCtx
   let cmdState := Command.mkState env messages {}
   let frontendState : Frontend.State := { commandState := cmdState, parserState, cmdPos := parserState.pos }
-  let rec loop (s : Frontend.State) (acc : Array Syntax) (errs : Array String) :
-      IO (Frontend.State × Array Syntax × Array String) := do
+  let rec loop (s : Frontend.State) (acc : Array Syntax) (vars : Array (Array Syntax)) (errs : Array String) :
+      IO (Frontend.State × Array Syntax × Array (Array Syntax) × Array String) := do
     let scope := s.commandState.scopes.head!
     let pmctx : Parser.ParserModuleContext :=
       { env := s.commandState.env, options := scope.opts,
@@ -56,6 +58,7 @@ partial def parseFile (env : Environment) (fileName : String) (text : String) : 
       { s with parserState := ps, cmdPos := s.parserState.pos,
                commandState := { s.commandState with messages := msgs } }
     let acc := acc.push cmd
+    let vars := vars.push scope.varDecls
     let s ← if scopeKinds.contains cmd.getKind then
       let cmdCtx : Command.Context :=
         { cmdPos := s.cmdPos, fileName := inputCtx.fileName, fileMap := inputCtx.fileMap,
@@ -64,9 +67,9 @@ partial def parseFile (env : Environment) (fileName : String) (text : String) : 
       | .ok (_, st) => pure { s with commandState := st }
       | .error _ => pure s
     else pure s
-    if Parser.isTerminalCommand cmd then return (s, acc, errs) else loop s acc errs
-  let (_, cmds, errs) ← loop frontendState #[] #[]
-  return { commands := cmds, fileMap := inputCtx.fileMap, text, parseErrors := errs }
+    if Parser.isTerminalCommand cmd then return (s, acc, vars, errs) else loop s acc vars errs
+  let (_, cmds, vars, errs) ← loop frontendState #[] #[] #[]
+  return { commands := cmds, scopeVars := vars, fileMap := inputCtx.fileMap, text, parseErrors := errs }
 
 /-- Byte range of a syntax node. -/
 def range? (stx : Syntax) : Option (String.Pos.Raw × String.Pos.Raw) := do

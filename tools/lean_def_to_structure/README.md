@@ -53,7 +53,7 @@ parse with `Init` and `Mathlib.Tactic.Says` from the checkout).
 - `DefToStructure/Discovery.lean`: `findDeclarationRanges?`, the `def`
   pieces from the parsed declaration, the conversion text, the import graph
   from file headers.
-- `Tests.lean`: 54 cases of the decision (the 43 recorded cases of the first
+- `Tests.lean`: 55 cases of the decision (the 43 recorded cases of the first
   tool, the silent projection, the parenthesized-receiver goal, the two
   applications under `unfold`, the negation cases and the `Decidable` instances).
 - `scope.lean`: scope measurement, `lake env lean scope.lean` in a built
@@ -102,18 +102,21 @@ changes. No pattern inserts `sorry`, `admit`, `axiom` or `native_decide`.
 | `wrap` | a term whose expected type is `P …` and whose type is not; not already `⟨…⟩` | `⟨t⟩` |
 | `wrap-nested` | the argument of `⟨…⟩ : P` whose expected type is `P`'s body, itself a structure | `⟨t⟩` |
 | `constructor` | a tactic from a fixed list failed and the goal before it is `P …` | `constructor` before the tactic |
-| `unfold-iff` | the range is a name in `unfold` that resolves to `P` | `simp only [P.iff]` (every application, as `unfold` did; `rw` rewrites one instantiation only), then `unfold` of the rest |
+| `unfold-iff` | the range is a name in `unfold` that resolves to `P` (or, without an error, any `unfold` naming `P`: on a hypothesis it reports nothing and changes nothing) | goal: `simp only [P.iff]` (every application, as `unfold` did; `rw` rewrites one instantiation only); hypothesis: `rw [P.iff] at h` (`simp only … at h` moves `h` to the end of the context, and a later `revert` binds in the other order); then `unfold` of the rest |
 | `simp-iff` | the range is a `simp` family call (or `says`) with a name that resolves to `P` | `P.iff` in place of `P` |
 | `decidable-iff` | the stack holds an `instance` whose declared type is `Decidable (X)` with the head of `X` resolving to `P`, and whose value is an `inferInstanceAs` application | `decidable_of_iff _ (P.iff ..).symm` |
 | `not-wrap` / `not-holds` | a term of type `¬ P args` where `¬ body` is expected, or the converse: the heads under `Not` on both sides (the first argument's head, tag `/1/0/…` of the explicit form) | `fun h => t ⟨h⟩` / `fun h => t h.holds`, parenthesized in an argument position |
+| `constructor-split` | every `constructor` whose goal before it is `P …` and which this run did not insert (`constructor` on the old `def` split the body; on the structure it enters it) | `constructor` before it |
 | `holds-proj` | every `t.k` in the file whose index resolves to `P.holds` (the silent case: `t.k` was part `k` of the body, now it is the whole body) | `t.holds.k` |
 
 ## Loop
 
 For each file that imports a converted module, in import order: `didOpen`;
-until the file has no error and no silent projection: read the diagnostics,
-decide one repair per error (last position first, no overlapping edits),
-apply, write the file, `didChange`. A round with an error and no repair
+until the file has no error and no silent case: read the diagnostics; if the
+silent scans (`holds-proj`, and `unfold P` whose name resolves to a
+converted predicate, which reports no error on a hypothesis) find anything,
+apply those alone (`holds-proj`, the silent `unfold`, `constructor-split`), else decide one repair per error (last position first,
+no overlapping edits); apply, write the file, `didChange`. A round with an error and no repair
 stops the tool. A repair that would repeat (same pattern, same detail, same
 line text) stops the tool. An edited module is rebuilt with
 `lake build <Module>` before the next file opens, so that a dependent's

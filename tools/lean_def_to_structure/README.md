@@ -1,7 +1,7 @@
 # lean_def_to_structure
 
-A deterministic codemod for armada-lean. It converts a predicate
-`def P (binders) : Prop := body` to the one-field structure
+One Lean program that converts a predicate `def P (binders) : Prop := body`
+of an armada-lean checkout to the one-field structure
 `structure P (binders) : Prop where holds : body`, adds the lemma
 `P.iff : P args ↔ body`, and repairs the proofs that break. The same input
 gives the same output. The tool lives here, not in armada-lean, because
@@ -12,103 +12,128 @@ excludes a hypothesis once its head is an `ArmadaLean`-declared structure.
 Workers made this conversion by hand many times. The brief is
 `.scratch/briefs/2026-11-14-codemod-def-to-structure.md`.
 
+## Build and run
+
+```
+cd tools/lean_def_to_structure && lake build
+.lake/build/bin/def_to_structure --checkout /path/to/armada-lean-worktree \
+  --slot 2 --names RegistryConsistent,Adjudicator.IsDAG --report report.json
+```
+
+`lean-toolchain` here must equal the target's. The checkout is a throwaway
+worktree, never a live branch. Every `lake` command runs as
+`flock ~/.cache/lean-run/locks/slot-N.lock nice <command>` with
+`~/.elan/bin` on `PATH` and `CI` unset. Logs, `state.json` and the LSP log
+go to `<checkout>/.scratch/codemod/`.
+
+Tests: `lake env <checkout> .lake/build/bin/tests <checkout>` (the snippets
+parse with `Init` and `Mathlib.Tactic.Says` from the checkout).
+
 ## Files
 
-- `discover.lean`: the Lean half. `lake env lean discover.lean` in the
-  target checkout, with `CODEMOD_NAMES=A,B` in the environment. For each
-  name it prints one JSON line: the full name, the module path, the
-  declaration range (`findDeclarationRanges?`), and the byte offsets of the
-  `def` pieces from the parsed syntax of the declaration (`def` keyword,
-  `declId`, each binder with its kind and names, the type, `:=`, the body).
-  It also reports the head constant of the body and whether that head
-  unfolds to a structure.
-- `probe/`: a small Lake package with one executable, `probe`. It links
-  Lean and elaborates one file of the target checkout the way `lean` does
-  (run under `lake env` of the target, so that `LEAN_PATH` is set). It
-  prints every message with its range, like `lean --json`, plus one line
-  per numeric projection `t.1` that resolves to a converted predicate's
-  `holds` field (read from the info trees). The driver builds it once;
-  `probe/lean-toolchain` must equal the target's `lean-toolchain`.
-- `codemod.py`: the Python half. The driver. See its docstring for the
-  steps.
-- `repairs.py`: the fixed repair patterns. `match(message, source,
-  predicates)` returns one `Repair` or `None`.
-- `test_repairs.py`: the matcher against recorded Lean messages, both the
-  matching and the refusing cases. `python3 test_repairs.py`.
-- `scope.lean`: the scope measurement. It lists the `repeatedPremise`
-  groups whose head is an `ArmadaLean` `def … : Prop` that is not a
-  structure.
+- `Main.lean`: the driver. Steps: the base build and `scripts/type_lint.lean`
+  (the "before" list); `importModules` of the target (discovery, and the
+  parser for the loop); discovery and the guards; the conversion; the
+  dependents in import order through `lake serve`; one full check at the
+  end.
+- `DefToStructure/Lsp.lean`: the `lake serve` client. JSON-RPC with
+  `Lean.JsonRpc`; `didOpen`/`didChange` with the whole text; `waitIdle`
+  returns the diagnostics once `$/lean/fileProgress` reports nothing left for
+  the current version. Queries: `textDocument/definition`, and
+  `$/lean/rpc/call` with `Lean.Widget.getInteractiveTermGoal`,
+  `Lean.Widget.getInteractiveGoals`, `Lean.Widget.getInteractiveDiagnostics`
+  and `Lean.Widget.getGoToLocation`.
+- `DefToStructure/Parse.lean`: the target file as command `Syntax`. The
+  parser runs with the imports' environment; only the commands that change
+  later parsing elaborate (`open`, `namespace`, `section`, `end`,
+  `set_option`, `universe`, `macro`, `syntax`, `notation`, …). Declarations
+  are the server's job.
+- `DefToStructure/Patterns.lean`: the decision. One diagnostic in, one repair
+  or none out.
+- `DefToStructure/Discovery.lean`: `findDeclarationRanges?`, the `def`
+  pieces from the parsed declaration, the conversion text, the import graph
+  from file headers.
+- `Tests.lean`: 45 cases of the decision (the 43 recorded cases of the first
+  tool, the silent projection, and the parenthesized-receiver goal).
+- `scope.lean`: scope measurement, `lake env lean scope.lean` in a built
+  checkout.
 
-## Usage
+## Elaboration data
 
-```
-python3 tools/lean_def_to_structure/codemod.py \
-  --checkout /path/to/armada-lean-worktree --slot 2 \
-  --names RegistryConsistent,Adjudicator.IsDAG \
-  --report report.json
-```
+A predicate is recognized by **location**: the position of its name in the
+`structure` declaration the tool wrote, or the position of its `holds`
+field. Every fact below is a declaration location that the server returns.
 
-The checkout is a throwaway worktree, never a live branch. The tool runs
-every Lean command as `flock ~/.cache/lean-run/locks/slot-N.lock nice
-<command>` with `~/.elan/bin` on `PATH` and `CI` unset. Logs go to
-`<checkout>/.scratch/codemod/`.
+| fact | source |
+|------|--------|
+| the syntax at the diagnostic range | the parsed file (`Parse.stackAt`) |
+| the expected type's head of a term | `getInteractiveTermGoal` at the term's first token, then `getGoToLocation` on the head tag of its `type` (the tag with the longest all-`appFn` `subexprPos`) |
+| the goal's head before a tactic | `getInteractiveGoals` at the tactic's start, the same way |
+| what an identifier or field index resolves to | `textDocument/definition` |
+| the type's head of the term a diagnostic is about | `getInteractiveDiagnostics`, then `getGoToLocation` on the head tag of the **second expression embedded in the diagnostic** |
+| the expected type's head of a projection term `h.1` | the third embedded expression, the same way |
+
+The last two rows are the one place where the diagnostic itself is a source.
+They read the `Expr` objects Lean attached to the message (through their RPC
+references), not the message text. No position query gives those two types:
+the server's info lookup (`InfoTree.hoverableInfoAtM?`) prefers the
+innermost info at a position, and every position of a projection node or an
+application node belongs to one of its children (`h` and `1` in `h.1`); an
+intermediate of a dotted identifier (`hord.isDAG` in `hord.isDAG.irrefl`)
+has no info at all (`Lean/Elab/App.lean`, `elabAppLValsAux` elaborates it
+with `expectedType? := none`). Lean puts `e` first and `eType` second in
+`throwTypeMismatchError`, `throwFunctionExpected`, the invalid-field and the
+invalid-projection errors, and the expected type third in the mismatch
+errors.
 
 ## Repair patterns
 
-Each pattern is a fixed edit at the position of one Lean error. An error
-that matches no pattern stops the tool. The tool then writes the report
-with the file, the line and the message, and it changes nothing more.
-No pattern inserts `sorry`, `admit`, `axiom` or `native_decide`.
+Each pattern is a fixed edit. An error that matches no pattern stops the
+tool; the report names the file, the line and the message, and nothing more
+changes. No pattern inserts `sorry`, `admit`, `axiom` or `native_decide`.
 
-| pattern        | Lean message                                                         | edit                                     |
-|----------------|----------------------------------------------------------------------|------------------------------------------|
-| `holds-apply`  | `Function expected at h … has type P args`                           | `h.holds x`                              |
-| `holds-field`  | `Invalid field f: … does not contain P.f` / `Invalid projection …`   | `h.holds.f`, `h.holds.2.1`               |
-| `holds-type`   | type mismatch, the term has type `P args`                            | `term.holds`                             |
-| `holds-proj`   | the probe finds `h.1` that resolves to `P.holds` (`h.1` meant the first part of the body; Lean reports the mismatch far away, or never) | `h.holds.1` |
-| `wrap`         | type mismatch, the expected type is `P args`                         | `⟨term⟩`                                 |
-| `wrap-nested`  | argument mismatch inside `{ holds := … }`, the body is a structure   | `⟨term⟩`                                 |
-| `constructor`  | `Tactic t failed … ⊢ P args`                                         | `constructor` before `t`                 |
-| `unfold-iff`   | `Tactic unfold failed to unfold P`                                   | `rw [P.iff]`, then `unfold` of the rest  |
-| `simp-iff`     | `simp made no progress`, the simp set lists `P`                      | `P.iff` in place of `P`                  |
+| pattern | decision | edit |
+|---------|----------|------|
+| `holds-apply` | the term at the range is an application with no term info (it did not elaborate), and the diagnosed term's type is `P …` | `f.holds args` |
+| `holds-field` | the range sits in a projection chain; the first field that resolves to nothing is the failing step; the diagnosed term's type is `P …` | `h.holds.f`, `h.holds.2.1` |
+| `holds-type` | a term whose type is `P …` where the expected type is not | `t.holds`, `(t).holds` for an application |
+| `wrap` | a term whose expected type is `P …` and whose type is not; not already `⟨…⟩` | `⟨t⟩` |
+| `wrap-nested` | the argument of `⟨…⟩ : P` whose expected type is `P`'s body, itself a structure | `⟨t⟩` |
+| `constructor` | a tactic from a fixed list failed and the goal before it is `P …` | `constructor` before the tactic |
+| `unfold-iff` | the range is a name in `unfold` that resolves to `P` | `rw [P.iff]`, then `unfold` of the rest |
+| `simp-iff` | the range is a `simp` family call (or `says`) with a name that resolves to `P` | `P.iff` in place of `P` |
+| `holds-proj` | every `t.k` in the file whose index resolves to `P.holds` (the silent case: `t.k` was part `k` of the body, now it is the whole body) | `t.holds.k` |
 
 ## Loop
 
-1. `lake build`, then `lake build ArmadaLean.Lint.TypeDoctrine
-   ArmadaLean.Lint.TypeDoctrineTest` (the modules the gate builds).
-2. For each failing module: the probe gives every message with its range
-   and every `t.1` on a converted type. Each `t.1` gets `.holds`; the
-   matcher maps each error to one repair. The repairs of one round apply
-   together, last position first, without overlap. The file runs again
-   until it has no error and no such projection.
-3. Back to step 1 until the build passes.
-4. `docs/counterexamples/*.lean` are outside the build. Each runs through
-   `lake env lean --json` and the same repair loop.
+For each file that imports a converted module, in import order: `didOpen`;
+until the file has no error and no silent projection: read the diagnostics,
+decide one repair per error (last position first, no overlapping edits),
+apply, write the file, `didChange`. A round with an error and no repair
+stops the tool. A repair that would repeat (same pattern, same detail, same
+line text) stops the tool. An edited module is rebuilt with
+`lake build <Module>` before the next file opens, so that a dependent's
+imports are the repaired `.olean` files. No full `lake build` runs inside the
+loop.
 
-A round that applies no repair stops the tool. A repair that would repeat
-an earlier repair (same pattern, same detail, same line text) stops the
-tool.
+At the end: `lake build`, the linter modules, `scripts/type_lint.lean` (the
+"after" list), `scripts/update_gate_baseline.py --hashes-only`,
+`bash scripts/check.sh --json` (it also elaborates
+`docs/counterexamples/*.lean`), and the JSON report.
 
 ## Guards
 
-- A predicate under `ArmadaLean/Spec/` is refused. The repair loop never
-  edits a file under `ArmadaLean/Spec/`.
-- `git grep "Spec\.<name>\b" -- ArmadaLean/Spec` must find nothing for
-  each predicate.
-- A predicate that is already a `holds` structure with `P.iff` is
-  skipped; the repair loop still runs.
+- A predicate under `ArmadaLean/Spec/` is refused. The loop never writes a
+  file under `ArmadaLean/Spec/`.
+- `git grep "Spec\.<name>\b" -- ArmadaLean/Spec` must find nothing.
 - `--resume` continues a stopped run after a hand edit of the file that
-  stopped it: it skips the base build and the discovery, and reads the
-  first run's `lint-before.log` and `discover.log` from
-  `<checkout>/.scratch/codemod/`.
+  stopped it: it skips the base build, the discovery and the conversion, and
+  reads `state.json` and `lint-before.jsonl`.
 
-## Output
+## Report
 
-A commit-ready working tree in the checkout, with
-`scripts/gate-baseline.json` file hashes refreshed
-(`scripts/update_gate_baseline.py --hashes-only`), and a JSON report:
-the predicates, the repairs (file, line, pattern, predicate, detail), the
-linter summaries before and after (`scripts/type_lint.lean` after full
-builds), the finding lines removed and added, the `bash scripts/check.sh
---json` `_ok` fields, the files changed, and `stopped` with the message
-when the tool stopped.
+The predicates, the repairs (file, line, pattern, predicate, detail), the
+rounds, the linter summaries before and after, the finding lines removed and
+added (the `example` field dropped: it is a nondeterministic
+representative), the `check.sh --json` `_ok` fields, the files changed, the
+timings of every `lake` command, `stopped` and `stops`.

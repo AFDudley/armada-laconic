@@ -213,13 +213,15 @@ def predTexts : M PredTexts := do
 def locOfLink (l : Lsp.LocationLink) : Loc :=
   { uri := l.targetUri, line := l.targetSelectionRange.start.line, character := l.targetSelectionRange.start.character }
 
+def headsOf (h : Lsp.Heads) : Heads := { head := h.head.map locOfLink, arg := h.arg.map locOfLink }
+
 def mkOracle (c : Lsp.Client) (uri : String) (fm : FileMap) : Oracle :=
   let pos (off : Nat) : Lsp.Position := fm.utf8PosToLspPos ⟨off⟩
   { definition := fun off => do return (← c.definition uri (pos off)).map locOfLink
-    expectedHead := fun off => do return (← c.expectedTypeHead uri (pos off)).map (·.map locOfLink)
-    goalHead := fun off => do return (← c.goalHead uri (pos off)).map locOfLink
+    expectedHead := fun off => do return (← c.expectedTypeHead uri (pos off)).map headsOf
+    goalHead := fun off => do return headsOf (← c.goalHead uri (pos off))
     diagExprHeads := fun s e => do
-      return (← c.diagExprHeads uri ⟨pos s, pos e⟩).map (·.map locOfLink) }
+      return (← c.diagExprHeads uri ⟨pos s, pos e⟩).map headsOf }
 
 /-- Repair one file through the server until it has no error and no silent
     projection. Returns whether the file changed. -/

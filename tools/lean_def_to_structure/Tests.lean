@@ -75,17 +75,26 @@ def predTexts : PredTexts := { fileMaps := Std.HashMap.ofList [("P.lean", FileMa
 def loc (p : Pred) : Loc := p.loc predTexts
 def holdsLoc (p : Pred) : Loc := p.holdsLoc predTexts
 
+/-- `Heads` with a head only. -/
+def hd (a : Array Loc) : Heads := { head := a }
+def notLoc : Loc := { uri := "file:///Prelude.lean", line := 100, character := 4 }
+/-- `¬ X` with `X` headed at `a`. -/
+def notOf (a : Array Loc) : Heads := { head := #[notLoc], arg := a }
+
 inductive Fact where
   /-- the head of the diagnosed term's type (the diagnostic's second embed). -/
   | type (ans : Array Loc)
   /-- `definition` at the needle's start. -/
   | defn (needle : String) (occ : Nat) (ans : Array Loc)
-  /-- expected-type head at the needle's start. -/
-  | exp (needle : String) (occ : Nat) (ans : Array Loc)
+  /-- expected-type heads at the needle's start. -/
+  | expH (needle : String) (occ : Nat) (ans : Heads)
   /-- goal head at the needle's start. -/
   | goal (needle : String) (occ : Nat) (ans : Array Loc)
   /-- the heads of the diagnostic's embedded expressions. -/
-  | embeds (ans : Array (Array Loc))
+  | embedsH (ans : Array Heads)
+
+def Fact.exp (needle : String) (occ : Nat) (ans : Array Loc) : Fact := .expH needle occ (hd ans)
+def Fact.embeds (ans : Array (Array Loc)) : Fact := .embedsH (ans.map hd)
 
 structure Case where
   name : String
@@ -99,16 +108,19 @@ structure Case where
 
 def mkOracle (src : String) (facts : List Fact) (log : IO.Ref (Array String))
     (diag : Option (Nat × Nat) := none) : Oracle :=
-  let look? (kind : String) (off : Nat) : IO (Option (Array Loc)) := do
+  let look? (kind : String) (off : Nat) : IO (Option Heads) := do
     for f in facts do
       match kind, f with
-      | "def", .defn n o a | "exp", .exp n o a | "goal", .goal n o a =>
+      | "def", .defn n o a | "goal", .goal n o a =>
+        if find! src n o == off then return some (hd a)
+      | "exp", .expH n o a =>
         if find! src n o == off then return some a
       | _, _ => pure ()
     log.modify (·.push s!"{kind}@{off}")
     return none
-  let look (kind : String) (off : Nat) : IO (Array Loc) := do return (← look? kind off).getD #[]
-  { definition := look "def", expectedHead := look? "exp", goalHead := look "goal",
+  let look (kind : String) (off : Nat) : IO (Array Loc) := do return ((← look? kind off).getD {}).head
+  { definition := look "def", expectedHead := look? "exp",
+    goalHead := fun off => do return (← look? "goal" off).getD {},
     diagExprHeads := fun s e => do
       -- the embeds belong to the diagnostic at its own range only
       if diag.any (· != (s, e)) then
@@ -116,8 +128,8 @@ def mkOracle (src : String) (facts : List Fact) (log : IO.Ref (Array String))
         return #[]
       for f in facts do
         match f with
-        | .embeds a => return a
-        | .type a => return #[#[], a]
+        | .embedsH a => return a
+        | .type a => return #[{}, hd a]
         | _ => pure ()
       return #[] }
 
@@ -138,7 +150,7 @@ def runCase (env : Environment) (c : Case) : IO Bool := do
   if got == c.expect then
     IO.println s!"ok   {c.name}"
     return true
-  IO.println s!"FAIL {c.name}\n  expected {repr c.expect}\n  got      {repr got}\n  unanswered {← log.get}"
+  IO.println s!"FAIL {c.name}\n  expected {repr c.expect}\n  got      {repr got}\n  unanswered {← log.get}\n  trace {← trace.get}"
   return false
 
 def functionExpectedEmbeds (p : Pred) : Fact := .embeds #[#[], #[loc p]]
@@ -280,6 +292,44 @@ def cases : List Case := [
     expect := some ("simp-iff", "theorem t : X := by\n  exact ⟨[], by (simp? [OnlyTransfers.iff] says simp only [OnlyTransfers.iff, List.not_mem_nil, IsEmpty.forall_iff, implies_true]), rfl⟩\n") },
   { name := "simp refuses without the predicate", src := "theorem t : X := by\n  simp only [foo]\n",
     diag := ("simp only [foo]", 0), facts := [.defn "foo]" 0 #[fooLoc]], expect := none },
+  -- negation
+  { name := "not-wrap: ¬ P where ¬ body is expected",
+    src := "theorem t (hnot : ¬ o.Precedes c b) : X := by\n  exact total_takeWhile_lt o.dedup hbc hc hnot\n",
+    diag := ("hnot\n", 0), preds := #[PRECEDES],
+    facts := [.expH "hnot\n" 0 (notOf #[otherLoc]), .embedsH #[{}, notOf #[loc PRECEDES], notOf #[otherLoc]]],
+    expect := some ("not-wrap", "theorem t (hnot : ¬ o.Precedes c b) : X := by\n  exact total_takeWhile_lt o.dedup hbc hc (fun h => hnot ⟨h⟩)\n") },
+  { name := "not-holds: ¬ body where ¬ P is expected",
+    src := "theorem t (hnot : ¬ c ∈ l) : ¬ o.Precedes c b := hnot\n",
+    diag := ("hnot\n", 0), preds := #[PRECEDES],
+    facts := [.expH "hnot\n" 0 (notOf #[loc PRECEDES]), .embedsH #[{}, notOf #[otherLoc], notOf #[loc PRECEDES]]],
+    expect := some ("not-holds", "theorem t (hnot : ¬ c ∈ l) : ¬ o.Precedes c b := fun h => hnot h.holds\n") },
+  { name := "not-wrap with an application gets parentheses",
+    src := "theorem t : X := by\n  exact f (g hnot) rest\n",
+    diag := ("g hnot", 0), preds := #[PRECEDES],
+    facts := [.expH "g hnot" 0 (notOf #[otherLoc]), .embedsH #[{}, notOf #[loc PRECEDES], notOf #[otherLoc]]],
+    expect := some ("not-wrap", "theorem t : X := by\n  exact f (fun h => (g hnot) ⟨h⟩) rest\n") },
+  { name := "negation refuses an unrelated predicate",
+    src := "theorem t (hnot : ¬ Foo c b) : X := by\n  exact total_takeWhile_lt o.dedup hbc hc hnot\n",
+    diag := ("hnot\n", 0), preds := #[PRECEDES],
+    facts := [.expH "hnot\n" 0 (notOf #[otherLoc]), .embedsH #[{}, notOf #[fooLoc], notOf #[otherLoc]]],
+    expect := none },
+  -- decidable instances
+  { name := "decidable-iff",
+    src := "instance (o : Allocation E) (c b : Address E) : Decidable (o.Precedes c b) :=\n  inferInstanceAs (Decidable (c ∈ _))\n",
+    diag := ("c ∈ _", 0), preds := #[PRECEDES], facts := [.defn "Precedes c b" 0 #[loc PRECEDES]],
+    expect := some ("decidable-iff", "instance (o : Allocation E) (c b : Address E) : Decidable (o.Precedes c b) :=\n  decidable_of_iff _ (ArmadaLean.Nitro.Allocation.Precedes.iff ..).symm\n") },
+  { name := "decidable-iff with a plain application type",
+    src := "instance (o : Allocation E) (c b : Address E) : Decidable (Precedes o c b) :=\n  inferInstanceAs (Decidable (c ∈ _))\n",
+    diag := ("c ∈ _", 0), preds := #[PRECEDES], facts := [.defn "Precedes o c b" 0 #[loc PRECEDES]],
+    expect := some ("decidable-iff", "instance (o : Allocation E) (c b : Address E) : Decidable (Precedes o c b) :=\n  decidable_of_iff _ (ArmadaLean.Nitro.Allocation.Precedes.iff ..).symm\n") },
+  { name := "decidable-iff refuses an unrelated predicate",
+    src := "instance (o : Allocation E) (c b : Address E) : Decidable (Foo o c b) :=\n  inferInstanceAs (Decidable (c ∈ _))\n",
+    diag := ("c ∈ _", 0), preds := #[PRECEDES], facts := [.defn "Foo o c b" 0 #[fooLoc]],
+    expect := none },
+  { name := "decidable-iff refuses another value",
+    src := "instance (o : Allocation E) (c b : Address E) : Decidable (Precedes o c b) :=\n  List.decidableBEx _ _\n",
+    diag := ("List.decidableBEx _ _", 0), preds := #[PRECEDES], facts := [.defn "Precedes o c b" 0 #[loc PRECEDES], .exp "List.decidableBEx _ _" 0 #[otherLoc]],
+    expect := none },
   -- refusals
   { name := "unsolved goals", src := "theorem t : X := by\n  omega\n", diag := ("omega", 0), facts := [.goal "omega" 0 #[otherLoc]], expect := none } ]
 

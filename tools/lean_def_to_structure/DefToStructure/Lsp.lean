@@ -228,18 +228,20 @@ partial def foldTagged (j : Json) (acc : Array Json) : Array Json :=
       | .ok (.arr #[info, inner]) => foldTagged inner (acc.push info)
       | _ => acc
 
-/-- The tag whose `subexprPos` is the longest all-`appFn` path (`/0/0/…`):
-    the head of an application in a `CodeWithInfos`. -/
-def headTag? (code : Json) : Option Json := Id.run do
+/-- The tag whose `subexprPos` is `pre` followed by the longest all-`appFn`
+    path (`/0/0/…`): the head of the application at `prefix`. -/
+def headTagUnder? (code : Json) (pre : List String) : Option Json := Id.run do
   let tags := foldTagged code #[]
   let mut best : Option (Nat × Json) := none
   for t in tags do
     let .ok (.str p) := t.getObjVal? "subexprPos" | continue
     let coords := (p.splitOn "/").filter (· ≠ "")
-    if coords.all (· == "0") then
+    if coords.take pre.length == pre && (coords.drop pre.length).all (· == "0") then
       let depth := coords.length
       if best.all (fun (d, _) => depth > d) then best := some (depth, t)
   return best.map (·.2)
+
+def headTag? (code : Json) : Option Json := headTagUnder? code []
 
 /-- The root tag of a `CodeWithInfos` (`subexprPos` `/`). -/
 def rootTag? (code : Json) : Option Json :=
@@ -253,37 +255,46 @@ def Client.gotoRef (c : Client) (uri : DocumentUri) (pos : Lsp.Position) (info :
   | .ok ls => return ls
   | .error e => throw (IO.userError s!"getGoToLocation: {e}: {r}")
 
+/-- The head constant of an expression and the head of its first explicit
+    argument (the `P` of `¬ P a`). -/
+structure Heads where
+  head : Array LocationLink
+  arg : Array LocationLink
+
 /-- The head constant's definition of the expression a `CodeWithInfos`
-    prints. The printed form may use field notation (`s.IsDAG`), which tags
-    no head; so the root's `InfoWithCtx` goes through
-    `InteractiveDiagnostics.infoToInteractive`, whose `exprExplicit` prints
-    the expression with `pp.explicit` and `pp.tagAppFns` (`@IsDAG E inst s`,
-    the head tagged at `/0/0/0`). -/
-def Client.headLoc (c : Client) (uri : DocumentUri) (pos : Lsp.Position) (code : Json) : IO (Array LocationLink) := do
-  let some root := rootTag? code | return #[]
-  let .ok info := root.getObjVal? "info" | return #[]
+    prints, and the head of its first argument. The printed form may use
+    field notation (`s.IsDAG`), which tags no head; so the root's
+    `InfoWithCtx` goes through `InteractiveDiagnostics.infoToInteractive`,
+    whose `exprExplicit` prints the expression with `pp.explicit` and
+    `pp.tagAppFns` (`@IsDAG E inst s`, the head tagged at `/0/0/0`; the
+    argument of `¬ P a` at `/1`, its head at `/1/0/…`). -/
+def Client.heads (c : Client) (uri : DocumentUri) (pos : Lsp.Position) (code : Json) : IO Heads := do
+  let some root := rootTag? code | return ⟨#[], #[]⟩
+  let .ok info := root.getObjVal? "info" | return ⟨#[], #[]⟩
   let popup ← c.rpcCall uri pos `Lean.Widget.InteractiveDiagnostics.infoToInteractive info
-  let .ok explicit := popup.getObjVal? "exprExplicit" | return #[]
-  let some head := headTag? explicit >>= (·.getObjVal? "info" |>.toOption) | return #[]
-  c.gotoRef uri pos head
+  let .ok explicit := popup.getObjVal? "exprExplicit" | return ⟨#[], #[]⟩
+  let gotoTag (t? : Option Json) : IO (Array LocationLink) := do
+    let some i := t? >>= (·.getObjVal? "info" |>.toOption) | return #[]
+    c.gotoRef uri pos i
+  return ⟨← gotoTag (headTag? explicit), ← gotoTag (headTagUnder? explicit ["1"])⟩
 
 /-- The head constant's definition of the expected type of the term at `pos`;
     `none` when the server has no term info there. -/
-def Client.expectedTypeHead (c : Client) (uri : DocumentUri) (pos : Lsp.Position) : IO (Option (Array LocationLink)) := do
+def Client.expectedTypeHead (c : Client) (uri : DocumentUri) (pos : Lsp.Position) : IO (Option Heads) := do
   let r ← c.rpcCall uri pos `Lean.Widget.getInteractiveTermGoal (tdp uri pos)
   if r.isNull then return none
   let .ok ty := r.getObjVal? "type" | throw (IO.userError s!"getInteractiveTermGoal: no type: {r}")
-  return some (← c.headLoc uri pos ty)
+  return some (← c.heads uri pos ty)
 
 /-- The head constant's definition of the main goal's target at `pos`
     (the goal before the tactic at `pos`). -/
-def Client.goalHead (c : Client) (uri : DocumentUri) (pos : Lsp.Position) : IO (Array LocationLink) := do
+def Client.goalHead (c : Client) (uri : DocumentUri) (pos : Lsp.Position) : IO Heads := do
   let r ← c.rpcCall uri pos `Lean.Widget.getInteractiveGoals (tdp uri pos)
-  if r.isNull then return #[]
+  if r.isNull then return ⟨#[], #[]⟩
   let .ok (.arr goals) := r.getObjVal? "goals" | throw (IO.userError s!"getInteractiveGoals: {r}")
-  let some g := goals[0]? | return #[]
-  let .ok ty := g.getObjVal? "type" | return #[]
-  c.headLoc uri pos ty
+  let some g := goals[0]? | return ⟨#[], #[]⟩
+  let .ok ty := g.getObjVal? "type" | return ⟨#[], #[]⟩
+  c.heads uri pos ty
 
 /-- Every expression embed of a `TaggedText MsgEmbed` JSON value, in order. -/
 partial def exprEmbeds (j : Json) (acc : Array Json) : Array Json :=
@@ -304,7 +315,7 @@ partial def exprEmbeds (j : Json) (acc : Array Json) : Array Json :=
 
 /-- The head-constant definitions of each expression Lean embedded in the
     diagnostic at `range` (one array per embedded expression, in order). -/
-def Client.diagExprHeads (c : Client) (uri : DocumentUri) (range : Range) : IO (Array (Array LocationLink)) := do
+def Client.diagExprHeads (c : Client) (uri : DocumentUri) (range : Range) : IO (Array Heads) := do
   let params := Json.mkObj [("lineRange", Json.mkObj [("start", toJson range.start.line), ("end", toJson (range.start.line + 1))])]
   let r ← c.rpcCall uri range.start `Lean.Widget.getInteractiveDiagnostics params
   let .arr diags := r | throw (IO.userError s!"getInteractiveDiagnostics: {r}")
@@ -316,7 +327,7 @@ def Client.diagExprHeads (c : Client) (uri : DocumentUri) (range : Range) : IO (
   let .ok msg := d.getObjVal? "message" | return #[]
   let mut out := #[]
   for code in exprEmbeds msg #[] do
-    out := out.push (← c.headLoc uri range.start code)
+    out := out.push (← c.heads uri range.start code)
   return out
 
 end DefToStructure.Lsp

@@ -53,8 +53,9 @@ parse with `Init` and `Mathlib.Tactic.Says` from the checkout).
 - `DefToStructure/Discovery.lean`: `findDeclarationRanges?`, the `def`
   pieces from the parsed declaration, the conversion text, the import graph
   from file headers.
-- `Tests.lean`: 45 cases of the decision (the 43 recorded cases of the first
-  tool, the silent projection, and the parenthesized-receiver goal).
+- `Tests.lean`: 54 cases of the decision (the 43 recorded cases of the first
+  tool, the silent projection, the parenthesized-receiver goal, the two
+  applications under `unfold`, the negation cases and the `Decidable` instances).
 - `scope.lean`: scope measurement, `lake env lean scope.lean` in a built
   checkout.
 
@@ -72,6 +73,7 @@ field. Every fact below is a declaration location that the server returns.
 | what an identifier or field index resolves to | `textDocument/definition` |
 | the type's head of the term a diagnostic is about | `getInteractiveDiagnostics`, then `getGoToLocation` on the head tag of the **second expression embedded in the diagnostic** |
 | the expected type's head of a projection term `h.1` | the third embedded expression, the same way |
+| the head under `¬` | the same queries, the head tag under the first argument (`/1/0/…`) |
 
 The last two rows are the one place where the diagnostic itself is a source.
 They read the `Expr` objects Lean attached to the message (through their RPC
@@ -102,6 +104,8 @@ changes. No pattern inserts `sorry`, `admit`, `axiom` or `native_decide`.
 | `constructor` | a tactic from a fixed list failed and the goal before it is `P …` | `constructor` before the tactic |
 | `unfold-iff` | the range is a name in `unfold` that resolves to `P` | `simp only [P.iff]` (every application, as `unfold` did; `rw` rewrites one instantiation only), then `unfold` of the rest |
 | `simp-iff` | the range is a `simp` family call (or `says`) with a name that resolves to `P` | `P.iff` in place of `P` |
+| `decidable-iff` | the stack holds an `instance` whose declared type is `Decidable (X)` with the head of `X` resolving to `P`, and whose value is an `inferInstanceAs` application | `decidable_of_iff _ (P.iff ..).symm` |
+| `not-wrap` / `not-holds` | a term of type `¬ P args` where `¬ body` is expected, or the converse: the heads under `Not` on both sides (the first argument's head, tag `/1/0/…` of the explicit form) | `fun h => t ⟨h⟩` / `fun h => t h.holds`, parenthesized in an argument position |
 | `holds-proj` | every `t.k` in the file whose index resolves to `P.holds` (the silent case: `t.k` was part `k` of the body, now it is the whole body) | `t.holds.k` |
 
 ## Loop

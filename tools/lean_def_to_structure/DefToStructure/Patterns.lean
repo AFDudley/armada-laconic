@@ -84,14 +84,21 @@ structure Repair where
 def mkRepair (pattern : String) (pred : String) (detail : String) (edits : Array Edit) : Repair :=
   { pattern, pred := some pred, detail, edits }
 
+/-- The head constant of a type and the head of its first explicit argument
+    (the `P` of `¬ P a`), as declaration locations. -/
+structure Heads where
+  head : Array Loc := #[]
+  arg : Array Loc := #[]
+  deriving Repr, Inhabited, BEq
+
 /-- Elaboration data for one file, by byte position. -/
 structure Oracle where
   definition : Nat → IO (Array Loc)
   /-- `none` when the server has no term info at the position: the term did
       not elaborate. -/
-  expectedHead : Nat → IO (Option (Array Loc))
-  goalHead : Nat → IO (Array Loc)
-  diagExprHeads : Nat → Nat → IO (Array (Array Loc))
+  expectedHead : Nat → IO (Option Heads)
+  goalHead : Nat → IO Heads
+  diagExprHeads : Nat → Nat → IO (Array Heads)
 
 /-- The predicate file texts the decision needs for locations: the current
     text of each predicate's file. -/
@@ -222,14 +229,14 @@ partial def decompose (c : Ctx) (n : Syntax) : Option (Array Step) :=
     invalid-projection errors). Position queries cannot give it: the server's
     info lookup prefers the innermost info at a position, and every position
     of a projection or application node belongs to one of its children. -/
-def actualType (c : Ctx) (s e : Nat) : IO (Array Loc) := do
-  return ((← c.oracle.diagExprHeads s e)[1]?).getD #[]
+def actualType (c : Ctx) (s e : Nat) : IO Heads := do
+  return ((← c.oracle.diagExprHeads s e)[1]?).getD {}
 
 /-- `holds-apply`: `f args` with `f : P …`. -/
 def tryHoldsApply (c : Ctx) (node : Syntax) (s e : Nat) : IO (Option Repair) := do
   unless isKind ``Term.app node do return none
   let f := node[0]
-  let some p := c.predAt (← actualType c s e) | return none
+  let some p := c.predAt (← actualType c s e).head | return none
   let fe := (rangeOf f).2
   return some (mkRepair "holds-apply" p.fullName
     s!"{textOf c (rangeOf f).1 fe} applied as a function" #[⟨fe, fe, ".holds"⟩])
@@ -253,7 +260,7 @@ def tryHoldsField (c : Ctx) (stack : Array Syntax) (s e : Nat) : IO (Option Repa
     i := i + 1
   let some k := failing | return none
   let st := steps[k]!
-  let some p := c.predAt (← actualType c s e) | return none
+  let some p := c.predAt (← actualType c s e).head | return none
   let fieldText := textOf c st.fieldStart st.fieldEnd
   return some (mkRepair "holds-field" p.fullName
     (if st.numeric then s!"projection on {textOf c (rangeOf chainNode).1 st.objectEnd} through holds"
@@ -267,14 +274,30 @@ def tryMismatch (c : Ctx) (stack : Array Syntax) (t : Syntax) (ds de : Nat) : IO
   -- a projection node has no position of its own for the term-goal query
   -- (its children cover every position); its expected type is the third
   -- expression Lean embedded in the mismatch diagnostic
-  let expected : Array Loc ← if isKind ``Term.proj t then do
+  let expected : Heads ← if isKind ``Term.proj t then do
       let heads ← c.oracle.diagExprHeads ds de
-      pure (heads[2]?.getD #[])
+      pure (heads[2]?.getD {})
     else do
       let r ← c.oracle.expectedHead (freePos t)
-      pure (r.getD #[])
-  let expPred := c.predAt expected
-  let actPred := c.predAt (← actualType c ds de)
+      pure (r.getD {})
+  let actual ← actualType c ds de
+  let expPred := c.predAt expected.head
+  let actPred := c.predAt actual.head
+  -- negation: `¬ P args` where `¬ body` is expected, or the converse
+  if expPred.isNone && actPred.isNone && !expected.arg.isEmpty && expected.head == actual.head then
+    let wrapped := if needsParens t then s!"({textOf c s e})" else textOf c s e
+    -- an argument of an application needs parentheses around the `fun`
+    let inApp := (stack.toList.dropLast.getLast?).any (isKind ``Term.app) ||
+      ((stack.toList.dropLast.dropLast.getLast?).any (isKind ``Term.app) && (stack.toList.dropLast.getLast?).any (·.getKind == nullKind))
+    let paren (x : String) := if inApp then s!"({x})" else x
+    match c.predAt actual.arg, c.predAt expected.arg with
+    | some p, none =>
+      return some (mkRepair "not-wrap" p.fullName s!"fun h => {wrapped} ⟨h⟩, has type ¬ {p.short}"
+        #[⟨s, e, paren s!"fun h => {wrapped} ⟨h⟩"⟩])
+    | none, some p =>
+      return some (mkRepair "not-holds" p.fullName s!"fun h => {wrapped} h.holds, expected ¬ {p.short}"
+        #[⟨s, e, paren s!"fun h => {wrapped} h.holds"⟩])
+    | _, _ => pure ()
   if expPred.isSome && actPred.isNone then
     if isKind ``Term.anonymousCtor t then return none
     return some (mkRepair "wrap" (expPred.get!.fullName)
@@ -292,12 +315,11 @@ def tryMismatch (c : Ctx) (stack : Array Syntax) (t : Syntax) (ds de : Nat) : IO
   -- itself a structure
   if isKind ``Term.anonymousCtor t then return none
   let some parent := stack.reverse.find? (isKind ``Term.anonymousCtor) | return none
-  let some p := c.predAt ((← c.oracle.expectedHead (rangeOf parent).1).getD #[]) | return none
-  unless p.bodyIsStructure && expected[0]? == p.bodyHead do return none
+  let some p := c.predAt ((← c.oracle.expectedHead (rangeOf parent).1).getD {}).head | return none
+  unless p.bodyIsStructure && expected.head[0]? == p.bodyHead do return none
   return some (mkRepair "wrap-nested" p.fullName
     s!"⟨{(textOf c s e).take 40}⟩ expected the body of {p.short}"
     #[⟨s, s, "⟨"⟩, ⟨e, e, "⟩"⟩])
-  return none
 
 /-- `unfold-iff`: `unfold P` cannot unfold a structure. `simp only [P.iff]`
     rewrites every application of `P`, as `unfold` did; `rw [P.iff]` would
@@ -347,8 +369,41 @@ def tryConstructor (c : Ctx) (stack : Array Syntax) : IO (Option Repair) := do
   let word := firstWord tac
   unless goalTactics.contains word do return none
   let ts := (rangeOf tac).1
-  let some p := c.predAt (← c.oracle.goalHead ts) | return none
+  let some p := c.predAt (← c.oracle.goalHead ts).head | return none
   return some (mkRepair "constructor" p.fullName s!"constructor before {word}" #[constructorEdit c ts])
+
+/-- `decidable-iff`: `instance : Decidable (P args) := inferInstanceAs (Decidable body')`
+    relied on `P` unfolding to its body. The replacement
+    `decidable_of_iff _ (P.iff ..).symm` carries the same instance through
+    the equivalence lemma. Decided from the instance's declared type: an
+    application of `Decidable` whose argument's head resolves to `P`, and a
+    value that is an `inferInstanceAs` application. -/
+def tryDecidable (c : Ctx) (stack : Array Syntax) : IO (Option Repair) := do
+  let some inst := stack.find? (isKind ``Command.instance) | return none
+  -- the value: an `inferInstanceAs …` term on the stack
+  let some body := stack.find? (isKind ``Term.inferInstanceAs) | return none
+  -- the declared type: `Decidable (X)`
+  let sig := inst[4]
+  let ty := sig[1][1]
+  unless isKind ``Term.app ty && ty[0].isIdent && ty[0].getId.toString == "Decidable" do return none
+  let arg := ty[1][0]
+  let inner := if isKind ``Term.paren arg then arg[1] else arg
+  let headPos : Option Nat :=
+    if isKind ``Term.app inner then
+      let f := inner[0]
+      if f.isIdent then
+        let comps := Parse.identComponentRanges c.parsed.text f
+        comps.back?.map (·.1.byteIdx)
+      else none
+    else if inner.isIdent then
+      (Parse.identComponentRanges c.parsed.text inner).back?.map (·.1.byteIdx)
+    else none
+  let some hp := headPos | return none
+  let some p := c.predAt (← c.oracle.definition hp) | return none
+  let (bs, be) := rangeOf body
+  return some (mkRepair "decidable-iff" p.fullName
+    s!"inferInstanceAs → decidable_of_iff _ ({p.fullName}.iff ..).symm"
+    #[⟨bs, be, s!"decidable_of_iff _ ({p.fullName}.iff ..).symm"⟩])
 
 /-- One error diagnostic at byte range `[s, e]` → one repair, or none. -/
 def decide (c : Ctx) (s e : Nat) : IO (Option Repair) := do
@@ -359,6 +414,7 @@ def decide (c : Ctx) (s e : Nat) : IO (Option Repair) := do
   c.note s!"{s}-{e}: stack {stack.map (·.getKind)}"
   if let some r ← tryUnfold c stack s e then return some r
   if let some r ← trySimp c stack s e then return some r
+  if let some r ← tryDecidable c stack then return some r
   if let some r ← tryHoldsField c stack s e then return some r
   if let some t := termAt c stack s e then
     let expected ← c.oracle.expectedHead (freePos t)

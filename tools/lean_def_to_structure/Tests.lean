@@ -35,6 +35,8 @@ structure OnlyTransfers (ops : List (Participant × Op E)) : Prop where
   holds : ∀ e ∈ ops, ∃ a b, e.2 = Op.transfer a b
 structure Threat.TransfersOnly {p : Participant} (T : Threat E p) : Prop where
   holds : ∀ net m, T.feasible net m → ∃ caller a b, m = .chain caller (.transfer a b)
+structure Allocation.Precedes (o : Allocation E) (c d : Address E) : Prop where
+  holds : c ∈ (o.dedup.map Entry.dest).takeWhile (· ≠ d)
 "
 
 def predUri := "file:///P.lean"
@@ -67,6 +69,7 @@ def ISDAG := mkPred "ArmadaLean.Nitro.Adjudicator.IsDAG" "Adjudicator.IsDAG" (so
 def RC := mkPred "ArmadaLean.RegistryConsistent" "RegistryConsistent"
 def OT := mkPred "ArmadaLean.Nitro.OnlyTransfers" "OnlyTransfers"
 def TO := mkPred "ArmadaLean.Nitro.Threat.TransfersOnly" "Threat.TransfersOnly"
+def PRECEDES := mkPred "ArmadaLean.Nitro.Allocation.Precedes" "Allocation.Precedes"
 
 def predTexts : PredTexts := { fileMaps := Std.HashMap.ofList [("P.lean", FileMap.ofString predFile)] }
 def loc (p : Pred) : Loc := p.loc predTexts
@@ -255,13 +258,17 @@ def cases : List Case := [
     expect := none },
   { name := "unfold two names (range on the name)", src := "theorem t3b : Dag r := by\n  unfold Dag Acyclic\n  exact ⟨hr⟩\n",
     diag := ("Dag", 1), facts := [.defn "Dag Acyclic" 0 #[loc DAG]],
-    expect := some ("unfold-iff", "theorem t3b : Dag r := by\n  rw [Dag.iff]\n  unfold Acyclic\n  exact ⟨hr⟩\n") },
+    expect := some ("unfold-iff", "theorem t3b : Dag r := by\n  simp only [Dag.iff]\n  unfold Acyclic\n  exact ⟨hr⟩\n") },
   { name := "unfold one name", src := "theorem t3c : Dag r := by\n  unfold Dag\n  exact ⟨hr⟩\n",
     diag := ("Dag", 1), facts := [.defn "Dag\n  exact" 0 #[loc DAG]],
-    expect := some ("unfold-iff", "theorem t3c : Dag r := by\n  rw [Dag.iff]\n  exact ⟨hr⟩\n") },
+    expect := some ("unfold-iff", "theorem t3c : Dag r := by\n  simp only [Dag.iff]\n  exact ⟨hr⟩\n") },
   { name := "unfold qualified name with at", src := "theorem t : X := by\n  unfold Adjudicator.IsDAG at h\n",
     diag := ("Adjudicator.IsDAG", 0), facts := [.defn "Adjudicator.IsDAG at" 0 #[loc ISDAG]],
-    expect := some ("unfold-iff", "theorem t : X := by\n  rw [Adjudicator.IsDAG.iff] at h\n") },
+    expect := some ("unfold-iff", "theorem t : X := by\n  simp only [Adjudicator.IsDAG.iff] at h\n") },
+  { name := "unfold with two applications of P in the goal",
+    src := "theorem precedes_reduceOwed' (o : Allocation E) (c d : Address E) :\n    (o.reduceOwed e x).Precedes c d ↔ o.Precedes c d := by\n  unfold Precedes\n  rw [dedup_reduceOwed, reduceOwed_map_dest]\n",
+    diag := ("Precedes\n", 0), preds := #[PRECEDES], facts := [.defn "Precedes\n" 0 #[loc PRECEDES]],
+    expect := some ("unfold-iff", "theorem precedes_reduceOwed' (o : Allocation E) (c d : Address E) :\n    (o.reduceOwed e x).Precedes c d ↔ o.Precedes c d := by\n  simp only [Precedes.iff]\n  rw [dedup_reduceOwed, reduceOwed_map_dest]\n") },
   { name := "unfold refuses another name", src := "theorem t : X := by\n  unfold Other\n",
     diag := ("Other", 0), facts := [.defn "Other" 0 #[otherLoc]], expect := none },
   { name := "simp only", src := "theorem t3e : Reg (fun _ => none) := by\n  simp only [Reg]\n",

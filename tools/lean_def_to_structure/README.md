@@ -100,7 +100,7 @@ changes. No pattern inserts `sorry`, `admit`, `axiom` or `native_decide`.
 | `wrap` | a term whose expected type is `P …` and whose type is not; not already `⟨…⟩` | `⟨t⟩` |
 | `wrap-nested` | the argument of `⟨…⟩ : P` whose expected type is `P`'s body, itself a structure | `⟨t⟩` |
 | `constructor` | a tactic from a fixed list failed and the goal before it is `P …` | `constructor` before the tactic |
-| `unfold-iff` | the range is a name in `unfold` that resolves to `P` | `rw [P.iff]`, then `unfold` of the rest |
+| `unfold-iff` | the range is a name in `unfold` that resolves to `P` | `simp only [P.iff]` (every application, as `unfold` did; `rw` rewrites one instantiation only), then `unfold` of the rest |
 | `simp-iff` | the range is a `simp` family call (or `says`) with a name that resolves to `P` | `P.iff` in place of `P` |
 | `holds-proj` | every `t.k` in the file whose index resolves to `P.holds` (the silent case: `t.k` was part `k` of the body, now it is the whole body) | `t.holds.k` |
 

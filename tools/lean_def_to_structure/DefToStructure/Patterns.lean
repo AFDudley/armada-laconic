@@ -299,7 +299,9 @@ def tryMismatch (c : Ctx) (stack : Array Syntax) (t : Syntax) (ds de : Nat) : IO
     #[⟨s, s, "⟨"⟩, ⟨e, e, "⟩"⟩])
   return none
 
-/-- `unfold-iff`: `unfold P` cannot unfold a structure. -/
+/-- `unfold-iff`: `unfold P` cannot unfold a structure. `simp only [P.iff]`
+    rewrites every application of `P`, as `unfold` did; `rw [P.iff]` would
+    rewrite only the instances of its first match. -/
 def tryUnfold (c : Ctx) (stack : Array Syntax) (s e : Nat) : IO (Option Repair) := do
   let some (ti, tac) := Parse.innermostTactic c.env stack | return none
   unless firstWord tac == "unfold" do return none
@@ -319,9 +321,9 @@ def tryUnfold (c : Ctx) (stack : Array Syntax) (s e : Nat) : IO (Option Repair) 
   let written := textOf c (rangeOf id).1 (rangeOf id).2
   let keep := names.filter (· ≠ written)
   let sep := if startsLine c ts then "\n" ++ indentOf c ts else "; "
-  let new := s!"rw [{written}.iff]{atClause}" ++ (if keep.isEmpty then "" else s!"{sep}unfold {" ".intercalate keep}{atClause}")
+  let new := s!"simp only [{written}.iff]{atClause}" ++ (if keep.isEmpty then "" else s!"{sep}unfold {" ".intercalate keep}{atClause}")
   return some (mkRepair "unfold-iff" (p.fullName)
-      (s!"unfold {written} → rw [{written}.iff]")
+      (s!"unfold {written} → simp only [{written}.iff]")
       #[⟨ts, te, new⟩])
 
 /-- `simp-iff`: a `simp` family call that lists `P` fails. -/

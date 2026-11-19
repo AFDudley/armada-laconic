@@ -18,8 +18,8 @@ All paths are absolute. Read the goal document first. Open the others when a tas
 | The build plan (S-items and their status) | `~/code/git_puller/repos/armada-laconic/engineering/build-plan.md` |
 | The operating rules (models, limits, routing) | `~/code/git_puller/repos/armada-laconic/engineering/operating-rules.md` |
 | All decisions | `~/code/git_puller/repos/armada-laconic/labbook/` |
-| The proof toolchain plan (items A-E) | `~/code/git_puller/repos/evm-proof-toolchain/docs/plan.md` |
-| The Lean model to Stele translator (superseded: Stele dropped 2026-11-08) | `~/code/git_puller/repos/evm-proof-toolchain/docs/translator.md` |
+| The proof toolchain plan (items A-E) | `~/code/git_puller/repos/armada-laconic-mono/docs/plan.md` |
+| The Lean model to Stele translator (superseded: Stele dropped 2026-11-08) | `~/code/git_puller/repos/armada-laconic-mono/docs/translator.md` |
 | The Lean model of the pool and of Nitro | `~/code/git_puller/repos/armada-lean/` (namespace `ArmadaLean`) |
 
 Owners: pane w3:p5 armada-lean, and the evm-proof-toolchain items of w3:p4 (that session ended 2026-11-07; the operator

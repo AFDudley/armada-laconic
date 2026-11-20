@@ -108,6 +108,31 @@ The actor model does not have `embeds`, by design: "the internal state of a comp
 be accessible through operations provided by the interface" (Agha et al. 1997 §1). `embeds` is
 that rule applied to a field: the embedded state changes only through its own machine's calls.
 
+### 3.2 Generated code replaces the hand-written dispatch
+
+**Ruling.** Charter generates the code that replaces `Pool.apply`. The hand-written dispatch is
+deleted. This supersedes decision E2 (`2026-11-11-library-selection.md`, note of 2026-11-20).
+
+`machine Pool` generates `Pool.Call`, `Pool.apply`, the four equation lemmas
+(`Pool.apply_<call>_equation`) and the `Decidable` instances of the preconditions. The author
+still writes each `Pre` and `Effect` (for example `ShieldPre` and `shieldEffect`). They are the
+meaning of the chart.
+
+`Pool.apply` is in the protected set: `ArmadaLean/Spec/Pool.lean` and
+`ArmadaLean/Spec/PoolSafety.lean` name it. The two systems differ:
+
+- **Pool.** The hand-written `Pool.apply` (`Pool.lean:1552`) is already in the dependent-`if`
+  form, and its four equation lemmas hold by `rfl`. A generator that emits the same term keeps every
+  statement and every proof. Acceptance: before the deletion, Lean confirms that the generated
+  definition is the same term as the hand-written one; after the deletion, the whole model builds,
+  `#check_spec_bindings` passes, and `#print axioms` is unchanged.
+- **Nitro.** The hand-written `Adjudicator.apply` (`Nitro/Adjudicator.lean:290`) is not in that
+  form. Its seven equation lemmas (`Nitro/OpEquations.lean`) are proved by case analysis, not by
+  `rfl`, and other proofs unfold the old operations (`Nitro/Lemmas.lean`, `apply_<op>` by `rfl`).
+  The equation lemmas are the equivalence proof between the old and the generated definition. The
+  replacement changes a protected definition, so it runs under the strong form of temper's
+  roadmap (lean-temper `docs/design.md` §9.1).
+
 ## 4. Temper and the DSL
 
 - Temper reads existing Lean, finds its repeated patterns, and rewrites it into a normal form.

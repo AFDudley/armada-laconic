@@ -49,3 +49,11 @@ A Lean library. A program written against it compiles to Solidity, and its compi
 - **D3: Poseidon is a trusted named primitive** (ruling 2026-10-28, `armada-lean/docs/verification-chain.md`). Its Solidity implementation is tied to it by a named hypothesis, not proved.
 
 Note (2026-11-11, later): the "Compiler build" row of the selection table ("one pinned solc build; a version change re-proves the helper specs") is superseded. The operator ruled that the compiler must be swappable by one command, to other solc versions and to Solar. Each compiler profile has its own generated pattern catalogue and helper specifications. See `labbook/2026-11-11-programmatic-compiler-swap.md`.
+
+Note (2026-11-20): E2 is superseded (operator ruling 2026-11-20; `labbook/2026-11-20-temper-and-the-dsl.md`
+§3.2). E2 had two defects. First, it carried PE4, PE5 and PE7 through an equality and then deleted
+`Pool.apply`; a carried theorem still refers to `Pool.apply`, so the deletion breaks it. Second, the
+library program and `Pool.apply` work on different states, so a gluing relation links them, not an
+equality; PE5 and PE7 carry across it, and PE4 needs `uint256` bound hypotheses. The new rule: the
+Charter declaration `machine Pool` generates `Pool.apply`, and the generated definition replaces the
+hand-written one. The library program is a separate `contract` that `implements` the chart.

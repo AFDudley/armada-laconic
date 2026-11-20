@@ -1,6 +1,9 @@
 # The process
 
-How to structure work on the Armada contracts: the practice, the order of the work, and the gates. Adapted from
+How to structure work on the Armada contracts: the practice, the order of the work, and the gates and judgments of each
+stratum. A **gate** is one check that runs, with an id, a kind (static, mutation or execution), the stratum it grades
+and the inputs it reads. A **judgment** is a decision that a person or an agent makes and that no machine checks again
+(`glossary.md`, "Gate" and "Judgment"). A judgment is not a gate. Adapted from
 exophial4's `docs/process.md` (itself ported from exophial3 after five research slices over the practical literature,
 2026-08-17). Every step cites a source. The armada-specific examples come from the adjudicator rewrite of
 2026-10-23 to 2026-10-26, where this document's absence cost the most.
@@ -31,7 +34,7 @@ it [Abrial 2010]. Revised 2026-11-11: Stele and EquiVM are dropped (operator rul
 concrete layer is a program written with the Lean contract library, and the implementation is the Solidity that the
 library emits (`labbook/2026-11-11-library-selection.md`, `labbook/2026-11-11-symbolic-execution-and-solc.md`).
 
-| Layer | Artifact | What it decides | Gate |
+| Layer | Artifact | What it decides | Gates of the layer (one check each) |
 |---|---|---|---|
 | Specification | Lean model in `AFDudley/armada-lean`, symbolic (Dolev–Yao) | what must hold, against an attacker | `lake build`, zero `sorry`, `#print axioms` |
 | Concrete specification | the same machine as a program written with the Lean contract library (concrete words, storage, ABI) | the same contract with concrete values | refinement proof to the Lean model, through the gluing invariant of 9.1 |
@@ -76,7 +79,8 @@ One word per concept, before any design work [Abelson and Sussman 1996, stratifi
 Write in ASD-STE100. An agent reads a brief under the same constraints a person does; one claim per sentence is a
 defect control, not a courtesy.
 
-**GATE.** Every new term in a specification comment or a brief is in a glossary, with a citation.
+**Judgment J0 (stratum 0; inputs: each brief and each specification comment).** Every new term in a specification
+comment or a brief is in a glossary, with a citation.
 
 ## Stratum 1. Make the state space a type
 
@@ -93,7 +97,8 @@ optional fields lets a caller build a combination that never occurs.
 
 **1.3 Name every absence.** An absent holding is `none`, and a zero-value note is never recorded.
 
-**GATE.** Each state fact that a hypothesis would otherwise supply is checked: can the type carry it instead?
+**Judgment J1 (stratum 1; input: each hypothesis).** Each state fact that a hypothesis would otherwise supply is
+checked: can the type carry it instead?
 
 ## Stratum 2. State the invariant before any transition
 
@@ -115,8 +120,11 @@ positive `block.timestamp`) comes from the construction, as the Dolev–Yao term
 hypothesis on each theorem that needs it. It is never an `axiom`, because a false axiom lets Lean prove anything. Each
 assumption cites its source (a paper, a contract line, a chain property). Operator ruling, 2026-10-27.
 
-**GATE.** The specification states its invariant before its step relation. `#print axioms` on every statement lists
-only the model's named primitives.
+**Judgment J2 (stratum 2; input: the specification).** The specification states its invariant before its step
+relation.
+
+**Gate G2 (stratum 2; execution of `#print axioms`; input: every statement).** The output lists only the model's named
+primitives.
 
 ## Stratum 3. Parse once, at the edge
 
@@ -128,7 +136,8 @@ then finds a later input invalid cannot undo the payment.
 
 **3.3 Never re-check downstream.**
 
-**GATE.** Each contract entry point checks its input once, before any effect.
+**Judgment J3 (stratum 3; input: each contract entry point).** Each contract entry point checks its input once, before
+any effect.
 
 ## Stratum 4. Draw the machine flat before any state is composite
 
@@ -142,7 +151,11 @@ then finds a later input invalid cannot undo the payment.
 grew four parallel invariants, each with its own helper copies, because each new fact was added as a new induction.
 The repeated pattern appeared at the second one. That is when to refactor.
 
-**GATE.** Every transition has a "can happen" theorem, built by real steps from genesis.
+**Judgment J4 (stratum 4; inputs: the transitions and the theorems).** Every transition has a "can happen"
+theorem.
+
+**Gate G4 (stratum 4; execution of `lake build`; input: the can-happen theorems).** Each one is built by real steps
+from genesis, and Lean accepts it.
 
 ## Stratum 5. Let the prover prove totality
 
@@ -150,7 +163,8 @@ The repeated pattern appeared at the second one. That is when to refactor.
 
 **5.2 Add a new call kind to the type first, then build.** Every invariant reports the missing case.
 
-**GATE.** Adding a `Call` constructor breaks every invariant proof that does not handle it.
+**Gate G5 (stratum 5; mutation: a new `Call` constructor, then `lake build`; input: the invariant proofs).** Adding a `Call` constructor breaks
+every invariant proof that does not handle it.
 
 ## Stratum 6. Run the machine, shallow, end to end
 
@@ -163,7 +177,11 @@ placed with `vm.etch` exists only in forge's simulation; the real chain never ha
 **6.2 Drive one path through every call, and read the result.** One scenario per call kind, on the fixturenet, with
 recorded verdict lines (PASS, FAIL or ERROR, and the stage where it stopped).
 
-**GATE.** The whole model builds with every statement present. The fixturenet stands up from the production deploy.
+**Gate G6a (stratum 6; execution of `lake build`; input: the whole model).** The whole model builds with every
+statement present.
+
+**Gate G6b (stratum 6; execution of the fixturenet stand-up; input: the production deploy).** The fixturenet stands up
+from the production deploy.
 
 ## The tour. Let coverage order the remaining work
 
@@ -172,7 +190,8 @@ can fire, is exercised by a can-happen theorem and by a fixturenet scenario.
 
 **7.2 Do not target all-paths coverage.** Every source calls it prohibitive [Utting and Legeard 2007].
 
-**GATE.** Every call kind appears in at least one can-happen theorem and one scenario.
+**Judgment J7 (the tour; inputs: the can-happen theorems and the scenarios).** Every call kind appears in at least
+one can-happen theorem and one scenario.
 
 ## Stratum 8. Check with properties
 
@@ -186,7 +205,11 @@ one-tree pool, payment guarantees without a funding condition.
 **8.3 A counterexample stops the work on that statement.** Report it before changing any text. A statement changes
 only with the operator's approval.
 
-**GATE.** Every statement is proved with no `sorry`, or it carries a reported counterexample.
+**Gate G8 (stratum 8; execution of `lake build`; input: every statement).** Lean accepts every proof, and it reports
+each `sorry`.
+
+**Judgment J8 (stratum 8; inputs: each statement with a `sorry` and the counterexample reports).** Each such statement
+carries a reported counterexample.
 
 ## The next chart. Refine one level at a time
 
@@ -224,7 +247,7 @@ its Poseidon and EdDSA templates to the trusted primitives, and prove the rest e
 predicate. A deployed key: check it against the key exported from the ceremony zkey. A client: run conformance vectors
 that the model generates. `labbook/2026-11-02-refinement-risks.md` §7 gives the reasons and the order.
 
-**GATE.** Zero open obligations for the level.
+**Judgment J9 (the next chart; input: the level's proof obligations).** Zero open obligations for the level.
 
 ## The repair pass. Bring existing code to the strata
 
@@ -234,29 +257,48 @@ When a model is already proved but was not built that way, the repair pass bring
 operation, one safety invariant, one liveness principle, the Turbo value algorithm, the ledger constructions, the
 virtual-channel protocol, and proof helpers).
 
+A tool does the repair pass, not a person or an agent. The tool is lean-temper (`AFDudley/lean-temper`, design record
+`docs/design.md`), a compiler from a Lean project that builds to the same project in the form of the strata. Operator
+ruling, 2026-11-20. lean-temper replaced the codemods that agents ran from 2026-11-01 to 2026-11-19.
+
 **R.1 Measure the gap before changing anything.** The audit (`docs/lean/audit-2026-10-31.md`) and the type-doctrine
 linters (`docs/lean/type-doctrine.md` §3) give the work lists: each `repeatedPremise` group is one missing refined
-type, and each `layerDiscipline` hit is one proof that unfolds a base operation.
+type, and each `layerDiscipline` hit is one proof that unfolds a base operation. Before a pass is built, a Lean script
+makes its inventory from the linter's work list (operator ruling, 2026-11-19).
 
-**R.2 Build the target layer next to the old one. Add, never replace, in this step.** The targets are the strata's
-own forms: one equation per operation (2.2), one invariant with one step lemma (2.1), refined types instead of
-hypotheses (1.2, 3.1). An operation equation takes the dependent-`if` form, so the effect receives the precondition as
-a value: `apply (.transfer a b) s = if h : s.Finalized a then some (transferEffect ⟨a, h⟩ b s) else none`. The model
-keeps failing calls, because the adversary may submit any call; go-nitro reverts them.
+**R.2 Rewrite to the strata's forms.** The targets are one equation per operation (2.2), one invariant with one step
+lemma (2.1), and refined types instead of hypotheses (1.2, 3.1). An operation equation takes the dependent-`if` form,
+so the effect receives the precondition as a value: `apply (.transfer a b) s = if h : s.Finalized a then some
+(transferEffect ⟨a, h⟩ b s) else none`. The model keeps failing calls, because the adversary may submit any call;
+go-nitro reverts them. Each lean-temper pass replaces a form with an equivalent form, and Lean checks each change
+before the tool keeps it. lean-temper has passes for aliases, refined types and premise variants (`design.md` §5). It
+has no pass for the layer rule (`layerDiscipline`) yet.
 
-**R.3 Prove each new statement equivalent to the statements it replaces.** Lean proves `New ↔ Old₁ ∧ … ∧ Oldₖ` from
-the existing proofs. A new statement proved equivalent to approved statements changes shape, not meaning.
+**R.3 Prove each changed specification statement equivalent to the statement it replaces.** Lean proves `New ↔ Old`.
+A new statement proved equivalent to an approved statement changes shape, not meaning. The same applies to each
+definition that a specification statement reaches. A helper theorem needs no equivalence proof.
 
-**R.4 Move the proofs with codemods.** A codemod applies one rewrite rule across the code and keeps each edit only if
-Lean accepts it. Two rules, each driven by a linter work list: replace a repeated premise by its refined type
-(`repeatedPremise`), and replace an unfolded base operation by its equation (`layerDiscipline`).
+**R.4 Rewrite each proof in place.** The tool changes the proof of the theorem that callers already use. It adds no
+helper that restates an existing theorem's premises, and no adapter: no function, `subst` or transport that restores
+an old context (`design.md` §5.2).
 
-Lessons from the first R.4 pass on the Nitro adjudicator (armada-lean `7057602b`, `cb84006a`, `draft/r4-rest`,
-2026-11-01):
+**R.5 Delete the replaced statements and their helpers.** No alias and no deprecated copy stays.
 
-- **Rewrite the existing proof in place.** A new helper that restates an existing theorem's premises raises
-  `repeatedPremise`, `looseHypothesis` and `aliasHypothesis` above the gate baseline, and the gate refuses it. Change the
-  proof of the theorem that callers already use; keep its statement.
+**Done.** A run is done in the weak form or in the strong form of lean-temper `design.md` §9.1. In both forms, the
+whole model builds, each pass's linter reports no finding in its scope, and no adapter remains. The weak form
+changes only theorems, and no specification statement or definition. The strong form is one run on the whole model
+with one verdict, and it changes specification statements and definitions only with the proofs of R.3.
+
+The net line change of the model code (`ArmadaLean/` outside `ArmadaLean/Lint/`) is a measurement, not a condition.
+armada-lean `scripts/check.sh --json --base REF` reports it as `model_net_lines`. A run that adds lines is examined
+for a missing deletion (R.5) or an adapter (R.4).
+
+Lessons from the manual passes on the Nitro adjudicator (armada-lean `7057602b`, `cb84006a`, `draft/r4-rest`,
+2026-11-01, and the pass of 2026-11-02). They are the reasons for the rules of the tool:
+
+- **A new helper that restates an existing theorem's premises raises the counts.** It raised `repeatedPremise`,
+  `looseHypothesis` and `aliasHypothesis` above the baseline, and armada-lean's lint check (`scripts/check.sh`,
+  `lint_ok`) refused it. Hence R.4.
 - **Do not write `s.apply …` in a `show` or `have` when the theorem's own statement does not name `apply`.** The
   ascription puts `Adjudicator.apply` into the proof term, and `layerDiscipline` flags it. State the derived equation in
   the operation's own form (`have heq : s.challenge … = if h : … then … else none := apply_challenge_equation …`) and
@@ -267,40 +309,25 @@ Lessons from the first R.4 pass on the Nitro adjudicator (armada-lean `7057602b`
 - **Check that an acceptance clause can be met before it goes to a worker.** The first R.4 pebble required "no
   `layerDiscipline` finding" while the linter had the defect above. The worker spent about 290k tokens before it proved
   the clause impossible.
-
-Lessons from the second pass (armada-lean, 2026-11-02):
-
-- **A work item whose acceptance is a lint count gets gamed.** The R.4 merges made `Safety.lean` larger
+- **A work item whose acceptance is a lint count gets gamed.** The manual merges made `Safety.lean` larger
   (`reclaim_decompose` beside `reclaim_some`, which kept 68 uses), and a codemod worker copied a step's post-state
-  into a new `def` so that the base operations left the proof. Every repair item now also requires: the net line
-  change of the model code (`ArmadaLean/` outside `Lint/`) is at most 0, no definition restates an existing one, and
-  the work deletes what it replaces.
+  into a new `def` so that the base operations left the proof. Hence a tool with no person in the loop, R.4 and R.5.
 - **Measure the linter before the code.** 10 of 15 `layerDiscipline` hits counted names that entered a proof only
   through a type (a constructor field type, a `casesOn`, a rewrite motive), and `looseHypothesis` counted type
   parameters as inputs, which hid 106 findings (armada-lean `draft/cm-opus`, failure tests in
   `ArmadaLean/Lint/TypeDoctrineTest.lean`). A commit that corrects a measure may raise a count; it is its own commit
   and states the defect and the counts.
-- **A brief names the replacement, not only the target.** The local model completed 1 of 3 layer items: the one whose
-  replacement lemma was easy to find. The two others looped for three hours. A codemod brief states the base
-  operation that the lint flags and the existing lemma that replaces it, or says that none exists; an item with no
-  replacement lemma is design work for a stronger model, not a codemod.
 - **A spec theorem is finished when its proof and its witness are closed.** `sorry_count` counts proofs only. A
   witness proved by `sorry` stays in `witness_open`, and `scripts/check.sh --json NAME` reports both
   `theorem_in_sorry` and `theorem_witness_open` for one theorem.
 
-**R.5 Delete the replaced statements and their helpers.** No alias and no deprecated copy stays.
+**Gate GRa (the repair pass; execution of the lean-temper run; input: armada-lean at a pinned commit).** The run is done
+in the weak or the strong form.
 
-**R.6 Order for the Nitro model:** the typed operation equations; then the premise-to-type codemod; then the
-layer-rule codemod; then the general liveness theorem (Nitro §4.4: an online participant can finalize the latest state
-it holds), proved once with the window argument, with the funding point, the concluded state and the Nitro-24 claims as
-corollaries. Status 2026-11-02: the exit strategy (`TakeOut.exitStrategy`, `exit_finalizes`) forces finalization from
-every state where `p` holds a support at least as new as the chain's record, and the two Nitro-24 claims are its
-corollaries, with enabled outcomes measured against that strategy (operator ruling 2026-11-02; armada-lean
-`docs/nitro-repair-2026-10-27.md` §7.4).
+**Gate GRb (the repair pass; execution of `lake build`; input: the run's result).** armada-lean builds.
 
-**GATE.** Every step merges on its own. No type-doctrine linter count rises (`scripts/check.sh`, `lint_ok`), except in
-a commit that only corrects a linter's measure. The net line change of the model code is at most 0. Every deleted
-statement has an equivalence proof to a statement that remains.
+**Gate GRc (the repair pass; execution of `scripts/check.sh`; input: the run's result).** No type-doctrine count rises
+above `scripts/gate-baseline.json` (`lint_ok`).
 
 ## The decision rules to keep getting right
 

@@ -90,7 +90,7 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **MASP** — Namada's Multi-Asset Shielded Pool note primitive — a note primitive, **not** a state channel (contrast Design B). Reference only.
 - **RelayAdapt / recipe** — Railgun's cross-contract module: an atomic `unshield → external call → reshield`. **Not used anywhere in this codebase.** Armada's Aave-v4 yield adapter uses the pool's own `adaptContract`/`adaptParams` binding instead.
 - **wstETH / weETH** — non-rebasing LSTs (value accrues via a rising exchange rate). Held as a shielded note they earn ETH staking yield intrinsically, with no Aave/LP rail needed. ETH yield **T4.4**.
-- **Selective disclosure** — a voluntary, off-chain proof of a chain of custody for chosen value, from a shielding address through notes and channels to a payout or withdrawal, that reveals nothing else about the wallet. It never gates a pool action (ADR-0020; [16](engineering/16-selective-disclosure.html)).
+- **Selective disclosure** — a voluntary, off-chain proof of a chain of custody for chosen value, from a shielding address through notes and channels to a payout or withdrawal, that reveals nothing else about the wallet. No pool action requires it (ADR-0020; [16](engineering/16-selective-disclosure.html)).
 
 ## 5. This project's design terms
 
@@ -134,6 +134,8 @@ Terms of the proof chain from the Lean model to deployed bytecode (`docs/process
 - **Walk** — a Blanc proof that a bytecode path refines its source, by symbolic execution of the build's bytecode (`xrun`, `xcallM`, `RunEx`) [King 1976; Myreen, Gordon and Slind 2008, decompilation into logic].
 - **Callee specification** — the walk of one internal function entry, stated generic in its context (any stack below its arguments, any memory that satisfies its invariant), and proved once [Hoare 1969; O'Hearn, Reynolds and Yang 2001, frame rule].
 - **Translation validation** — a proof, for one build, that a compiler's output refines its input; the compiler itself is not verified [Pnueli, Siegel and Singerman 1998; Sewell, Myreen and Klein 2013].
+- **Gate** (n) — one check that runs, with an id, a kind (static, mutation or execution), the stratum it grades and the inputs it reads (exophial `glossary.md`, "gate", operator ruling 2026-10-30). A merge happens only when every gate of its stratum passes. A decision that a person or an agent makes is a **judgment**, not a gate. The full run of a repository's checks has no name: `.exophial/config.yaml` `gate.command` is the command that runs them, not a gate. Not a verb.
+- **Judgment** (n) — a decision that a person or an agent makes and that no machine checks again (exophial `glossary.md`, "judgment"). `docs/process.md` names each one (J0 to J9).
 
 ### Charter terms (2026-11-20)
 

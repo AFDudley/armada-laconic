@@ -135,6 +135,14 @@ Terms of the proof chain from the Lean model to deployed bytecode (`docs/process
 - **Callee specification** — the walk of one internal function entry, stated generic in its context (any stack below its arguments, any memory that satisfies its invariant), and proved once [Hoare 1969; O'Hearn, Reynolds and Yang 2001, frame rule].
 - **Translation validation** — a proof, for one build, that a compiler's output refines its input; the compiler itself is not verified [Pnueli, Siegel and Singerman 1998; Sewell, Myreen and Klein 2013].
 
+### Charter terms (2026-11-20)
+
+Terms of the Lean DSL that defines a system as a proof-carrying state machine and an abstract representation of Solidity (`labbook/2026-11-20-temper-and-the-dsl.md` §3).
+
+- **Charter** — the Lean 4 DSL, built as `elab` commands (Lake package `charter`, namespace `Charter`). Its three declarations are `machine`, `contract` and `implements … via`. It names nothing specific to Armada: the pool and the Nitro adjudicator are instances. The name joins the **chart** (the machine) and a charter (a founding document that states what a body may do) [Harel 1987; Hudak 1996, embedded DSL].
+- **Chart** — a state machine that a `machine` declaration states: its state type, its invariant, and its calls in the form `if h : Pre then some (Effect ⟨_, h⟩) else none`. A call takes and returns states that carry the invariant [Harel 1987; Abrial 2010]. Not the **concrete specification**: a chart is the **specification** layer.
+- **Embedding** (of a chart) — a field of one chart that holds the state of another chart and changes only through the other chart's calls (`embeds`). Example: `Network.chain` holds the adjudicator's state [Agha et al. 1997, §1; Lamport 2002, §10.4.1].
+
 ## Orgs
 
 - **Vulcanize** — the originating company (ex_net, matcher, vulcanizedb lineage; 2017–).

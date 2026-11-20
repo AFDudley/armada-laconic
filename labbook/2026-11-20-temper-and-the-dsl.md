@@ -83,6 +83,10 @@ adjudicator is a second instance of the same three declarations. The machine doe
 Solidity, so the application code for armada-nitro is a second target of the same `machine`.
 No pool-specific name appears in the DSL's own library.
 
+**Ruling.** The DSL is named **Charter** (Lake package `charter`, namespace `Charter`). A `machine`
+states a chart, and a contract that `implements` it may do only what the chart allows (rule 9.2):
+the system's charter. The glossary defines "Charter", "chart" and "embedding".
+
 ### 3.1 Prior art (three surveys, 2026-11-20)
 
 Reports: `notes/prior-art-2026-11-20/{cardano-survey,k-rv-survey,actor-survey}.md`. No surveyed

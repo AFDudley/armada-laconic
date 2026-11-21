@@ -249,15 +249,15 @@ that the model generates. `labbook/2026-11-02-refinement-risks.md` §7 gives the
 
 **Judgment J9 (the next chart; input: the level's proof obligations).** Zero open obligations for the level.
 
-## The repair pass. Bring existing code to the strata
+## The refactoring pass. Bring existing code to the strata
 
 The strata above describe building forward. Rule 4.4 assumes each repeated pattern is refactored when it appears.
-When a model is already proved but was not built that way, the repair pass brings it to the strata. Operator ruling,
+When a model is already proved but was not built that way, the refactoring pass brings it to the strata. Operator ruling,
 2026-11-01. The Nitro model is the first case: its 115 spec theorems state about seven ideas (one equation per
 operation, one safety invariant, one liveness principle, the Turbo value algorithm, the ledger constructions, the
 virtual-channel protocol, and proof helpers).
 
-A tool does the repair pass, not a person or an agent. The tool is lean-temper (`AFDudley/lean-temper`, design record
+A tool does the refactoring pass, not a person or an agent. The tool is lean-temper (`AFDudley/lean-temper`, design record
 `docs/design.md`), a compiler from a Lean project that builds to the same project in the form of the strata. Operator
 ruling, 2026-11-20. lean-temper replaced the codemods that agents ran from 2026-11-01 to 2026-11-19.
 
@@ -321,12 +321,12 @@ Lessons from the manual passes on the Nitro adjudicator (armada-lean `7057602b`,
   witness proved by `sorry` stays in `witness_open`, and `scripts/check.sh --json NAME` reports both
   `theorem_in_sorry` and `theorem_witness_open` for one theorem.
 
-**Gate GRa (the repair pass; execution of the lean-temper run; input: armada-lean at a pinned commit).** The run is done
+**Gate GRa (the refactoring pass; execution of the lean-temper run; input: armada-lean at a pinned commit).** The run is done
 in the weak or the strong form.
 
-**Gate GRb (the repair pass; execution of `lake build`; input: the run's result).** armada-lean builds.
+**Gate GRb (the refactoring pass; execution of `lake build`; input: the run's result).** armada-lean builds.
 
-**Gate GRc (the repair pass; execution of `scripts/check.sh`; input: the run's result).** No type-doctrine count rises
+**Gate GRc (the refactoring pass; execution of `scripts/check.sh`; input: the run's result).** No type-doctrine count rises
 above `scripts/gate-baseline.json` (`lint_ok`).
 
 ## The decision rules to keep getting right

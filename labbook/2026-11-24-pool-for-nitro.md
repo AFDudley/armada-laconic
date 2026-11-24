@@ -35,6 +35,7 @@ Each one is a place where the concrete machine allows more than the model, or ca
 | D6 | `verifyOwned` gives `N+M+3` public signals. The owned circuit gives `2N+M+4`: `npk[N]`, `transcriptHash`, then the inputs. | `TransactOwned.lean:150-156`: the two outputs are public signals that the witness determines | every real owned proof fails |
 | D7 | `transactOwned` writes no preimage. | every output is disclosed (`ownedOutputRecords`, `requireAll = true`) | Nitro's `preimageOf` reads fail |
 | D8 | `insertLeaf` sets the root to `hash(root, leaf)`. | `TreeState.extend` takes `treeRoot TreeDepth leaves` | no real proof names a root of our tree |
+| D9 | The constructor writes all 19 verifying keys. The deployment of PoolSol `5b89c45a` needs 17,678,290 gas (measured on anvil). EIP-7825 limits one transaction to 16,777,216 gas, and the fixturenet starts Osaka at genesis. | `Pool.apply` takes one `Verifier` for the whole run (`PoolGlue.lean`, `VerifierAgrees`): the keys do not change after genesis | PoolSol cannot be deployed |
 
 ## 2. The state as types (stratum 1)
 
@@ -103,6 +104,7 @@ sources and no release (D-a below).
 |---|---|---|---|
 | P1 | genesis: constructor takes the fee ratio and writes the empty-tree root; `init_establishes` stated | D1, D2 | can-happen of `shield` with no `setFeeRatio` before it |
 | P2 | the tree: 17 constants, the frontier walk with rollover; Charter forms for a range loop, an indexed storage array and a select; `TreeRel` stated | D8 | on the fixturenet, PoolSol's `merkleRoot` after each shield equals the root of an independent depth-16 Poseidon tree over the emitted leaves; rollover by a can-happen theorem |
+| P2.1 | the keys after the constructor: `registerKey(shape, key)` and `registerOwnedKey(shape, key)`, deployer only, each shape written once; `seal()` ends registration; `shield`, `transact` and `transactOwned` revert until sealed. Genesis `s₀` is the storage after the seal. | D9 | the deployment and each registration fit 16,777,216 gas on the fixturenet; a revert theorem for a second write of a shape and for any write after the seal |
 | P3 | the edge: one parse of the batch; duplicate nullifiers refused | D3, D4 | can-happen theorems; a revert theorem for a duplicate |
 | P4 | the owned public outputs | D6 | fixturenet `transactOwned` PASS (needs D-a) |
 | P5 | the registry: `shield` records; disclosure for `transact`; all outputs for `transactOwned`; getters `preimageOf`, `merkleRoot`, `treeNumber` | D5, D7 | Nitro's calls resolve against PoolSol |
@@ -114,6 +116,11 @@ P1 to P5 make a pool that supports `transactOwned` as Nitro uses it. P6 and P7 m
 Correction, 2026-11-24 (process.md 9.4): the first text of P2 accepted a `transact` PASS against PoolSol's own tree.
 The SDK finds notes through Armada's `Shield` and `Transact` events, which PoolSol emits only after P7. So P2 is
 accepted by the root check above, and the `transact` PASS moves to P7.
+
+Decision, 2026-11-24, for D9: the keys stay fixed after genesis, because the model fixes the verifier for the run. A
+setter that can replace a key, as in armada-poc's `setVerificationKey`, breaks `VerifierAgrees`, so P2.1 makes each key
+write-once and seals the set. The other fixed-key route, keys as the code of a data contract, needs a new Charter form
+to read code, so it is not chosen.
 
 The rules of the items are armada-laconic-mono `docs/plan.md` section F (F1 to F7) and armada-charter `docs/plan.md`
 C1. Each is filed as one report.

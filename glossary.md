@@ -91,6 +91,11 @@ Hosting: **GitHub** `cerc-io` where a mirror exists, otherwise the Laconic **Git
 - **RelayAdapt / recipe** — Railgun's cross-contract module: an atomic `unshield → external call → reshield`. **Not used anywhere in this codebase.** Armada's Aave-v4 yield adapter uses the pool's own `adaptContract`/`adaptParams` binding instead.
 - **wstETH / weETH** — non-rebasing LSTs (value accrues via a rising exchange rate). Held as a shielded note they earn ETH staking yield intrinsically, with no Aave/LP rail needed. ETH yield **T4.4**.
 - **Selective disclosure** — a voluntary, off-chain proof of a chain of custody for chosen value, from a shielding address through notes and channels to a payout or withdrawal, that reveals nothing else about the wallet. No pool action requires it (ADR-0020; [16](engineering/16-selective-disclosure.html)).
+- **Frontier** — the pool's right-most filled node at each level of the current Merkle tree (`filledSubTrees`); with the zero values it gives the next root without the leaf list (armada-poc `MerkleModule.insertLeaves`; labbook `2026-11-24-pool-for-nitro.md`).
+- **Zero value** — the node of an empty subtree at one level: `ZERO_VALUE` at level 0, and `Poseidon(z, z)` of the level below above it (`MerkleModule.initializeMerkle`).
+- **Tree rollover** — a batch that does not fit in the current tree goes, whole, to a new tree with the next tree number (`Pool.lean` `insertLeaves`).
+- **Owned public outputs** — the owned circuit's two public outputs, `npk[N]` and `transcriptHash`, which the witness determines and which come first in its Groth16 public signals (armada-lean `TransactOwned.lean:150-156`; ship-armada/armada-circuits PR #7).
+- **Disclosure** — the record of an output note's preimage in the pool's registry `preimageOf`: optional for `transact`, every output for `transactOwned`, always for `shield` (`Pool.lean` `Step`).
 
 ## 5. This project's design terms
 

@@ -102,14 +102,21 @@ sources and no release (D-a below).
 | # | Item | Fixes | Acceptance |
 |---|---|---|---|
 | P1 | genesis: constructor takes the fee ratio and writes the empty-tree root; `init_establishes` stated | D1, D2 | can-happen of `shield` with no `setFeeRatio` before it |
-| P2 | the tree: 17 constants, the frontier walk with rollover; Charter forms for a range loop, an indexed storage array and a select; `TreeRel` stated | D8 | fixturenet `transact` PASS with a real proof against PoolSol's own tree |
+| P2 | the tree: 17 constants, the frontier walk with rollover; Charter forms for a range loop, an indexed storage array and a select; `TreeRel` stated | D8 | on the fixturenet, PoolSol's `merkleRoot` after each shield equals the root of an independent depth-16 Poseidon tree over the emitted leaves; rollover by a can-happen theorem |
 | P3 | the edge: one parse of the batch; duplicate nullifiers refused | D3, D4 | can-happen theorems; a revert theorem for a duplicate |
 | P4 | the owned public outputs | D6 | fixturenet `transactOwned` PASS (needs D-a) |
 | P5 | the registry: `shield` records; disclosure for `transact`; all outputs for `transactOwned`; getters `preimageOf`, `merkleRoot`, `treeNumber` | D5, D7 | Nitro's calls resolve against PoolSol |
 | P6 | the unshield payout and the adapt check | — | Nitro's `depositFromNote` scenario on PoolSol |
-| P7 | Armada's events and `shield(ShieldRequest[], integrator)`, so the SDK and Nitro's gates run on PoolSol | — | armada-nitro's gates on PoolSol |
+| P7 | Armada's events and `shield(ShieldRequest[], integrator)`, so the SDK and Nitro's gates run on PoolSol | — | fixturenet `transact` PASS with a real proof that the SDK makes against PoolSol's own tree; armada-nitro's gates on PoolSol |
 
 P1 to P5 make a pool that supports `transactOwned` as Nitro uses it. P6 and P7 make Nitro's gates run on it.
+
+Correction, 2026-11-24 (process.md 9.4): the first text of P2 accepted a `transact` PASS against PoolSol's own tree.
+The SDK finds notes through Armada's `Shield` and `Transact` events, which PoolSol emits only after P7. So P2 is
+accepted by the root check above, and the `transact` PASS moves to P7.
+
+The rules of the items are armada-laconic-mono `docs/plan.md` section F (F1 to F7) and armada-charter `docs/plan.md`
+C1. Each is filed as one report.
 
 ## 8. Decisions for the operator
 
